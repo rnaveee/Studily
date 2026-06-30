@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import { api } from "../../lib/api";
+import { useAuth } from "../../lib/auth";
 import { countdown, formatDateTime, hhmm } from "../../lib/format";
 import {
   DAYS,
@@ -33,8 +34,30 @@ function fmtHour(h: number): string {
   return h > 12 ? `${h - 12}p` : `${h}a`;
 }
 
+function fmtCountdown(mins: number): string {
+  if (mins < 60) return `${mins}m`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+function fmtWeekRange(start: string, end: string): string {
+  const fmt = (s: string) =>
+    new Date(s + "T12:00:00").toLocaleDateString(undefined, { month: "long", day: "numeric" });
+  return `${fmt(start)} – ${fmt(end)}`;
+}
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Morning";
+  if (h < 17) return "Afternoon";
+  return "Evening";
+}
+
 export default function DashboardPage() {
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const firstName = user?.name?.split(" ")[0] ?? user?.username ?? "";
   const [semesterId, setSemesterId] = useState<number | null>(null);
   const [addingDay, setAddingDay] = useState<string | null>(null);
 
@@ -71,11 +94,39 @@ export default function DashboardPage() {
     [courses]
   );
 
-  return (
-    <div className="space-y-6 animate-in">
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-semibold text-fg">Dashboard</h1>
+  const { data: quote } = useQuery({
+    queryKey: ["quote"],
+    queryFn: async () => {
+      const res = await fetch("https://dummyjson.com/quotes/random");
+      if (!res.ok) throw new Error("Failed");
+      return res.json() as Promise<{ quote: string; author: string }>;
+    },
+    staleTime: 1000 * 60 * 60,
+    retry: 1,
+  });
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayData = data?.days.find((d) => d.date === todayStr);
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const nextMeeting = todayData?.meetings
+    .filter((m) => toMin(m.startTime) > nowMin)
+    .sort((a, b) => toMin(a.startTime) - toMin(b.startTime))[0];
+  const todayLabel = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+
+  return (
+    <div className="space-y-4 animate-in">
+      {quote && (
+        <p className="text-[13px] italic font-semibold text-fg-2">
+          "{quote.quote}" <span className="not-italic">— {quote.author}</span>
+        </p>
+      )}
+
+      <div>
+        <h1 className="text-3xl font-bold text-fg">{greeting()}, {firstName}</h1>
+        <p className="mt-1 text-sm text-fg-3">Here's your weekly schedule</p>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
         {semesters && semesters.length > 0 && (
           <select
             className="input w-auto"
@@ -88,15 +139,9 @@ export default function DashboardPage() {
             ))}
           </select>
         )}
-
-        {data && (
-          <span className="text-xs text-fg-3">{data.weekStart} – {data.weekEnd}</span>
-        )}
-
         {data?.semester && (
           <span className="badge badge-accent">{data.semester.label}</span>
         )}
-
         {data?.nextExam && (
           <span className="badge badge-soft">
             Next exam: {data.nextExam.title} · {countdown(data.nextExam.dueAt)}
@@ -114,6 +159,55 @@ export default function DashboardPage() {
 
       {data && (
         <>
+          <div className="flex flex-col gap-4 md:flex-row md:items-stretch">
+            {/* Today's classes — full width on mobile, fixed sidebar on desktop */}
+            <div className="card p-4 md:w-56 md:shrink-0">
+              <p className="mb-3 text-[15px] font-semibold text-fg md:text-[11px] md:uppercase md:tracking-wider md:text-fg-3">
+                Today, {todayLabel}
+              </p>
+
+              {todayData && todayData.meetings.length > 0 ? (
+                <>
+                  <div className="flex flex-wrap gap-2 md:flex-col">
+                    {todayData.meetings.map((m, i) => {
+                      const done = toMin(m.endTime) < nowMin;
+                      return (
+                        <Link
+                          key={i}
+                          to={`/courses/${m.courseId}`}
+                          className="flex items-start gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-80"
+                          style={{
+                            backgroundColor: m.color ?? "var(--accent)",
+                            opacity: done ? 0.45 : 1,
+                          }}
+                        >
+                          <span className="flex-1 leading-snug">{m.courseName}</span>
+                          <span className="shrink-0 whitespace-nowrap text-[11px] opacity-80 mt-0.5">{hhmm(m.startTime)}–{hhmm(m.endTime)}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-3">
+                    {nextMeeting ? (
+                      <span className="text-[12px] text-accent">
+                        Next in {fmtCountdown(toMin(nextMeeting.startTime) - nowMin)}
+                      </span>
+                    ) : (
+                      <span className="text-[12px] text-fg-3">No more classes today</span>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <p className="text-[13px] text-fg-3">No classes today.</p>
+              )}
+            </div>
+
+            {/* Calendar — takes remaining space, scrolls horizontally */}
+            <div className="min-w-0 flex-1 space-y-2">
+              <p className="text-[12px] font-medium uppercase tracking-wider text-fg-3">
+                This week · {fmtWeekRange(data.weekStart, data.weekEnd)}
+              </p>
+
           <div className="card overflow-x-auto">
             {addingDay && (
               <div className="border-b border-line px-4 py-3 animate-slide">
@@ -235,8 +329,10 @@ export default function DashboardPage() {
                         to={`/courses/${it.courseId}`}
                         className="block truncate rounded-sm border-l-2 px-1 py-0.5 text-[9px] leading-tight transition-opacity hover:opacity-75"
                         style={{
-                          borderColor: it.courseColor ?? "var(--accent)",
-                          background: "color-mix(in srgb, var(--accent) 8%, transparent)",
+                          borderColor: it.type === "EXAM" ? "var(--red)" : "var(--green)",
+                          background: it.type === "EXAM"
+                            ? "color-mix(in srgb, var(--red) 10%, transparent)"
+                            : "color-mix(in srgb, var(--green) 10%, transparent)",
                           color: "var(--fg-2)",
                         }}
                         title={`${it.title} · ${it.courseName} · due ${formatDateTime(it.dueAt)}`}
@@ -249,6 +345,8 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+            </div>{/* end calendar column */}
+          </div>{/* end side-by-side flex */}
 
           <div>
             <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
@@ -259,14 +357,14 @@ export default function DashboardPage() {
             ) : (
               <ul className="card divide-y divide-line">
                 {data.dueThisWeek.map((it) => (
-                  <li key={it.id} className="flex items-center justify-between px-4 py-2.5 text-[13px]">
-                    <span>
+                  <li key={it.id} className="flex items-center gap-3 px-4 py-2.5 text-[13px]">
+                    <div className="min-w-0 flex-1 truncate">
                       <Link to={`/courses/${it.courseId}`} className="font-medium text-fg hover:text-accent transition-colors">
                         {it.title}
                       </Link>
                       <span className="ml-2 text-fg-3">· {it.courseName}</span>
-                    </span>
-                    <span className="text-fg-3 tabular-nums">{formatDateTime(it.dueAt)}</span>
+                    </div>
+                    <span className="shrink-0 whitespace-nowrap text-fg-3 tabular-nums">{formatDateTime(it.dueAt)}</span>
                   </li>
                 ))}
               </ul>

@@ -10,7 +10,6 @@ import ItemForm from "../../components/ItemForm";
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function dayColor(it: AcademicItem): string {
-  if (it.courseColor) return it.courseColor;
   return it.type === "EXAM" ? "var(--red)" : "var(--green)";
 }
 
@@ -197,8 +196,8 @@ export default function CalendarPage() {
                 >
                   {it.title}
                 </Link>
-                <span className="shrink-0 text-[12px] text-fg-3">{it.courseName}</span>
-                <span className="shrink-0 text-[12px] text-fg-3 tabular-nums">
+                <span className="max-w-[8rem] truncate text-[12px] text-fg-3">{it.courseName}</span>
+                <span className="shrink-0 whitespace-nowrap text-[12px] text-fg-3 tabular-nums">
                   {formatDateTime(it.dueAt)}
                 </span>
               </li>

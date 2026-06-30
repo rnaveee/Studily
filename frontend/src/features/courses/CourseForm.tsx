@@ -131,7 +131,7 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel }:
 
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <label className="field-label mb-0">Meeting times</label>
+          <label className="field-label mb-0">Class times</label>
           <button type="button" onClick={addBlock} className="btn btn-soft text-xs">
             <Plus size={12} />
             Add time

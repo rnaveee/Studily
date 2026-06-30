@@ -12,11 +12,15 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "semesters")
+@Getter
+@Setter
 public class Semester {
 
     @Id
@@ -39,22 +43,4 @@ public class Semester {
 
     @Column(nullable = false)
     private LocalDate endDate;
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-
-    public SemesterTerm getTerm() { return term; }
-    public void setTerm(SemesterTerm term) { this.term = term; }
-
-    public Integer getYear() { return year; }
-    public void setYear(Integer year) { this.year = year; }
-
-    public LocalDate getStartDate() { return startDate; }
-    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
-
-    public LocalDate getEndDate() { return endDate; }
-    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
 }

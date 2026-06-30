@@ -1,122 +1,81 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { Check } from "lucide-react";
-import { api } from "../../lib/api";
+import { Link } from "react-router-dom";
+import { Edit2, GraduationCap, BookOpen, School } from "lucide-react";
 import { useAuth } from "../../lib/auth";
-import { queryClient } from "../../lib/queryClient";
-import type { User } from "../../types";
 
 export default function ProfilePage() {
-  const { user, setUser } = useAuth();
-  const [form, setForm] = useState({
-    name: user?.name ?? "",
-    school: user?.school ?? "",
-    schoolId: user?.schoolId ?? "",
-    year: user?.year?.toString() ?? "",
-    major: user?.major ?? "",
-    bio: user?.bio ?? "",
-    avatarUrl: user?.avatarUrl ?? "",
-  });
-  const [saved, setSaved] = useState(false);
+  const { user } = useAuth();
+  if (!user) return null;
 
-  const save = useMutation({
-    mutationFn: () =>
-      api.put<User>("/me", {
-        name: form.name,
-        school: form.school || null,
-        schoolId: form.schoolId || null,
-        year: form.year ? Number(form.year) : null,
-        major: form.major || null,
-        bio: form.bio || null,
-        avatarUrl: form.avatarUrl || null,
-      }),
-    onSuccess: (updated) => {
-      setUser(updated);
-      queryClient.invalidateQueries({ queryKey: ["classmates"] });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-    },
-  });
-
-  function set(field: keyof typeof form) {
-    return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm((f) => ({ ...f, [field]: e.target.value }));
-  }
-
-  const initial = (user?.name ?? user?.username ?? "?").charAt(0).toUpperCase();
+  const initial = (user.name ?? user.username).charAt(0).toUpperCase();
 
   return (
     <div className="mx-auto max-w-lg space-y-5 animate-in">
-      <h1 className="text-xl font-semibold text-fg">Profile</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-fg">Profile</h1>
+        <Link to="/profile/edit" className="btn btn-ghost">
+          <Edit2 size={13} />
+          Edit
+        </Link>
+      </div>
 
-      <div className="card flex items-center gap-4 px-5 py-4">
+      {/* Avatar + name */}
+      <div className="card p-6 text-center">
         <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-bold text-accent-fg"
+          className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold text-accent-fg"
           style={{ background: "var(--accent)" }}
         >
           {initial}
         </div>
-        <div>
-          <div className="font-semibold text-fg">@{user?.username}</div>
-          <div className="text-[13px] text-fg-3">{user?.email}</div>
-        </div>
+        <h2 className="text-xl font-bold text-fg">{user.name}</h2>
+        <p className="mt-0.5 text-[13px] text-fg-3">@{user.username}</p>
+        <p className="mt-0.5 text-[13px] text-fg-3">{user.email}</p>
+        {user.bio && (
+          <p className="mx-auto mt-3 max-w-xs text-sm text-fg-2">{user.bio}</p>
+        )}
       </div>
 
-      <form
-        onSubmit={(e) => { e.preventDefault(); save.mutate(); }}
-        className="card p-5 space-y-3"
-      >
-        <div>
-          <label className="field-label">Name</label>
-          <input className="input" value={form.name} onChange={set("name")} required />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="field-label">School</label>
-            <input className="input" placeholder="e.g. Simon Fraser" value={form.school} onChange={set("school")} />
+      {/* Details */}
+      <div className="card divide-y divide-line">
+        {user.school && (
+          <ProfileRow icon={<School size={14} />} label="School" value={user.school} />
+        )}
+        {user.major && (
+          <ProfileRow icon={<BookOpen size={14} />} label="Major" value={user.major} />
+        )}
+        {user.year != null && (
+          <ProfileRow icon={<GraduationCap size={14} />} label="Year" value={`Year ${user.year}`} />
+        )}
+        {user.schoolId && (
+          <ProfileRow icon={null} label="Student ID" value={user.schoolId} />
+        )}
+        {!user.school && !user.major && !user.year && !user.schoolId && (
+          <div className="px-5 py-4 text-[13px] text-fg-3">
+            No details yet —{" "}
+            <Link to="/profile/edit" className="text-accent hover:text-accent-2 transition-colors">
+              fill in your profile
+            </Link>
+            .
           </div>
-          <div>
-            <label className="field-label">School ID</label>
-            <input className="input" placeholder="Student ID" value={form.schoolId} onChange={set("schoolId")} />
-          </div>
-          <div>
-            <label className="field-label">Year</label>
-            <input className="input" type="number" placeholder="e.g. 2" value={form.year} onChange={set("year")} min={1} max={8} />
-          </div>
-          <div>
-            <label className="field-label">Major</label>
-            <input className="input" placeholder="e.g. Computer Science" value={form.major} onChange={set("major")} />
-          </div>
-        </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
-        <div>
-          <label className="field-label">Avatar URL</label>
-          <input className="input" placeholder="https://…" value={form.avatarUrl} onChange={set("avatarUrl")} />
-        </div>
-
-        <div>
-          <label className="field-label">Bio</label>
-          <textarea className="input resize-none" rows={3} placeholder="A few words about you…" value={form.bio} onChange={set("bio")} />
-        </div>
-
-        <div className="flex items-center gap-3 pt-1">
-          <button type="submit" disabled={save.isPending} className="btn btn-primary">
-            {save.isPending ? "Saving…" : "Save changes"}
-          </button>
-          {saved && (
-            <span className="flex items-center gap-1 text-[13px] text-green animate-fade">
-              <Check size={13} />
-              Saved
-            </span>
-          )}
-          {save.error && (
-            <span className="text-[13px] text-red animate-fade">
-              {(save.error as Error).message}
-            </span>
-          )}
-        </div>
-      </form>
+function ProfileRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-5 py-3.5">
+      <span className="text-fg-3">{icon}</span>
+      <span className="w-24 shrink-0 text-[12px] text-fg-3">{label}</span>
+      <span className="text-[13px] font-medium text-fg">{value}</span>
     </div>
   );
 }

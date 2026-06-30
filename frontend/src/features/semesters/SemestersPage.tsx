@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Edit2, Plus, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
+import { useConfirm } from "../../lib/confirm";
+import { toast } from "../../lib/toast";
 import type { Semester, SemesterRequest, SemesterTerm } from "../../types";
 
 const TERMS: SemesterTerm[] = ["FALL", "SPRING", "SUMMER", "WINTER"];
@@ -14,6 +16,7 @@ const TERM_LABELS: Record<SemesterTerm, string> = {
 
 export default function SemestersPage() {
   const qc = useQueryClient();
+  const confirm = useConfirm();
   const [showForm, setShowForm] = useState(false);
 
   const { data: semesters, isLoading } = useQuery({
@@ -36,6 +39,7 @@ export default function SemestersPage() {
       qc.invalidateQueries({ queryKey: ["semesters"] });
       qc.invalidateQueries({ queryKey: ["courses"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
+      toast.success("Semester deleted");
     },
   });
 
@@ -68,10 +72,14 @@ export default function SemestersPage() {
             <SemesterRow
               key={s.id}
               semester={s}
-              onDelete={() => {
-                if (confirm(`Delete ${s.label}? Courses in this semester will become unassigned.`)) {
-                  remove.mutate(s.id);
-                }
+              onDelete={async () => {
+                const ok = await confirm({
+                  title: `Delete ${s.label}?`,
+                  message: "Courses in this semester will become unassigned.",
+                  confirmLabel: "Delete",
+                  danger: true,
+                });
+                if (ok) remove.mutate(s.id);
               }}
             />
           ))}

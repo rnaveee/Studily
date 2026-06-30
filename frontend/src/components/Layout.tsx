@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -22,7 +22,13 @@ const NAV = [
   { to: "/profile",    label: "Profile",    icon: User },
 ];
 
-const SUB_LINKS = ["About", "Terms", "Privacy", "Support", "Install"];
+const SUB_LINKS = [
+  { label: "About",   to: "/about" },
+  { label: "Terms",   to: "/terms" },
+  { label: "Privacy", to: "/privacy" },
+  { label: "Support", to: "/support" },
+  { label: "Install", to: "/install" },
+];
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -73,6 +79,18 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+
+        <div className="flex flex-wrap gap-x-3 gap-y-1 px-5 pb-3">
+          {SUB_LINKS.map(({ label, to }) => (
+            <Link
+              key={to}
+              to={to}
+              className="text-[11px] text-fg-3 transition-colors hover:text-fg"
+            >
+              {label}
+            </Link>
+          ))}
+        </div>
 
         <div className="p-2 space-y-0.5" style={{ borderTop: "1px solid var(--line)" }}>
           <button
@@ -186,14 +204,14 @@ export default function Layout() {
             className="flex items-center justify-center gap-4 px-4 py-2"
             style={{ borderTop: "1px solid var(--line)" }}
           >
-            {SUB_LINKS.map((label) => (
-              <a
-                key={label}
-                href="#"
+            {SUB_LINKS.map(({ label, to }) => (
+              <Link
+                key={to}
+                to={to}
                 className="text-[11px] text-fg-3 transition-colors hover:text-fg"
               >
                 {label}
-              </a>
+              </Link>
             ))}
           </div>
         </footer>

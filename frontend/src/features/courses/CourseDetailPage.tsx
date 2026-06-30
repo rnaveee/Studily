@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { Edit2, Plus, Trash2, X } from "lucide-react";
 import { api } from "../../lib/api";
+import { useConfirm } from "../../lib/confirm";
+import { toast } from "../../lib/toast";
 import {
   type AcademicItem,
   type AcademicItemRequest,
@@ -27,6 +29,7 @@ export default function CourseDetailPage() {
   const courseId = Number(id);
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [editing, setEditing] = useState(false);
 
   const courseQ = useQuery({
@@ -54,7 +57,7 @@ export default function CourseDetailPage() {
   });
   const deleteCourse = useMutation({
     mutationFn: () => api.del<void>(`/courses/${courseId}`),
-    onSuccess: () => { invalidateAll(); navigate("/courses"); },
+    onSuccess: () => { invalidateAll(); navigate("/courses"); toast.success("Course deleted"); },
   });
 
   if (courseQ.isLoading) {
@@ -89,15 +92,15 @@ export default function CourseDetailPage() {
       ) : (
         <div className="card p-5">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2.5">
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2.5">
                 <span
                   className="h-3 w-3 shrink-0 rounded-full"
                   style={{ backgroundColor: course.color ?? "var(--accent)" }}
                 />
-                <h1 className="text-xl font-semibold text-fg">{course.name}</h1>
+                <h1 className="min-w-0 truncate text-xl font-semibold text-fg">{course.name}</h1>
                 {course.code && (
-                  <span className="rounded bg-surface-hi px-1.5 py-0.5 text-[11px] font-mono text-fg-3">
+                  <span className="shrink-0 rounded bg-surface-hi px-1.5 py-0.5 text-[11px] font-mono text-fg-3">
                     {course.code}
                   </span>
                 )}
@@ -119,10 +122,14 @@ export default function CourseDetailPage() {
                 Edit
               </button>
               <button
-                onClick={() => {
-                  if (confirm(`Delete ${course.name}? This removes its items and notes.`)) {
-                    deleteCourse.mutate();
-                  }
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: `Delete ${course.name}?`,
+                    message: "This permanently removes all its items and notes.",
+                    confirmLabel: "Delete course",
+                    danger: true,
+                  });
+                  if (ok) deleteCourse.mutate();
                 }}
                 className="btn btn-danger"
               >
@@ -198,11 +205,15 @@ function ItemsSection({
         <ul className="card divide-y divide-line">
           {items.map((it) => (
             <li key={it.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-[13px]">
-              <div className="min-w-0">
-                <span className="font-medium text-fg">{it.title}</span>
-                <span className="ml-2 text-fg-3">{formatDateTime(it.dueAt)}</span>
+              <div className="flex min-w-0 items-center gap-2">
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: it.type === "EXAM" ? "var(--red)" : "var(--green)" }}
+                />
+                <span className="min-w-0 truncate font-medium text-fg">{it.title}</span>
+                <span className="shrink-0 whitespace-nowrap text-fg-3">{formatDateTime(it.dueAt)}</span>
                 {it.weight != null && (
-                  <span className="ml-2 text-fg-3">{it.weight}%</span>
+                  <span className="shrink-0 text-fg-3">{it.weight}%</span>
                 )}
               </div>
               <div className="flex shrink-0 items-center gap-2">
