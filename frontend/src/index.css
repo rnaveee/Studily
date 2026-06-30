@@ -1,0 +1,221 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Design tokens ──────────────────────────────────────── */
+:root {
+  --bg:         #f3f3f7;
+  --surface:    #ffffff;
+  --surface-hi: #ebebf0;
+  --line:       #e0e0ea;
+  --fg:         #0e0e1a;
+  --fg-2:       #5e5e7a;
+  --fg-3:       #9898b5;
+  --accent:     #5548c8;
+  --accent-2:   #4438b0;
+  --accent-fg:  #ffffff;
+  --red:        #c63636;
+  --green:      #2d9060;
+  --sidebar-w:  220px;
+}
+
+.dark {
+  --bg:         #0c0c10;
+  --surface:    #16161e;
+  --surface-hi: #202028;
+  --line:       #2a2a38;
+  --fg:         #e4e4f0;
+  --fg-2:       #8484a0;
+  --fg-3:       #50506a;
+  --accent:     #7968dc;
+  --accent-2:   #8b7de8;
+  --accent-fg:  #ffffff;
+  --red:        #dc4444;
+  --green:      #42a870;
+}
+
+@theme inline {
+  --color-bg:         var(--bg);
+  --color-surface:    var(--surface);
+  --color-surface-hi: var(--surface-hi);
+  --color-line:       var(--line);
+  --color-fg:         var(--fg);
+  --color-fg-2:       var(--fg-2);
+  --color-fg-3:       var(--fg-3);
+  --color-accent:     var(--accent);
+  --color-accent-2:   var(--accent-2);
+  --color-accent-fg:  var(--accent-fg);
+  --color-red:        var(--red);
+  --color-green:      var(--green);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "SF Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
+}
+
+/* ── Base ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--fg-3); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Animations ─────────────────────────────────────────── */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slide-down {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in  { animation: fade-up   0.18s ease-out both; }
+.animate-fade { animation: fade-in   0.15s ease-out both; }
+.animate-slide { animation: slide-down 0.14s ease-out both; }
+
+/* ── Component classes ──────────────────────────────────── */
+
+/* Input */
+.input {
+  display: block;
+  width: 100%;
+  background: var(--surface-hi);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 7px 11px;
+  font-size: 13px;
+  color: var(--fg);
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+  appearance: none;
+}
+.input::placeholder { color: var(--fg-3); }
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.input:disabled { opacity: 0.45; cursor: not-allowed; }
+select.input { cursor: pointer; }
+textarea.input { resize: vertical; }
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.13s, color 0.13s, border-color 0.13s, opacity 0.13s, transform 0.1s;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  line-height: 1.4;
+  text-decoration: none;
+}
+.btn:active:not(:disabled) { transform: scale(0.975); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+.btn-primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--fg-2);
+  border-color: var(--line);
+}
+.btn-ghost:hover { background: var(--surface-hi); color: var(--fg); }
+
+.btn-soft {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--accent);
+  border-color: transparent;
+}
+.btn-soft:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+
+.btn-danger {
+  background: transparent;
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 28%, transparent);
+}
+.btn-danger:hover { background: color-mix(in srgb, var(--red) 8%, transparent); }
+
+/* Card */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+/* Badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.badge-accent {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+.badge-muted {
+  background: var(--surface-hi);
+  color: var(--fg-2);
+}
+.badge-red {
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: var(--red);
+}
+.badge-green {
+  background: color-mix(in srgb, var(--green) 10%, transparent);
+  color: var(--green);
+}
+
+/* Label */
+.field-label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: var(--line);
+  margin: 0;
+}
