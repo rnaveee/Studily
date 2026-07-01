@@ -68,6 +68,9 @@ Opens on `http://localhost:5173` and proxies `/api` to the backend, so run both 
 | `JWT_EXPIRATION_MS` | `86400000` | Token lifetime |
 | `CORS_ORIGINS` | `http://localhost:5173` | Allowed frontend origin(s), comma-separated |
 | `REMINDER_WINDOW_HOURS` | `48` | How far ahead deadline reminders fire |
+| `SENTRY_DSN` | unset (disabled) | Backend error tracking — DSN from your Sentry project |
+| `SENTRY_ENVIRONMENT` | `development` | Tag backend Sentry events with an environment name |
+| `VITE_SENTRY_DSN` | unset (disabled) | Frontend error tracking — **build-time** var, must be set when the Docker image is built, not at runtime |
 
 ## Deploying (Railway)
 
@@ -90,6 +93,12 @@ so client-side routes (e.g. `/courses/123`) survive a hard refresh.
    - `JWT_SECRET` = a random string ≥64 characters (`openssl rand -base64 64`)
    - `CORS_ORIGINS` = your Railway-assigned domain (harmless once same-origin, but keep it
      accurate in case you ever split the frontend out)
+   - `SENTRY_DSN` / `VITE_SENTRY_DSN` = DSNs from your Sentry project (create one at
+     sentry.io — a Java project for the backend DSN, a React project for the frontend one).
+     Railway passes service variables through as Docker build args automatically when the
+     Dockerfile declares a matching `ARG`, so `VITE_SENTRY_DSN` gets baked into the frontend
+     bundle at build time from the same place you set everything else. `SENTRY_ENVIRONMENT` =
+     `production` is worth setting too, to separate prod events from local dev noise.
 4. Railway healthchecks `/actuator/health` (configured in `railway.json`); only that one
    endpoint is exposed, with no detail leakage (`show-details=never`).
 
