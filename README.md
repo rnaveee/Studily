@@ -34,11 +34,9 @@ createdb studily
 ```
 
 Connection defaults to `localhost:5432`, db `studily`, user/password `postgres`/`postgres`.
-Override with env vars: `DB_NAME`, `DB_USER`, `DB_PASSWORD`. Schema is auto-created by
-Hibernate (`ddl-auto=update`).
-
-> Before any real deploy: set a strong `JWT_SECRET`, switch `ddl-auto` to `validate`, and
-> introduce Flyway migrations.
+Override with env vars: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`. Schema is
+managed by Flyway migrations (`src/main/resources/db/migration`); `ddl-auto=validate` just
+checks Hibernate's model matches what Flyway created.
 
 ## Run the backend
 
@@ -63,11 +61,45 @@ Opens on `http://localhost:5173` and proxies `/api` to the backend, so run both 
 
 | Var | Default | Purpose |
 |---|---|---|
+| `PORT` | `8080` | Port the server listens on (Railway injects this) |
+| `DB_HOST` / `DB_PORT` | `localhost` / `5432` | Postgres host/port |
 | `DB_NAME` / `DB_USER` / `DB_PASSWORD` | `studily` / `postgres` / `postgres` | Postgres connection |
-| `JWT_SECRET` | dev placeholder | HS256 signing key (≥32 bytes) |
+| `JWT_SECRET` | dev placeholder | HS256 signing key — **must be ≥64 chars in prod**, app refuses to boot otherwise |
 | `JWT_EXPIRATION_MS` | `86400000` | Token lifetime |
-| `CORS_ORIGINS` | `http://localhost:5173` | Allowed frontend origin(s) |
+| `CORS_ORIGINS` | `http://localhost:5173` | Allowed frontend origin(s), comma-separated |
 | `REMINDER_WINDOW_HOURS` | `48` | How far ahead deadline reminders fire |
+
+## Deploying (Railway)
+
+The app is a single Docker image: the multi-stage `Dockerfile` builds the React app, copies
+it into `src/main/resources/static`, and packages everything into one Spring Boot jar. There
+is no separate frontend host, no reverse proxy, and no CORS to configure at runtime — the
+browser talks to the same origin that served the page, and `api.ts`'s relative `/api/...`
+calls just work. `SpaWebConfig` falls back to `index.html` for any non-API, non-static path
+so client-side routes (e.g. `/courses/123`) survive a hard refresh.
+
+1. Push this repo to GitHub and create a new Railway project from it (or `railway up`).
+   Railway auto-detects `railway.json` and builds via the Dockerfile.
+2. Add a Postgres plugin to the project.
+3. Set these service variables (Railway lets you reference the Postgres plugin's own vars):
+   - `DB_HOST` = `${{Postgres.PGHOST}}`
+   - `DB_PORT` = `${{Postgres.PGPORT}}`
+   - `DB_NAME` = `${{Postgres.PGDATABASE}}`
+   - `DB_USER` = `${{Postgres.PGUSER}}`
+   - `DB_PASSWORD` = `${{Postgres.PGPASSWORD}}`
+   - `JWT_SECRET` = a random string ≥64 characters (`openssl rand -base64 64`)
+   - `CORS_ORIGINS` = your Railway-assigned domain (harmless once same-origin, but keep it
+     accurate in case you ever split the frontend out)
+4. Railway healthchecks `/actuator/health` (configured in `railway.json`); only that one
+   endpoint is exposed, with no detail leakage (`show-details=never`).
+
+To build/run the image locally instead:
+
+```bash
+docker build -t studily .
+docker run -p 8080:8080 -e JWT_SECRET=$(openssl rand -base64 64) \
+  -e DB_HOST=host.docker.internal -e DB_USER=postgres -e DB_PASSWORD=postgres studily
+```
 
 ## Project layout
 

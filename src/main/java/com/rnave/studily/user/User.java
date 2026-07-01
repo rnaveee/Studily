@@ -39,7 +39,11 @@ public class User {
     @Column(length = 1000)
     private String bio;
 
-    private String avatarUrl;
+    private byte[] avatarImage;
+    private String avatarContentType;
+
+    @Column(nullable = false)
+    private int avatarVersion = 0;
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();

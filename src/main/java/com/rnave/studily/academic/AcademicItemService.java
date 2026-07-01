@@ -27,7 +27,7 @@ public class AcademicItemService {
 
     @Transactional(readOnly = true)
     public List<AcademicItemDto> listForCourse(Long courseId) {
-        courseService.requireOwned(courseId); // ownership check
+        courseService.requireOwned(courseId);
         return itemRepository.findByCourseIdOrderByDueAtAsc(courseId)
                 .stream().map(AcademicItemDto::from).toList();
     }

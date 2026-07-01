@@ -160,7 +160,6 @@ export default function DashboardPage() {
       {data && (
         <>
           <div className="flex flex-col gap-4 md:flex-row md:items-stretch">
-            {/* Today's classes — full width on mobile, fixed sidebar on desktop */}
             <div className="card p-4 md:w-56 md:shrink-0">
               <p className="mb-3 text-[15px] font-semibold text-fg md:text-[11px] md:uppercase md:tracking-wider md:text-fg-3">
                 Today, {todayLabel}
@@ -202,7 +201,6 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Calendar — takes remaining space, scrolls horizontally */}
             <div className="min-w-0 flex-1 space-y-2">
               <p className="text-[12px] font-medium uppercase tracking-wider text-fg-3">
                 This week · {fmtWeekRange(data.weekStart, data.weekEnd)}
@@ -345,8 +343,8 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
-            </div>{/* end calendar column */}
-          </div>{/* end side-by-side flex */}
+            </div>
+          </div>
 
           <div>
             <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wider text-fg-3">

@@ -1,12 +1,11 @@
 import { Link } from "react-router-dom";
 import { Edit2, GraduationCap, BookOpen, School } from "lucide-react";
 import { useAuth } from "../../lib/auth";
+import Avatar from "../../components/Avatar";
 
 export default function ProfilePage() {
   const { user } = useAuth();
   if (!user) return null;
-
-  const initial = (user.name ?? user.username).charAt(0).toUpperCase();
 
   return (
     <div className="mx-auto max-w-lg space-y-5 animate-in">
@@ -18,14 +17,8 @@ export default function ProfilePage() {
         </Link>
       </div>
 
-      {/* Avatar + name */}
       <div className="card p-6 text-center">
-        <div
-          className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full text-3xl font-bold text-accent-fg"
-          style={{ background: "var(--accent)" }}
-        >
-          {initial}
-        </div>
+        <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} size={80} className="mx-auto mb-4 text-3xl" />
         <h2 className="text-xl font-bold text-fg">{user.name}</h2>
         <p className="mt-0.5 text-[13px] text-fg-3">@{user.username}</p>
         <p className="mt-0.5 text-[13px] text-fg-3">{user.email}</p>
@@ -34,19 +27,24 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {/* Details */}
       <div className="card divide-y divide-line">
-        {user.school && (
-          <ProfileRow icon={<School size={14} />} label="School" value={user.school} />
+        {(user.school || user.schoolId) && (
+          <ProfileRow
+            icon={<School size={14} />}
+            label="School"
+            value={
+              <span className="flex items-center gap-2">
+                {user.school}
+                {user.schoolId && <span className="badge badge-muted">{user.schoolId}</span>}
+              </span>
+            }
+          />
         )}
         {user.major && (
           <ProfileRow icon={<BookOpen size={14} />} label="Major" value={user.major} />
         )}
         {user.year != null && (
           <ProfileRow icon={<GraduationCap size={14} />} label="Year" value={`Year ${user.year}`} />
-        )}
-        {user.schoolId && (
-          <ProfileRow icon={null} label="Student ID" value={user.schoolId} />
         )}
         {!user.school && !user.major && !user.year && !user.schoolId && (
           <div className="px-5 py-4 text-[13px] text-fg-3">
@@ -69,7 +67,7 @@ function ProfileRow({
 }: {
   icon: React.ReactNode;
   label: string;
-  value: string;
+  value: React.ReactNode;
 }) {
   return (
     <div className="flex items-center gap-3 px-5 py-3.5">

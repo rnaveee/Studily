@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
+import Avatar from "./Avatar";
 
 const NAV = [
   { to: "/",           label: "Dashboard",  icon: LayoutDashboard, end: true },
@@ -40,17 +41,17 @@ export default function Layout() {
     navigate("/login");
   }
 
-  const initial = (user?.name ?? user?.username ?? "?").charAt(0).toUpperCase();
-
   return (
     <div className="flex h-screen overflow-hidden bg-bg">
-      {/* Desktop sidebar */}
       <aside
         className="hidden md:flex w-[220px] shrink-0 flex-col"
         style={{ background: "var(--surface)", borderRight: "1px solid var(--line)" }}
       >
         <div className="px-5 py-5">
-          <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
+          <div className="flex items-center gap-2">
+            <img src="/studily-3a.svg" alt="" className="h-6 w-6" />
+            <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
+          </div>
           <div className="text-[10px] text-fg-3">by ryan nave</div>
         </div>
 
@@ -113,28 +114,24 @@ export default function Layout() {
 
           {user && (
             <div className="flex items-center gap-2.5 px-3 py-2.5 mt-0.5">
-              <div
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold"
-                style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-              >
-                {initial}
-              </div>
+              <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} size={24} className="text-[11px]" />
               <span className="truncate text-[12px] text-fg-2">@{user.username}</span>
             </div>
           )}
         </div>
       </aside>
 
-      {/* Right panel — flex column, fills remaining space */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Mobile header */}
         <header
           className="flex items-center justify-between px-4 py-2.5 md:hidden"
           style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)" }}
         >
-          <div>
-            <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
-            <div className="text-[9px] leading-tight text-fg-3">by ryan nave</div>
+          <div className="flex items-center gap-2">
+            <img src="/studily-3a.svg" alt="" className="h-6 w-6" />
+            <div>
+              <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
+              <div className="text-[9px] leading-tight text-fg-3">by ryan nave</div>
+            </div>
           </div>
 
           <div className="flex items-center gap-0.5">
@@ -150,12 +147,7 @@ export default function Layout() {
               to="/profile"
               className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] text-fg-2 transition-colors hover:bg-surface-hi"
             >
-              <div
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold"
-                style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-              >
-                {initial}
-              </div>
+              <Avatar name={user?.name} username={user?.username} avatarUrl={user?.avatarUrl} size={20} className="text-[10px]" />
               <span className="max-w-[80px] truncate">@{user?.username}</span>
             </NavLink>
 
@@ -169,14 +161,12 @@ export default function Layout() {
           </div>
         </header>
 
-        {/* Main scrollable content */}
         <main className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-5xl px-4 py-6 md:px-10 md:py-8">
             <Outlet />
           </div>
         </main>
 
-        {/* Mobile footer */}
         <footer
           className="md:hidden"
           style={{ background: "var(--surface)", borderTop: "1px solid var(--line)" }}

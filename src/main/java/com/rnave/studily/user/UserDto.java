@@ -18,7 +18,7 @@ public record UserDto(
     public static UserDto from(User u) {
         return new UserDto(
                 u.getId(), u.getEmail(), u.getUsername(), u.getName(), u.getSchool(),
-                u.getSchoolId(), u.getYear(), u.getMajor(), u.getBio(), u.getAvatarUrl(),
+                u.getSchoolId(), u.getYear(), u.getMajor(), u.getBio(), AvatarUrls.of(u),
                 u.getCreatedAt());
     }
 }

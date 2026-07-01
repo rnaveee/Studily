@@ -21,12 +21,14 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const headers: Record<string, string> = {};
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+
+  const isFormData = body instanceof FormData;
+  if (body !== undefined && !isFormData) headers["Content-Type"] = "application/json";
 
   const res = await fetch(`/api${path}`, {
     method,
     headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
   });
 
   if (res.status === 401 && getToken()) {
@@ -41,7 +43,6 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       const data = await res.json();
       if (data?.message) message = data.message;
     } catch {
-      /* non-JSON error body */
     }
     throw new ApiError(res.status, message);
   }

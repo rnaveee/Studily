@@ -31,7 +31,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-bg px-4">
       <div className="w-full max-w-[340px] animate-in">
         <div className="mb-8 text-center">
-          <span className="font-mono text-2xl font-bold tracking-tight text-fg">studily</span>
+          <img src="/studily-3a.svg" alt="" className="mx-auto mb-2 h-12 w-12" />
+          <span className="font-mono text-2xl font-bold tracking-tight text-fg">Studily</span>
           <p className="mt-1 text-xs text-fg-3">your academic planner</p>
         </div>
 

@@ -1,5 +1,6 @@
 package com.rnave.studily.classmate;
 
+import com.rnave.studily.user.AvatarUrls;
 import com.rnave.studily.user.User;
 
 public class ClassmateDtos {
@@ -17,7 +18,7 @@ public class ClassmateDtos {
         public static PublicUserDto from(User u) {
             return new PublicUserDto(
                     u.getId(), u.getUsername(), u.getName(), u.getSchool(),
-                    u.getYear(), u.getMajor(), u.getBio(), u.getAvatarUrl());
+                    u.getYear(), u.getMajor(), u.getBio(), AvatarUrls.of(u));
         }
     }
 

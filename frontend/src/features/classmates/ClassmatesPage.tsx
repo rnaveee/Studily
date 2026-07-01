@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Users2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api } from "../../lib/api";
+import Avatar from "../../components/Avatar";
 import type { ClassmateSuggestion } from "../../types";
 
 export default function ClassmatesPage() {
@@ -31,16 +32,10 @@ export default function ClassmatesPage() {
       ) : data && data.length > 0 ? (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {data.map((s, i) => {
-            const initial = (s.user.name ?? s.user.username).charAt(0).toUpperCase();
             return (
               <li key={`${s.user.id}-${s.sharedCourseCode}-${i}`} className="card p-4 animate-fade">
                 <div className="flex items-center gap-3">
-                  <div
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-accent-fg"
-                    style={{ background: "var(--accent)" }}
-                  >
-                    {initial}
-                  </div>
+                  <Avatar name={s.user.name} username={s.user.username} avatarUrl={s.user.avatarUrl} size={36} className="text-[13px]" />
                   <div className="min-w-0">
                     <div className="flex items-baseline gap-1.5">
                       <span className="font-medium text-fg truncate">{s.user.name}</span>

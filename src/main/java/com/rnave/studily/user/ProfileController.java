@@ -36,7 +36,6 @@ public class ProfileController {
         user.setYear(req.year());
         user.setMajor(req.major());
         user.setBio(req.bio());
-        user.setAvatarUrl(req.avatarUrl());
         return UserDto.from(userRepository.save(user));
     }
 
@@ -46,7 +45,6 @@ public class ProfileController {
             String schoolId,
             Integer year,
             String major,
-            String bio,
-            String avatarUrl) {
+            String bio) {
     }
 }

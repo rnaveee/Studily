@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Check, ArrowLeft } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { queryClient } from "../../lib/queryClient";
+import Avatar from "../../components/Avatar";
 import type { User } from "../../types";
 
 export default function ProfileEditPage() {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     name: user?.name ?? "",
     school: user?.school ?? "",
@@ -17,7 +19,6 @@ export default function ProfileEditPage() {
     year: user?.year?.toString() ?? "",
     major: user?.major ?? "",
     bio: user?.bio ?? "",
-    avatarUrl: user?.avatarUrl ?? "",
   });
   const [saved, setSaved] = useState(false);
 
@@ -30,7 +31,6 @@ export default function ProfileEditPage() {
         year: form.year ? Number(form.year) : null,
         major: form.major || null,
         bio: form.bio || null,
-        avatarUrl: form.avatarUrl || null,
       }),
     onSuccess: (updated) => {
       setUser(updated);
@@ -39,6 +39,32 @@ export default function ProfileEditPage() {
       setTimeout(() => navigate("/profile"), 800);
     },
   });
+
+  const uploadAvatar = useMutation({
+    mutationFn: (file: File) => {
+      const body = new FormData();
+      body.append("file", file);
+      return api.post<User>("/me/avatar", body);
+    },
+    onSuccess: (updated) => {
+      setUser(updated);
+      queryClient.invalidateQueries({ queryKey: ["classmates"] });
+    },
+  });
+
+  const removeAvatar = useMutation({
+    mutationFn: () => api.del<User>("/me/avatar"),
+    onSuccess: (updated) => {
+      setUser(updated);
+      queryClient.invalidateQueries({ queryKey: ["classmates"] });
+    },
+  });
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) uploadAvatar.mutate(file);
+    e.target.value = "";
+  }
 
   function set(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -53,6 +79,44 @@ export default function ProfileEditPage() {
           Back
         </button>
         <h1 className="text-xl font-semibold text-fg">Edit profile</h1>
+      </div>
+
+      <div className="card p-5 flex items-center gap-4">
+        <Avatar name={user?.name} username={user?.username} avatarUrl={user?.avatarUrl} size={64} className="text-xl" />
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadAvatar.isPending}
+              className="btn btn-ghost"
+            >
+              {uploadAvatar.isPending ? "Uploading…" : "Change photo"}
+            </button>
+            {user?.avatarUrl && (
+              <button
+                type="button"
+                onClick={() => removeAvatar.mutate()}
+                disabled={removeAvatar.isPending}
+                className="btn btn-ghost text-red"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+          {(uploadAvatar.error || removeAvatar.error) && (
+            <span className="text-[12px] text-red">
+              {((uploadAvatar.error ?? removeAvatar.error) as Error).message}
+            </span>
+          )}
+        </div>
       </div>
 
       <form
@@ -81,11 +145,6 @@ export default function ProfileEditPage() {
             <label className="field-label">Major</label>
             <input className="input" placeholder="e.g. Computer Science" value={form.major} onChange={set("major")} />
           </div>
-        </div>
-
-        <div>
-          <label className="field-label">Avatar URL</label>
-          <input className="input" placeholder="https://…" value={form.avatarUrl} onChange={set("avatarUrl")} />
         </div>
 
         <div>

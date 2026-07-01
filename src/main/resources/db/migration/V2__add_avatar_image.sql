@@ -1,0 +1,4 @@
+ALTER TABLE users DROP COLUMN avatar_url;
+ALTER TABLE users ADD COLUMN avatar_image BYTEA;
+ALTER TABLE users ADD COLUMN avatar_content_type VARCHAR(50);
+ALTER TABLE users ADD COLUMN avatar_version INTEGER NOT NULL DEFAULT 0;
