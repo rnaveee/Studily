@@ -135,7 +135,7 @@ export default function ProfileEditPage() {
           </div>
           <div>
             <label className="field-label">School ID</label>
-            <input className="input" placeholder="Student ID" value={form.schoolId} onChange={set("schoolId")} />
+            <input className="input" placeholder="e.g. SFU" value={form.schoolId} onChange={set("schoolId")} />
           </div>
           <div>
             <label className="field-label">Year</label>

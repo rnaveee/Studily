@@ -40,11 +40,11 @@ export default function AboutPage() {
       </Section>
 
       <Section title="About the developer">
-        <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-start sm:text-left">
+        <div className="space-y-4">
           <img
-            src="/me.jpg"
+            src="/me.png"
             alt="Ryan Nave"
-            className="h-24 w-24 shrink-0 rounded-xl bg-surface-hi object-cover"
+            className="h-64 w-full rounded-xl bg-surface-hi object-cover sm:h-80"
             style={{ border: "1px solid var(--line)" }}
           />
           <div className="space-y-2">
