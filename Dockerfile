@@ -23,4 +23,4 @@ RUN addgroup -S studily && adduser -S studily -G studily
 COPY --from=backend-build /app/target/*.jar app.jar
 USER studily
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

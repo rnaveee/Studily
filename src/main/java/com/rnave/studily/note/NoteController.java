@@ -5,6 +5,7 @@ import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.course.Course;
 import com.rnave.studily.course.CourseService;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -66,6 +67,6 @@ public class NoteController {
         }
     }
 
-    public record NoteRequest(@NotBlank String body) {
+    public record NoteRequest(@NotBlank @Size(max = 10000) String body) {
     }
 }

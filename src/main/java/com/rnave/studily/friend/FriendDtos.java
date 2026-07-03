@@ -1,9 +1,19 @@
-package com.rnave.studily.classmate;
+package com.rnave.studily.friend;
 
 import com.rnave.studily.user.AvatarUrls;
 import com.rnave.studily.user.User;
 
-public class ClassmateDtos {
+import java.time.Instant;
+
+public class FriendDtos {
+
+    public enum RelationshipStatus {
+        SELF,
+        NONE,
+        FRIENDS,
+        OUTGOING_PENDING,
+        INCOMING_PENDING
+    }
 
     public record PublicUserDto(
             Long id,
@@ -22,9 +32,17 @@ public class ClassmateDtos {
         }
     }
 
-    public record ClassmateSuggestion(
+    public record FriendRequestDto(
+            Long id,
             PublicUserDto user,
-            String sharedCourseCode,
-            String sharedCourseName) {
+            FriendRequestStatus status,
+            Instant createdAt,
+            Instant respondedAt) {
+    }
+
+    public record RelationshipDto(
+            PublicUserDto user,
+            RelationshipStatus status,
+            Long requestId) {
     }
 }

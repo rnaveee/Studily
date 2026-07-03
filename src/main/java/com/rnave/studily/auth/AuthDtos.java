@@ -8,11 +8,11 @@ import jakarta.validation.constraints.Size;
 public class AuthDtos {
 
     public record SignupRequest(
-            @Email @NotBlank String email,
+            @Email @NotBlank @Size(max = 255) String email,
             @NotBlank @Size(min = 3, max = 30) String username,
             @NotBlank @Size(min = 8, max = 100) String password,
-            @NotBlank String name,
-            String school) {
+            @NotBlank @Size(max = 255) String name,
+            @Size(max = 255) String school) {
     }
 
     public record LoginRequest(

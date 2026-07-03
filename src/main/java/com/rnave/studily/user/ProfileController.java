@@ -2,6 +2,7 @@ package com.rnave.studily.user;
 
 import com.rnave.studily.config.CurrentUser;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -40,11 +41,11 @@ public class ProfileController {
     }
 
     public record ProfileUpdateRequest(
-            String name,
-            String school,
-            String schoolId,
+            @Size(max = 255) String name,
+            @Size(max = 255) String school,
+            @Size(max = 255) String schoolId,
             Integer year,
-            String major,
-            String bio) {
+            @Size(max = 255) String major,
+            @Size(max = 1000) String bio) {
     }
 }

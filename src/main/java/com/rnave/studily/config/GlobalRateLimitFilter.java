@@ -6,17 +6,22 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+/**
+ * Runs after {@link JwtAuthFilter} so it can key by authenticated user id instead of just IP;
+ * {@link AuthRateLimitFilter} already covers the tighter /api/auth/** login/signup limit.
+ */
 @Component
-public class AuthRateLimitFilter extends OncePerRequestFilter {
+public class GlobalRateLimitFilter extends OncePerRequestFilter {
 
     private static final long WINDOW_MS = 60_000;
 
-    private final SlidingWindowRateLimiter limiter = new SlidingWindowRateLimiter(10, WINDOW_MS);
+    private final SlidingWindowRateLimiter limiter = new SlidingWindowRateLimiter(120, WINDOW_MS);
 
     @Override
     protected void doFilterInternal(
@@ -24,16 +29,25 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
-        if (!request.getRequestURI().startsWith("/api/auth/")) {
+        String uri = request.getRequestURI();
+        if (!uri.startsWith("/api/") || uri.startsWith("/api/auth/")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        if (!limiter.tryConsume(clientIp(request))) {
-            RateLimitResponses.reject(response, "Too many attempts, please try again in a minute.");
+        if (!limiter.tryConsume(rateLimitKey(request))) {
+            RateLimitResponses.reject(response, "Too many requests, please slow down.");
             return;
         }
         filterChain.doFilter(request, response);
+    }
+
+    private String rateLimitKey(HttpServletRequest request) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof Long userId) {
+            return "user:" + userId;
+        }
+        return "ip:" + clientIp(request);
     }
 
     private String clientIp(HttpServletRequest request) {
