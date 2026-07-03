@@ -5,7 +5,6 @@ import { Page, Section } from "./shell";
 function isStandalone() {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
-    // iOS Safari
     (navigator as unknown as { standalone?: boolean }).standalone === true
   );
 }

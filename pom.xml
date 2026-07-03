@@ -69,17 +69,12 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Deliberately NOT sentry-spring-boot-starter-jakarta: its autoconfiguration references
-             org.springframework.boot.web.client.RestClientCustomizer, which doesn't exist in
-             Spring Boot 4.1.0, and breaks context startup. Wired manually in SentryConfig instead. -->
         <dependency>
             <groupId>io.sentry</groupId>
             <artifactId>sentry-spring-jakarta</artifactId>
             <version>8.16.0</version>
         </dependency>
 
-        <!-- Applies EXIF orientation when reading images; plain ImageIO ignores it,
-             which made phone-camera avatar uploads come out sideways. -->
         <dependency>
             <groupId>net.coobird</groupId>
             <artifactId>thumbnailator</artifactId>

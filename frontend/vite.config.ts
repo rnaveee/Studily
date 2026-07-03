@@ -2,7 +2,6 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-// Dev server proxies /api to the Spring Boot backend so the browser sees a single origin.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {

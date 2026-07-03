@@ -12,10 +12,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * Runs after {@link JwtAuthFilter} so it can key by authenticated user id instead of just IP;
- * {@link AuthRateLimitFilter} already covers the tighter /api/auth/** login/signup limit.
- */
 @Component
 public class GlobalRateLimitFilter extends OncePerRequestFilter {
 
@@ -53,8 +49,6 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
     private String clientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
-            // Only the last entry is trustworthy: the edge proxy appends the real client IP,
-            // while earlier entries are client-supplied and spoofable.
             String[] hops = forwarded.split(",");
             return hops[hops.length - 1].trim();
         }

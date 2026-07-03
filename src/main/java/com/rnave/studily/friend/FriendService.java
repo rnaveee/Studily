@@ -100,7 +100,6 @@ public class FriendService {
             if (req.getRequester().getId().equals(me.getId())) {
                 throw new ConflictException("Friend request already sent");
             }
-            // They already sent us a request — accept it instead of creating a duplicate pending row.
             req.setStatus(FriendRequestStatus.ACCEPTED);
             req.setRespondedAt(Instant.now());
             return toDto(friendRequestRepository.save(req), me.getId());

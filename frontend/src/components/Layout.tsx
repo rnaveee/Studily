@@ -44,9 +44,7 @@ export default function Layout() {
   }
 
   return (
-    // h-dvh (not h-screen/100vh): on mobile Safari 100vh extends behind the browser
-    // toolbar, which pushed the pinned footer below the visible screen.
-    <div className="flex h-dvh overflow-hidden bg-bg">
+    <div className="flex h-screen overflow-hidden bg-bg" style={{ height: "100dvh" }}>
       <aside
         className="hidden md:flex w-[220px] shrink-0 flex-col"
         style={{ background: "var(--surface)", borderRight: "1px solid var(--line)" }}
@@ -146,7 +144,6 @@ export default function Layout() {
           style={{
             background: "var(--surface)",
             borderBottom: "1px solid var(--line)",
-            // Extra top padding, plus the status-bar safe area when installed as a PWA.
             paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
           }}
         >
@@ -210,7 +207,6 @@ export default function Layout() {
           style={{
             background: "var(--surface)",
             borderTop: "1px solid var(--line)",
-            // Just clear the iPhone home indicator; no extra padding.
             paddingBottom: "env(safe-area-inset-bottom, 0px)",
           }}
         >

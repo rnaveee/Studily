@@ -42,7 +42,6 @@ export default function App() {
         <Route path="/profile/edit" element={<ProfileEditPage />} />
         <Route path="/profile/:userId/add" element={<AddFriendPage />} />
       </Route>
-      {/* Public info pages: same Layout, no auth required (signup links to terms/privacy). */}
       <Route element={<Layout />}>
         <Route path="/about"   element={<AboutPage />} />
         <Route path="/terms"   element={<TermsPage />} />

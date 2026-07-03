@@ -46,8 +46,6 @@ public class AvatarService {
 
         BufferedImage original;
         try {
-            // Thumbnailator honors the EXIF orientation tag, so phone photos
-            // shot in portrait don't come out sideways after re-encoding.
             original = Thumbnails.of(file.getInputStream()).scale(1.0).asBufferedImage();
         } catch (IOException | IllegalArgumentException e) {
             throw new IllegalArgumentException("Could not read image");
