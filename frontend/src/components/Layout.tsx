@@ -44,7 +44,9 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-bg">
+    {/* h-dvh (not h-screen/100vh): on mobile Safari 100vh extends behind the browser
+        toolbar, which pushed the pinned footer below the visible screen. */}
+    <div className="flex h-dvh overflow-hidden bg-bg">
       <aside
         className="hidden md:flex w-[220px] shrink-0 flex-col"
         style={{ background: "var(--surface)", borderRight: "1px solid var(--line)" }}
@@ -138,8 +140,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      {/* Single scroll container: header, banners, content, and footer all flow together. */}
-      <div className="flex flex-1 flex-col overflow-y-auto">
+      <div className="flex flex-1 flex-col overflow-hidden">
         <header
           className="flex items-center justify-between px-4 pb-2.5 md:hidden"
           style={{
@@ -198,7 +199,7 @@ export default function Layout() {
 
         <Banners />
 
-        <main className="flex-1">
+        <main className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-5xl px-4 pt-6 pb-16 md:px-10 md:pt-8 md:pb-20">
             <Outlet />
           </div>
