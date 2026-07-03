@@ -71,6 +71,15 @@ export default function SupportPage() {
               >
                 {SUPPORT_EMAIL}
               </a>
+              , or message me on Instagram:{" "}
+              <a
+                href="https://www.instagram.com/rnave9"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent transition-colors hover:text-accent-2"
+              >
+                @rnave9
+              </a>
             </p>
           </div>
         </form>

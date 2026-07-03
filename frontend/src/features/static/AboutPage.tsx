@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Page, Section } from "./shell";
 
 const FEATURES = [
@@ -15,14 +16,20 @@ export default function AboutPage() {
     <Page title="About" intro="What Studily is and who builds it.">
       <Section title="What is Studily?">
         <p>
-          Studily is an academic planner for students. It puts your class schedule, assignments,
-          exams, notes, and deadlines in one place, so you always know what's coming up and what
-          to work on next.
+          Studily is an academic planner for students. Enter your class schedule once, and Studily
+          turns it into a weekly schedule for you. Add your assignments and exams too, and they'll
+          show up on your dashboard as their due dates approach!
         </p>
         <p>
-          It's intended for personal academic organization — plan your semester, track your
-          coursework, and connect with classmates at your school. It's not a replacement for your
-          school's official systems; always double-check important dates against your syllabus.
+          You can also connect with others at your school — set up your{" "}
+          <Link to="/profile" className="text-accent transition-colors hover:text-accent-2">
+            profile
+          </Link>{" "}
+          to add friends and see who else from your school is using the app (see{" "}
+          <Link to="/friends/schoolmates" className="text-accent transition-colors hover:text-accent-2">
+            schoolmates
+          </Link>{" "}
+          for more).
         </p>
       </Section>
 
@@ -50,10 +57,23 @@ export default function AboutPage() {
           <div className="space-y-2">
             <p className="text-[15px] font-semibold text-fg">Ryan Nave</p>
             <p>
-              Hi, I'm Ryan — a student and developer building Studily to be the planner I always
-              wished I had. I'm working on it solo, so every bug report and piece of feedback
-              genuinely helps shape what gets built next.
+              Hello, I'm Ryan — a student and developer studying Computer Science at SFU. I currently
+              am pursuing a career in software development, so any feedback helps a lot!
             </p>
+            <p className="text-[15px] font-semibold text-fg">Why I made Studily</p>
+            <p>
+              Have you ever used Notion? or Google Calendar? I used to use them to manage my school,
+              and it was kind of messy... (no hate to those apps!)
+            </p>
+            <p>Manually inputting classes, switching between those apps, creating my OWN dashboard, I was very
+              demotivated to organize my classes because of those things. So as a student and app developer, I
+              created my own!
+            </p>
+            <p>
+              I aimed to bundle up those everyday apps people use for their classes and simplify
+              the process! The best part, <strong>It's completely free!</strong>
+            </p>
+
             <p>
               Want to say hi or report something?{" "}
               <a
@@ -61,6 +81,11 @@ export default function AboutPage() {
                 className="text-accent transition-colors hover:text-accent-2"
               >
                 ryannave97@gmail.com
+              </a>
+              {" "}or try my instagram!{" "}
+              <a href={"https://www.instagram.com/rnave9"}
+                 className="text-accent transition-colors hover:text-accent-2">
+                @rnave9
               </a>
             </p>
           </div>

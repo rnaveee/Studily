@@ -140,8 +140,13 @@ export default function Layout() {
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <header
-          className="flex items-center justify-between px-4 py-2.5 md:hidden"
-          style={{ background: "var(--surface)", borderBottom: "1px solid var(--line)" }}
+          className="flex items-center justify-between px-4 pb-2.5 md:hidden"
+          style={{
+            background: "var(--surface)",
+            borderBottom: "1px solid var(--line)",
+            // Extra top padding, plus the status-bar safe area when installed as a PWA.
+            paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
+          }}
         >
           <div className="flex items-center gap-2">
             <img src="/studily-3a.svg" alt="" className="h-6 w-6" />
@@ -241,7 +246,7 @@ export default function Layout() {
                 </Link>
               ))}
             </div>
-            <div className="mt-0.5 text-[10px] text-fg-3">
+            <div className="mt-2 text-[10px] text-fg-3">
               © {new Date().getFullYear()} Ryan Nave
             </div>
           </div>
