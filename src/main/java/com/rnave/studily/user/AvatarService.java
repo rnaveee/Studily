@@ -2,6 +2,7 @@ package com.rnave.studily.user;
 
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
+import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -45,11 +46,10 @@ public class AvatarService {
 
         BufferedImage original;
         try {
-            original = ImageIO.read(file.getInputStream());
-        } catch (IOException e) {
-            throw new IllegalArgumentException("Could not read image");
-        }
-        if (original == null) {
+            // Thumbnailator honors the EXIF orientation tag, so phone photos
+            // shot in portrait don't come out sideways after re-encoding.
+            original = Thumbnails.of(file.getInputStream()).scale(1.0).asBufferedImage();
+        } catch (IOException | IllegalArgumentException e) {
             throw new IllegalArgumentException("Could not read image");
         }
 

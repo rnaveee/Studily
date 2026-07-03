@@ -138,7 +138,8 @@ export default function Layout() {
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      {/* Single scroll container: header, banners, content, and footer all flow together. */}
+      <div className="flex flex-1 flex-col overflow-y-auto">
         <header
           className="flex items-center justify-between px-4 pb-2.5 md:hidden"
           style={{
@@ -197,7 +198,7 @@ export default function Layout() {
 
         <Banners />
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1">
           <div className="mx-auto max-w-5xl px-4 pt-6 pb-16 md:px-10 md:pt-8 md:pb-20">
             <Outlet />
           </div>
@@ -208,8 +209,8 @@ export default function Layout() {
           style={{
             background: "var(--surface)",
             borderTop: "1px solid var(--line)",
-            // Raise the footer above the iPhone home indicator (and give a little air elsewhere).
-            paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+            // Just clear the iPhone home indicator; no extra padding.
+            paddingBottom: "env(safe-area-inset-bottom, 0px)",
           }}
         >
           <nav className="grid grid-cols-6">
