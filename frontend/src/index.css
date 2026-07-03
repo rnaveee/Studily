@@ -112,6 +112,11 @@ body {
   outline: none;
   appearance: none;
 }
+/* iOS Safari auto-zooms into focused fields with font-size < 16px; matching the
+   md breakpoint keeps the compact 13px inputs on desktop. */
+@media (max-width: 767px) {
+  .input { font-size: 16px; }
+}
 .input::placeholder { color: var(--fg-3); }
 .input:focus {
   border-color: var(--accent);
