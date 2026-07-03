@@ -78,6 +78,18 @@ export default function SignupPage() {
             <button type="submit" disabled={busy} className="btn btn-primary w-full mt-1">
               {busy ? "Creating account…" : "Create account"}
             </button>
+
+            <p className="text-center text-[11px] leading-relaxed text-fg-3">
+              By signing up, you agree to the{" "}
+              <Link to="/terms" className="text-accent hover:text-accent-2 transition-colors">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link to="/privacy" className="text-accent hover:text-accent-2 transition-colors">
+                Privacy Policy
+              </Link>
+              .
+            </p>
           </form>
         </div>
 

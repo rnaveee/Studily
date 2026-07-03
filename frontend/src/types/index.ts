@@ -134,10 +134,20 @@ export interface PublicUser {
   avatarUrl?: string | null;
 }
 
-export interface ClassmateSuggestion {
+export type RelationshipStatus = "SELF" | "NONE" | "FRIENDS" | "OUTGOING_PENDING" | "INCOMING_PENDING";
+
+export interface FriendRequestItem {
+  id: number;
   user: PublicUser;
-  sharedCourseCode: string;
-  sharedCourseName: string;
+  status: "PENDING" | "ACCEPTED";
+  createdAt: string;
+  respondedAt?: string | null;
+}
+
+export interface Relationship {
+  user: PublicUser;
+  status: RelationshipStatus;
+  requestId?: number | null;
 }
 
 export type NotificationType = "DEADLINE_REMINDER";

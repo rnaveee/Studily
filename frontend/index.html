@@ -2,20 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Studily</title>
     <link rel="icon" type="image/svg+xml" href="/studily-3a.svg" />
     <link rel="icon" type="image/png" sizes="512x512" href="/studily-3a-512.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/studily-3a-180.png" />
-    <script>
-      (function () {
-        const stored = localStorage.getItem("studily.theme");
-        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        if (stored === "dark" || (!stored && prefersDark)) {
-          document.documentElement.classList.add("dark");
-        }
-      })();
-    </script>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Studily" />
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>

@@ -91,32 +91,21 @@ export default function CourseDetailPage() {
         />
       ) : (
         <div className="card p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <span
-                  className="h-3 w-3 shrink-0 rounded-full"
-                  style={{ backgroundColor: course.color ?? "var(--accent)" }}
-                />
-                <h1 className="min-w-0 truncate text-xl font-semibold text-fg">{course.name}</h1>
-                {course.code && (
-                  <span className="shrink-0 rounded bg-surface-hi px-1.5 py-0.5 text-[11px] font-mono text-fg-3">
-                    {course.code}
-                  </span>
-                )}
-              </div>
-              {course.professor && (
-                <p className="mt-1 text-[13px] text-fg-2">{course.professor}</p>
-              )}
-              {course.meetingBlocks.length > 0 && (
-                <p className="mt-1.5 text-[12px] text-fg-3">
-                  {course.meetingBlocks
-                    .map((b) => `${b.dayOfWeek} ${hhmm(b.startTime)}–${hhmm(b.endTime)}`)
-                    .join("  ·  ")}
-                </p>
-              )}
-            </div>
-            <div className="flex shrink-0 gap-1.5">
+          <div className="flex items-start gap-2.5">
+            <span
+              className="mt-2 h-3 w-3 shrink-0 rounded-full"
+              style={{ backgroundColor: course.color ?? "var(--accent)" }}
+            />
+            <h1 className="min-w-0 break-words text-xl font-semibold text-fg">{course.name}</h1>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {course.code && (
+              <span className="rounded bg-surface-hi px-1.5 py-0.5 text-[11px] font-mono text-fg-3">
+                {course.code}
+              </span>
+            )}
+            <div className="ml-auto flex shrink-0 gap-1.5">
               <button onClick={() => setEditing(true)} className="btn btn-ghost">
                 <Edit2 size={13} />
                 Edit
@@ -138,6 +127,17 @@ export default function CourseDetailPage() {
               </button>
             </div>
           </div>
+
+          {course.professor && (
+            <p className="mt-2 text-[13px] text-fg-2">{course.professor}</p>
+          )}
+          {course.meetingBlocks.length > 0 && (
+            <p className="mt-1.5 text-[12px] text-fg-3">
+              {course.meetingBlocks
+                .map((b) => `${b.dayOfWeek} ${hhmm(b.startTime)}–${hhmm(b.endTime)}`)
+                .join("  ·  ")}
+            </p>
+          )}
         </div>
       )}
 

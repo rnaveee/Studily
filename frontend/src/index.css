@@ -54,6 +54,9 @@
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 
+/* Match the app background on <html> so iOS rubber-band overscroll never flashes white. */
+html { background: var(--bg); }
+
 body {
   background: var(--bg);
   color: var(--fg);

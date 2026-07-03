@@ -11,6 +11,19 @@ import { ConfirmProvider } from "./lib/confirm";
 import App from "./App";
 import "./index.css";
 
+// PWA: register the service worker (production only — it would fight Vite's dev server)
+// and stash Chrome's install prompt so the /install page can trigger it on demand.
+if ("serviceWorker" in navigator && import.meta.env.PROD) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  (window as unknown as { deferredInstallPrompt?: Event }).deferredInstallPrompt = e;
+  window.dispatchEvent(new Event("studily:install-ready"));
+});
+
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
 Sentry.init({
   dsn: sentryDsn,

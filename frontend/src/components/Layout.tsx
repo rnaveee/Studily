@@ -9,17 +9,19 @@ import {
   Sun,
   Moon,
   LogOut,
+  LogIn,
 } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
 import Avatar from "./Avatar";
+import Banners from "./Banners";
 
 const NAV = [
   { to: "/",           label: "Dashboard",  icon: LayoutDashboard, end: true },
   { to: "/calendar",   label: "Calendar",   icon: CalendarDays },
   { to: "/courses",    label: "Courses",    icon: BookOpen },
   { to: "/semesters",  label: "Semesters",  icon: GraduationCap },
-  { to: "/classmates", label: "Classmates", icon: Users2 },
+  { to: "/friends",    label: "Friends",    icon: Users2 },
   { to: "/profile",    label: "Profile",    icon: User },
 ];
 
@@ -52,7 +54,7 @@ export default function Layout() {
             <img src="/studily-3a.svg" alt="" className="h-6 w-6" />
             <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
           </div>
-          <div className="text-[10px] text-fg-3">by ryan nave</div>
+          <div className="text-[10px] text-fg-3">by Ryan Nave</div>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
@@ -81,16 +83,21 @@ export default function Layout() {
           ))}
         </nav>
 
-        <div className="flex flex-wrap gap-x-3 gap-y-1 px-5 pb-3">
-          {SUB_LINKS.map(({ label, to }) => (
-            <Link
-              key={to}
-              to={to}
-              className="text-[11px] text-fg-3 transition-colors hover:text-fg"
-            >
-              {label}
-            </Link>
-          ))}
+        <div className="px-5 pb-3">
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {SUB_LINKS.map(({ label, to }) => (
+              <Link
+                key={to}
+                to={to}
+                className="text-[11px] text-fg-3 transition-colors hover:text-fg"
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+          <div className="mt-1.5 text-[10px] text-fg-3">
+            © {new Date().getFullYear()} Ryan Nave
+          </div>
         </div>
 
         <div className="p-2 space-y-0.5" style={{ borderTop: "1px solid var(--line)" }}>
@@ -104,13 +111,23 @@ export default function Layout() {
             {dark ? "Light mode" : "Dark mode"}
           </button>
 
-          <button
-            onClick={handleLogout}
-            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-fg-2 transition-all duration-150 hover:bg-surface-hi hover:text-fg"
-          >
-            <LogOut size={15} strokeWidth={1.8} />
-            Sign out
-          </button>
+          {user ? (
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-fg-2 transition-all duration-150 hover:bg-surface-hi hover:text-fg"
+            >
+              <LogOut size={15} strokeWidth={1.8} />
+              Sign out
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-fg-2 transition-all duration-150 hover:bg-surface-hi hover:text-fg"
+            >
+              <LogIn size={15} strokeWidth={1.8} />
+              Log in
+            </Link>
+          )}
 
           {user && (
             <div className="flex items-center gap-2.5 px-3 py-2.5 mt-0.5">
@@ -143,33 +160,52 @@ export default function Layout() {
               {dark ? <Sun size={16} strokeWidth={1.8} /> : <Moon size={16} strokeWidth={1.8} />}
             </button>
 
-            <NavLink
-              to="/profile"
-              className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] text-fg-2 transition-colors hover:bg-surface-hi"
-            >
-              <Avatar name={user?.name} username={user?.username} avatarUrl={user?.avatarUrl} size={20} className="text-[10px]" />
-              <span className="max-w-[80px] truncate">@{user?.username}</span>
-            </NavLink>
+            {user ? (
+              <>
+                <NavLink
+                  to="/profile"
+                  className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] text-fg-2 transition-colors hover:bg-surface-hi"
+                >
+                  <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} size={20} className="text-[10px]" />
+                  <span className="max-w-[80px] truncate">@{user.username}</span>
+                </NavLink>
 
-            <button
-              onClick={handleLogout}
-              className="rounded-lg p-2 text-fg-2 transition-colors hover:bg-surface-hi"
-              aria-label="Sign out"
-            >
-              <LogOut size={16} strokeWidth={1.8} />
-            </button>
+                <button
+                  onClick={handleLogout}
+                  className="rounded-lg p-2 text-fg-2 transition-colors hover:bg-surface-hi"
+                  aria-label="Sign out"
+                >
+                  <LogOut size={16} strokeWidth={1.8} />
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] text-fg-2 transition-colors hover:bg-surface-hi"
+              >
+                <LogIn size={16} strokeWidth={1.8} />
+                Log in
+              </Link>
+            )}
           </div>
         </header>
 
+        <Banners />
+
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-5xl px-4 py-6 md:px-10 md:py-8">
+          <div className="mx-auto max-w-5xl px-4 pt-6 pb-16 md:px-10 md:pt-8 md:pb-20">
             <Outlet />
           </div>
         </main>
 
         <footer
           className="md:hidden"
-          style={{ background: "var(--surface)", borderTop: "1px solid var(--line)" }}
+          style={{
+            background: "var(--surface)",
+            borderTop: "1px solid var(--line)",
+            // Raise the footer above the iPhone home indicator (and give a little air elsewhere).
+            paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+          }}
         >
           <nav className="grid grid-cols-6">
             {NAV.map(({ to, label, icon: Icon, end }) => (
@@ -191,18 +227,23 @@ export default function Layout() {
           </nav>
 
           <div
-            className="flex items-center justify-center gap-4 px-4 py-2"
+            className="px-4 py-2 text-center"
             style={{ borderTop: "1px solid var(--line)" }}
           >
-            {SUB_LINKS.map(({ label, to }) => (
-              <Link
-                key={to}
-                to={to}
-                className="text-[11px] text-fg-3 transition-colors hover:text-fg"
-              >
-                {label}
-              </Link>
-            ))}
+            <div className="flex items-center justify-center gap-4">
+              {SUB_LINKS.map(({ label, to }) => (
+                <Link
+                  key={to}
+                  to={to}
+                  className="text-[11px] text-fg-3 transition-colors hover:text-fg"
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+            <div className="mt-0.5 text-[10px] text-fg-3">
+              © {new Date().getFullYear()} Ryan Nave
+            </div>
           </div>
         </footer>
       </div>

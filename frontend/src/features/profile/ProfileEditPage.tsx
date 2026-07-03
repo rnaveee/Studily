@@ -34,7 +34,7 @@ export default function ProfileEditPage() {
       }),
     onSuccess: (updated) => {
       setUser(updated);
-      queryClient.invalidateQueries({ queryKey: ["classmates"] });
+      queryClient.invalidateQueries({ queryKey: ["schoolmates"] });
       setSaved(true);
       setTimeout(() => navigate("/profile"), 800);
     },
@@ -48,7 +48,7 @@ export default function ProfileEditPage() {
     },
     onSuccess: (updated) => {
       setUser(updated);
-      queryClient.invalidateQueries({ queryKey: ["classmates"] });
+      queryClient.invalidateQueries({ queryKey: ["schoolmates"] });
     },
   });
 
@@ -56,7 +56,7 @@ export default function ProfileEditPage() {
     mutationFn: () => api.del<User>("/me/avatar"),
     onSuccess: (updated) => {
       setUser(updated);
-      queryClient.invalidateQueries({ queryKey: ["classmates"] });
+      queryClient.invalidateQueries({ queryKey: ["schoolmates"] });
     },
   });
 
