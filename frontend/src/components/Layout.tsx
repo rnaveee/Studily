@@ -44,8 +44,8 @@ export default function Layout() {
   }
 
   return (
-    {/* h-dvh (not h-screen/100vh): on mobile Safari 100vh extends behind the browser
-        toolbar, which pushed the pinned footer below the visible screen. */}
+    // h-dvh (not h-screen/100vh): on mobile Safari 100vh extends behind the browser
+    // toolbar, which pushed the pinned footer below the visible screen.
     <div className="flex h-dvh overflow-hidden bg-bg">
       <aside
         className="hidden md:flex w-[220px] shrink-0 flex-col"
