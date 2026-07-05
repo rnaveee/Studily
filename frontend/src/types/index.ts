@@ -150,6 +150,46 @@ export interface Relationship {
   requestId?: number | null;
 }
 
+export interface Flashcard {
+  id?: number;
+  front: string;
+  back: string;
+}
+
+export interface FlashcardSet {
+  id: number;
+  courseId?: number | null;
+  title: string;
+  createdAt: string;
+  cards: Flashcard[];
+}
+
+export interface FlashcardSetRequest {
+  title: string;
+  courseId?: number | null;
+  cards: Flashcard[];
+}
+
+export type ConversationType = "DIRECT" | "GROUP";
+
+export interface Conversation {
+  id: number;
+  type: ConversationType;
+  name?: string | null;
+  members: PublicUser[];
+  lastMessage?: string | null;
+  lastMessageAt?: string | null;
+  unread: boolean;
+}
+
+export interface Message {
+  id: number;
+  conversationId: number;
+  sender: PublicUser;
+  body: string;
+  createdAt: string;
+}
+
 export type NotificationType = "DEADLINE_REMINDER";
 
 export interface Notification {

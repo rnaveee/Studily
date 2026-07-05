@@ -1,8 +1,9 @@
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard,
-  CalendarDays,
-  BookOpen,
+  MessageSquare,
+  Brain,
   GraduationCap,
   Users2,
   User,
@@ -11,15 +12,17 @@ import {
   LogOut,
   LogIn,
 } from "lucide-react";
+import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
 import Avatar from "./Avatar";
 import Banners from "./Banners";
+import type { Conversation, FriendRequestItem } from "../types";
 
 const NAV = [
   { to: "/",           label: "Dashboard",  icon: LayoutDashboard, end: true },
-  { to: "/calendar",   label: "Calendar",   icon: CalendarDays },
-  { to: "/courses",    label: "Courses",    icon: BookOpen },
+  { to: "/messages",   label: "Messages",   icon: MessageSquare },
+  { to: "/learn",      label: "Learn",      icon: Brain },
   { to: "/semesters",  label: "Semesters",  icon: GraduationCap },
   { to: "/friends",    label: "Friends",    icon: Users2 },
   { to: "/profile",    label: "Profile",    icon: User },
@@ -37,6 +40,25 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const { dark, toggle } = useTheme();
   const navigate = useNavigate();
+
+  const conversations = useQuery({
+    queryKey: ["conversations", "list"],
+    queryFn: () => api.get<Conversation[]>("/conversations"),
+    enabled: !!user,
+    refetchInterval: 15000,
+  });
+
+  const incomingRequests = useQuery({
+    queryKey: ["friends", "incoming"],
+    queryFn: () => api.get<FriendRequestItem[]>("/friends/incoming"),
+    enabled: !!user,
+    refetchInterval: 15000,
+  });
+
+  const NAV_DOTS: Record<string, boolean> = {
+    "/messages": conversations.data?.some((c) => c.unread) ?? false,
+    "/friends": (incomingRequests.data?.length ?? 0) > 0,
+  };
 
   function handleLogout() {
     logout();
@@ -77,7 +99,12 @@ export default function Layout() {
                   : {}
               }
             >
-              <Icon size={15} strokeWidth={1.8} />
+              <span className="relative inline-flex">
+                <Icon size={15} strokeWidth={1.8} />
+                {NAV_DOTS[to] && (
+                  <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-red" />
+                )}
+              </span>
               {label}
             </NavLink>
           ))}
@@ -223,7 +250,12 @@ export default function Layout() {
                   ].join(" ")
                 }
               >
-                <Icon size={20} strokeWidth={1.8} />
+                <span className="relative inline-flex">
+                  <Icon size={20} strokeWidth={1.8} />
+                  {NAV_DOTS[to] && (
+                    <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red" />
+                  )}
+                </span>
                 <span>{label}</span>
               </NavLink>
             ))}

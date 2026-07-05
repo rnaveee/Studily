@@ -18,6 +18,12 @@ import FriendsPage from "./features/friends/FriendsPage";
 import SchoolmatesPage from "./features/friends/SchoolmatesPage";
 import AddFriendPage from "./features/friends/AddFriendPage";
 import SemestersPage from "./features/semesters/SemestersPage";
+import MessagesPage from "./features/messages/MessagesPage";
+import ConversationPage from "./features/messages/ConversationPage";
+import LearnPage from "./features/learn/LearnPage";
+import FlashcardsPage from "./features/learn/FlashcardsPage";
+import FlashcardSetPage from "./features/learn/FlashcardSetPage";
+import AiChatPage from "./features/learn/AiChatPage";
 
 export default function App() {
   return (
@@ -35,6 +41,12 @@ export default function App() {
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/:id" element={<CourseDetailPage />} />
+        <Route path="/messages" element={<MessagesPage />} />
+        <Route path="/messages/:id" element={<ConversationPage />} />
+        <Route path="/learn" element={<LearnPage />} />
+        <Route path="/learn/flashcards" element={<FlashcardsPage />} />
+        <Route path="/learn/flashcards/:id" element={<FlashcardSetPage />} />
+        <Route path="/learn/ai" element={<AiChatPage />} />
         <Route path="/semesters" element={<SemestersPage />} />
         <Route path="/friends" element={<FriendsPage />} />
         <Route path="/friends/schoolmates" element={<SchoolmatesPage />} />

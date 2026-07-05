@@ -1,0 +1,78 @@
+import { Link } from "react-router-dom";
+import { Layers, Sparkles } from "lucide-react";
+
+const TOOLS = [
+  {
+    to: "/learn/flashcards",
+    icon: Layers,
+    title: "Flashcards",
+    description: "Create and study flashcard sets.",
+    disabled: false,
+  },
+  {
+    to: "/learn/ai",
+    icon: Sparkles,
+    title: "AI",
+    description: "Ask questions about your course materials.",
+    disabled: true,
+  },
+];
+
+export default function LearnPage() {
+  return (
+    <div className="space-y-6 animate-in">
+      <div>
+        <h1 className="text-xl font-semibold text-fg">Learn</h1>
+        <p className="mt-1 text-[13px] text-fg-3">
+          Study tools to help you master your courses.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {TOOLS.map(({ to, icon: Icon, title, description, disabled }) => {
+          const content = (
+            <>
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{
+                  background: disabled
+                    ? "var(--surface-hi)"
+                    : "color-mix(in srgb, var(--accent) 12%, transparent)",
+                }}
+              >
+                <Icon size={16} className={disabled ? "text-fg-3" : "text-accent"} />
+              </span>
+              <div className="min-w-0">
+                <div className={`text-[14px] font-medium ${disabled ? "text-fg-3" : "text-fg"}`}>
+                  {title}
+                  {disabled && (
+                    <span className="badge badge-muted ml-2 align-middle">Coming soon</span>
+                  )}
+                </div>
+                <div className="text-[12px] text-fg-3">{description}</div>
+              </div>
+            </>
+          );
+
+          return disabled ? (
+            <div
+              key={to}
+              className="card flex cursor-not-allowed items-center gap-3 p-4 opacity-60"
+              aria-disabled="true"
+            >
+              {content}
+            </div>
+          ) : (
+            <Link
+              key={to}
+              to={to}
+              className="card flex items-center gap-3 p-4 transition-colors hover:bg-surface-hi"
+            >
+              {content}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
