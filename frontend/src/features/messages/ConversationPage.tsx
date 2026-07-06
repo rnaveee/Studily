@@ -6,6 +6,7 @@ import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { queryClient } from "../../lib/queryClient";
 import Avatar from "../../components/Avatar";
+import { useDockToKeyboard } from "../../lib/keyboardDock";
 import type { Conversation, Message } from "../../types";
 
 export default function ConversationPage() {
@@ -14,6 +15,8 @@ export default function ConversationPage() {
   const { user } = useAuth();
   const [draft, setDraft] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  useDockToKeyboard(formRef);
 
   const conversation = useQuery({
     queryKey: ["conversations", convId],
@@ -167,9 +170,10 @@ export default function ConversationPage() {
         </div>
 
         <form
+          ref={formRef}
           onSubmit={handleSend}
           className="flex items-center gap-2 p-3"
-          style={{ borderTop: "1px solid var(--line)" }}
+          style={{ borderTop: "1px solid var(--line)", background: "var(--surface)" }}
         >
           <input
             className="input"
