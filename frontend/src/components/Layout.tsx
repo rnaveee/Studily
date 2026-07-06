@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -36,10 +37,29 @@ const SUB_LINKS = [
   { label: "Install", to: "/install" },
 ];
 
+// True while a text field has focus, i.e. the on-screen keyboard is (about to be) up.
+function useTypingInField() {
+  const [typing, setTyping] = useState(false);
+  useEffect(() => {
+    const isField = (el: EventTarget | null) =>
+      el instanceof HTMLElement && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
+    const onFocusIn = (e: FocusEvent) => setTyping(isField(e.target));
+    const onFocusOut = () => setTyping(false);
+    window.addEventListener("focusin", onFocusIn);
+    window.addEventListener("focusout", onFocusOut);
+    return () => {
+      window.removeEventListener("focusin", onFocusIn);
+      window.removeEventListener("focusout", onFocusOut);
+    };
+  }, []);
+  return typing;
+}
+
 export default function Layout() {
   const { user, logout } = useAuth();
   const { dark, toggle } = useTheme();
   const navigate = useNavigate();
+  const typing = useTypingInField();
 
   const conversations = useQuery({
     queryKey: ["conversations", "list"],
@@ -230,7 +250,7 @@ export default function Layout() {
         </main>
 
         <footer
-          className="md:hidden"
+          className={typing ? "hidden" : "md:hidden"}
           style={{
             background: "var(--surface)",
             borderTop: "1px solid var(--line)",
