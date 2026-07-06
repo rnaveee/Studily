@@ -2,6 +2,7 @@ package com.rnave.studily.academic;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 
@@ -36,9 +37,9 @@ public class AcademicItemDtos {
 
     public record AcademicItemRequest(
             @NotNull ItemType type,
-            @NotBlank String title,
+            @NotBlank @Size(max = 255) String title,
             @NotNull Instant dueAt,
-            String location,
+            @Size(max = 255) String location,
             Double weight,
             ItemStatus status) {
     }
