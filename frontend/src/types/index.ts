@@ -160,12 +160,14 @@ export interface FlashcardSet {
   id: number;
   courseId?: number | null;
   title: string;
+  description?: string | null;
   createdAt: string;
   cards: Flashcard[];
 }
 
 export interface FlashcardSetRequest {
   title: string;
+  description?: string | null;
   courseId?: number | null;
   cards: Flashcard[];
 }

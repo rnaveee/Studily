@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Check, X } from "lucide-react";
@@ -46,7 +47,7 @@ export default function NewGroupModal({ onClose }: { onClose: () => void }) {
 
   const canCreate = name.trim().length > 0 && selected.length > 0 && !create.isPending;
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-[90] flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.45)" }}
@@ -139,6 +140,7 @@ export default function NewGroupModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

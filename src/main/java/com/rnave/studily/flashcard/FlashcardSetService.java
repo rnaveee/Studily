@@ -71,6 +71,7 @@ public class FlashcardSetService {
 
     private void apply(FlashcardSet set, FlashcardSetRequest req) {
         set.setTitle(req.title().trim());
+        set.setDescription(trimToNull(req.description()));
 
         if (req.courseId() != null) {
             Course course = courseService.requireOwned(req.courseId());
@@ -91,5 +92,11 @@ public class FlashcardSetService {
                 set.getCards().add(card);
             }
         }
+    }
+
+    private static String trimToNull(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
     }
 }

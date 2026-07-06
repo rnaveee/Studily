@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Shuffle, X } from "lucide-react";
 import { api } from "../../lib/api";
 import { toast } from "../../lib/toast";
-import type { FlashcardSet, FlashcardSetRequest } from "../../types";
+import type { Course, FlashcardSet, FlashcardSetRequest } from "../../types";
 
 export default function FlashcardSetPage() {
   const { id } = useParams();
@@ -16,6 +16,7 @@ export default function FlashcardSetPage() {
   const [flipped, setFlipped] = useState(false);
   const [front, setFront] = useState("");
   const [back, setBack] = useState("");
+  const [order, setOrder] = useState<number[]>([]);
 
   const set = useQuery({
     queryKey: ["flashcards", "sets", setId],
@@ -23,6 +24,18 @@ export default function FlashcardSetPage() {
     enabled: Number.isFinite(setId),
     retry: false,
   });
+
+  const courses = useQuery({
+    queryKey: ["courses", null],
+    queryFn: () => api.get<Course[]>("/courses"),
+  });
+
+  useEffect(() => {
+    if (!set.data) return;
+    setOrder(set.data.cards.map((_, i) => i));
+    setIndex(0);
+    setFlipped(false);
+  }, [set.data?.id, set.data?.cards.length]);
 
   const update = useMutation({
     mutationFn: (req: FlashcardSetRequest) => api.put<FlashcardSet>(`/flashcard-sets/${setId}`, req),
@@ -51,9 +64,12 @@ export default function FlashcardSetPage() {
   }
 
   const data = set.data;
+  const course = courses.data?.find((c) => c.id === data.courseId);
+  const color = course?.color ?? "var(--accent)";
   const count = data.cards.length;
   const safeIndex = count === 0 ? 0 : Math.min(index, count - 1);
-  const card = data.cards[safeIndex];
+  const cardIndex = order[safeIndex] ?? safeIndex;
+  const card = data.cards[cardIndex];
 
   function go(delta: number) {
     if (count === 0) return;
@@ -61,11 +77,25 @@ export default function FlashcardSetPage() {
     setFlipped(false);
   }
 
+  function shuffle() {
+    if (count < 2) return;
+    const shuffled = order.slice();
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    setOrder(shuffled);
+    setIndex(0);
+    setFlipped(false);
+    toast.success("Cards shuffled");
+  }
+
   function addCard(e: React.FormEvent) {
     e.preventDefault();
     if (!front.trim() || !back.trim()) return;
     update.mutate({
       title: data.title,
+      description: data.description,
       courseId: data.courseId,
       cards: [...data.cards, { front: front.trim(), back: back.trim() }],
     });
@@ -73,11 +103,12 @@ export default function FlashcardSetPage() {
     setBack("");
   }
 
-  function deleteCard(cardIndex: number) {
+  function deleteCard(actualIndex: number) {
     update.mutate({
       title: data.title,
+      description: data.description,
       courseId: data.courseId,
-      cards: data.cards.filter((_, i) => i !== cardIndex),
+      cards: data.cards.filter((_, i) => i !== actualIndex),
     });
     setFlipped(false);
   }
@@ -92,12 +123,22 @@ export default function FlashcardSetPage() {
         >
           <ArrowLeft size={16} />
         </button>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold text-fg">{data.title}</h1>
           <p className="mt-1 text-[13px] text-fg-3">
             {count} {count === 1 ? "card" : "cards"}
+            {data.description && ` · ${data.description}`}
           </p>
         </div>
+        <button
+          onClick={shuffle}
+          disabled={count < 2}
+          className="btn btn-ghost shrink-0"
+          aria-label="Shuffle cards"
+        >
+          <Shuffle size={13} />
+          Shuffle
+        </button>
       </div>
 
       {card ? (
@@ -105,6 +146,7 @@ export default function FlashcardSetPage() {
           <button
             onClick={() => setFlipped((f) => !f)}
             className="card flex min-h-48 w-full items-center justify-center p-8 text-center transition-colors hover:bg-surface-hi"
+            style={{ borderLeft: `4px solid ${color}` }}
           >
             <div>
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-fg-3">
@@ -123,7 +165,7 @@ export default function FlashcardSetPage() {
                 {safeIndex + 1} / {count}
               </span>
               <button
-                onClick={() => deleteCard(safeIndex)}
+                onClick={() => deleteCard(cardIndex)}
                 className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
                 aria-label="Delete card"
               >

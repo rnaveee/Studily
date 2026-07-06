@@ -3,30 +3,21 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Layers, Plus, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
-import type { Course, FlashcardSet, FlashcardSetRequest } from "../../types";
+import type { Course, FlashcardSet } from "../../types";
+import NewFlashcardSetModal from "./NewFlashcardSetModal";
 
 export default function FlashcardsPage() {
   const qc = useQueryClient();
-  const [newTitle, setNewTitle] = useState("");
-  const [newCourseId, setNewCourseId] = useState<number | "">("");
-
-  const courses = useQuery({
-    queryKey: ["courses", null],
-    queryFn: () => api.get<Course[]>("/courses"),
-  });
+  const [showCreate, setShowCreate] = useState(false);
 
   const sets = useQuery({
     queryKey: ["flashcards", "sets"],
     queryFn: () => api.get<FlashcardSet[]>("/flashcard-sets"),
   });
 
-  const create = useMutation({
-    mutationFn: (req: FlashcardSetRequest) => api.post<FlashcardSet>("/flashcard-sets", req),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["flashcards"] });
-      setNewTitle("");
-      setNewCourseId("");
-    },
+  const courses = useQuery({
+    queryKey: ["courses", null],
+    queryFn: () => api.get<Course[]>("/courses"),
   });
 
   const remove = useMutation({
@@ -34,57 +25,27 @@ export default function FlashcardsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["flashcards"] }),
   });
 
-  function createSet(e: React.FormEvent) {
-    e.preventDefault();
-    const title = newTitle.trim();
-    if (!title) return;
-    create.mutate({ title, courseId: newCourseId === "" ? null : newCourseId, cards: [] });
-  }
-
   return (
     <div className="space-y-6 animate-in">
-      <div className="flex items-center gap-3">
-        <Link
-          to="/learn"
-          className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-          aria-label="Back to Learn"
-        >
-          <ArrowLeft size={16} />
-        </Link>
-        <div>
-          <h1 className="text-xl font-semibold text-fg">Flashcards</h1>
-          <p className="mt-1 text-[13px] text-fg-3">Create sets and study them.</p>
-        </div>
-      </div>
-
-      <form onSubmit={createSet} className="flex flex-wrap items-center gap-2">
-        <input
-          className="input flex-1"
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          placeholder="New set title, e.g. Bio 101 midterm"
-        />
-        {courses.data && courses.data.length > 0 && (
-          <select
-            className="input w-auto"
-            value={newCourseId}
-            onChange={(e) => setNewCourseId(e.target.value ? Number(e.target.value) : "")}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Link
+            to="/learn"
+            className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+            aria-label="Back to Learn"
           >
-            <option value="">No course</option>
-            {courses.data.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        )}
-        <button
-          type="submit"
-          disabled={!newTitle.trim() || create.isPending}
-          className="btn btn-primary shrink-0"
-        >
+            <ArrowLeft size={16} />
+          </Link>
+          <div>
+            <h1 className="text-xl font-semibold text-fg">Flashcards</h1>
+            <p className="mt-1 text-[13px] text-fg-3">Create sets and study them.</p>
+          </div>
+        </div>
+        <button onClick={() => setShowCreate(true)} className="btn btn-primary">
           <Plus size={13} />
           Create
         </button>
-      </form>
+      </div>
 
       {sets.isLoading ? (
         <div className="flex items-center gap-2 text-sm text-fg-3">
@@ -95,24 +56,28 @@ export default function FlashcardsPage() {
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {sets.data.map((s) => {
             const course = courses.data?.find((c) => c.id === s.courseId);
+            const color = course?.color ?? "var(--accent)";
             return (
-              <li key={s.id} className="card flex items-center justify-between gap-3 p-4 animate-fade">
+              <li
+                key={s.id}
+                className="card flex items-center justify-between gap-3 p-4 animate-fade"
+                style={{ borderLeft: `4px solid ${color}` }}
+              >
                 <Link
                   to={`/learn/flashcards/${s.id}`}
                   className="flex min-w-0 flex-1 items-center gap-3 text-left"
                 >
                   <span
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                    style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}
+                    style={{ background: `color-mix(in srgb, ${color} 12%, transparent)` }}
                   >
-                    <Layers size={16} className="text-accent" />
+                    <Layers size={16} style={{ color }} />
                   </span>
                   <div className="min-w-0">
                     <div className="text-[14px] font-medium text-fg truncate">{s.title}</div>
-                    <div className="text-[12px] text-fg-3">
-                      {s.cards.length} {s.cards.length === 1 ? "card" : "cards"}
-                      {course && ` · ${course.name}`}
-                    </div>
+                    {s.description && (
+                      <div className="text-[12px] text-fg-3 truncate">{s.description}</div>
+                    )}
                   </div>
                 </Link>
                 <button
@@ -129,10 +94,11 @@ export default function FlashcardsPage() {
       ) : (
         <div className="card p-10 text-center">
           <Layers className="mx-auto mb-2 text-fg-3" size={28} strokeWidth={1.5} />
-          <p className="text-sm text-fg-3">No flashcard sets yet.</p>
-          <p className="mt-1 text-[12px] text-fg-3">Create your first set above.</p>
+          <p className="text-sm text-fg-3">You have no flashcards. Create one!</p>
         </div>
       )}
+
+      {showCreate && <NewFlashcardSetModal onClose={() => setShowCreate(false)} />}
     </div>
   );
 }

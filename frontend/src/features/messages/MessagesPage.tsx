@@ -116,13 +116,6 @@ export default function MessagesPage() {
         )
       ) : (
         <>
-          <div className="flex items-center justify-end">
-            <button onClick={() => setShowNewGroup(true)} className="btn btn-primary">
-              <Plus size={13} />
-              New group
-            </button>
-          </div>
-
           {groups.isLoading ? (
             <Loading />
           ) : groups.data && groups.data.length > 0 ? (
@@ -159,6 +152,13 @@ export default function MessagesPage() {
               hint="Create one with the New group button."
             />
           )}
+
+          <div className="flex justify-center">
+            <button onClick={() => setShowNewGroup(true)} className="btn btn-primary">
+              <Plus size={13} />
+              New group
+            </button>
+          </div>
         </>
       )}
 

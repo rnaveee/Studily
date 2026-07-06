@@ -105,49 +105,56 @@ export default function ConversationPage() {
       </div>
 
       <div className="card flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {messages.isLoading ? (
             <div className="flex items-center gap-2 text-sm text-fg-3">
               <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
               Loading…
             </div>
           ) : messages.data && messages.data.length > 0 ? (
-            messages.data.map((m) => {
+            messages.data.map((m, i) => {
               const mine = m.sender.id === user?.id;
+              const prev = messages.data[i - 1];
+              const next = messages.data[i + 1];
+              const isFirstInRun = !prev || prev.sender.id !== m.sender.id;
+              const isLastInRun = !next || next.sender.id !== m.sender.id;
               return (
-                <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                  <div className={`flex max-w-[80%] items-end gap-2 ${mine ? "flex-row-reverse" : ""}`}>
+                <div
+                  key={m.id}
+                  className={`flex flex-col ${isFirstInRun ? "mt-3" : "mt-0.5"} ${mine ? "items-end" : "items-start"}`}
+                >
+                  {!mine && isGroup && isFirstInRun && (
+                    <div className="mb-0.5 ml-8 text-[11px] text-fg-3">{m.sender.name}</div>
+                  )}
+                  <div className={`flex max-w-[80%] items-center gap-2 ${mine ? "flex-row-reverse" : ""}`}>
                     {!mine && (
                       <Avatar
                         name={m.sender.name}
                         username={m.sender.username}
                         avatarUrl={m.sender.avatarUrl}
                         size={26}
-                        className="text-[11px]"
+                        className="text-[11px] shrink-0"
                       />
                     )}
-                    <div>
-                      {!mine && isGroup && (
-                        <div className="mb-0.5 ml-1 text-[11px] text-fg-3">{m.sender.name}</div>
-                      )}
-                      <div
-                        className={`rounded-2xl px-3.5 py-2 text-[13px] ${
-                          mine ? "text-accent-fg" : "text-fg"
-                        }`}
-                        style={{
-                          background: mine ? "var(--accent)" : "var(--surface-hi)",
-                        }}
-                      >
-                        {m.body}
-                      </div>
-                      <div className={`mt-0.5 text-[10px] text-fg-3 ${mine ? "text-right mr-1" : "ml-1"}`}>
-                        {new Date(m.createdAt).toLocaleTimeString([], {
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </div>
+                    <div
+                      className={`rounded-2xl px-3.5 py-2 text-[13px] ${
+                        mine ? "text-accent-fg" : "text-fg"
+                      }`}
+                      style={{
+                        background: mine ? "var(--accent)" : "var(--surface-hi)",
+                      }}
+                    >
+                      {m.body}
                     </div>
                   </div>
+                  {isLastInRun && (
+                    <div className={`mt-0.5 text-[10px] text-fg-3 ${mine ? "mr-1" : "ml-8"}`}>
+                      {new Date(m.createdAt).toLocaleTimeString([], {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })

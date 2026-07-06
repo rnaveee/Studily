@@ -22,6 +22,7 @@ public class FlashcardDtos {
             Long id,
             Long courseId,
             String title,
+            String description,
             Instant createdAt,
             List<FlashcardDto> cards) {
 
@@ -30,6 +31,7 @@ public class FlashcardDtos {
                     s.getId(),
                     s.getCourse() != null ? s.getCourse().getId() : null,
                     s.getTitle(),
+                    s.getDescription(),
                     s.getCreatedAt(),
                     s.getCards().stream().map(FlashcardDto::from).toList());
         }
@@ -37,6 +39,7 @@ public class FlashcardDtos {
 
     public record FlashcardSetRequest(
             @NotBlank String title,
+            String description,
             Long courseId,
             @Valid List<FlashcardDto> cards) {
     }

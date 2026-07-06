@@ -42,6 +42,9 @@ public class FlashcardSet {
     @Column(nullable = false)
     private String title;
 
+    @Column(columnDefinition = "text")
+    private String description;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
