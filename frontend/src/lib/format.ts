@@ -19,12 +19,13 @@ export function formatDate(iso: string): string {
   });
 }
 
-export function formatMonthDay(dateStr: string): string {
-  const [year, month, day] = dateStr.split("-").map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
-    month: "long",
-    day: "numeric",
-  });
+export const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+export function formatMonth(dateStr: string): string {
+  return MONTHS[Number(dateStr.split("-")[1]) - 1] ?? "";
 }
 
 export function countdown(iso: string): string {

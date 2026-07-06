@@ -4,7 +4,7 @@ import { Edit2, Plus, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
 import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
-import { formatMonthDay } from "../../lib/format";
+import { MONTHS, formatMonth } from "../../lib/format";
 import type { Semester, SemesterRequest, SemesterTerm } from "../../types";
 
 const TERMS: SemesterTerm[] = ["FALL", "SPRING", "SUMMER", "WINTER"];
@@ -131,7 +131,7 @@ function SemesterRow({ semester, onDelete }: { semester: Semester; onDelete: () 
       <div>
         <div className="font-medium text-fg">{semester.label}</div>
         <div className="text-[13px] text-fg-3">
-          {formatMonthDay(semester.startDate)} – {formatMonthDay(semester.endDate)}
+          {formatMonth(semester.startDate)} – {formatMonth(semester.endDate)}
         </div>
       </div>
       <div className="flex gap-1.5">
@@ -148,6 +148,19 @@ function SemesterRow({ semester, onDelete }: { semester: Semester; onDelete: () 
   );
 }
 
+function monthOf(dateStr?: string): string {
+  return dateStr ? String(Number(dateStr.split("-")[1])) : "";
+}
+
+function firstOfMonth(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-01`;
+}
+
+function lastOfMonth(year: number, month: number): string {
+  const day = new Date(year, month, 0).getDate();
+  return `${year}-${String(month).padStart(2, "0")}-${day}`;
+}
+
 function SemesterForm({
   initial,
   onSubmit,
@@ -162,15 +175,23 @@ function SemesterForm({
   const currentYear = new Date().getFullYear();
   const [term, setTerm] = useState<SemesterTerm>(initial?.term ?? "FALL");
   const [year, setYear] = useState(initial?.year?.toString() ?? String(currentYear));
-  const [startDate, setStartDate] = useState(initial?.startDate ?? "");
-  const [endDate, setEndDate] = useState(initial?.endDate ?? "");
+  const [startMonth, setStartMonth] = useState(monthOf(initial?.startDate));
+  const [endMonth, setEndMonth] = useState(monthOf(initial?.endDate));
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     try {
-      await onSubmit({ term, year: Number(year), startDate: startDate || null, endDate: endDate || null });
+      const y = Number(year);
+      // A semester ending in an earlier month than it starts spans the year boundary.
+      const endYear = startMonth && endMonth && Number(endMonth) < Number(startMonth) ? y + 1 : y;
+      await onSubmit({
+        term,
+        year: y,
+        startDate: startMonth ? firstOfMonth(y, Number(startMonth)) : null,
+        endDate: endMonth ? lastOfMonth(endYear, Number(endMonth)) : null,
+      });
     } finally {
       setBusy(false);
     }
@@ -201,18 +222,28 @@ function SemesterForm({
         </div>
         <div>
           <label className="field-label">
-            Start date <span className="normal-case font-normal text-fg-3">(optional)</span>
+            Start month <span className="normal-case font-normal text-fg-3">(optional)</span>
           </label>
-          <input className="input" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          <select className="input w-auto" value={startMonth} onChange={(e) => setStartMonth(e.target.value)}>
+            <option value="">Default</option>
+            {MONTHS.map((m, i) => (
+              <option key={m} value={i + 1}>{m}</option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="field-label">
-            End date <span className="normal-case font-normal text-fg-3">(optional)</span>
+            End month <span className="normal-case font-normal text-fg-3">(optional)</span>
           </label>
-          <input className="input" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          <select className="input w-auto" value={endMonth} onChange={(e) => setEndMonth(e.target.value)}>
+            <option value="">Default</option>
+            {MONTHS.map((m, i) => (
+              <option key={m} value={i + 1}>{m}</option>
+            ))}
+          </select>
         </div>
       </div>
-      <p className="text-[12px] text-fg-3">Leave dates blank to use defaults (e.g. Fall = Sep 1 – Dec 31).</p>
+      <p className="text-[12px] text-fg-3">Leave months on Default to use the term's usual range (e.g. Fall = September – December).</p>
       {error && <p className="text-xs text-red animate-fade">{error}</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={busy} className="btn btn-primary">
