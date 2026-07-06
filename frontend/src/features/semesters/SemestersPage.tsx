@@ -129,10 +129,10 @@ function SemesterRow({ semester, onDelete }: { semester: Semester; onDelete: () 
   return (
     <li className="flex items-center justify-between px-4 py-3">
       <div>
-        <span className="font-medium text-fg">{semester.label}</span>
-        <span className="ml-3 text-[13px] text-fg-3">
+        <div className="font-medium text-fg">{semester.label}</div>
+        <div className="text-[13px] text-fg-3">
           {formatMonthDay(semester.startDate)} – {formatMonthDay(semester.endDate)}
-        </span>
+        </div>
       </div>
       <div className="flex gap-1.5">
         <button onClick={() => setEditing(true)} className="btn btn-ghost">
