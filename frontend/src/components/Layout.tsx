@@ -245,7 +245,7 @@ export default function Layout() {
 
         <main className="flex-1 overflow-y-auto">
           <div
-            className={`mx-auto max-w-5xl px-4 pt-6 md:px-10 md:pt-8 md:pb-20 ${
+            className={`mx-auto flex h-full max-w-5xl flex-col px-4 pt-6 md:px-10 md:pt-8 md:pb-20 ${
               typing ? "pb-0" : "pb-16"
             }`}
           >
