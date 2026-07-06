@@ -244,7 +244,11 @@ export default function Layout() {
         <Banners />
 
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-5xl px-4 pt-6 pb-16 md:px-10 md:pt-8 md:pb-20">
+          <div
+            className={`mx-auto max-w-5xl px-4 pt-6 md:px-10 md:pt-8 md:pb-20 ${
+              typing ? "pb-0" : "pb-16"
+            }`}
+          >
             <Outlet />
           </div>
         </main>
