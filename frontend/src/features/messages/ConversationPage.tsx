@@ -6,7 +6,6 @@ import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { queryClient } from "../../lib/queryClient";
 import Avatar from "../../components/Avatar";
-import { usePinToBottomOnKeyboard } from "../../lib/viewport";
 import type { Conversation, Message } from "../../types";
 
 export default function ConversationPage() {
@@ -53,8 +52,6 @@ export default function ConversationPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages.data?.length]);
-
-  usePinToBottomOnKeyboard(bottomRef);
 
   const conv = conversation.data;
   const others = conv?.members.filter((m) => m.id !== user?.id) ?? [];
