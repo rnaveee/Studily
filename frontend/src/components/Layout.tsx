@@ -232,7 +232,7 @@ export default function Layout() {
         </main>
 
         <footer
-          className="md:hidden"
+          className="md:hidden kb-hide"
           style={{
             background: "var(--surface)",
             borderTop: "1px solid var(--line)",

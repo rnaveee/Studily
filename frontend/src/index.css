@@ -224,3 +224,8 @@ textarea.input { resize: vertical; }
   background: var(--line);
   margin: 0;
 }
+
+/* Hidden while the on-screen keyboard is open (see lib/viewport.ts) */
+html[data-keyboard="open"] .kb-hide {
+  display: none;
+}
