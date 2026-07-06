@@ -19,6 +19,14 @@ export function formatDate(iso: string): string {
   });
 }
 
+export function formatMonthDay(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+    month: "long",
+    day: "numeric",
+  });
+}
+
 export function countdown(iso: string): string {
   const ms = new Date(iso).getTime() - Date.now();
   if (ms <= 0) return "now";

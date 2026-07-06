@@ -4,6 +4,7 @@ import { Edit2, Plus, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
 import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
+import { formatMonthDay } from "../../lib/format";
 import type { Semester, SemesterRequest, SemesterTerm } from "../../types";
 
 const TERMS: SemesterTerm[] = ["FALL", "SPRING", "SUMMER", "WINTER"];
@@ -130,7 +131,7 @@ function SemesterRow({ semester, onDelete }: { semester: Semester; onDelete: () 
       <div>
         <span className="font-medium text-fg">{semester.label}</span>
         <span className="ml-3 text-[13px] text-fg-3">
-          {semester.startDate} – {semester.endDate}
+          {formatMonthDay(semester.startDate)} – {formatMonthDay(semester.endDate)}
         </span>
       </div>
       <div className="flex gap-1.5">

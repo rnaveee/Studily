@@ -67,7 +67,6 @@ export default function MessagesPage() {
         ]}
         value={tab}
         onChange={setTab}
-        className="max-w-xs"
       />
 
       {tab === "messages" ? (
