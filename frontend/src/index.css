@@ -53,6 +53,9 @@
 /* ── Base ───────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; }
+/* The app shell manages its own scrolling; the document itself must never scroll,
+   or iOS pans the whole page when the on-screen keyboard opens. */
+html, body { overflow: hidden; overscroll-behavior: none; }
 
 html { background: var(--bg); }
 
@@ -223,4 +226,9 @@ textarea.input { resize: vertical; }
   height: 1px;
   background: var(--line);
   margin: 0;
+}
+
+/* Hidden while the on-screen keyboard is open (see lib/viewport.ts) */
+html[data-keyboard="open"] .kb-hide {
+  display: none;
 }

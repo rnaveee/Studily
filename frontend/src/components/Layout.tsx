@@ -15,6 +15,7 @@ import {
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useTheme } from "../lib/theme";
+import { useVisualViewportHeight } from "../lib/viewport";
 import Avatar from "./Avatar";
 import Banners from "./Banners";
 import type { Conversation, FriendRequestItem } from "../types";
@@ -40,6 +41,7 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const { dark, toggle } = useTheme();
   const navigate = useNavigate();
+  useVisualViewportHeight();
 
   const conversations = useQuery({
     queryKey: ["conversations", "list"],
@@ -66,7 +68,13 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-bg" style={{ height: "100dvh" }}>
+    <div
+      className="flex h-screen overflow-hidden bg-bg"
+      style={{
+        height: "var(--app-height, 100dvh)",
+        transform: "translateY(var(--app-offset-top, 0px))",
+      }}
+    >
       <aside
         className="hidden md:flex w-[220px] shrink-0 flex-col"
         style={{ background: "var(--surface)", borderRight: "1px solid var(--line)" }}
@@ -224,13 +232,13 @@ export default function Layout() {
         <Banners />
 
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-5xl px-4 pt-6 pb-16 md:px-10 md:pt-8 md:pb-20">
+          <div className="mx-auto flex h-full max-w-5xl flex-col px-4 pt-6 pb-16 md:px-10 md:pt-8 md:pb-20">
             <Outlet />
           </div>
         </main>
 
         <footer
-          className="md:hidden"
+          className="md:hidden kb-hide"
           style={{
             background: "var(--surface)",
             borderTop: "1px solid var(--line)",
