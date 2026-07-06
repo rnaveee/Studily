@@ -8,18 +8,23 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Set;
 
 @Service
 public class AvatarService {
 
     private static final int MAX_DIMENSION = 480;
+    private static final int MAX_SOURCE_DIMENSION = 8000;
     private static final long MAX_UPLOAD_BYTES = 5L * 1024 * 1024;
     private static final Set<String> ALLOWED_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
 
@@ -44,9 +49,17 @@ public class AvatarService {
             throw new IllegalArgumentException("Only JPEG, PNG, or WEBP images are supported");
         }
 
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Could not read image");
+        }
+        requireSafeDimensions(bytes);
+
         BufferedImage original;
         try {
-            original = Thumbnails.of(file.getInputStream()).scale(1.0).asBufferedImage();
+            original = Thumbnails.of(new ByteArrayInputStream(bytes)).scale(1.0).asBufferedImage();
         } catch (IOException | IllegalArgumentException e) {
             throw new IllegalArgumentException("Could not read image");
         }
@@ -72,6 +85,29 @@ public class AvatarService {
         return userRepository.findById(userId)
                 .filter(u -> u.getAvatarImage() != null)
                 .orElseThrow(() -> new NotFoundException("No avatar"));
+    }
+
+    // Checks the declared dimensions from the image header before decoding: a small
+    // compressed file can otherwise decode into a multi-gigabyte BufferedImage and OOM the app.
+    private void requireSafeDimensions(byte[] bytes) {
+        try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
+            if (!readers.hasNext()) {
+                throw new IllegalArgumentException("Could not read image");
+            }
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(in);
+                if (reader.getWidth(0) > MAX_SOURCE_DIMENSION || reader.getHeight(0) > MAX_SOURCE_DIMENSION) {
+                    throw new IllegalArgumentException(
+                            "Image dimensions are too large (max " + MAX_SOURCE_DIMENSION + "px per side)");
+                }
+            } finally {
+                reader.dispose();
+            }
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Could not read image");
+        }
     }
 
     private byte[] resizeToJpeg(BufferedImage original) {

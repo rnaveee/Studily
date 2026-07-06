@@ -4,6 +4,8 @@ import com.rnave.studily.auth.AuthDtos.LoginRequest;
 import com.rnave.studily.auth.AuthDtos.SignupRequest;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.JwtService;
+import com.rnave.studily.config.LoginRateLimiter;
+import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.config.UnauthorizedException;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
@@ -25,6 +27,7 @@ class AuthServiceTest {
     private UserRepository userRepository;
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private JwtService jwtService;
+    private LoginRateLimiter loginRateLimiter;
     private AuthService authService;
 
     @BeforeEach
@@ -32,7 +35,9 @@ class AuthServiceTest {
         userRepository = mock(UserRepository.class);
         passwordEncoder = mock(org.springframework.security.crypto.password.PasswordEncoder.class);
         jwtService = mock(JwtService.class);
-        authService = new AuthService(userRepository, passwordEncoder, jwtService);
+        loginRateLimiter = mock(LoginRateLimiter.class);
+        when(loginRateLimiter.tryConsume(anyString())).thenReturn(true);
+        authService = new AuthService(userRepository, passwordEncoder, jwtService, loginRateLimiter);
     }
 
     @Test
@@ -46,7 +51,7 @@ class AuthServiceTest {
             u.setId(42L);
             return u;
         });
-        when(jwtService.generateToken(42L)).thenReturn("token-abc");
+        when(jwtService.generateToken(42L, 0)).thenReturn("token-abc");
 
         var response = authService.signup(req);
 
@@ -86,7 +91,7 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("me@example.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("correct", "hashed")).thenReturn(true);
-        when(jwtService.generateToken(7L)).thenReturn("token-xyz");
+        when(jwtService.generateToken(7L, 0)).thenReturn("token-xyz");
 
         var response = authService.login(new LoginRequest("me@example.com", "correct"));
 
@@ -99,6 +104,15 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.login(new LoginRequest("nobody@example.com", "whatever")))
                 .isInstanceOf(UnauthorizedException.class);
+    }
+
+    @Test
+    void login_rejectsWhenAccountIsThrottled() {
+        when(loginRateLimiter.tryConsume("me@example.com")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.login(new LoginRequest("me@example.com", "correct")))
+                .isInstanceOf(TooManyRequestsException.class);
+        org.mockito.Mockito.verify(userRepository, org.mockito.Mockito.never()).findByEmail(anyString());
     }
 
     @Test

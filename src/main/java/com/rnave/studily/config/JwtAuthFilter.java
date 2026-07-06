@@ -1,5 +1,6 @@
 package com.rnave.studily.config;
 
+import com.rnave.studily.user.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,9 +19,11 @@ import java.util.List;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final UserRepository userRepository;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    public JwtAuthFilter(JwtService jwtService, UserRepository userRepository) {
         this.jwtService = jwtService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -34,11 +37,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 && SecurityContextHolder.getContext().getAuthentication() == null) {
             String token = header.substring(7);
             try {
-                Long userId = jwtService.parseUserId(token);
-                var auth = new UsernamePasswordAuthenticationToken(
-                        userId, null, List.of());
-                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(auth);
+                JwtService.TokenPayload payload = jwtService.parseToken(token);
+                boolean current = userRepository.findById(payload.userId())
+                        .map(u -> u.getTokenVersion() == payload.tokenVersion())
+                        .orElse(false);
+                if (current) {
+                    var auth = new UsernamePasswordAuthenticationToken(
+                            payload.userId(), null, List.of());
+                    auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                }
             } catch (Exception ex) {
                 SecurityContextHolder.clearContext();
             }

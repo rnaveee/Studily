@@ -49,22 +49,29 @@ public class JwtService {
         }
     }
 
-    public String generateToken(Long userId) {
+    public String generateToken(Long userId, int tokenVersion) {
         Date now = new Date();
         return Jwts.builder()
                 .subject(String.valueOf(userId))
+                .claim("ver", tokenVersion)
                 .issuedAt(now)
                 .expiration(new Date(now.getTime() + expirationMs))
                 .signWith(key)
                 .compact();
     }
 
-    public Long parseUserId(String token) {
+    public TokenPayload parseToken(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(key)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-        return Long.valueOf(claims.getSubject());
+        // Tokens issued before versioning have no "ver" claim; treat them as version 0
+        // so they keep working until the user's tokenVersion is first bumped.
+        Integer version = claims.get("ver", Integer.class);
+        return new TokenPayload(Long.valueOf(claims.getSubject()), version == null ? 0 : version);
+    }
+
+    public record TokenPayload(Long userId, int tokenVersion) {
     }
 }

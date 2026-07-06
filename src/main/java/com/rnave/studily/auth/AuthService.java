@@ -5,6 +5,8 @@ import com.rnave.studily.auth.AuthDtos.LoginRequest;
 import com.rnave.studily.auth.AuthDtos.SignupRequest;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.JwtService;
+import com.rnave.studily.config.LoginRateLimiter;
+import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.config.UnauthorizedException;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserDto;
@@ -19,11 +21,14 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final LoginRateLimiter loginRateLimiter;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
+                       LoginRateLimiter loginRateLimiter) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.loginRateLimiter = loginRateLimiter;
     }
 
     @Transactional
@@ -43,17 +48,20 @@ public class AuthService {
         user.setName(req.name().trim());
         user.setSchool(req.school() == null ? null : req.school().trim());
         user = userRepository.save(user);
-        return new AuthResponse(jwtService.generateToken(user.getId()), UserDto.from(user));
+        return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user));
     }
 
     @Transactional(readOnly = true)
     public AuthResponse login(LoginRequest req) {
         String email = req.email().trim().toLowerCase();
+        if (!loginRateLimiter.tryConsume(email)) {
+            throw new TooManyRequestsException("Too many login attempts for this account, please try again later.");
+        }
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
         if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
             throw new UnauthorizedException("Invalid email or password");
         }
-        return new AuthResponse(jwtService.generateToken(user.getId()), UserDto.from(user));
+        return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user));
     }
 }

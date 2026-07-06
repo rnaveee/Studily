@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public interface MessageRepository extends JpaRepository<Message, Long> {
 
-    List<Message> findByConversationIdOrderByCreatedAtAsc(Long conversationId);
+    List<Message> findTop500ByConversationIdOrderByCreatedAtDesc(Long conversationId);
 
     Optional<Message> findTopByConversationIdOrderByCreatedAtDesc(Long conversationId);
 

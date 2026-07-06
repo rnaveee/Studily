@@ -45,6 +45,9 @@ public class User {
     @Column(nullable = false)
     private int avatarVersion = 0;
 
+    @Column(nullable = false)
+    private int tokenVersion = 0;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 }

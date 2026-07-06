@@ -55,6 +55,12 @@ class AvatarServiceTest {
     }
 
     @Test
+    void rejectsImageWithHugeDeclaredDimensions() throws IOException {
+        MockMultipartFile file = new MockMultipartFile("file", "a.png", "image/png", pngBytes(8001, 1));
+        assertThatThrownBy(() -> avatarService.upload(file)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void rejectsUnreadableImageBytes() {
         MockMultipartFile file = new MockMultipartFile("file", "a.png", "image/png", new byte[]{1, 2, 3, 4});
         assertThatThrownBy(() -> avatarService.upload(file)).isInstanceOf(IllegalArgumentException.class);

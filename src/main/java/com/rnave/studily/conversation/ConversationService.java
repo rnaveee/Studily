@@ -1,8 +1,8 @@
 package com.rnave.studily.conversation;
 
 import com.rnave.studily.config.CurrentUser;
+import com.rnave.studily.config.ForbiddenException;
 import com.rnave.studily.config.NotFoundException;
-import com.rnave.studily.config.UnauthorizedException;
 import com.rnave.studily.conversation.ConversationDtos.ConversationDto;
 import com.rnave.studily.conversation.ConversationDtos.MessageDto;
 import com.rnave.studily.friend.FriendRequestRepository;
@@ -103,13 +103,22 @@ public class ConversationService {
     public List<MessageDto> messages(Long conversationId) {
         requireMember(conversationId);
         markRead(conversationId);
-        return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId)
+        return messageRepository.findTop500ByConversationIdOrderByCreatedAtDesc(conversationId)
+                .reversed()
                 .stream().map(MessageDto::from).toList();
     }
 
     @Transactional
     public MessageDto send(Long conversationId, String body) {
         Conversation conv = requireMember(conversationId);
+        if (conv.getType() == ConversationType.DIRECT) {
+            Long me = currentUser.id();
+            conv.getMembers().stream()
+                    .map(m -> m.getUser().getId())
+                    .filter(id -> !id.equals(me))
+                    .findFirst()
+                    .ifPresent(other -> requireFriends(me, other));
+        }
         Message message = new Message();
         message.setConversation(conv);
         message.setSender(currentUser.entity());
@@ -137,7 +146,7 @@ public class ConversationService {
                 .map(f -> f.getStatus() == FriendRequestStatus.ACCEPTED)
                 .orElse(false);
         if (!friends) {
-            throw new UnauthorizedException("You can only message friends");
+            throw new ForbiddenException("You can only message friends");
         }
     }
 

@@ -2,6 +2,7 @@ package com.rnave.studily.flashcard;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 import java.util.List;
@@ -10,8 +11,8 @@ public class FlashcardDtos {
 
     public record FlashcardDto(
             Long id,
-            @NotBlank String front,
-            @NotBlank String back) {
+            @NotBlank @Size(max = 10000) String front,
+            @NotBlank @Size(max = 10000) String back) {
 
         public static FlashcardDto from(Flashcard c) {
             return new FlashcardDto(c.getId(), c.getFront(), c.getBack());
@@ -38,9 +39,9 @@ public class FlashcardDtos {
     }
 
     public record FlashcardSetRequest(
-            @NotBlank String title,
-            String description,
+            @NotBlank @Size(max = 255) String title,
+            @Size(max = 2000) String description,
             Long courseId,
-            @Valid List<FlashcardDto> cards) {
+            @Valid @Size(max = 500) List<FlashcardDto> cards) {
     }
 }

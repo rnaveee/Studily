@@ -1,6 +1,11 @@
 package com.rnave.studily.config;
 
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 import org.junit.jupiter.api.Test;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -14,12 +19,25 @@ class JwtServiceTest {
     private static final String SHORT_BUT_HMAC_VALID_SECRET = "a".repeat(40);
 
     @Test
-    void generateToken_thenParseUserId_roundTrips() {
+    void generateToken_thenParseToken_roundTrips() {
         JwtService jwtService = new JwtService(VALID_SECRET, 60_000);
 
-        String token = jwtService.generateToken(42L);
+        String token = jwtService.generateToken(42L, 3);
 
-        assertThat(jwtService.parseUserId(token)).isEqualTo(42L);
+        assertThat(jwtService.parseToken(token)).isEqualTo(new JwtService.TokenPayload(42L, 3));
+    }
+
+    @Test
+    void parseToken_treatsTokenWithoutVersionClaimAsVersionZero() {
+        JwtService jwtService = new JwtService(VALID_SECRET, 60_000);
+        String legacyToken = Jwts.builder()
+                .subject("5")
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 60_000))
+                .signWith(Keys.hmacShaKeyFor(VALID_SECRET.getBytes(StandardCharsets.UTF_8)))
+                .compact();
+
+        assertThat(jwtService.parseToken(legacyToken)).isEqualTo(new JwtService.TokenPayload(5L, 0));
     }
 
     @Test
@@ -42,20 +60,20 @@ class JwtServiceTest {
     }
 
     @Test
-    void parseUserId_rejectsTokenSignedWithADifferentSecret() {
+    void parseToken_rejectsTokenSignedWithADifferentSecret() {
         JwtService issuer = new JwtService(VALID_SECRET, 60_000);
         JwtService verifier = new JwtService("b".repeat(64), 60_000);
-        String token = issuer.generateToken(1L);
+        String token = issuer.generateToken(1L, 0);
 
-        assertThatThrownBy(() -> verifier.parseUserId(token)).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> verifier.parseToken(token)).isInstanceOf(RuntimeException.class);
     }
 
     @Test
-    void parseUserId_rejectsExpiredToken() {
+    void parseToken_rejectsExpiredToken() {
         JwtService jwtService = new JwtService(VALID_SECRET, -1_000);
 
-        String token = jwtService.generateToken(1L);
+        String token = jwtService.generateToken(1L, 0);
 
-        assertThatThrownBy(() -> jwtService.parseUserId(token)).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> jwtService.parseToken(token)).isInstanceOf(RuntimeException.class);
     }
 }

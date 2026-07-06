@@ -4,6 +4,7 @@ import com.rnave.studily.friend.FriendDtos.PublicUserDto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 import java.util.List;
@@ -44,9 +45,11 @@ public class ConversationDtos {
     public record OpenDirectRequest(@NotNull Long userId) {
     }
 
-    public record CreateGroupRequest(@NotBlank String name, @NotEmpty List<Long> memberIds) {
+    public record CreateGroupRequest(
+            @NotBlank @Size(max = 100) String name,
+            @NotEmpty @Size(max = 100) List<Long> memberIds) {
     }
 
-    public record SendMessageRequest(@NotBlank String body) {
+    public record SendMessageRequest(@NotBlank @Size(max = 5000) String body) {
     }
 }
