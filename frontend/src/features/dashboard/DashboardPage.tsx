@@ -14,6 +14,7 @@ import {
   type WeekView,
 } from "../../types";
 import ItemForm from "../../components/ItemForm";
+import { quoteOfTheDay } from "./quotes";
 
 const GRID_START = 8 * 60;
 const GRID_END   = 21 * 60;
@@ -94,16 +95,7 @@ export default function DashboardPage() {
     [courses]
   );
 
-  const { data: quote } = useQuery({
-    queryKey: ["quote"],
-    queryFn: async () => {
-      const res = await fetch("https://dummyjson.com/quotes/random");
-      if (!res.ok) throw new Error("Failed");
-      return res.json() as Promise<{ quote: string; author: string }>;
-    },
-    staleTime: 1000 * 60 * 60,
-    retry: 1,
-  });
+  const quote = quoteOfTheDay();
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayData = data?.days.find((d) => d.date === todayStr);

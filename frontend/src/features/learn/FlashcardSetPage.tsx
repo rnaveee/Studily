@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ChevronLeft, ChevronRight, Plus, Shuffle, X } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, GraduationCap, Plus, Shuffle, X } from "lucide-react";
 import { api } from "../../lib/api";
 import { toast } from "../../lib/toast";
+import StudySession from "./StudySession";
 import type { Course, FlashcardSet, FlashcardSetRequest } from "../../types";
 
 export default function FlashcardSetPage() {
@@ -17,6 +18,7 @@ export default function FlashcardSetPage() {
   const [front, setFront] = useState("");
   const [back, setBack] = useState("");
   const [order, setOrder] = useState<number[]>([]);
+  const [studying, setStudying] = useState(false);
 
   const set = useQuery({
     queryKey: ["flashcards", "sets", setId],
@@ -139,9 +141,24 @@ export default function FlashcardSetPage() {
           <Shuffle size={13} />
           Shuffle
         </button>
+        <button
+          onClick={() => setStudying(true)}
+          disabled={count === 0 || studying}
+          className="btn btn-primary shrink-0"
+        >
+          <GraduationCap size={13} />
+          Study{data.dueCount > 0 ? ` (${data.dueCount})` : ""}
+        </button>
       </div>
 
-      {card ? (
+      {studying ? (
+        <StudySession
+          setId={data.id}
+          cards={data.cards}
+          color={color}
+          onExit={() => setStudying(false)}
+        />
+      ) : card ? (
         <div className="space-y-3">
           <button
             onClick={() => setFlipped((f) => !f)}
@@ -184,6 +201,7 @@ export default function FlashcardSetPage() {
         </div>
       )}
 
+      {!studying && (
       <form onSubmit={addCard} className="card space-y-3 p-4">
         <h2 className="text-[12px] font-semibold uppercase tracking-wide text-fg-3">Add a card</h2>
         <div>
@@ -211,6 +229,7 @@ export default function FlashcardSetPage() {
           </button>
         </div>
       </form>
+      )}
     </div>
   );
 }

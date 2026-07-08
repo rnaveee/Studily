@@ -11,7 +11,11 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class FlashcardSetService {
@@ -69,6 +73,24 @@ public class FlashcardSetService {
         flashcardSetRepository.delete(requireOwned(id));
     }
 
+    @Transactional
+    public FlashcardDto review(Long setId, Long cardId, Sm2.Grade grade) {
+        FlashcardSet set = requireOwned(setId);
+        Flashcard card = set.getCards().stream()
+                .filter(c -> c.getId() != null && c.getId().equals(cardId))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Flashcard not found"));
+
+        Sm2.Result result = Sm2.review(card.getRepetitions(), card.getEaseFactor(), card.getIntervalDays(), grade);
+        Instant now = Instant.now();
+        card.setRepetitions(result.repetitions());
+        card.setEaseFactor(result.easeFactor());
+        card.setIntervalDays(result.intervalDays());
+        card.setLastReviewedAt(now);
+        card.setDueAt(now.plus(result.intervalDays(), ChronoUnit.DAYS));
+        return FlashcardDto.from(card);
+    }
+
     private void apply(FlashcardSet set, FlashcardSetRequest req) {
         set.setTitle(req.title().trim());
         set.setDescription(trimToNull(req.description()));
@@ -80,12 +102,22 @@ public class FlashcardSetService {
             set.setCourse(null);
         }
 
+        // Match incoming cards to existing ones by id so edits keep each card's
+        // SM-2 review state; only genuinely new cards start from scratch.
+        Map<Long, Flashcard> existing = new HashMap<>();
+        for (Flashcard c : set.getCards()) {
+            if (c.getId() != null) existing.put(c.getId(), c);
+        }
+
         set.getCards().clear();
         if (req.cards() != null) {
             int position = 0;
             for (FlashcardDto dto : req.cards()) {
-                Flashcard card = new Flashcard();
-                card.setSet(set);
+                Flashcard card = dto.id() != null ? existing.get(dto.id()) : null;
+                if (card == null) {
+                    card = new Flashcard();
+                    card.setSet(set);
+                }
                 card.setFront(dto.front().trim());
                 card.setBack(dto.back().trim());
                 card.setPosition(position++);

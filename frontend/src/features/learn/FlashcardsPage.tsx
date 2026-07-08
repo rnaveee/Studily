@@ -74,7 +74,20 @@ export default function FlashcardsPage() {
                     <Layers size={16} style={{ color }} />
                   </span>
                   <div className="min-w-0">
-                    <div className="text-[14px] font-medium text-fg truncate">{s.title}</div>
+                    <div className="flex items-center gap-2 text-[14px] font-medium text-fg">
+                      <span className="truncate">{s.title}</span>
+                      {s.dueCount > 0 && (
+                        <span
+                          className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                          style={{
+                            background: `color-mix(in srgb, ${color} 14%, transparent)`,
+                            color,
+                          }}
+                        >
+                          {s.dueCount} due
+                        </span>
+                      )}
+                    </div>
                     {s.description && (
                       <div className="text-[12px] text-fg-3 truncate">{s.description}</div>
                     )}

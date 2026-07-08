@@ -159,7 +159,13 @@ export interface Flashcard {
   id?: number;
   front: string;
   back: string;
+  dueAt?: string;
+  intervalDays?: number;
+  repetitions?: number;
+  easeFactor?: number;
 }
+
+export type ReviewGrade = "AGAIN" | "HARD" | "GOOD" | "EASY";
 
 export interface FlashcardSet {
   id: number;
@@ -167,6 +173,7 @@ export interface FlashcardSet {
   title: string;
   description?: string | null;
   createdAt: string;
+  dueCount: number;
   cards: Flashcard[];
 }
 

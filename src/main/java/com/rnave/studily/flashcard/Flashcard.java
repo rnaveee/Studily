@@ -12,6 +12,8 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
+
 @Entity
 @Table(name = "flashcards")
 @Getter
@@ -34,4 +36,18 @@ public class Flashcard {
 
     @Column(nullable = false)
     private int position;
+
+    @Column(nullable = false)
+    private int repetitions = 0;
+
+    @Column(nullable = false)
+    private double easeFactor = 2.5;
+
+    @Column(nullable = false)
+    private int intervalDays = 0;
+
+    @Column(nullable = false)
+    private Instant dueAt = Instant.now();
+
+    private Instant lastReviewedAt;
 }

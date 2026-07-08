@@ -1,0 +1,91 @@
+// Bundled quote-of-the-day pool: production CSP is locked to 'self', so the
+// dashboard can't call external quote APIs. One quote per calendar day.
+
+export interface Quote {
+  quote: string;
+  author: string;
+}
+
+const QUOTES: Quote[] = [
+  { quote: "The secret of getting ahead is getting started.", author: "Mark Twain" },
+  { quote: "It always seems impossible until it's done.", author: "Nelson Mandela" },
+  { quote: "Education is the most powerful weapon which you can use to change the world.", author: "Nelson Mandela" },
+  { quote: "The beautiful thing about learning is that no one can take it away from you.", author: "B.B. King" },
+  { quote: "I have not failed. I've just found 10,000 ways that won't work.", author: "Thomas Edison" },
+  { quote: "Success is the sum of small efforts, repeated day in and day out.", author: "Robert Collier" },
+  { quote: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
+  { quote: "Our greatest weakness lies in giving up. The most certain way to succeed is always to try just one more time.", author: "Thomas Edison" },
+  { quote: "The expert in anything was once a beginner.", author: "Helen Hayes" },
+  { quote: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
+  { quote: "Learning never exhausts the mind.", author: "Leonardo da Vinci" },
+  { quote: "An investment in knowledge pays the best interest.", author: "Benjamin Franklin" },
+  { quote: "Live as if you were to die tomorrow. Learn as if you were to live forever.", author: "Mahatma Gandhi" },
+  { quote: "The more that you read, the more things you will know. The more that you learn, the more places you'll go.", author: "Dr. Seuss" },
+  { quote: "Genius is one percent inspiration and ninety-nine percent perspiration.", author: "Thomas Edison" },
+  { quote: "I am always doing that which I cannot do, in order that I may learn how to do it.", author: "Pablo Picasso" },
+  { quote: "You don't have to be great to start, but you have to start to be great.", author: "Zig Ziglar" },
+  { quote: "A person who never made a mistake never tried anything new.", author: "Albert Einstein" },
+  { quote: "The only way to learn mathematics is to do mathematics.", author: "Paul Halmos" },
+  { quote: "Tell me and I forget. Teach me and I remember. Involve me and I learn.", author: "Xun Kuang" },
+  { quote: "The roots of education are bitter, but the fruit is sweet.", author: "Aristotle" },
+  { quote: "Success is not final, failure is not fatal: it is the courage to continue that counts.", author: "Winston Churchill" },
+  { quote: "Believe you can and you're halfway there.", author: "Theodore Roosevelt" },
+  { quote: "Start where you are. Use what you have. Do what you can.", author: "Arthur Ashe" },
+  { quote: "The future belongs to those who believe in the beauty of their dreams.", author: "Eleanor Roosevelt" },
+  { quote: "Do the best you can until you know better. Then when you know better, do better.", author: "Maya Angelou" },
+  { quote: "You miss 100% of the shots you don't take.", author: "Wayne Gretzky" },
+  { quote: "Whether you think you can or you think you can't, you're right.", author: "Henry Ford" },
+  { quote: "Quality is not an act, it is a habit.", author: "Will Durant" },
+  { quote: "Well begun is half done.", author: "Aristotle" },
+  { quote: "He who is not courageous enough to take risks will accomplish nothing in life.", author: "Muhammad Ali" },
+  { quote: "If you're going through hell, keep going.", author: "Winston Churchill" },
+  { quote: "Perseverance is not a long race; it is many short races one after the other.", author: "Walter Elliot" },
+  { quote: "Fall seven times, stand up eight.", author: "Japanese proverb" },
+  { quote: "A journey of a thousand miles begins with a single step.", author: "Lao Tzu" },
+  { quote: "There are no shortcuts to any place worth going.", author: "Beverly Sills" },
+  { quote: "Push yourself, because no one else is going to do it for you.", author: "Unknown" },
+  { quote: "Great things never come from comfort zones.", author: "Unknown" },
+  { quote: "Discipline is the bridge between goals and accomplishment.", author: "Jim Rohn" },
+  { quote: "Motivation is what gets you started. Habit is what keeps you going.", author: "Jim Ryun" },
+  { quote: "Strive for progress, not perfection.", author: "Unknown" },
+  { quote: "Little by little, one travels far.", author: "Spanish proverb" },
+  { quote: "The best time to plant a tree was 20 years ago. The second best time is now.", author: "Chinese proverb" },
+  { quote: "Knowledge is power.", author: "Francis Bacon" },
+  { quote: "Nothing will work unless you do.", author: "Maya Angelou" },
+  { quote: "I find that the harder I work, the more luck I seem to have.", author: "Thomas Jefferson" },
+  { quote: "If people knew how hard I had to work to gain my mastery, it would not seem so wonderful at all.", author: "Michelangelo" },
+  { quote: "Dreams don't work unless you do.", author: "John C. Maxwell" },
+  { quote: "The man who moves a mountain begins by carrying away small stones.", author: "Confucius" },
+  { quote: "What we learn with pleasure we never forget.", author: "Alfred Mercier" },
+  { quote: "First, learn the meaning of what you say, and then speak.", author: "Epictetus" },
+  { quote: "Wisdom begins in wonder.", author: "Socrates" },
+  { quote: "The mind is not a vessel to be filled but a fire to be kindled.", author: "Plutarch" },
+  { quote: "Study hard what interests you the most in the most undisciplined, irreverent and original manner possible.", author: "Richard Feynman" },
+  { quote: "What I cannot create, I do not understand.", author: "Richard Feynman" },
+  { quote: "The first principle is that you must not fool yourself — and you are the easiest person to fool.", author: "Richard Feynman" },
+  { quote: "Somewhere, something incredible is waiting to be known.", author: "Carl Sagan" },
+  { quote: "The good thing about science is that it's true whether or not you believe in it.", author: "Neil deGrasse Tyson" },
+  { quote: "Nothing in life is to be feared, it is only to be understood.", author: "Marie Curie" },
+  { quote: "Be less curious about people and more curious about ideas.", author: "Marie Curie" },
+  { quote: "I never dreamed about success. I worked for it.", author: "Estée Lauder" },
+  { quote: "It's not that I'm so smart, it's just that I stay with problems longer.", author: "Albert Einstein" },
+  { quote: "Anyone who has never made a mistake has never tried anything new.", author: "Albert Einstein" },
+  { quote: "If you can't explain it simply, you don't understand it well enough.", author: "Albert Einstein" },
+  { quote: "Everything should be made as simple as possible, but not simpler.", author: "Albert Einstein" },
+  { quote: "Champions keep playing until they get it right.", author: "Billie Jean King" },
+  { quote: "You are never too old to set another goal or to dream a new dream.", author: "C.S. Lewis" },
+  { quote: "Act as if what you do makes a difference. It does.", author: "William James" },
+  { quote: "Hardships often prepare ordinary people for an extraordinary destiny.", author: "C.S. Lewis" },
+  { quote: "Courage doesn't always roar. Sometimes courage is the quiet voice at the end of the day saying, 'I will try again tomorrow.'", author: "Mary Anne Radmacher" },
+  { quote: "We may encounter many defeats but we must not be defeated.", author: "Maya Angelou" },
+  { quote: "It is our choices that show what we truly are, far more than our abilities.", author: "J.K. Rowling" },
+];
+
+// Same quote all day, different quote tomorrow. Knuth's multiplicative hash
+// keeps consecutive days from walking the list in order.
+export function quoteOfTheDay(date = new Date()): Quote {
+  const day = Math.floor(
+    (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())) / 86400000,
+  );
+  return QUOTES[(day * 2654435761) % QUOTES.length];
+}

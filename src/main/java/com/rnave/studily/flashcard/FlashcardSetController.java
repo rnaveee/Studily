@@ -1,7 +1,9 @@
 package com.rnave.studily.flashcard;
 
+import com.rnave.studily.flashcard.FlashcardDtos.FlashcardDto;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetDto;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetRequest;
+import com.rnave.studily.flashcard.FlashcardDtos.ReviewRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -52,5 +54,11 @@ public class FlashcardSetController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {
         flashcardSetService.delete(id);
+    }
+
+    @PostMapping("/{setId}/cards/{cardId}/review")
+    public FlashcardDto review(@PathVariable Long setId, @PathVariable Long cardId,
+                               @Valid @RequestBody ReviewRequest req) {
+        return flashcardSetService.review(setId, cardId, req.grade());
     }
 }

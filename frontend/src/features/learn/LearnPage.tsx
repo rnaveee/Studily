@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
-import { Atom, Brain, Calculator, Layers, PersonStanding, Sparkles } from "lucide-react";
+import { Atom, Calculator, Layers, PersonStanding, Sparkles } from "lucide-react";
 
 const TOOLS = [
   {
     to: "/learn/flashcards",
     icon: Layers,
     title: "Flashcards",
-    description: "Create and study flashcard sets.",
+    description: "Create sets and study with smart spaced repetition.",
     disabled: false,
   },
   {
@@ -14,13 +14,6 @@ const TOOLS = [
     icon: Sparkles,
     title: "AI",
     description: "Ask questions about your course materials.",
-    disabled: true,
-  },
-  {
-    to: "/learn/review",
-    icon: Brain,
-    title: "Spaced Repetition",
-    description: "Review flashcards on a smart schedule that adapts to you.",
     disabled: true,
   },
   {
