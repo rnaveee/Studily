@@ -3,6 +3,7 @@ package com.rnave.studily.friend;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
+import com.rnave.studily.config.PageResponse;
 import com.rnave.studily.config.UnauthorizedException;
 import com.rnave.studily.friend.FriendDtos.FriendRequestDto;
 import com.rnave.studily.friend.FriendDtos.PublicUserDto;
@@ -10,6 +11,8 @@ import com.rnave.studily.friend.FriendDtos.RelationshipDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipStatus;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,19 +58,45 @@ public class FriendService {
     }
 
     @Transactional(readOnly = true)
-    public List<RelationshipDto> schoolmates() {
+    public PageResponse<RelationshipDto> schoolmates(int page, int size) {
         User me = currentUser.entity();
         if (me.getSchool() == null || me.getSchool().isBlank()) {
-            return List.of();
+            return PageResponse.empty();
         }
-        List<User> mates = userRepository.findBySchoolIgnoreCaseAndIdNotOrderByNameAsc(me.getSchool(), me.getId());
+        Slice<User> mates = userRepository.findBySchoolIgnoreCaseAndIdNotOrderByNameAsc(
+                me.getSchool(), me.getId(),
+                PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
         if (mates.isEmpty()) {
-            return List.of();
+            return PageResponse.empty();
         }
         Map<Long, FriendRequest> relations = relationsByOtherUserId(me.getId());
-        return mates.stream()
+        List<RelationshipDto> items = mates.getContent().stream()
                 .map(u -> toRelationshipDto(u, me.getId(), relations.get(u.getId())))
                 .toList();
+        return new PageResponse<>(items, mates.hasNext());
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<RelationshipDto> searchByUsername(String query, int page, int size) {
+        String q = query == null ? "" : query.trim();
+        if (q.startsWith("@")) {
+            q = q.substring(1);
+        }
+        if (q.isBlank()) {
+            return PageResponse.empty();
+        }
+        User me = currentUser.entity();
+        Slice<User> found = userRepository.findByUsernameContainingIgnoreCaseAndIdNotOrderByUsernameAsc(
+                q, me.getId(),
+                PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
+        if (found.isEmpty()) {
+            return PageResponse.empty();
+        }
+        Map<Long, FriendRequest> relations = relationsByOtherUserId(me.getId());
+        List<RelationshipDto> items = found.getContent().stream()
+                .map(u -> toRelationshipDto(u, me.getId(), relations.get(u.getId())))
+                .toList();
+        return new PageResponse<>(items, found.hasNext());
     }
 
     @Transactional(readOnly = true)

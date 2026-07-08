@@ -11,6 +11,8 @@ import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.SliceImpl;
 
 import java.util.List;
 import java.util.Optional;
@@ -182,8 +184,8 @@ class FriendServiceTest {
         me.setSchool(null);
         when(currentUser.entity()).thenReturn(me);
 
-        assertThat(friendService.schoolmates()).isEmpty();
-        verify(userRepository, never()).findBySchoolIgnoreCaseAndIdNotOrderByNameAsc(any(), any());
+        assertThat(friendService.schoolmates(0, 30).items()).isEmpty();
+        verify(userRepository, never()).findBySchoolIgnoreCaseAndIdNotOrderByNameAsc(any(), any(), any());
     }
 
     @Test
@@ -199,8 +201,8 @@ class FriendServiceTest {
         User stranger = new User();
         stranger.setId(5L);
 
-        when(userRepository.findBySchoolIgnoreCaseAndIdNotOrderByNameAsc(eq("SFU"), eq(1L)))
-                .thenReturn(List.of(pendingOutgoing, pendingIncoming, friend, stranger));
+        when(userRepository.findBySchoolIgnoreCaseAndIdNotOrderByNameAsc(eq("SFU"), eq(1L), any(Pageable.class)))
+                .thenReturn(new SliceImpl<>(List.of(pendingOutgoing, pendingIncoming, friend, stranger)));
 
         FriendRequest outgoing = new FriendRequest();
         outgoing.setId(100L);
@@ -223,7 +225,7 @@ class FriendServiceTest {
         when(friendRequestRepository.findByRequesterIdOrAddresseeId(1L, 1L))
                 .thenReturn(List.of(outgoing, incoming, accepted));
 
-        List<RelationshipDto> result = friendService.schoolmates();
+        List<RelationshipDto> result = friendService.schoolmates(0, 30).items();
 
         assertThat(result).hasSize(4);
         assertThat(statusFor(result, 2L)).isEqualTo(RelationshipStatus.OUTGOING_PENDING);

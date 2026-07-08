@@ -16,7 +16,7 @@ import ProfilePage from "./features/profile/ProfilePage";
 import ProfileEditPage from "./features/profile/ProfileEditPage";
 import FriendsPage from "./features/friends/FriendsPage";
 import SchoolmatesPage from "./features/friends/SchoolmatesPage";
-import AddFriendPage from "./features/friends/AddFriendPage";
+import UserProfilePage from "./features/friends/UserProfilePage";
 import SemestersPage from "./features/semesters/SemestersPage";
 import MessagesPage from "./features/messages/MessagesPage";
 import ConversationPage from "./features/messages/ConversationPage";
@@ -52,7 +52,9 @@ export default function App() {
         <Route path="/friends/schoolmates" element={<SchoolmatesPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/edit" element={<ProfileEditPage />} />
-        <Route path="/profile/:userId/add" element={<AddFriendPage />} />
+        <Route path="/users/:userId" element={<UserProfilePage />} />
+        {/* Old invite links point here; keep the path alive. */}
+        <Route path="/profile/:userId/add" element={<UserProfilePage />} />
       </Route>
       <Route element={<Layout />}>
         <Route path="/about"   element={<AboutPage />} />

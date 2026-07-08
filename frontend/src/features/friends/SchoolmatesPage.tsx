@@ -1,16 +1,22 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ArrowLeft, School, UserPlus, Check, Clock } from "lucide-react";
 import { api } from "../../lib/api";
 import { queryClient } from "../../lib/queryClient";
 import Avatar from "../../components/Avatar";
-import type { Relationship } from "../../types";
+import type { Page, Relationship } from "../../types";
+
+const PAGE_SIZE = 30;
 
 export default function SchoolmatesPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, hasNextPage, fetchNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["schoolmates"],
-    queryFn: () => api.get<Relationship[]>("/friends/schoolmates"),
+    queryFn: ({ pageParam }) =>
+      api.get<Page<Relationship>>(`/friends/schoolmates?page=${pageParam}&size=${PAGE_SIZE}`),
+    initialPageParam: 0,
+    getNextPageParam: (last, all) => (last.hasMore ? all.length : undefined),
   });
+  const mates = data?.pages.flatMap((p) => p.items) ?? [];
 
   function invalidateAll() {
     queryClient.invalidateQueries({ queryKey: ["schoolmates"] });
@@ -45,20 +51,22 @@ export default function SchoolmatesPage() {
           <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
           Loading…
         </div>
-      ) : data && data.length > 0 ? (
+      ) : mates.length > 0 ? (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {data.map((r) => (
+          {mates.map((r) => (
             <li key={r.user.id} className="card p-4 animate-fade flex items-center gap-3">
-              <Avatar name={r.user.name} username={r.user.username} avatarUrl={r.user.avatarUrl} size={40} className="text-sm" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="font-medium text-fg truncate">{r.user.name}</span>
-                  <span className="text-[12px] text-fg-3 truncate">@{r.user.username}</span>
+              <Link to={`/users/${r.user.id}`} className="flex min-w-0 flex-1 items-center gap-3 group">
+                <Avatar name={r.user.name} username={r.user.username} avatarUrl={r.user.avatarUrl} size={40} className="text-sm" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="font-medium text-fg truncate group-hover:text-accent transition-colors">{r.user.name}</span>
+                    <span className="text-[12px] text-fg-3 truncate">@{r.user.username}</span>
+                  </div>
+                  {r.user.year != null && (
+                    <div className="text-[12px] text-fg-3">Year {r.user.year}</div>
+                  )}
                 </div>
-                {r.user.year != null && (
-                  <div className="text-[12px] text-fg-3">Year {r.user.year}</div>
-                )}
-              </div>
+              </Link>
               <ActionButton
                 relationship={r}
                 onAdd={() => send.mutate(r.user.id)}
@@ -79,6 +87,18 @@ export default function SchoolmatesPage() {
             </Link>
             .
           </p>
+        </div>
+      )}
+
+      {hasNextPage && (
+        <div className="flex justify-center">
+          <button
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="btn btn-ghost"
+          >
+            {isFetchingNextPage ? "Loading…" : "Load more"}
+          </button>
         </div>
       )}
     </div>

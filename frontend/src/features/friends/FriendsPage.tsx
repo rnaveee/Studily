@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Users2, School, Link2, Check, X, UserMinus } from "lucide-react";
+import { Users2, School, Link2, Check, X, UserMinus, Search } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
 import { queryClient } from "../../lib/queryClient";
 import Avatar from "../../components/Avatar";
+import UserSearchModal from "./UserSearchModal";
 import type { FriendRequestItem } from "../../types";
 
 export default function FriendsPage() {
   const { user } = useAuth();
   const confirm = useConfirm();
   const [copied, setCopied] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
 
   const incoming = useQuery({
     queryKey: ["friends", "incoming"],
@@ -69,17 +71,17 @@ export default function FriendsPage() {
 
   return (
     <div className="space-y-6 animate-in">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+      <div>
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-semibold text-fg">Friends</h1>
-          <p className="mt-1 text-[13px] text-fg-3">
-            Connect with people you know on Studily.
-          </p>
+          <button onClick={copyInviteLink} className="btn btn-ghost shrink-0">
+            {copied ? <Check size={13} /> : <Link2 size={13} />}
+            {copied ? "Copied" : "Copy friend link"}
+          </button>
         </div>
-        <button onClick={copyInviteLink} className="btn btn-ghost shrink-0">
-          {copied ? <Check size={13} /> : <Link2 size={13} />}
-          {copied ? "Copied" : "Copy invite link"}
-        </button>
+        <p className="mt-1 text-[13px] text-fg-3">
+          Connect with people you know on Studily.
+        </p>
       </div>
 
       <Link
@@ -157,6 +159,14 @@ export default function FriendsPage() {
             </Section>
           )}
 
+          <button
+            onClick={() => setShowSearch(true)}
+            className="input flex items-center gap-2 text-left text-fg-3"
+          >
+            <Search size={14} className="shrink-0" />
+            Search users by username…
+          </button>
+
           <Section title="Your friends" count={friends.data?.length ?? 0}>
             {friends.data && friends.data.length > 0 ? (
               <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -189,6 +199,8 @@ export default function FriendsPage() {
           </Section>
         </>
       )}
+
+      {showSearch && <UserSearchModal onClose={() => setShowSearch(false)} />}
     </div>
   );
 }
@@ -208,11 +220,11 @@ function Section({ title, count, children }: { title: string; count: number; chi
 function PersonRow({ item }: { item: FriendRequestItem }) {
   const { user } = item;
   return (
-    <div className="flex min-w-0 items-center gap-3">
+    <Link to={`/users/${user.id}`} className="flex min-w-0 items-center gap-3 group">
       <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} size={36} className="text-[13px]" />
       <div className="min-w-0">
         <div className="flex items-baseline gap-1.5">
-          <span className="font-medium text-fg truncate">{user.name}</span>
+          <span className="font-medium text-fg truncate group-hover:text-accent transition-colors">{user.name}</span>
           <span className="text-[12px] text-fg-3 truncate">@{user.username}</span>
         </div>
         {(user.major || user.year) && (
@@ -221,6 +233,6 @@ function PersonRow({ item }: { item: FriendRequestItem }) {
           </div>
         )}
       </div>
-    </div>
+    </Link>
   );
 }

@@ -3,12 +3,15 @@ package com.rnave.studily.conversation;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.ForbiddenException;
 import com.rnave.studily.config.NotFoundException;
+import com.rnave.studily.config.PageResponse;
 import com.rnave.studily.conversation.ConversationDtos.ConversationDto;
 import com.rnave.studily.conversation.ConversationDtos.MessageDto;
 import com.rnave.studily.friend.FriendRequestRepository;
 import com.rnave.studily.friend.FriendRequestStatus;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -100,12 +103,20 @@ public class ConversationService {
     }
 
     @Transactional
-    public List<MessageDto> messages(Long conversationId) {
+    public PageResponse<MessageDto> messages(Long conversationId, Long before, int limit) {
         requireMember(conversationId);
-        markRead(conversationId);
-        return messageRepository.findTop500ByConversationIdOrderByCreatedAtDesc(conversationId)
-                .reversed()
-                .stream().map(MessageDto::from).toList();
+        // Only the latest page marks the conversation read: paging back through
+        // history shouldn't clear unread state for messages the user hasn't seen.
+        if (before == null) {
+            markRead(conversationId);
+        }
+        int size = Math.min(Math.max(limit, 1), 100);
+        Slice<Message> slice = before == null
+                ? messageRepository.findByConversationIdOrderByIdDesc(conversationId, PageRequest.of(0, size))
+                : messageRepository.findByConversationIdAndIdLessThanOrderByIdDesc(
+                        conversationId, before, PageRequest.of(0, size));
+        List<MessageDto> items = slice.getContent().reversed().stream().map(MessageDto::from).toList();
+        return new PageResponse<>(items, slice.hasNext());
     }
 
     @Transactional

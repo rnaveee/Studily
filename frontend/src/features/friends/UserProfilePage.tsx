@@ -1,14 +1,15 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, UserPlus, Check, Clock, School, GraduationCap, BookOpen } from "lucide-react";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, UserPlus, Check, Clock, School, GraduationCap, BookOpen, MessageSquare } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { queryClient } from "../../lib/queryClient";
 import Avatar from "../../components/Avatar";
-import type { Relationship } from "../../types";
+import type { Conversation, Relationship } from "../../types";
 
-export default function AddFriendPage() {
+export default function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>();
   const id = Number(userId);
+  const navigate = useNavigate();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["friends", "user", id],
@@ -38,14 +39,26 @@ export default function AddFriendPage() {
     onSuccess: invalidateAll,
   });
 
-  const pending = send.isPending || accept.isPending || withdraw.isPending;
+  const openChat = useMutation({
+    mutationFn: () => api.post<Conversation>("/conversations/direct", { userId: id }),
+    onSuccess: (conv) => {
+      queryClient.invalidateQueries({ queryKey: ["conversations"] });
+      navigate(`/messages/${conv.id}`);
+    },
+  });
+
+  const pending = send.isPending || accept.isPending || withdraw.isPending || openChat.isPending;
+
+  if (data?.status === "SELF") {
+    return <Navigate to="/profile" replace />;
+  }
 
   return (
     <div className="mx-auto max-w-sm space-y-4 animate-in">
-      <Link to="/friends" className="btn btn-ghost">
+      <button onClick={() => navigate(-1)} className="btn btn-ghost">
         <ArrowLeft size={13} />
-        Back to friends
-      </Link>
+        Back
+      </button>
 
       {isLoading ? (
         <div className="flex items-center gap-2 text-sm text-fg-3">
@@ -82,11 +95,14 @@ export default function AddFriendPage() {
           )}
 
           <div className="pt-1">
-            {data.status === "SELF" && (
-              <p className="text-[13px] text-fg-3">This is your own invite link — share it with a friend.</p>
-            )}
             {data.status === "FRIENDS" && (
-              <span className="badge badge-green">Already friends</span>
+              <div className="space-y-2">
+                <span className="badge badge-green">Friends</span>
+                <button onClick={() => openChat.mutate()} disabled={pending} className="btn btn-primary w-full">
+                  <MessageSquare size={13} />
+                  Message
+                </button>
+              </div>
             )}
             {data.status === "NONE" && (
               <button onClick={() => send.mutate()} disabled={pending} className="btn btn-primary w-full">

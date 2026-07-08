@@ -1,3 +1,8 @@
+export interface Page<T> {
+  items: T[];
+  hasMore: boolean;
+}
+
 export type SemesterTerm = "FALL" | "SPRING" | "SUMMER" | "WINTER";
 
 export interface Semester {

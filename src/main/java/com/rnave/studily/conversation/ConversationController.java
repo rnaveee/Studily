@@ -5,6 +5,7 @@ import com.rnave.studily.conversation.ConversationDtos.CreateGroupRequest;
 import com.rnave.studily.conversation.ConversationDtos.MessageDto;
 import com.rnave.studily.conversation.ConversationDtos.OpenDirectRequest;
 import com.rnave.studily.conversation.ConversationDtos.SendMessageRequest;
+import com.rnave.studily.config.PageResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -50,8 +51,11 @@ public class ConversationController {
     }
 
     @GetMapping("/{id}/messages")
-    public List<MessageDto> messages(@PathVariable Long id) {
-        return conversationService.messages(id);
+    public PageResponse<MessageDto> messages(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long before,
+            @RequestParam(defaultValue = "50") int limit) {
+        return conversationService.messages(id, before, limit);
     }
 
     @PostMapping("/{id}/messages")
