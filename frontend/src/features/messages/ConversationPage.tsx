@@ -76,7 +76,7 @@ export default function ConversationPage() {
   }
 
   return (
-    <div className="flex h-full min-h-[60vh] flex-col animate-in">
+    <div className="flex min-h-[60vh] flex-1 flex-col animate-in">
       <div className="flex items-center gap-3 pb-4">
         <Link
           to="/messages"

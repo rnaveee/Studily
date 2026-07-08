@@ -54,6 +54,14 @@
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 
+/* The app shell (Layout) owns all scrolling. Without this, swiping a page whose
+   content doesn't overflow rubber-bands the whole document on iOS, dragging the
+   fixed header and footer along with it. */
+html, body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 html { background: var(--bg); }
 
 body {

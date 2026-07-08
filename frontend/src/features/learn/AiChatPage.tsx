@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Send, Sparkles } from "lucide-react";
 
-// UI shell only — no AI backend yet. A RAG pipeline over course documents
-// will be wired in later; for now the assistant returns a placeholder.
 interface ChatMessage {
   role: "user" | "assistant";
   body: string;
@@ -34,7 +32,7 @@ export default function AiChatPage() {
   }
 
   return (
-    <div className="flex h-full min-h-[60vh] flex-col animate-in">
+    <div className="flex min-h-[60vh] flex-1 flex-col animate-in">
       <div className="flex items-center gap-3 pb-4">
         <Link
           to="/learn"
