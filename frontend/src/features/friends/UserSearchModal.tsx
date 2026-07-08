@@ -44,11 +44,11 @@ export default function UserSearchModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="card flex h-[50vh] w-full max-w-sm flex-col gap-3 rounded-b-none p-5 shadow-xl animate-sheet sm:h-auto sm:max-h-[70vh] sm:rounded-b-xl"
+        className="card flex max-h-[50vh] w-full max-w-sm flex-col gap-3 rounded-b-none p-5 shadow-xl animate-sheet sm:max-h-[70vh] sm:rounded-b-xl"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between">
+        <div className="flex shrink-0 items-start justify-between">
           <div>
             <h2 className="text-[15px] font-semibold text-fg">Find people</h2>
             <p className="mt-1 text-[13px] text-fg-2">Search by username.</p>
@@ -62,7 +62,7 @@ export default function UserSearchModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div className="relative">
+        <div className="relative shrink-0">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-3" />
           <input
             className="input"
@@ -74,7 +74,7 @@ export default function UserSearchModal({ onClose }: { onClose: () => void }) {
           />
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 overflow-y-auto">
           {debounced.length === 0 ? (
             <p className="py-4 text-center text-sm text-fg-3">
               Type a username to find someone.

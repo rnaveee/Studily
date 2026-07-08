@@ -262,7 +262,7 @@ export default function ConversationPage() {
         <form
           ref={formRef}
           onSubmit={handleSend}
-          className="flex items-center gap-2 p-3"
+          className="flex items-center gap-2 rounded-b-[11px] p-3"
           style={{ borderTop: "1px solid var(--line)", background: "var(--surface)" }}
         >
           <input
