@@ -58,10 +58,13 @@ export default function FriendsPage() {
     if (ok) remove.mutate(id);
   }
 
+  const inviteText = user
+    ? `Join me on Studily! ${window.location.origin}/profile/${user.id}/add`
+    : "";
+
   function copyInviteLink() {
     if (!user) return;
-    const url = `${window.location.origin}/profile/${user.id}/add`;
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(inviteText);
     setCopied(true);
     toast.success("Invite link copied");
     setTimeout(() => setCopied(false), 2000);
@@ -71,14 +74,18 @@ export default function FriendsPage() {
 
   return (
     <div className="space-y-6 animate-in">
-      <div>
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-xl font-semibold text-fg">Friends</h1>
-          <button onClick={copyInviteLink} className="btn btn-ghost shrink-0">
+      {user && (
+        <div className="card flex items-center gap-2.5 p-2.5">
+          <button onClick={copyInviteLink} className="btn btn-soft shrink-0">
             {copied ? <Check size={13} /> : <Link2 size={13} />}
             {copied ? "Copied" : "Copy friend link"}
           </button>
+          <span className="min-w-0 flex-1 truncate text-[12px] text-fg-3">{inviteText}</span>
         </div>
+      )}
+
+      <div>
+        <h1 className="text-xl font-semibold text-fg">Friends</h1>
         <p className="mt-1 text-[13px] text-fg-3">
           Connect with people you know on Studily.
         </p>

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Atom, Calculator, Layers, PersonStanding, Sparkles } from "lucide-react";
+import { Atom, Calculator, Layers, LineChart, PersonStanding, Sparkles } from "lucide-react";
 
 const TOOLS = [
   {
@@ -28,6 +28,13 @@ const TOOLS = [
     icon: Calculator,
     title: "Calculator",
     description: "Basic and scientific calculator, always at hand.",
+    disabled: true,
+  },
+  {
+    to: "/learn/graphing",
+    icon: LineChart,
+    title: "Graphing",
+    description: "Type an equation and see it graphed instantly.",
     disabled: true,
   },
   {
