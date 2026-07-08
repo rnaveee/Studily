@@ -37,7 +37,7 @@ export default function SignupPage() {
     <div className="flex min-h-screen items-center justify-center bg-bg px-4 py-8">
       <div className="w-full max-w-[360px] animate-in">
         <div className="mb-8 text-center">
-          <img src="/studily-3a.svg" alt="" className="mx-auto mb-2 h-12 w-12" />
+          <img src="/studily-3a.svg" alt="" className="mx-auto mb-2 h-14 w-14" />
           <span className="font-mono text-2xl font-bold tracking-tight text-fg">Studily</span>
           <p className="mt-1 text-xs text-fg-3">your academic planner</p>
         </div>

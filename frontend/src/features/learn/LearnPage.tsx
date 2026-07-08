@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Layers, Sparkles } from "lucide-react";
+import { Atom, Brain, Calculator, Layers, PersonStanding, Sparkles } from "lucide-react";
 
 const TOOLS = [
   {
@@ -14,6 +14,34 @@ const TOOLS = [
     icon: Sparkles,
     title: "AI",
     description: "Ask questions about your course materials.",
+    disabled: true,
+  },
+  {
+    to: "/learn/review",
+    icon: Brain,
+    title: "Spaced Repetition",
+    description: "Review flashcards on a smart schedule that adapts to you.",
+    disabled: true,
+  },
+  {
+    to: "/learn/periodic-table",
+    icon: Atom,
+    title: "Periodic Table",
+    description: "Explore all 118 elements with detailed info.",
+    disabled: true,
+  },
+  {
+    to: "/learn/calculator",
+    icon: Calculator,
+    title: "Calculator",
+    description: "Basic and scientific calculator, always at hand.",
+    disabled: true,
+  },
+  {
+    to: "/learn/body-diagram",
+    icon: PersonStanding,
+    title: "Body Diagram",
+    description: "Interactive anatomy diagrams by body system.",
     disabled: true,
   },
 ];

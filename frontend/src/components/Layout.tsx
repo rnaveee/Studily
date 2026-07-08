@@ -92,8 +92,8 @@ export default function Layout() {
         style={{ background: "var(--surface)", borderRight: "1px solid var(--line)" }}
       >
         <div className="px-5 py-5">
-          <div className="flex items-center gap-2">
-            <img src="/studily-3a.svg" alt="" className="h-6 w-6" />
+          <div className="flex items-center gap-1.5">
+            <img src="/studily-3a.svg" alt="" className="h-8 w-8" />
             <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
           </div>
           <div className="text-[10px] text-fg-3">by Ryan Nave</div>
@@ -194,11 +194,11 @@ export default function Layout() {
             paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
           }}
         >
-          <div className="flex items-center gap-2">
-            <img src="/studily-3a.svg" alt="" className="h-6 w-6" />
+          <div className="flex items-center">
+            <img src="/studily-3a.svg" alt="" className="h-8 w-8" />
             <div>
               <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
-              <div className="text-[9px] leading-tight text-fg-3">by ryan nave</div>
+              <div className="text-[9px] leading-tight text-fg-3">by Ryan Nave</div>
             </div>
           </div>
 

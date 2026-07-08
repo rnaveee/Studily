@@ -6,5 +6,4 @@
   <path d="M100 90 L164 120 L100 150 L36 120 Z" fill="#818cf8"></path>
   <path d="M100 90 L164 120 L100 150 Z" fill="#6f77f0"></path>
   <path d="M100 96 L152 120 L100 144 L48 120 Z" stroke="#a5b4fc" stroke-width="2.5" opacity="0.55" fill="none"></path>
-  <circle cx="100" cy="120" r="7.5" fill="#eef1ff"></circle>
 </svg>
