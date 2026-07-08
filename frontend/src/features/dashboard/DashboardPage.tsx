@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { X, BookOpen, CalendarDays } from "lucide-react";
+import { X, BookOpen, CalendarDays, Brain, User } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { countdown, formatDateTime, hhmm } from "../../lib/format";
@@ -392,6 +392,26 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <div className="text-[14px] font-medium text-fg">Calendar</div>
                   <div className="text-[12px] text-fg-3">See and plan your full calendar.</div>
+                </div>
+              </Link>
+              <Link to="/learn" className="card flex items-center gap-3 p-4 transition-colors hover:bg-surface-hi">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                      style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}>
+                  <Brain size={16} className="text-accent" />
+                </span>
+                <div className="min-w-0">
+                  <div className="text-[14px] font-medium text-fg">Learn</div>
+                  <div className="text-[12px] text-fg-3">Improve your learning in your classes.</div>
+                </div>
+              </Link>
+              <Link to="/profile" className="card flex items-center gap-3 p-4 transition-colors hover:bg-surface-hi">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                      style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}>
+                  <User size={16} className="text-accent" />
+                </span>
+                <div className="min-w-0">
+                  <div className="text-[14px] font-medium text-fg">Profile</div>
+                  <div className="text-[12px] text-fg-3">Set your profile to connect with others.</div>
                 </div>
               </Link>
             </div>
