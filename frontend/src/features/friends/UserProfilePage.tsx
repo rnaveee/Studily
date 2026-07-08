@@ -54,7 +54,7 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="mx-auto max-w-sm space-y-4 animate-in">
+    <div className="space-y-4 animate-in">
       <button onClick={() => navigate(-1)} className="btn btn-ghost">
         <ArrowLeft size={13} />
         Back
@@ -72,7 +72,7 @@ export default function UserProfilePage() {
           </p>
         </div>
       ) : (
-        <div className="card p-6 text-center space-y-4">
+        <div className="card p-6 text-center">
           <div>
             <Avatar name={data.user.name} username={data.user.username} avatarUrl={data.user.avatarUrl} size={80} className="mx-auto mb-4 text-3xl" />
             <h1 className="text-xl font-bold text-fg">{data.user.name}</h1>
@@ -81,7 +81,7 @@ export default function UserProfilePage() {
           </div>
 
           {(data.user.school || data.user.major || data.user.year != null) && (
-            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[12px] text-fg-3">
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[12px] text-fg-3">
               {data.user.school && (
                 <span className="flex items-center gap-1"><School size={12} />{data.user.school}</span>
               )}
@@ -94,37 +94,35 @@ export default function UserProfilePage() {
             </div>
           )}
 
-          <div className="pt-1">
-            {data.status === "FRIENDS" && (
-              <div className="space-y-2">
-                <span className="badge badge-green">Friends</span>
-                <button onClick={() => openChat.mutate()} disabled={pending} className="btn btn-primary w-full">
-                  <MessageSquare size={13} />
-                  Message
-                </button>
-              </div>
-            )}
-            {data.status === "NONE" && (
-              <button onClick={() => send.mutate()} disabled={pending} className="btn btn-primary w-full">
-                <UserPlus size={13} />
-                Add friend
+          {data.status === "FRIENDS" && (
+            <div className="mt-2">
+              <div><span className="badge badge-green">Friends</span></div>
+              <button onClick={() => openChat.mutate()} disabled={pending} className="btn btn-primary mt-5 w-full">
+                <MessageSquare size={13} />
+                Message
               </button>
-            )}
-            {data.status === "OUTGOING_PENDING" && data.requestId && (
-              <div className="space-y-2">
-                <span className="badge badge-muted"><Clock size={11} />Request sent</span>
-                <button onClick={() => withdraw.mutate(data.requestId!)} disabled={pending} className="btn btn-ghost w-full">
-                  Withdraw request
-                </button>
-              </div>
-            )}
-            {data.status === "INCOMING_PENDING" && data.requestId && (
-              <button onClick={() => accept.mutate(data.requestId!)} disabled={pending} className="btn btn-primary w-full">
-                <Check size={13} />
-                Accept friend request
+            </div>
+          )}
+          {data.status === "NONE" && (
+            <button onClick={() => send.mutate()} disabled={pending} className="btn btn-primary mt-5 w-full">
+              <UserPlus size={13} />
+              Add friend
+            </button>
+          )}
+          {data.status === "OUTGOING_PENDING" && data.requestId && (
+            <div className="mt-2">
+              <div><span className="badge badge-muted"><Clock size={11} />Request sent</span></div>
+              <button onClick={() => withdraw.mutate(data.requestId!)} disabled={pending} className="btn btn-ghost mt-5 w-full">
+                Withdraw request
               </button>
-            )}
-          </div>
+            </div>
+          )}
+          {data.status === "INCOMING_PENDING" && data.requestId && (
+            <button onClick={() => accept.mutate(data.requestId!)} disabled={pending} className="btn btn-primary mt-5 w-full">
+              <Check size={13} />
+              Accept friend request
+            </button>
+          )}
         </div>
       )}
     </div>

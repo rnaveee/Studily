@@ -161,10 +161,10 @@ export default function FriendsPage() {
 
           <button
             onClick={() => setShowSearch(true)}
-            className="input flex items-center gap-2 text-left text-fg-3"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface-hi px-4 py-2.5 text-[13px] font-medium text-fg-2 transition-colors hover:text-fg"
           >
             <Search size={14} className="shrink-0" />
-            Search users by username…
+            Add friend
           </button>
 
           <Section title="Your friends" count={friends.data?.length ?? 0}>

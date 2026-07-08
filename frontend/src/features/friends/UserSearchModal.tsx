@@ -44,7 +44,7 @@ export default function UserSearchModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="card flex h-[70vh] w-full max-w-sm flex-col gap-3 rounded-b-none p-5 shadow-xl animate-sheet sm:h-auto sm:max-h-[70vh] sm:rounded-b-xl"
+        className="card flex h-[50vh] w-full max-w-sm flex-col gap-3 rounded-b-none p-5 shadow-xl animate-sheet sm:h-auto sm:max-h-[70vh] sm:rounded-b-xl"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -65,7 +65,8 @@ export default function UserSearchModal({ onClose }: { onClose: () => void }) {
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-3" />
           <input
-            className="input pl-8"
+            className="input"
+            style={{ paddingLeft: "2.1rem" }}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="e.g. rnavee"
