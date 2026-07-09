@@ -23,9 +23,9 @@ import type { Conversation, FriendRequestItem } from "../types";
 
 const NAV = [
   { to: "/",           label: "Dashboard",  icon: LayoutDashboard, end: true },
+  { to: "/semesters",  label: "Semesters",  icon: GraduationCap },
   { to: "/messages",   label: "Messages",   icon: MessageSquare },
   { to: "/learn",      label: "Learn",      icon: Brain },
-  { to: "/semesters",  label: "Semesters",  icon: GraduationCap },
   { to: "/friends",    label: "Friends",    icon: Users2 },
   { to: "/profile",    label: "Profile",    icon: User },
 ];
