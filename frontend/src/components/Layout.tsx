@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { useKeyboardViewport } from "../lib/keyboardDock";
 import { useTheme } from "../lib/theme";
 import Avatar from "./Avatar";
 import Banners from "./Banners";
@@ -59,6 +60,7 @@ export default function Layout() {
   const { dark, toggle } = useTheme();
   const navigate = useNavigate();
   const typing = useTypingInField();
+  useKeyboardViewport();
 
   const conversations = useQuery({
     queryKey: ["conversations", "list"],
@@ -85,7 +87,7 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-bg" style={{ height: "100dvh" }}>
+    <div className="flex h-screen overflow-hidden bg-bg" style={{ height: "var(--app-height, 100dvh)" }}>
       <aside
         className="hidden md:flex w-[220px] shrink-0 flex-col"
         style={{ background: "var(--surface)", borderRight: "1px solid var(--line)" }}

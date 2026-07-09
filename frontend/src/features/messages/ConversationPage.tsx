@@ -8,7 +8,7 @@ import { useAuth } from "../../lib/auth";
 import { queryClient } from "../../lib/queryClient";
 import { ws } from "../../lib/ws";
 import Avatar from "../../components/Avatar";
-import { useDockToKeyboard } from "../../lib/keyboardDock";
+import { useKeyboardBottomAnchor } from "../../lib/keyboardDock";
 import type { Conversation, Message, Page, PublicUser } from "../../types";
 
 function mergeThread(a: Message[], b: Message[]): Message[] {
@@ -30,8 +30,7 @@ export default function ConversationPage() {
   const listRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<{ height: number; top: number } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
-  useDockToKeyboard(formRef);
+  useKeyboardBottomAnchor(bottomRef);
 
   const [wsConnected, setWsConnected] = useState(ws.isConnected());
   useEffect(() => ws.onState(setWsConnected), []);
@@ -270,7 +269,6 @@ export default function ConversationPage() {
         </div>
 
         <form
-          ref={formRef}
           onSubmit={handleSend}
           className="flex items-center gap-2 rounded-b-[11px] p-3"
           style={{ borderTop: "1px solid var(--line)", background: "var(--surface)" }}
@@ -284,6 +282,7 @@ export default function ConversationPage() {
           <button
             type="submit"
             disabled={!draft.trim() || send.isPending}
+            onPointerDown={(e) => e.preventDefault()}
             className="btn btn-primary shrink-0"
             aria-label="Send message"
           >
