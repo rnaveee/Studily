@@ -1,10 +1,21 @@
 import { Link } from "react-router-dom";
-import { Edit2, GraduationCap, BookOpen, School } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Edit2, GraduationCap, BookOpen, CalendarDays, School } from "lucide-react";
+import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import Avatar from "../../components/Avatar";
+import WeekSchedule from "../../components/WeekSchedule";
+import type { ProfileSchedule } from "../../types";
 
 export default function ProfilePage() {
   const { user } = useAuth();
+
+  const schedule = useQuery({
+    queryKey: ["schedule", user?.id],
+    queryFn: () => api.get<ProfileSchedule>(`/users/${user!.id}/schedule`),
+    enabled: !!user,
+  });
+
   if (!user) return null;
 
   return (
@@ -54,6 +65,35 @@ export default function ProfilePage() {
             </Link>
             .
           </div>
+        )}
+      </div>
+
+      <div className="card">
+        <div className="flex items-center justify-between px-5 pb-1 pt-4">
+          <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-fg">
+            <CalendarDays size={14} className="text-fg-3" />
+            Current semester
+          </h3>
+          {schedule.data?.semester && (
+            <span className="badge badge-muted">{schedule.data.semester.label}</span>
+          )}
+        </div>
+        {schedule.data?.semester ? (
+          <WeekSchedule courses={schedule.data.courses} />
+        ) : (
+          <p className="px-5 py-4 text-[13px] text-fg-3">
+            {schedule.isLoading ? (
+              "Loading…"
+            ) : (
+              <>
+                No active semester —{" "}
+                <Link to="/semesters" className="text-accent hover:text-accent-2 transition-colors">
+                  set one up
+                </Link>
+                .
+              </>
+            )}
+          </p>
         )}
       </div>
     </div>

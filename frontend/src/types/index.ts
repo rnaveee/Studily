@@ -155,6 +155,11 @@ export interface Relationship {
   requestId?: number | null;
 }
 
+export interface ProfileSchedule {
+  semester: Semester | null;
+  courses: Course[];
+}
+
 export interface Flashcard {
   id?: number;
   front: string;

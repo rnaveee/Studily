@@ -1,10 +1,11 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, UserPlus, Check, Clock, School, GraduationCap, BookOpen, MessageSquare } from "lucide-react";
+import { ArrowLeft, UserPlus, Check, Clock, School, GraduationCap, BookOpen, CalendarDays, MessageSquare } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { queryClient } from "../../lib/queryClient";
 import Avatar from "../../components/Avatar";
-import type { Conversation, Relationship } from "../../types";
+import WeekSchedule from "../../components/WeekSchedule";
+import type { Conversation, ProfileSchedule, Relationship } from "../../types";
 
 export default function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>();
@@ -16,6 +17,12 @@ export default function UserProfilePage() {
     queryFn: () => api.get<Relationship>(`/friends/users/${id}`),
     enabled: Number.isFinite(id),
     retry: false,
+  });
+
+  const schedule = useQuery({
+    queryKey: ["schedule", id],
+    queryFn: () => api.get<ProfileSchedule>(`/users/${id}/schedule`),
+    enabled: Number.isFinite(id) && data?.status === "FRIENDS",
   });
 
   function invalidateAll() {
@@ -72,6 +79,7 @@ export default function UserProfilePage() {
           </p>
         </div>
       ) : (
+        <>
         <div className="card p-6 text-center">
           <div>
             <Avatar name={data.user.name} username={data.user.username} avatarUrl={data.user.avatarUrl} size={80} className="mx-auto mb-4 text-3xl" />
@@ -104,10 +112,13 @@ export default function UserProfilePage() {
             </div>
           )}
           {data.status === "NONE" && (
-            <button onClick={() => send.mutate()} disabled={pending} className="btn btn-primary mt-5 w-full">
-              <UserPlus size={13} />
-              Add friend
-            </button>
+            <div className="mt-5">
+              <button onClick={() => send.mutate()} disabled={pending} className="btn btn-primary w-full">
+                <UserPlus size={13} />
+                Add friend
+              </button>
+              <p className="mt-2 text-[11px] text-fg-3">Friends can see each other's semester schedule.</p>
+            </div>
           )}
           {data.status === "OUTGOING_PENDING" && data.requestId && (
             <div className="mt-2">
@@ -124,6 +135,26 @@ export default function UserProfilePage() {
             </button>
           )}
         </div>
+
+        {data.status === "FRIENDS" && schedule.data && (
+          <div className="card">
+            <div className="flex items-center justify-between px-5 pb-1 pt-4">
+              <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-fg">
+                <CalendarDays size={14} className="text-fg-3" />
+                Current semester
+              </h3>
+              {schedule.data.semester && (
+                <span className="badge badge-muted">{schedule.data.semester.label}</span>
+              )}
+            </div>
+            {schedule.data.semester ? (
+              <WeekSchedule courses={schedule.data.courses} />
+            ) : (
+              <p className="px-5 py-4 text-[13px] text-fg-3">No active semester.</p>
+            )}
+          </div>
+        )}
+        </>
       )}
     </div>
   );

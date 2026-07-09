@@ -33,7 +33,7 @@ export default function LoginPage() {
         <div className="mb-8 text-center">
           <img src="/studily-3a.svg" alt="" className="mx-auto mb-2 h-14 w-14" />
           <span className="font-mono text-2xl font-bold tracking-tight text-fg">Studily</span>
-          <p className="mt-1 text-xs text-fg-3">your academic planner</p>
+          <p className="mt-1 text-xs text-fg-3">Your Academic Planner</p>
         </div>
 
         <div className="card p-6">
