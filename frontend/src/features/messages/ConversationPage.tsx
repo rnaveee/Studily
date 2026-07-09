@@ -236,7 +236,7 @@ export default function ConversationPage() {
         style={{
           borderTop: "1px solid var(--line)",
           background: "var(--surface)",
-          paddingBottom: "calc(var(--kb-inset, env(safe-area-inset-bottom, 0px)) + 12px)",
+          paddingBottom: "var(--composer-pb, calc(env(safe-area-inset-bottom, 0px) + 12px))",
         }}
       >
         <input

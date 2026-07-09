@@ -15,11 +15,11 @@ export function useKeyboardViewport() {
       const keyboard = root.clientHeight - vv!.height - vv!.offsetTop;
       if (keyboard >= KEYBOARD_MIN_PX) {
         root.style.setProperty("--app-height", `${Math.round(vv!.height)}px`);
-        root.style.setProperty("--kb-inset", "0px");
+        root.style.setProperty("--composer-pb", "6px");
         if (vv!.offsetTop > 0 || window.scrollY > 0) window.scrollTo(0, 0);
       } else {
         root.style.removeProperty("--app-height");
-        root.style.removeProperty("--kb-inset");
+        root.style.removeProperty("--composer-pb");
       }
     }
 
@@ -36,7 +36,7 @@ export function useKeyboardViewport() {
     return () => {
       timers.forEach(clearTimeout);
       root.style.removeProperty("--app-height");
-      root.style.removeProperty("--kb-inset");
+      root.style.removeProperty("--composer-pb");
       vv.removeEventListener("resize", schedule);
       vv.removeEventListener("scroll", schedule);
       window.removeEventListener("focusin", schedule);
