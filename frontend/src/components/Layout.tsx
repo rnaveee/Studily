@@ -87,7 +87,7 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-bg" style={{ height: "var(--app-height, 100dvh)" }}>
+    <div className="fixed inset-0 flex overflow-hidden bg-bg" style={{ height: "var(--app-height)" }}>
       <aside
         className="hidden md:flex w-[220px] shrink-0 flex-col"
         style={{ background: "var(--surface)", borderRight: "1px solid var(--line)" }}
