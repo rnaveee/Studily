@@ -17,7 +17,6 @@ import static org.mockito.Mockito.when;
 
 class AuthRateLimitFilterTest {
 
-    // Mirrors AuthRateLimitFilter.LIMIT_PER_WINDOW, which is private.
     private static final int LIMIT_PER_WINDOW = 10;
 
     private AuthRateLimitFilter filter;
@@ -92,7 +91,6 @@ class AuthRateLimitFilterTest {
 
     @Test
     void spoofedFirstXForwardedForEntriesCannotBypassTheLimit() throws Exception {
-        // Rotating client-supplied first entries, same proxy-appended last entry: one shared bucket.
         for (int i = 0; i < LIMIT_PER_WINDOW; i++) {
             HttpServletRequest request = mock(HttpServletRequest.class);
             when(request.getRequestURI()).thenReturn("/api/auth/login");

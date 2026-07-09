@@ -38,8 +38,6 @@ class CourseServiceTest {
 
     @Test
     void requireOwned_rejectsAnotherUsersCourse() {
-        // Course 99 belongs to some other user; findByIdAndUserId is scoped so it comes back empty
-        // for the caller (id 1), exactly as it would if user 2's course id was guessed/enumerated.
         when(currentUser.id()).thenReturn(1L);
         when(courseRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.empty());
 

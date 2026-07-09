@@ -1,7 +1,6 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* ── Design tokens ──────────────────────────────────────── */
 :root {
   --bg:         #f3f3f7;
   --surface:    #ffffff;
@@ -50,13 +49,9 @@
   --font-mono: "SF Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
 }
 
-/* ── Base ───────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; }
 
-/* The app shell (Layout) owns all scrolling. Without this, swiping a page whose
-   content doesn't overflow rubber-bands the whole document on iOS, dragging the
-   fixed header and footer along with it. */
 html, body {
   overflow: hidden;
   overscroll-behavior: none;
@@ -85,7 +80,6 @@ body {
   border-radius: 4px;
 }
 
-/* ── Animations ─────────────────────────────────────────── */
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -108,9 +102,6 @@ body {
 .animate-slide { animation: slide-down 0.14s ease-out both; }
 .animate-sheet { animation: sheet-up 0.22s ease-out both; }
 
-/* ── Component classes ──────────────────────────────────── */
-
-/* Input */
 .input {
   display: block;
   width: 100%;
@@ -136,7 +127,6 @@ body {
 select.input { cursor: pointer; }
 textarea.input { resize: vertical; }
 
-/* Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -184,14 +174,12 @@ textarea.input { resize: vertical; }
 }
 .btn-danger:hover { background: color-mix(in srgb, var(--red) 8%, transparent); }
 
-/* Card */
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 12px;
 }
 
-/* Badge */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -220,7 +208,6 @@ textarea.input { resize: vertical; }
   color: var(--green);
 }
 
-/* Label */
 .field-label {
   display: block;
   margin-bottom: 5px;
@@ -231,7 +218,6 @@ textarea.input { resize: vertical; }
   text-transform: uppercase;
 }
 
-/* Divider */
 .divider {
   height: 1px;
   background: var(--line);

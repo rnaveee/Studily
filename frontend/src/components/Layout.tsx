@@ -37,7 +37,6 @@ const SUB_LINKS = [
   { label: "Install", to: "/install" },
 ];
 
-// True while a text field has focus, i.e. the on-screen keyboard is (about to be) up.
 function useTypingInField() {
   const [typing, setTyping] = useState(false);
   useEffect(() => {

@@ -53,7 +53,6 @@ export default function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/edit" element={<ProfileEditPage />} />
         <Route path="/users/:userId" element={<UserProfilePage />} />
-        {/* Old invite links point here; keep the path alive. */}
         <Route path="/profile/:userId/add" element={<UserProfilePage />} />
       </Route>
       <Route element={<Layout />}>

@@ -1,17 +1,9 @@
 import { useEffect } from "react";
 
-// Visual-viewport shrink below this is browser chrome, not a keyboard.
 const KEYBOARD_MIN_PX = 120;
 
-// iOS applies its focus scrolling asynchronously across the keyboard animation,
-// so the correction has to be re-checked at several points after each event.
 const CHECK_DELAYS = [0, 100, 250, 500, 800];
 
-// Measures the real gap between the docked element's bottom edge and the top of the
-// on-screen keyboard, and cancels it. iOS — installed PWAs in particular — over-scrolls
-// the page when an input gains focus, leaving the input floating above the keyboard by
-// a device/OS-dependent amount that no static layout can account for. The correction is
-// applied through window scroll where possible and a translateY for any remainder.
 export function useDockToKeyboard(dockRef: React.RefObject<HTMLElement | null>) {
   useEffect(() => {
     const vv = window.visualViewport;
@@ -35,11 +27,10 @@ export function useDockToKeyboard(dockRef: React.RefObject<HTMLElement | null>) 
         clearShift();
         return;
       }
-      clearShift(); // measure from the element's natural position
+      clearShift();
       const visibleBottom = vv!.offsetTop + vv!.height;
       const gap = visibleBottom - el.getBoundingClientRect().bottom;
       if (Math.abs(gap) <= 2) return;
-      // gap > 0: input floats above the keyboard — undo over-scroll first.
       const scrollable = Math.min(window.scrollY, Math.max(0, gap));
       if (scrollable > 0) window.scrollTo(0, window.scrollY - scrollable);
       const rest = gap - scrollable;

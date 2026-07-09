@@ -14,8 +14,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class JwtServiceTest {
 
     private static final String VALID_SECRET = "a".repeat(64);
-    // Long enough for jjwt's own HMAC-SHA256 key-strength check (>= 32 bytes) but still
-    // short of this app's own 64-char minimum, so it isolates JwtService#validate's own guard.
     private static final String SHORT_BUT_HMAC_VALID_SECRET = "a".repeat(40);
 
     @Test

@@ -66,8 +66,6 @@ public class JwtService {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-        // Tokens issued before versioning have no "ver" claim; treat them as version 0
-        // so they keep working until the user's tokenVersion is first bumped.
         Integer version = claims.get("ver", Integer.class);
         return new TokenPayload(Long.valueOf(claims.getSubject()), version == null ? 0 : version);
     }

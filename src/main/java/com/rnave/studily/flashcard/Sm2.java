@@ -1,9 +1,5 @@
 package com.rnave.studily.flashcard;
 
-/**
- * SM-2 spaced-repetition scheduling (SuperMemo 2, as popularized by Anki),
- * with Anki's four answer buttons mapped onto SM-2 quality scores.
- */
 public final class Sm2 {
 
     public static final double MIN_EASE_FACTOR = 1.3;
@@ -27,9 +23,7 @@ public final class Sm2 {
 
     public static Result review(int repetitions, double easeFactor, int intervalDays, Grade grade) {
         if (grade == Grade.AGAIN) {
-            // Failed recall: restart the repetition sequence; SM-2 leaves the ease factor
-            // unchanged on failure. Interval 0 keeps the card due now, so it comes back
-            // within the same study session.
+
             return new Result(0, easeFactor, 0);
         }
 

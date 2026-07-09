@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, getToken, setToken } from "./api";
+import { ws } from "./ws";
 import type { AuthResponse, User } from "../types";
 
 interface AuthState {
@@ -37,6 +38,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (user) ws.connect();
+    else ws.disconnect();
+  }, [user]);
+
   async function login(email: string, password: string) {
     const res = await api.post<AuthResponse>("/auth/login", { email, password });
     setToken(res.token);
@@ -61,7 +67,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth(): AuthState {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");

@@ -102,8 +102,6 @@ public class FlashcardSetService {
             set.setCourse(null);
         }
 
-        // Match incoming cards to existing ones by id so edits keep each card's
-        // SM-2 review state; only genuinely new cards start from scratch.
         Map<Long, Flashcard> existing = new HashMap<>();
         for (Flashcard c : set.getCards()) {
             if (c.getId() != null) existing.put(c.getId(), c);

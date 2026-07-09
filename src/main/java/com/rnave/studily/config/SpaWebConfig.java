@@ -16,14 +16,10 @@ public class SpaWebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // Vite emits content-hashed filenames under /assets, so those may be cached forever.
         registry.addResourceHandler("/assets/**")
                 .addResourceLocations("classpath:/static/assets/")
                 .setCacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable());
 
-        // Everything else (index.html, sw.js, manifest, icons) must revalidate on each load —
-        // without an explicit Cache-Control, browsers heuristically cache index.html and
-        // installed PWAs keep launching a stale bundle after deploys.
         registry.addResourceHandler("/**")
                 .addResourceLocations("classpath:/static/")
                 .setCacheControl(CacheControl.noCache())

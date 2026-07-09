@@ -1,7 +1,5 @@
 import type { Flashcard, ReviewGrade } from "../../types";
 
-// Mirrors the backend SM-2 scheduler (Sm2.java) just enough to preview the
-// next interval for each grade button, Anki-style.
 const QUALITY: Record<ReviewGrade, number> = { AGAIN: 0, HARD: 3, GOOD: 4, EASY: 5 };
 
 export function isDue(card: Flashcard, now = Date.now()): boolean {

@@ -87,8 +87,6 @@ public class AvatarService {
                 .orElseThrow(() -> new NotFoundException("No avatar"));
     }
 
-    // Checks the declared dimensions from the image header before decoding: a small
-    // compressed file can otherwise decode into a multi-gigabyte BufferedImage and OOM the app.
     private void requireSafeDimensions(byte[] bytes) {
         try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
             Iterator<ImageReader> readers = ImageIO.getImageReaders(in);

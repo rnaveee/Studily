@@ -58,11 +58,12 @@ public class SecurityConfig {
                                         + "script-src 'self'; "
                                         + "style-src 'self' 'unsafe-inline'; "
                                         + "img-src 'self' data:; "
-                                        + "connect-src 'self' https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io; "
+                                        + "connect-src 'self' wss: https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io; "
                                         + "base-uri 'self'; "
                                         + "frame-ancestors 'none'")))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/ws").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/*/avatar").permitAll()
                         .requestMatchers("/api/**").authenticated()

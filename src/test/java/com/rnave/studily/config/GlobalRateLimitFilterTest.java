@@ -21,7 +21,6 @@ import static org.mockito.Mockito.when;
 
 class GlobalRateLimitFilterTest {
 
-    // Mirrors GlobalRateLimitFilter's own limit, which is private.
     private static final int LIMIT_PER_WINDOW = 120;
 
     private GlobalRateLimitFilter filter;
@@ -89,7 +88,6 @@ class GlobalRateLimitFilterTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(7L, null, List.of()));
 
-        // Two different IPs, same authenticated user, should share one bucket.
         HttpServletRequest requestFromIpA = requestFor("/api/courses", "1.1.1.1");
         HttpServletRequest requestFromIpB = requestFor("/api/courses", "2.2.2.2");
 

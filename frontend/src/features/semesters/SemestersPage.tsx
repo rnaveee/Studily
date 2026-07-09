@@ -184,7 +184,6 @@ function SemesterForm({
     setBusy(true);
     try {
       const y = Number(year);
-      // A semester ending in an earlier month than it starts spans the year boundary.
       const endYear = startMonth && endMonth && Number(endMonth) < Number(startMonth) ? y + 1 : y;
       await onSubmit({
         term,

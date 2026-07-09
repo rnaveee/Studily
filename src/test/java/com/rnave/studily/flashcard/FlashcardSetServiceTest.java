@@ -122,7 +122,6 @@ class FlashcardSetServiceTest {
 
     @Test
     void updateIgnoresForeignCardIdsAndCreatesFreshCards() {
-        // A card id that isn't in the owned set (e.g. another user's card) must not be adopted.
         FlashcardSet set = ownedSetWithCard(10L, 100L);
 
         service.update(10L, new FlashcardSetRequest("Title", null, null, List.of(

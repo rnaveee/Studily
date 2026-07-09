@@ -1,6 +1,3 @@
-// Bundled quote-of-the-day pool: production CSP is locked to 'self', so the
-// dashboard can't call external quote APIs. One quote per calendar day.
-
 export interface Quote {
   quote: string;
   author: string;
@@ -81,8 +78,6 @@ const QUOTES: Quote[] = [
   { quote: "It is our choices that show what we truly are, far more than our abilities.", author: "J.K. Rowling" },
 ];
 
-// Same quote all day, different quote tomorrow. Knuth's multiplicative hash
-// keeps consecutive days from walking the list in order.
 export function quoteOfTheDay(date = new Date()): Quote {
   const day = Math.floor(
     (Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())) / 86400000,

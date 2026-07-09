@@ -22,7 +22,6 @@ interface Props {
 
 export default function StudySession({ setId, cards, color, onExit }: Props) {
   const qc = useQueryClient();
-  // Overdue-first queue, snapshotted once so grading doesn't reshuffle mid-session.
   const [queue, setQueue] = useState<Flashcard[]>(() =>
     cards
       .filter((c) => c.id != null && isDue(c))
@@ -47,7 +46,6 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
         `/flashcard-sets/${setId}/cards/${card.id}/review`,
         { grade: g },
       );
-      // "Again" puts the card at the back of today's queue; anything else retires it.
       setQueue((q) => (g === "AGAIN" ? [...q.slice(1), updated] : q.slice(1)));
       setReviewed((n) => n + 1);
       setFlipped(false);

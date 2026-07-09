@@ -3,10 +3,6 @@ package com.rnave.studily.config;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * Per-account login throttle. The IP-based {@link AuthRateLimitFilter} can be sidestepped
- * by an attacker rotating source addresses, so login attempts are also limited per email.
- */
 @Component
 public class LoginRateLimiter {
 

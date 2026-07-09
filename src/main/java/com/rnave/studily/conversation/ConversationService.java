@@ -6,6 +6,8 @@ import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.config.PageResponse;
 import com.rnave.studily.conversation.ConversationDtos.ConversationDto;
 import com.rnave.studily.conversation.ConversationDtos.MessageDto;
+import com.rnave.studily.conversation.ws.WsEvents;
+import com.rnave.studily.conversation.ws.WsSessionRegistry;
 import com.rnave.studily.friend.FriendRequestRepository;
 import com.rnave.studily.friend.FriendRequestStatus;
 import com.rnave.studily.user.User;
@@ -14,6 +16,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.Instant;
 import java.util.LinkedHashSet;
@@ -29,19 +33,22 @@ public class ConversationService {
     private final FriendRequestRepository friendRequestRepository;
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
+    private final WsSessionRegistry wsSessionRegistry;
 
     public ConversationService(ConversationRepository conversationRepository,
                                ConversationMemberRepository conversationMemberRepository,
                                MessageRepository messageRepository,
                                FriendRequestRepository friendRequestRepository,
                                UserRepository userRepository,
-                               CurrentUser currentUser) {
+                               CurrentUser currentUser,
+                               WsSessionRegistry wsSessionRegistry) {
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
         this.messageRepository = messageRepository;
         this.friendRequestRepository = friendRequestRepository;
         this.userRepository = userRepository;
         this.currentUser = currentUser;
+        this.wsSessionRegistry = wsSessionRegistry;
     }
 
     @Transactional(readOnly = true)
@@ -105,8 +112,6 @@ public class ConversationService {
     @Transactional
     public PageResponse<MessageDto> messages(Long conversationId, Long before, int limit) {
         requireMember(conversationId);
-        // Only the latest page marks the conversation read: paging back through
-        // history shouldn't clear unread state for messages the user hasn't seen.
         if (before == null) {
             markRead(conversationId);
         }
@@ -135,7 +140,29 @@ public class ConversationService {
         message.setSender(currentUser.entity());
         message.setBody(body.trim());
         conv.setLastMessageAt(Instant.now());
-        return MessageDto.from(messageRepository.save(message));
+        MessageDto dto = MessageDto.from(messageRepository.save(message));
+        broadcastAfterCommit(conv, dto);
+        return dto;
+    }
+
+    @Transactional
+    public void markConversationRead(Long conversationId) {
+        requireMember(conversationId);
+        markRead(conversationId);
+    }
+
+    private void broadcastAfterCommit(Conversation conv, MessageDto dto) {
+        List<Long> memberIds = conv.getMembers().stream()
+                .map(m -> m.getUser().getId())
+                .toList();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                for (Long memberId : memberIds) {
+                    wsSessionRegistry.sendToUser(memberId, WsEvents.MessageEvent.of(dto));
+                }
+            }
+        });
     }
 
     private Conversation requireMember(Long conversationId) {

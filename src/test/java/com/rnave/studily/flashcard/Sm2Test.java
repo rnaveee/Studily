@@ -31,7 +31,7 @@ class Sm2Test {
         Result r = Sm2.review(2, 2.5, 6, Grade.GOOD);
 
         assertThat(r.repetitions()).isEqualTo(3);
-        assertThat(r.intervalDays()).isEqualTo(15); // round(6 * 2.5)
+        assertThat(r.intervalDays()).isEqualTo(15);
     }
 
     @Test
@@ -45,7 +45,6 @@ class Sm2Test {
 
     @Test
     void relearnedCardRestartsAtOneDay() {
-        // A lapsed card (reps reset by AGAIN) climbs back through 1d like a new card.
         Result r = Sm2.review(0, 2.2, 0, Grade.GOOD);
 
         assertThat(r.repetitions()).isEqualTo(1);

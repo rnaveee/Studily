@@ -6,12 +6,11 @@ import { ArrowLeft, Send, Users2, X } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { queryClient } from "../../lib/queryClient";
+import { ws } from "../../lib/ws";
 import Avatar from "../../components/Avatar";
 import { useDockToKeyboard } from "../../lib/keyboardDock";
 import type { Conversation, Message, Page, PublicUser } from "../../types";
 
-// The latest-page poll and the "load earlier" pages overlap in unpredictable
-// ways as new messages arrive, so everything seen is merged by id.
 function mergeThread(a: Message[], b: Message[]): Message[] {
   const byId = new Map<number, Message>();
   for (const m of a) byId.set(m.id, m);
@@ -29,12 +28,13 @@ export default function ConversationPage() {
   const [showMembers, setShowMembers] = useState(false);
   const seededRef = useRef(false);
   const listRef = useRef<HTMLDivElement>(null);
-  // Scroll offset captured just before older messages are prepended,
-  // so the list can be re-anchored instead of jumping to the top.
   const anchorRef = useRef<{ height: number; top: number } | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   useDockToKeyboard(formRef);
+
+  const [wsConnected, setWsConnected] = useState(ws.isConnected());
+  useEffect(() => ws.onState(setWsConnected), []);
 
   useEffect(() => {
     setThread([]);
@@ -53,7 +53,7 @@ export default function ConversationPage() {
     queryKey: ["conversations", convId, "messages"],
     queryFn: () => api.get<Page<Message>>(`/conversations/${convId}/messages`),
     enabled: Number.isFinite(convId),
-    refetchInterval: 5000,
+    refetchInterval: wsConnected ? false : 5000,
   });
 
   const latestPage = messages.data;
@@ -97,18 +97,24 @@ export default function ConversationPage() {
     },
   });
 
+  useEffect(() => {
+    return ws.onMessage((m) => {
+      if (m.conversationId !== convId) return;
+      if (m.sender.id !== user?.id && document.visibilityState === "visible") {
+        ws.markRead(convId);
+      }
+    });
+  }, [convId, user?.id]);
+
   const markedReadRef = useRef<number | null>(null);
   useEffect(() => {
     if (!Number.isFinite(convId) || !messages.data || markedReadRef.current === convId) return;
     markedReadRef.current = convId;
-    // The backend marks the conversation read as a side effect of fetching messages;
-    // refresh the lists that show unread state so the nav dot and list styling catch up.
     queryClient.invalidateQueries({ queryKey: ["conversations", "list"] });
     queryClient.invalidateQueries({ queryKey: ["conversations", "groups"] });
     queryClient.invalidateQueries({ queryKey: ["conversations", "direct"] });
   }, [convId, messages.data]);
 
-  // Follow the newest message only — prepending history must not scroll down.
   const lastMessageId = thread.length > 0 ? thread[thread.length - 1].id : null;
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
@@ -130,6 +136,10 @@ export default function ConversationPage() {
     e.preventDefault();
     const body = draft.trim();
     if (!body || send.isPending) return;
+    if (ws.sendChat(convId, body)) {
+      setDraft("");
+      return;
+    }
     send.mutate(body);
   }
 
