@@ -15,9 +15,11 @@ export function useKeyboardViewport() {
       const keyboard = root.clientHeight - vv!.height - vv!.offsetTop;
       if (keyboard >= KEYBOARD_MIN_PX) {
         root.style.setProperty("--app-height", `${Math.round(vv!.height)}px`);
+        root.style.setProperty("--kb-inset", "0px");
         if (vv!.offsetTop > 0 || window.scrollY > 0) window.scrollTo(0, 0);
       } else {
         root.style.removeProperty("--app-height");
+        root.style.removeProperty("--kb-inset");
       }
     }
 
@@ -34,33 +36,11 @@ export function useKeyboardViewport() {
     return () => {
       timers.forEach(clearTimeout);
       root.style.removeProperty("--app-height");
+      root.style.removeProperty("--kb-inset");
       vv.removeEventListener("resize", schedule);
       vv.removeEventListener("scroll", schedule);
       window.removeEventListener("focusin", schedule);
       window.removeEventListener("focusout", schedule);
     };
   }, []);
-}
-
-export function useKeyboardBottomAnchor(bottomRef: React.RefObject<HTMLElement | null>) {
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    let timers: number[] = [];
-
-    function anchor() {
-      bottomRef.current?.scrollIntoView({ block: "end" });
-    }
-
-    function schedule() {
-      timers.forEach(clearTimeout);
-      timers = CHECK_DELAYS.map((ms) => window.setTimeout(anchor, ms));
-    }
-
-    vv.addEventListener("resize", schedule);
-    return () => {
-      timers.forEach(clearTimeout);
-      vv.removeEventListener("resize", schedule);
-    };
-  }, [bottomRef]);
 }

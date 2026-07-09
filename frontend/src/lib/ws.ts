@@ -1,3 +1,4 @@
+import type { InfiniteData } from "@tanstack/react-query";
 import { getToken } from "./api";
 import { queryClient } from "./queryClient";
 import { toast } from "./toast";
@@ -34,15 +35,21 @@ function notifyState(connected: boolean) {
   stateListeners.forEach((fn) => fn(connected));
 }
 
-function handleIncoming(message: Message) {
-  queryClient.setQueryData<Page<Message>>(
+export function appendMessageToCache(message: Message) {
+  queryClient.setQueryData<InfiniteData<Page<Message>>>(
     ["conversations", message.conversationId, "messages"],
     (old) => {
-      if (!old) return old;
-      if (old.items.some((m) => m.id === message.id)) return old;
-      return { ...old, items: [...old.items, message] };
+      if (!old || old.pages.length === 0) return old;
+      if (old.pages.some((p) => p.items.some((m) => m.id === message.id))) return old;
+      const pages = old.pages.slice();
+      pages[0] = { ...pages[0], items: [...pages[0].items, message] };
+      return { ...old, pages };
     },
   );
+}
+
+function handleIncoming(message: Message) {
+  appendMessageToCache(message);
   queryClient.invalidateQueries({ queryKey: ["conversations", "list"] });
   queryClient.invalidateQueries({ queryKey: ["conversations", "direct"] });
   queryClient.invalidateQueries({ queryKey: ["conversations", "groups"] });
