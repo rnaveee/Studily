@@ -4,17 +4,51 @@ import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { api } from "../../lib/api";
 import { formatDateTime } from "../../lib/format";
-import { type AcademicItem, type AcademicItemRequest, type Course } from "../../types";
-import ItemForm from "../../components/ItemForm";
+import { useConfirm } from "../../lib/confirm";
+import { type AcademicItem, type CalendarEvent } from "../../types";
+import AddCalendarItemModal from "./AddCalendarItemModal";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function dayColor(it: AcademicItem): string {
-  return it.type === "EXAM" ? "var(--red)" : "var(--green)";
+interface Entry {
+  key: string;
+  title: string;
+  color: string;
+  badge: string;
+  when: string;
+  courseId?: number;
+  courseName?: string;
+  place?: string | null;
+  eventId?: number;
+}
+
+function itemEntry(it: AcademicItem): Entry {
+  return {
+    key: `item-${it.id}`,
+    title: it.title,
+    color: it.type === "EXAM" ? "var(--red)" : "var(--green)",
+    badge: it.type === "EXAM" ? "Exam" : "Assign",
+    when: it.dueAt,
+    courseId: it.courseId,
+    courseName: it.courseName,
+  };
+}
+
+function eventEntry(ev: CalendarEvent): Entry {
+  return {
+    key: `event-${ev.id}`,
+    title: ev.title,
+    color: "var(--accent)",
+    badge: "Event",
+    when: ev.startAt,
+    place: ev.place,
+    eventId: ev.id,
+  };
 }
 
 export default function CalendarPage() {
   const qc = useQueryClient();
+  const confirm = useConfirm();
   const [month, setMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -29,48 +63,42 @@ export default function CalendarPage() {
     return { from: start.toISOString(), to: end.toISOString() };
   }, [month]);
 
+  const range = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+
   const { data: items } = useQuery({
     queryKey: ["calendar", from, to],
-    queryFn: () =>
-      api.get<AcademicItem[]>(`/calendar?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+    queryFn: () => api.get<AcademicItem[]>(`/calendar?${range}`),
   });
 
-  const { data: courses } = useQuery({
-    queryKey: ["courses"],
-    queryFn: () => api.get<Course[]>("/courses"),
+  const { data: events } = useQuery({
+    queryKey: ["calendar-events", from, to],
+    queryFn: () => api.get<CalendarEvent[]>(`/calendar/events?${range}`),
   });
 
-  const createItem = useMutation({
-    mutationFn: ({ courseId, req }: { courseId: number; req: AcademicItemRequest }) =>
-      api.post<AcademicItem>(`/courses/${courseId}/items`, req),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["calendar"] });
-      qc.invalidateQueries({ queryKey: ["dashboard"] });
-      setSelectedDay(null);
-    },
+  const deleteEvent = useMutation({
+    mutationFn: (id: number) => api.del(`/calendar/events/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["calendar-events"] }),
   });
+
+  const entries = useMemo(
+    () =>
+      [...(items ?? []).map(itemEntry), ...(events ?? []).map(eventEntry)].sort(
+        (a, b) => new Date(a.when).getTime() - new Date(b.when).getTime()
+      ),
+    [items, events]
+  );
 
   const byDay = useMemo(() => {
-    const map = new Map<number, AcademicItem[]>();
-    for (const it of items ?? []) {
-      const d = new Date(it.dueAt);
+    const map = new Map<number, Entry[]>();
+    for (const en of entries) {
+      const d = new Date(en.when);
       if (d.getMonth() === month.getMonth() && d.getFullYear() === month.getFullYear()) {
         const day = d.getDate();
-        map.set(day, [...(map.get(day) ?? []), it]);
+        map.set(day, [...(map.get(day) ?? []), en]);
       }
     }
     return map;
-  }, [items, month]);
-
-  const sortedItems = useMemo(
-    () => [...(items ?? [])].sort((a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime()),
-    [items]
-  );
-
-  const courseList = useMemo(
-    () => (courses ?? []).map((c) => ({ id: c.id, name: c.name })),
-    [courses]
-  );
+  }, [entries, month]);
 
   const firstWeekday = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
   const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
@@ -88,6 +116,16 @@ export default function CalendarPage() {
     const m = String(month.getMonth() + 1).padStart(2, "0");
     const d = String(day).padStart(2, "0");
     return `${y}-${m}-${d}`;
+  }
+
+  async function handleDeleteEvent(en: Entry) {
+    const ok = await confirm({
+      title: "Delete event?",
+      message: `"${en.title}" will be removed from your calendar.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (ok && en.eventId) deleteEvent.mutate(en.eventId);
   }
 
   return (
@@ -131,7 +169,7 @@ export default function CalendarPage() {
         <div className="grid grid-cols-7">
           {cells.map((day, i) => {
             const isToday = isCurrentMonth && day === today.getDate();
-            const dayItems = day ? (byDay.get(day) ?? []) : [];
+            const dayEntries = day ? (byDay.get(day) ?? []) : [];
             return (
               <div
                 key={i}
@@ -154,18 +192,18 @@ export default function CalendarPage() {
                       {day}
                     </div>
                     <div className="space-y-0.5">
-                      {dayItems.slice(0, 3).map((it) => (
+                      {dayEntries.slice(0, 3).map((en) => (
                         <div
-                          key={it.id}
+                          key={en.key}
                           className="truncate rounded px-1 py-0.5 text-[9px] font-medium leading-tight text-white"
-                          style={{ backgroundColor: dayColor(it) }}
-                          title={`${it.title} · ${it.courseName}`}
+                          style={{ backgroundColor: en.color }}
+                          title={en.courseName ? `${en.title} · ${en.courseName}` : en.title}
                         >
-                          {it.title}
+                          {en.title}
                         </div>
                       ))}
-                      {dayItems.length > 3 && (
-                        <div className="text-[9px] text-fg-3 pl-0.5">+{dayItems.length - 3} more</div>
+                      {dayEntries.length > 3 && (
+                        <div className="text-[9px] text-fg-3 pl-0.5">+{dayEntries.length - 3} more</div>
                       )}
                     </div>
                   </>
@@ -176,30 +214,47 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {sortedItems.length > 0 && (
+      {entries.length > 0 && (
         <div>
           <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
             {label}
           </h2>
           <ul className="card divide-y divide-line">
-            {sortedItems.map((it) => (
-              <li key={it.id} className="flex items-center gap-3 px-4 py-2.5">
+            {entries.map((en) => (
+              <li key={en.key} className="flex items-center gap-3 px-4 py-2.5">
                 <span
                   className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
-                  style={{ backgroundColor: it.type === "EXAM" ? "var(--red)" : "var(--green)" }}
+                  style={{ backgroundColor: en.color }}
                 >
-                  {it.type === "EXAM" ? "Exam" : "Assign"}
+                  {en.badge}
                 </span>
-                <Link
-                  to={`/courses/${it.courseId}`}
-                  className="min-w-0 flex-1 truncate text-[13px] font-medium text-fg transition-colors hover:text-accent"
-                >
-                  {it.title}
-                </Link>
-                <span className="max-w-[8rem] truncate text-[12px] text-fg-3">{it.courseName}</span>
+                {en.courseId ? (
+                  <Link
+                    to={`/courses/${en.courseId}`}
+                    className="min-w-0 flex-1 truncate text-[13px] font-medium text-fg transition-colors hover:text-accent"
+                  >
+                    {en.title}
+                  </Link>
+                ) : (
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-fg">
+                    {en.title}
+                  </span>
+                )}
+                <span className="max-w-[8rem] truncate text-[12px] text-fg-3">
+                  {en.courseName ?? en.place ?? ""}
+                </span>
                 <span className="shrink-0 whitespace-nowrap text-[12px] text-fg-3 tabular-nums">
-                  {formatDateTime(it.dueAt)}
+                  {formatDateTime(en.when)}
                 </span>
+                {en.eventId && (
+                  <button
+                    onClick={() => handleDeleteEvent(en)}
+                    className="shrink-0 rounded p-0.5 text-fg-3 transition-colors hover:text-red"
+                    aria-label="Delete event"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -207,40 +262,7 @@ export default function CalendarPage() {
       )}
 
       {selectedDay && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.5)" }}
-          onClick={() => setSelectedDay(null)}
-        >
-          <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="mb-2 flex items-center justify-between px-1">
-              <span className="text-sm font-semibold text-white drop-shadow">
-                Add item — {selectedDay}
-              </span>
-              <button
-                onClick={() => setSelectedDay(null)}
-                className="rounded p-0.5 text-white/70 transition-colors hover:text-white"
-              >
-                <X size={14} />
-              </button>
-            </div>
-            {courseList.length === 0 ? (
-              <div className="card p-4 text-[13px] text-fg-3">
-                No courses yet —{" "}
-                <Link to="/courses" className="text-accent hover:text-accent-2 transition-colors">
-                  add one first
-                </Link>.
-              </div>
-            ) : (
-              <ItemForm
-                courses={courseList}
-                initialDate={selectedDay}
-                onSubmit={(courseId, req) => createItem.mutateAsync({ courseId, req })}
-                onCancel={() => setSelectedDay(null)}
-              />
-            )}
-          </div>
-        </div>
+        <AddCalendarItemModal date={selectedDay} onClose={() => setSelectedDay(null)} />
       )}
     </div>
   );

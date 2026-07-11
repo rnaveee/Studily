@@ -94,6 +94,19 @@ export interface AcademicItemRequest {
   status: ItemStatus;
 }
 
+export interface CalendarEvent {
+  id: number;
+  title: string;
+  place?: string | null;
+  startAt: string;
+}
+
+export interface CalendarEventRequest {
+  title: string;
+  place?: string | null;
+  startAt: string;
+}
+
 export interface Note {
   id: number;
   courseId: number;
