@@ -12,14 +12,22 @@ export function useKeyboardViewport() {
     let timers: number[] = [];
 
     function apply() {
+      const active = document.activeElement;
+      const editing =
+        active instanceof HTMLElement &&
+        (active.tagName === "INPUT" ||
+          active.tagName === "TEXTAREA" ||
+          active.tagName === "SELECT" ||
+          active.isContentEditable);
       const keyboard = root.clientHeight - vv!.height - vv!.offsetTop;
-      if (keyboard >= KEYBOARD_MIN_PX) {
+      if (editing && keyboard >= KEYBOARD_MIN_PX) {
         root.style.setProperty("--app-height", `${Math.round(vv!.height)}px`);
         root.style.setProperty("--composer-pb", "6px");
         if (vv!.offsetTop > 0 || window.scrollY > 0) window.scrollTo(0, 0);
       } else {
         root.style.removeProperty("--app-height");
         root.style.removeProperty("--composer-pb");
+        if (window.scrollY > 0) window.scrollTo(0, 0);
       }
     }
 
