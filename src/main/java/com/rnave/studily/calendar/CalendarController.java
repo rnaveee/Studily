@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -71,6 +72,17 @@ public class CalendarController {
     public CalendarEventDto createEvent(@Valid @RequestBody CalendarEventRequest req) {
         CalendarEvent event = new CalendarEvent();
         event.setUser(currentUser.entity());
+        event.setTitle(req.title().trim());
+        event.setPlace(req.place() != null && !req.place().isBlank() ? req.place().trim() : null);
+        event.setStartAt(req.startAt());
+        return CalendarEventDto.from(eventRepository.save(event));
+    }
+
+    @PutMapping("/events/{id}")
+    @Transactional
+    public CalendarEventDto updateEvent(@PathVariable Long id, @Valid @RequestBody CalendarEventRequest req) {
+        CalendarEvent event = eventRepository.findByIdAndUserId(id, currentUser.id())
+                .orElseThrow(() -> new NotFoundException("Event not found"));
         event.setTitle(req.title().trim());
         event.setPlace(req.place() != null && !req.place().isBlank() ? req.place().trim() : null);
         event.setStartAt(req.startAt());

@@ -1,12 +1,11 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "../../lib/api";
 import { formatDateTime } from "../../lib/format";
-import { useConfirm } from "../../lib/confirm";
 import { type AcademicItem, type CalendarEvent } from "../../types";
 import AddCalendarItemModal from "./AddCalendarItemModal";
+import CalendarEntryModal from "./CalendarEntryModal";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -16,10 +15,10 @@ interface Entry {
   color: string;
   badge: string;
   when: string;
-  courseId?: number;
   courseName?: string;
   place?: string | null;
-  eventId?: number;
+  item?: AcademicItem;
+  event?: CalendarEvent;
 }
 
 function itemEntry(it: AcademicItem): Entry {
@@ -29,8 +28,8 @@ function itemEntry(it: AcademicItem): Entry {
     color: it.type === "EXAM" ? "var(--red)" : "var(--green)",
     badge: it.type === "EXAM" ? "Exam" : "Assign",
     when: it.dueAt,
-    courseId: it.courseId,
     courseName: it.courseName,
+    item: it,
   };
 }
 
@@ -42,18 +41,17 @@ function eventEntry(ev: CalendarEvent): Entry {
     badge: "Event",
     when: ev.startAt,
     place: ev.place,
-    eventId: ev.id,
+    event: ev,
   };
 }
 
 export default function CalendarPage() {
-  const qc = useQueryClient();
-  const confirm = useConfirm();
   const [month, setMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
 
   const today = new Date();
 
@@ -73,11 +71,6 @@ export default function CalendarPage() {
   const { data: events } = useQuery({
     queryKey: ["calendar-events", from, to],
     queryFn: () => api.get<CalendarEvent[]>(`/calendar/events?${range}`),
-  });
-
-  const deleteEvent = useMutation({
-    mutationFn: (id: number) => api.del(`/calendar/events/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["calendar-events"] }),
   });
 
   const entries = useMemo(
@@ -116,16 +109,6 @@ export default function CalendarPage() {
     const m = String(month.getMonth() + 1).padStart(2, "0");
     const d = String(day).padStart(2, "0");
     return `${y}-${m}-${d}`;
-  }
-
-  async function handleDeleteEvent(en: Entry) {
-    const ok = await confirm({
-      title: "Delete event?",
-      message: `"${en.title}" will be removed from your calendar.`,
-      confirmLabel: "Delete",
-      danger: true,
-    });
-    if (ok && en.eventId) deleteEvent.mutate(en.eventId);
   }
 
   return (
@@ -221,40 +204,31 @@ export default function CalendarPage() {
           </h2>
           <ul className="card divide-y divide-line">
             {entries.map((en) => (
-              <li key={en.key} className="flex items-center gap-3 px-4 py-2.5">
-                <span
-                  className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
-                  style={{ backgroundColor: en.color }}
+              <li key={en.key}>
+                <button
+                  onClick={() => setSelectedEntry(en)}
+                  className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-surface-hi"
                 >
-                  {en.badge}
-                </span>
-                {en.courseId ? (
-                  <Link
-                    to={`/courses/${en.courseId}`}
-                    className="min-w-0 flex-1 truncate text-[13px] font-medium text-fg transition-colors hover:text-accent"
+                  <span
+                    className="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
+                    style={{ backgroundColor: en.color }}
                   >
-                    {en.title}
-                  </Link>
-                ) : (
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-fg">
-                    {en.title}
+                    {en.badge}
                   </span>
-                )}
-                <span className="max-w-[8rem] truncate text-[12px] text-fg-3">
-                  {en.courseName ?? en.place ?? ""}
-                </span>
-                <span className="shrink-0 whitespace-nowrap text-[12px] text-fg-3 tabular-nums">
-                  {formatDateTime(en.when)}
-                </span>
-                {en.eventId && (
-                  <button
-                    onClick={() => handleDeleteEvent(en)}
-                    className="shrink-0 rounded p-0.5 text-fg-3 transition-colors hover:text-red"
-                    aria-label="Delete event"
-                  >
-                    <X size={13} />
-                  </button>
-                )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-medium leading-snug text-fg">
+                      {en.title}
+                    </span>
+                    {(en.courseName ?? en.place) && (
+                      <span className="mt-0.5 block truncate text-[12px] text-fg-3">
+                        {en.courseName ?? en.place}
+                      </span>
+                    )}
+                  </span>
+                  <span className="shrink-0 whitespace-nowrap pt-0.5 text-[12px] text-fg-3 tabular-nums">
+                    {formatDateTime(en.when)}
+                  </span>
+                </button>
               </li>
             ))}
           </ul>
@@ -263,6 +237,14 @@ export default function CalendarPage() {
 
       {selectedDay && (
         <AddCalendarItemModal date={selectedDay} onClose={() => setSelectedDay(null)} />
+      )}
+
+      {selectedEntry && (
+        <CalendarEntryModal
+          item={selectedEntry.item}
+          event={selectedEntry.event}
+          onClose={() => setSelectedEntry(null)}
+        />
       )}
     </div>
   );

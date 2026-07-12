@@ -19,7 +19,7 @@ export default function AddCalendarItemModal({ date, onClose }: { date: string; 
   const qc = useQueryClient();
   const [kind, setKind] = useState<Kind>("ASSIGNMENT");
   const [title, setTitle] = useState("");
-  const [when, setWhen] = useState(`${date}T23:59`);
+  const [whens, setWhens] = useState<string[]>([`${date}T23:59`]);
   const [weight, setWeight] = useState("");
   const [place, setPlace] = useState("");
   const [courseId, setCourseId] = useState<number | "">("");
@@ -49,8 +49,8 @@ export default function AddCalendarItemModal({ date, onClose }: { date: string; 
   }
 
   const createItem = useMutation({
-    mutationFn: ({ cid, req }: { cid: number; req: AcademicItemRequest }) =>
-      api.post<AcademicItem>(`/courses/${cid}/items`, req),
+    mutationFn: ({ cid, reqs }: { cid: number; reqs: AcademicItemRequest[] }) =>
+      Promise.all(reqs.map((req) => api.post<AcademicItem>(`/courses/${cid}/items`, req))),
     onSuccess: () => {
       invalidate();
       onClose();
@@ -59,7 +59,8 @@ export default function AddCalendarItemModal({ date, onClose }: { date: string; 
   });
 
   const createEvent = useMutation({
-    mutationFn: (req: CalendarEventRequest) => api.post<CalendarEvent>("/calendar/events", req),
+    mutationFn: (reqs: CalendarEventRequest[]) =>
+      Promise.all(reqs.map((req) => api.post<CalendarEvent>("/calendar/events", req))),
     onSuccess: () => {
       invalidate();
       onClose();
@@ -74,16 +75,18 @@ export default function AddCalendarItemModal({ date, onClose }: { date: string; 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!when) {
-      setError("Pick a date and time");
+    if (whens.some((w) => !w)) {
+      setError("Pick a date and time for every entry");
       return;
     }
     if (isEvent) {
-      createEvent.mutate({
-        title: title.trim(),
-        place: place.trim() || null,
-        startAt: new Date(when).toISOString(),
-      });
+      createEvent.mutate(
+        whens.map((w) => ({
+          title: title.trim(),
+          place: place.trim() || null,
+          startAt: new Date(w).toISOString(),
+        }))
+      );
       return;
     }
     if (!courseId) {
@@ -92,13 +95,13 @@ export default function AddCalendarItemModal({ date, onClose }: { date: string; 
     }
     createItem.mutate({
       cid: courseId,
-      req: {
+      reqs: whens.map((w) => ({
         type: kind,
         title: title.trim(),
-        dueAt: new Date(when).toISOString(),
+        dueAt: new Date(w).toISOString(),
         weight: weight ? Number(weight) : undefined,
         status: "TODO",
-      },
+      })),
     });
   }
 
@@ -201,13 +204,39 @@ export default function AddCalendarItemModal({ date, onClose }: { date: string; 
             <div className="flex gap-2">
               <div className="flex-1">
                 <label className="field-label">{isEvent ? "Date & time" : "Due date & time"}</label>
-                <input
-                  className="input"
-                  type="datetime-local"
-                  value={when}
-                  onChange={(e) => setWhen(e.target.value)}
-                  required
-                />
+                <div className="space-y-2">
+                  {whens.map((w, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input
+                        className="input"
+                        type="datetime-local"
+                        value={w}
+                        onChange={(e) =>
+                          setWhens(whens.map((prev, j) => (j === i ? e.target.value : prev)))
+                        }
+                        required
+                      />
+                      {i > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setWhens(whens.filter((_, j) => j !== i))}
+                          className="shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
+                          aria-label="Remove date"
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setWhens([...whens, `${date}T23:59`])}
+                  className="mt-2 flex items-center gap-1 text-[12px] font-medium text-accent transition-colors hover:text-accent-2"
+                >
+                  <Plus size={12} strokeWidth={2.5} />
+                  Add another date
+                </button>
               </div>
               {!isEvent && (
                 <div className="w-24">
