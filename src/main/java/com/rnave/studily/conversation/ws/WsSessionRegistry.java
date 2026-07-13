@@ -42,6 +42,11 @@ public class WsSessionRegistry {
         });
     }
 
+    public boolean hasSessions(Long userId) {
+        Map<String, WebSocketSession> sessions = sessionsByUser.get(userId);
+        return sessions != null && !sessions.isEmpty();
+    }
+
     public void sendToUser(Long userId, Object payload) {
         Map<String, WebSocketSession> sessions = sessionsByUser.get(userId);
         if (sessions == null || sessions.isEmpty()) {

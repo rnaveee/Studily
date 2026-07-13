@@ -67,7 +67,9 @@ Opens on `http://localhost:5173` and proxies `/api` to the backend, so run both 
 | `JWT_SECRET` | dev placeholder | HS256 signing key — **must be ≥64 chars in prod**, app refuses to boot otherwise |
 | `JWT_EXPIRATION_MS` | `86400000` | Token lifetime |
 | `CORS_ORIGINS` | `http://localhost:5173` | Allowed frontend origin(s), comma-separated |
-| `REMINDER_WINDOW_HOURS` | `48` | How far ahead deadline reminders fire |
+| `APP_TIMEZONE` | `America/Toronto` | Timezone used for class/event/exam reminder scheduling |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | unset (push disabled) | Web Push VAPID keypair (base64url, P-256). Generate: `npx web-push generate-vapid-keys` |
+| `VAPID_SUBJECT` | `mailto:ryannave97@gmail.com` | Contact URI sent to push services |
 | `SENTRY_DSN` | unset (disabled) | Backend error tracking — DSN from your Sentry project |
 | `SENTRY_ENVIRONMENT` | `development` | Tag backend Sentry events with an environment name |
 | `VITE_SENTRY_DSN` | unset (disabled) | Frontend error tracking — **build-time** var, must be set when the Docker image is built, not at runtime |

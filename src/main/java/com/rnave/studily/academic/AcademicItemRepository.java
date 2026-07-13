@@ -19,6 +19,9 @@ public interface AcademicItemRepository extends JpaRepository<AcademicItem, Long
 
     List<AcademicItem> findByStatusNotAndDueAtBetween(ItemStatus status, Instant from, Instant to);
 
+    List<AcademicItem> findByTypeAndStatusNotAndDueAtBetween(
+            ItemType type, ItemStatus status, Instant from, Instant to);
+
     Optional<AcademicItem> findFirstByCourseUserIdAndTypeAndDueAtAfterOrderByDueAtAsc(
             Long userId, ItemType type, Instant after);
 

@@ -8,7 +8,7 @@ const FEATURES = [
   ["Calendar", "a monthly view of everything you have due"],
   ["Semesters", "scope your courses and dashboard to the current term"],
   ["Friends", "find schoolmates, send friend requests, and see profiles"],
-  ["Reminders", "in-app notifications for items due within 48 hours"],
+  ["Notifications", "push notifications for messages, classes, events, and due dates"],
 ] as const;
 
 export default function AboutPage() {

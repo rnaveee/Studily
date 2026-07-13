@@ -11,4 +11,6 @@ public interface CalendarEventRepository extends JpaRepository<CalendarEvent, Lo
     List<CalendarEvent> findByUserIdAndStartAtBetweenOrderByStartAtAsc(Long userId, Instant from, Instant to);
 
     Optional<CalendarEvent> findByIdAndUserId(Long id, Long userId);
+
+    List<CalendarEvent> findByStartAtBetween(Instant from, Instant to);
 }

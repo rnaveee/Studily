@@ -8,15 +8,13 @@ import {
   GraduationCap,
   Users2,
   User,
-  Sun,
-  Moon,
+  Settings,
   LogOut,
   LogIn,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useKeyboardViewport } from "../lib/keyboardDock";
-import { useTheme } from "../lib/theme";
 import Avatar from "./Avatar";
 import Banners from "./Banners";
 import MobileFooter from "./MobileFooter";
@@ -59,7 +57,6 @@ function useTypingInField() {
 
 export default function Layout() {
   const { user, logout } = useAuth();
-  const { dark, toggle } = useTheme();
   const navigate = useNavigate();
   const typing = useTypingInField();
   useKeyboardViewport();
@@ -165,15 +162,18 @@ export default function Layout() {
         </div>
 
         <div className="p-2 space-y-0.5" style={{ borderTop: "1px solid var(--line)" }}>
-          <button
-            onClick={toggle}
-            className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-fg-2 transition-all duration-150 hover:bg-surface-hi hover:text-fg"
+          <NavLink
+            to="/settings"
+            className={({ isActive }) =>
+              [
+                "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-150",
+                isActive ? "text-accent" : "text-fg-2 hover:bg-surface-hi hover:text-fg",
+              ].join(" ")
+            }
           >
-            {dark
-              ? <Sun size={15} strokeWidth={1.8} />
-              : <Moon size={15} strokeWidth={1.8} />}
-            {dark ? "Light mode" : "Dark mode"}
-          </button>
+            <Settings size={15} strokeWidth={1.8} />
+            Settings
+          </NavLink>
 
           {user ? (
             <button
@@ -220,13 +220,13 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-0.5">
-            <button
-              onClick={toggle}
+            <NavLink
+              to="/settings"
               className="rounded-lg p-2 text-fg-2 transition-colors hover:bg-surface-hi"
-              aria-label="Toggle theme"
+              aria-label="Settings"
             >
-              {dark ? <Sun size={16} strokeWidth={1.8} /> : <Moon size={16} strokeWidth={1.8} />}
-            </button>
+              <Settings size={16} strokeWidth={1.8} />
+            </NavLink>
 
             {user ? (
               <>

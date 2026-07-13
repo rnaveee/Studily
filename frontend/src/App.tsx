@@ -24,6 +24,7 @@ import LearnPage from "./features/learn/LearnPage";
 import FlashcardsPage from "./features/learn/FlashcardsPage";
 import FlashcardSetPage from "./features/learn/FlashcardSetPage";
 import AiChatPage from "./features/learn/AiChatPage";
+import SettingsPage from "./features/settings/SettingsPage";
 
 export default function App() {
   return (
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="/friends/schoolmates" element={<SchoolmatesPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/edit" element={<ProfileEditPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/users/:userId" element={<UserProfilePage />} />
         <Route path="/profile/:userId/add" element={<UserProfilePage />} />
       </Route>

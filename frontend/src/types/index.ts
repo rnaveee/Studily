@@ -222,3 +222,11 @@ export interface Message {
   createdAt: string;
 }
 
+export interface NotificationPrefs {
+  messages: boolean;
+  classReminders: boolean;
+  eventDayOf: boolean;
+  itemWeekAhead: boolean;
+  examDayOf: boolean;
+}
+

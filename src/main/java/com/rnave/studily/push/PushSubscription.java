@@ -1,10 +1,8 @@
-package com.rnave.studily.notification;
+package com.rnave.studily.push;
 
 import com.rnave.studily.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -18,10 +16,10 @@ import lombok.Setter;
 import java.time.Instant;
 
 @Entity
-@Table(name = "notifications")
+@Table(name = "push_subscriptions")
 @Getter
 @Setter
-public class Notification {
+public class PushSubscription {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -31,20 +29,14 @@ public class Notification {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private NotificationType type;
+    @Column(nullable = false, unique = true, columnDefinition = "text")
+    private String endpoint;
 
-    @Column(nullable = false)
-    private String message;
+    @Column(nullable = false, columnDefinition = "text")
+    private String p256dh;
 
-    private Long relatedItemId;
-
-    @Column(length = 120)
-    private String dedupKey;
-
-    @Column(nullable = false)
-    private boolean read = false;
+    @Column(nullable = false, columnDefinition = "text")
+    private String auth;
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();

@@ -10,6 +10,9 @@ import com.rnave.studily.conversation.ws.WsEvents;
 import com.rnave.studily.conversation.ws.WsSessionRegistry;
 import com.rnave.studily.friend.FriendRequestRepository;
 import com.rnave.studily.friend.FriendRequestStatus;
+import com.rnave.studily.notification.NotificationPrefsService;
+import com.rnave.studily.push.PushPayload;
+import com.rnave.studily.push.WebPushSender;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import org.springframework.data.domain.PageRequest;
@@ -34,6 +37,8 @@ public class ConversationService {
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
     private final WsSessionRegistry wsSessionRegistry;
+    private final NotificationPrefsService notificationPrefsService;
+    private final WebPushSender webPushSender;
 
     public ConversationService(ConversationRepository conversationRepository,
                                ConversationMemberRepository conversationMemberRepository,
@@ -41,7 +46,9 @@ public class ConversationService {
                                FriendRequestRepository friendRequestRepository,
                                UserRepository userRepository,
                                CurrentUser currentUser,
-                               WsSessionRegistry wsSessionRegistry) {
+                               WsSessionRegistry wsSessionRegistry,
+                               NotificationPrefsService notificationPrefsService,
+                               WebPushSender webPushSender) {
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
         this.messageRepository = messageRepository;
@@ -49,6 +56,8 @@ public class ConversationService {
         this.userRepository = userRepository;
         this.currentUser = currentUser;
         this.wsSessionRegistry = wsSessionRegistry;
+        this.notificationPrefsService = notificationPrefsService;
+        this.webPushSender = webPushSender;
     }
 
     @Transactional(readOnly = true)
@@ -155,11 +164,24 @@ public class ConversationService {
         List<Long> memberIds = conv.getMembers().stream()
                 .map(m -> m.getUser().getId())
                 .toList();
+        Long senderId = dto.sender().id();
+        String senderName = dto.sender().name() == null || dto.sender().name().isBlank()
+                ? "@" + dto.sender().username()
+                : dto.sender().name();
+        boolean group = conv.getType() == ConversationType.GROUP;
+        String pushTitle = group ? conv.getName() : senderName;
+        String pushBody = group ? senderName + ": " + dto.body() : dto.body();
+        String pushUrl = "/messages/" + conv.getId();
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
                 for (Long memberId : memberIds) {
                     wsSessionRegistry.sendToUser(memberId, WsEvents.MessageEvent.of(dto));
+                    if (!memberId.equals(senderId)
+                            && !wsSessionRegistry.hasSessions(memberId)
+                            && notificationPrefsService.prefsFor(memberId).isMessages()) {
+                        webPushSender.sendToUser(memberId, PushPayload.of(pushTitle, pushBody, pushUrl));
+                    }
                 }
             }
         });
