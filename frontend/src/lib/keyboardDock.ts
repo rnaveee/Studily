@@ -25,7 +25,11 @@ export function useKeyboardViewport() {
         root.style.setProperty("--composer-pb", "6px");
         if (vv!.offsetTop > 0 || window.scrollY > 0) window.scrollTo(0, 0);
       } else {
-        root.style.removeProperty("--app-height");
+        if (vv!.scale === 1 && vv!.height - root.clientHeight > 1) {
+          root.style.setProperty("--app-height", `${Math.round(vv!.height)}px`);
+        } else {
+          root.style.removeProperty("--app-height");
+        }
         root.style.removeProperty("--composer-pb");
         if (window.scrollY > 0) window.scrollTo(0, 0);
       }
@@ -39,6 +43,7 @@ export function useKeyboardViewport() {
     schedule();
     vv.addEventListener("resize", schedule);
     vv.addEventListener("scroll", schedule);
+    window.addEventListener("resize", schedule);
     window.addEventListener("focusin", schedule);
     window.addEventListener("focusout", schedule);
     return () => {
@@ -47,6 +52,7 @@ export function useKeyboardViewport() {
       root.style.removeProperty("--composer-pb");
       vv.removeEventListener("resize", schedule);
       vv.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
       window.removeEventListener("focusin", schedule);
       window.removeEventListener("focusout", schedule);
     };
