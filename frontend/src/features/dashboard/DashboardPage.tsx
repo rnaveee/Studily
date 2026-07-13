@@ -55,6 +55,56 @@ function greeting(): string {
   return "Evening";
 }
 
+const WEEKDAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
+
+function MiniMonth({ marked }: { marked: Set<string> }) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const lead = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthLabel = now.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const iso = (d: number) =>
+    `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+  return (
+    <div className="mx-auto mt-4 max-w-xs">
+      <p className="mb-2 text-center text-[11px] font-semibold uppercase tracking-wider text-fg-3">
+        {monthLabel}
+      </p>
+      <div className="grid grid-cols-7 gap-y-1 text-center text-[11px]">
+        {WEEKDAY_LETTERS.map((d, i) => (
+          <span key={`h-${i}`} className="font-medium text-fg-3">
+            {d}
+          </span>
+        ))}
+        {Array.from({ length: lead }, (_, i) => (
+          <span key={`b-${i}`} />
+        ))}
+        {Array.from({ length: daysInMonth }, (_, i) => {
+          const day = i + 1;
+          const isToday = day === now.getDate();
+          return (
+            <span key={day} className="relative mx-auto flex h-6 w-6 items-center justify-center">
+              <span
+                className={[
+                  "flex h-5.5 w-5.5 items-center justify-center rounded-full tabular-nums",
+                  isToday ? "bg-accent font-semibold text-white" : "text-fg-2",
+                ].join(" ")}
+              >
+                {day}
+              </span>
+              {marked.has(iso(day)) && !isToday && (
+                <span className="absolute bottom-0 h-1 w-1 rounded-full bg-accent" />
+              )}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -361,6 +411,20 @@ export default function DashboardPage() {
             )}
           </div>
 
+          <Link to="/calendar" className="card block p-4 transition-colors hover:bg-surface-hi">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                    style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}>
+                <CalendarDays size={16} className="text-accent" />
+              </span>
+              <div className="min-w-0">
+                <div className="text-[14px] font-medium text-fg">Calendar</div>
+                <div className="text-[12px] text-fg-3">See and plan your full calendar.</div>
+              </div>
+            </div>
+            <MiniMonth marked={new Set(data.dueThisWeek.map((it) => it.dueAt.slice(0, 10)))} />
+          </Link>
+
           <div>
             <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
               Explore
@@ -374,16 +438,6 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <div className="text-[14px] font-medium text-fg">Courses</div>
                   <div className="text-[12px] text-fg-3">Set your courses for this semester.</div>
-                </div>
-              </Link>
-              <Link to="/calendar" className="card flex items-center gap-3 p-4 transition-colors hover:bg-surface-hi">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                      style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}>
-                  <CalendarDays size={16} className="text-accent" />
-                </span>
-                <div className="min-w-0">
-                  <div className="text-[14px] font-medium text-fg">Calendar</div>
-                  <div className="text-[12px] text-fg-3">See and plan your full calendar.</div>
                 </div>
               </Link>
               <Link to="/learn" className="card flex items-center gap-3 p-4 transition-colors hover:bg-surface-hi">

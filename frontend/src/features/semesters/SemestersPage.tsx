@@ -67,7 +67,7 @@ export default function SemestersPage() {
         </span>
         <div className="min-w-0">
           <div className="text-[14px] font-medium text-fg">Courses</div>
-          <div className="text-[12px] text-fg-3">Set your courses for this semester.</div>
+          <div className="text-[12px] text-fg-3">Set your courses for your semesters.</div>
         </div>
       </Link>
 
