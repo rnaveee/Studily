@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 
-function measureSafeBottom() {
+function measureInset(side: "top" | "bottom") {
   const el = document.createElement("div");
-  el.style.cssText =
-    "position:fixed;left:0;bottom:0;height:env(safe-area-inset-bottom,0px);width:1px;visibility:hidden;pointer-events:none";
+  el.style.cssText = `position:fixed;left:0;${side}:0;height:env(safe-area-inset-${side},0px);width:1px;visibility:hidden;pointer-events:none`;
   document.body.appendChild(el);
   const h = el.getBoundingClientRect().height;
   el.remove();
@@ -24,7 +23,8 @@ function read() {
     availH: window.screen.availHeight,
     scrollY: r1(window.scrollY),
     appH: document.documentElement.style.getPropertyValue("--app-height") || "unset",
-    safeB: measureSafeBottom(),
+    safeT: measureInset("top"),
+    safeB: measureInset("bottom"),
     standalone: window.matchMedia("(display-mode: standalone)").matches ? "yes" : "no",
     active: document.activeElement?.tagName ?? "none",
   };
