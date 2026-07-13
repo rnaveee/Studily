@@ -210,7 +210,7 @@ export default function Layout() {
             paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
           }}
         >
-          <div className="flex items-center">
+          <div className="flex items-center" onClick={handleDebugTap}>
             <img src="/studily-3a.svg" alt="" className="h-8 w-8" />
             <div>
               <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
