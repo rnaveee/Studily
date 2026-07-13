@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -19,6 +19,7 @@ import { useKeyboardViewport } from "../lib/keyboardDock";
 import { useTheme } from "../lib/theme";
 import Avatar from "./Avatar";
 import Banners from "./Banners";
+import ViewportDebug from "./ViewportDebug";
 import type { Conversation, FriendRequestItem } from "../types";
 
 const NAV = [
@@ -61,6 +62,20 @@ export default function Layout() {
   const navigate = useNavigate();
   const typing = useTypingInField();
   useKeyboardViewport();
+  const [debug, setDebug] = useState(false);
+  const debugTaps = useRef({ n: 0, t: 0 });
+
+  function handleDebugTap() {
+    const now = Date.now();
+    debugTaps.current =
+      now - debugTaps.current.t < 1500
+        ? { n: debugTaps.current.n + 1, t: now }
+        : { n: 1, t: now };
+    if (debugTaps.current.n >= 5) {
+      debugTaps.current = { n: 0, t: 0 };
+      setDebug((d) => !d);
+    }
+  }
 
   const conversations = useQuery({
     queryKey: ["conversations", "list"],
@@ -301,12 +316,13 @@ export default function Layout() {
                 </Link>
               ))}
             </div>
-            <div className="mt-2 text-[10px] text-fg-3">
+            <div className="mt-2 text-[10px] text-fg-3" onClick={handleDebugTap}>
               © {new Date().getFullYear()} Ryan Nave
             </div>
           </div>
         </footer>
       </div>
+      {debug && <ViewportDebug />}
     </div>
   );
 }
