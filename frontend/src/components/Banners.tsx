@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Megaphone, Smartphone, X } from "lucide-react";
+import { MailWarning, Megaphone, Smartphone, X } from "lucide-react";
+import { useAuth } from "../lib/auth";
 
 const BETA_KEY = "studily.banner.beta";
 const INSTALL_KEY = "studily.banner.install";
@@ -13,6 +14,7 @@ function isStandalone() {
 }
 
 export default function Banners() {
+  const { user } = useAuth();
   const [betaDismissed, setBetaDismissed] = useState(
     () => localStorage.getItem(BETA_KEY) === "1",
   );
@@ -25,10 +27,21 @@ export default function Banners() {
     set(true);
   }
 
-  if (betaDismissed && installDismissed) return null;
+  const unverified = !!user && !user.emailVerified;
+
+  if (betaDismissed && installDismissed && !unverified) return null;
 
   return (
     <div className="shrink-0">
+      {unverified && (
+        <Banner icon={<MailWarning size={13} className="shrink-0" />} color="var(--orange)">
+          Your account is unverified! Some features are unavailable.{" "}
+          <Link to="/settings" className="font-medium underline underline-offset-2">
+            Verify now
+          </Link>
+          .
+        </Banner>
+      )}
       {!betaDismissed && (
         <Banner
           icon={<Megaphone size={13} className="shrink-0" />}
@@ -60,29 +73,34 @@ export default function Banners() {
 function Banner({
   icon,
   onDismiss,
+  color = "var(--accent)",
   children,
 }: {
   icon: React.ReactNode;
-  onDismiss: () => void;
+  onDismiss?: () => void;
+  color?: string;
   children: React.ReactNode;
 }) {
   return (
     <div
-      className="flex items-center gap-2 px-4 py-1.5 text-[12px] text-accent animate-slide"
+      className="flex items-center gap-2 px-4 py-1.5 text-[12px] animate-slide"
       style={{
-        background: "color-mix(in srgb, var(--accent) 9%, var(--surface))",
+        color,
+        background: `color-mix(in srgb, ${color} 9%, var(--surface))`,
         borderBottom: "1px solid var(--line)",
       }}
     >
       {icon}
       <p className="flex-1 truncate">{children}</p>
-      <button
-        onClick={onDismiss}
-        aria-label="Dismiss"
-        className="rounded p-0.5 transition-colors hover:bg-surface-hi"
-      >
-        <X size={13} />
-      </button>
+      {onDismiss && (
+        <button
+          onClick={onDismiss}
+          aria-label="Dismiss"
+          className="rounded p-0.5 transition-colors hover:bg-surface-hi"
+        >
+          <X size={13} />
+        </button>
+      )}
     </div>
   );
 }

@@ -22,4 +22,15 @@ public class AuthDtos {
 
     public record AuthResponse(String token, UserDto user) {
     }
+
+    public record VerifyEmailRequest(@NotBlank String token) {
+    }
+
+    public record ForgotPasswordRequest(@NotBlank String email) {
+    }
+
+    public record ResetPasswordRequest(
+            @NotBlank String token,
+            @NotBlank @Size(min = 8, max = 100) String password) {
+    }
 }

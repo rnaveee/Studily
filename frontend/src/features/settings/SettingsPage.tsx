@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../lib/api";
+import { api, ApiError, setToken } from "../../lib/api";
+import { useAuth } from "../../lib/auth";
+import { useConfirm } from "../../lib/confirm";
 import { useTheme } from "../../lib/theme";
 import { toast } from "../../lib/toast";
 import {
@@ -12,7 +14,7 @@ import {
   pushSupported,
 } from "../../lib/push";
 import Toggle from "../../components/Toggle";
-import type { NotificationPrefs } from "../../types";
+import type { AuthResponse, NotificationPrefs } from "../../types";
 
 const PREF_ROWS: { key: keyof NotificationPrefs; label: string; hint: string }[] = [
   { key: "messages", label: "DMs + group chats", hint: "New messages from friends and groups" },
@@ -155,6 +157,229 @@ export default function SettingsPage() {
           <Toggle checked={dark} onChange={() => toggle()} />
         </div>
       </div>
+
+      <AccountSection />
     </div>
+  );
+}
+
+function AccountSection() {
+  const { user, logout, refresh } = useAuth();
+  const confirm = useConfirm();
+  const navigate = useNavigate();
+  const [openForm, setOpenForm] = useState<"password" | "delete" | null>(null);
+
+  useEffect(() => {
+    if (user && !user.emailVerified) {
+      const onFocus = () => refresh().catch(() => {});
+      window.addEventListener("focus", onFocus);
+      return () => window.removeEventListener("focus", onFocus);
+    }
+  }, [user, refresh]);
+
+  const resend = useMutation({
+    mutationFn: () => api.post<void>("/me/verification-email"),
+    onSuccess: () => toast.success(`Verification link sent to ${user?.email}`),
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Couldn't send the email"),
+  });
+
+  async function deleteAccount(password: string) {
+    const ok = await confirm({
+      title: "Delete your account?",
+      message:
+        "This permanently erases your courses, schedule, messages, friendships — everything. There is no undo.",
+      confirmLabel: "Delete forever",
+      danger: true,
+    });
+    if (!ok) return;
+    await api.post<void>("/me/delete", { password });
+    toast.success("Your account has been deleted");
+    logout();
+    navigate("/signup");
+  }
+
+  if (!user) return null;
+
+  return (
+    <>
+      <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
+        Account
+      </h2>
+
+      <div className="card mt-3 divide-y" style={{ borderColor: "var(--line)" }}>
+        <div className="flex items-center justify-between gap-4 p-4">
+          <div className="min-w-0">
+            <div className="truncate text-[14px] font-medium text-fg">{user.email}</div>
+            <div className="mt-0.5 text-[12px] text-fg-3">
+              {user.emailVerified
+                ? "Verified — messaging and friends are unlocked"
+                : "Unverified — messaging and friends are locked"}
+            </div>
+          </div>
+          {user.emailVerified ? (
+            <span className="badge badge-accent shrink-0">Verified</span>
+          ) : (
+            <button
+              onClick={() => resend.mutate()}
+              disabled={resend.isPending}
+              className="btn btn-primary shrink-0"
+            >
+              {resend.isPending ? "Sending…" : "Send link"}
+            </button>
+          )}
+        </div>
+
+        <div className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-[14px] font-medium text-fg">Password</div>
+              <div className="mt-0.5 text-[12px] text-fg-3">Change your account password</div>
+            </div>
+            <button
+              onClick={() => setOpenForm((f) => (f === "password" ? null : "password"))}
+              className="btn btn-ghost shrink-0"
+            >
+              {openForm === "password" ? "Cancel" : "Change"}
+            </button>
+          </div>
+          {openForm === "password" && (
+            <ChangePasswordForm onDone={() => setOpenForm(null)} />
+          )}
+        </div>
+
+        <div className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-[14px] font-medium text-fg">Delete account</div>
+              <div className="mt-0.5 text-[12px] text-fg-3">
+                Permanently erase your account and all data
+              </div>
+            </div>
+            <button
+              onClick={() => setOpenForm((f) => (f === "delete" ? null : "delete"))}
+              className="btn btn-danger shrink-0"
+            >
+              {openForm === "delete" ? "Cancel" : "Delete"}
+            </button>
+          </div>
+          {openForm === "delete" && <DeleteAccountForm onSubmit={deleteAccount} />}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ChangePasswordForm({ onDone }: { onDone: () => void }) {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (next !== confirmPw) {
+      setError("New passwords don't match");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await api.put<AuthResponse>("/me/password", {
+        currentPassword: current,
+        newPassword: next,
+      });
+      setToken(res.token);
+      toast.success("Password updated");
+      onDone();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't update password");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-3 space-y-3 animate-slide">
+      <div>
+        <label className="field-label">Current password</label>
+        <input
+          className="input"
+          type="password"
+          value={current}
+          onChange={(e) => setCurrent(e.target.value)}
+          required
+          autoFocus
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="field-label">New password</label>
+          <input
+            className="input"
+            type="password"
+            placeholder="min 8 characters"
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+            required
+            minLength={8}
+          />
+        </div>
+        <div>
+          <label className="field-label">Confirm</label>
+          <input
+            className="input"
+            type="password"
+            value={confirmPw}
+            onChange={(e) => setConfirmPw(e.target.value)}
+            required
+            minLength={8}
+          />
+        </div>
+      </div>
+      {error && <p className="text-xs text-red animate-fade">{error}</p>}
+      <button type="submit" disabled={busy} className="btn btn-primary">
+        {busy ? "Saving…" : "Update password"}
+      </button>
+    </form>
+  );
+}
+
+function DeleteAccountForm({ onSubmit }: { onSubmit: (password: string) => Promise<void> }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setBusy(true);
+    try {
+      await onSubmit(password);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't delete account");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-3 space-y-3 animate-slide">
+      <div>
+        <label className="field-label">Confirm with your password</label>
+        <input
+          className="input"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          autoFocus
+        />
+      </div>
+      {error && <p className="text-xs text-red animate-fade">{error}</p>}
+      <button type="submit" disabled={busy} className="btn btn-danger">
+        {busy ? "Deleting…" : "Permanently delete my account"}
+      </button>
+    </form>
   );
 }

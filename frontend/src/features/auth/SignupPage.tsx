@@ -11,8 +11,9 @@ export default function SignupPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [created, setCreated] = useState(false);
 
-  if (user) return <Navigate to="/" replace />;
+  if (user && !created) return <Navigate to="/" replace />;
 
   function set(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -25,12 +26,41 @@ export default function SignupPage() {
     setBusy(true);
     try {
       await signup({ ...form, school: form.school || undefined });
-      navigate("/");
+      setCreated(true);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Sign up failed");
     } finally {
       setBusy(false);
     }
+  }
+
+  if (created) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-bg px-4">
+        <div className="w-full max-w-[360px] animate-in">
+          <div className="mb-8 text-center">
+            <img src="/studily-3a.svg" alt="" className="mx-auto mb-2 h-14 w-14" />
+            <span className="font-mono text-2xl font-bold tracking-tight text-fg">Studily</span>
+          </div>
+
+          <div className="card p-6">
+            <h1 className="mb-3 text-[15px] font-semibold text-fg">Check your email 📬</h1>
+            <p className="text-[13px] leading-relaxed text-fg-2">
+              We sent a verification link to{" "}
+              <span className="font-medium text-fg">{form.email}</span>. Verifying unlocks
+              messaging and friends — until then you can still plan your semesters, courses, and
+              schedule.
+            </p>
+            <button onClick={() => navigate("/")} className="btn btn-primary w-full mt-5">
+              Continue to Studily
+            </button>
+            <p className="mt-3 text-center text-[11px] leading-relaxed text-fg-3">
+              Didn't get it? You can resend the link anytime from Settings.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

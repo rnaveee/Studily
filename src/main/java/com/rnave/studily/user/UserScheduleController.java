@@ -51,8 +51,14 @@ public class UserScheduleController {
         if (!userRepository.existsById(id)) {
             throw new NotFoundException("User not found");
         }
-        if (!me.equals(id) && !isFriend(me, id)) {
-            throw new ForbiddenException("Only friends can view schedules");
+        if (!me.equals(id)) {
+            boolean verified = userRepository.findById(me).map(User::isEmailVerified).orElse(false);
+            if (!verified) {
+                throw new ForbiddenException("Verify your email to view schedules");
+            }
+            if (!isFriend(me, id)) {
+                throw new ForbiddenException("Only friends can view schedules");
+            }
         }
         LocalDate today = LocalDate.now();
         Semester current = semesterRepository

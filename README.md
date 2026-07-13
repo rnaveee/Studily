@@ -70,6 +70,9 @@ Opens on `http://localhost:5173` and proxies `/api` to the backend, so run both 
 | `APP_TIMEZONE` | `America/Toronto` | Timezone used for class/event/exam reminder scheduling |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | unset (push disabled) | Web Push VAPID keypair (base64url, P-256). Generate: `npx web-push generate-vapid-keys` |
 | `VAPID_SUBJECT` | `mailto:ryannave97@gmail.com` | Contact URI sent to push services |
+| `RESEND_API_KEY` | unset (email disabled) | Resend API key for verification / password-reset emails |
+| `MAIL_FROM` | `Studily <onboarding@resend.dev>` | From address — the default only delivers to the Resend account owner; verify a domain in Resend and use it in prod |
+| `APP_BASE_URL` | `http://localhost:5173` | Public URL used in email links (`https://studily.ca` in prod) |
 | `SENTRY_DSN` | unset (disabled) | Backend error tracking — DSN from your Sentry project |
 | `SENTRY_ENVIRONMENT` | `development` | Tag backend Sentry events with an environment name |
 | `VITE_SENTRY_DSN` | unset (disabled) | Frontend error tracking — **build-time** var, must be set when the Docker image is built, not at runtime |

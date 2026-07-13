@@ -78,14 +78,14 @@ export default function Layout() {
   const conversations = useQuery({
     queryKey: ["conversations", "list"],
     queryFn: () => api.get<Conversation[]>("/conversations"),
-    enabled: !!user,
+    enabled: !!user?.emailVerified,
     refetchInterval: 15000,
   });
 
   const incomingRequests = useQuery({
     queryKey: ["friends", "incoming"],
     queryFn: () => api.get<FriendRequestItem[]>("/friends/incoming"),
-    enabled: !!user,
+    enabled: !!user?.emailVerified,
     refetchInterval: 15000,
   });
 

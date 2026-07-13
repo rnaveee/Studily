@@ -8,6 +8,10 @@ import SupportPage from "./features/static/SupportPage";
 import InstallPage from "./features/static/InstallPage";
 import LoginPage from "./features/auth/LoginPage";
 import SignupPage from "./features/auth/SignupPage";
+import ForgotPasswordPage from "./features/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./features/auth/ResetPasswordPage";
+import VerifyEmailPage from "./features/auth/VerifyEmailPage";
+import VerifyGate from "./components/VerifyGate";
 import DashboardPage from "./features/dashboard/DashboardPage";
 import CalendarPage from "./features/calendar/CalendarPage";
 import CoursesPage from "./features/courses/CoursesPage";
@@ -31,6 +35,9 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route
         element={
           <ProtectedRoute>
@@ -42,20 +49,20 @@ export default function App() {
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/:id" element={<CourseDetailPage />} />
-        <Route path="/messages" element={<MessagesPage />} />
-        <Route path="/messages/:id" element={<ConversationPage />} />
+        <Route path="/messages" element={<VerifyGate><MessagesPage /></VerifyGate>} />
+        <Route path="/messages/:id" element={<VerifyGate><ConversationPage /></VerifyGate>} />
         <Route path="/learn" element={<LearnPage />} />
         <Route path="/learn/flashcards" element={<FlashcardsPage />} />
         <Route path="/learn/flashcards/:id" element={<FlashcardSetPage />} />
         <Route path="/learn/ai" element={<AiChatPage />} />
         <Route path="/semesters" element={<SemestersPage />} />
-        <Route path="/friends" element={<FriendsPage />} />
-        <Route path="/friends/schoolmates" element={<SchoolmatesPage />} />
+        <Route path="/friends" element={<VerifyGate><FriendsPage /></VerifyGate>} />
+        <Route path="/friends/schoolmates" element={<VerifyGate><SchoolmatesPage /></VerifyGate>} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/edit" element={<ProfileEditPage />} />
         <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/users/:userId" element={<UserProfilePage />} />
-        <Route path="/profile/:userId/add" element={<UserProfilePage />} />
+        <Route path="/users/:userId" element={<VerifyGate><UserProfilePage /></VerifyGate>} />
+        <Route path="/profile/:userId/add" element={<VerifyGate><UserProfilePage /></VerifyGate>} />
       </Route>
       <Route element={<Layout />}>
         <Route path="/about"   element={<AboutPage />} />

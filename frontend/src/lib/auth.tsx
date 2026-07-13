@@ -10,6 +10,7 @@ interface AuthState {
   signup: (input: SignupInput) => Promise<void>;
   logout: () => void;
   setUser: (user: User) => void;
+  refresh: () => Promise<void>;
 }
 
 export interface SignupInput {
@@ -39,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (user) ws.connect();
+    if (user?.emailVerified) ws.connect();
     else ws.disconnect();
   }, [user]);
 
@@ -60,8 +61,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }
 
+  async function refresh() {
+    if (!getToken()) return;
+    const u = await api.get<User>("/me");
+    setUser(u);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, setUser }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, setUser, refresh }}>
       {children}
     </AuthContext.Provider>
   );

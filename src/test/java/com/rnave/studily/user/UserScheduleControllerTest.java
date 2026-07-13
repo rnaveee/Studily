@@ -46,6 +46,10 @@ class UserScheduleControllerTest {
                 semesterRepository, courseRepository, friendRequestRepository, userRepository, currentUser);
         when(currentUser.id()).thenReturn(1L);
         when(userRepository.existsById(anyLong())).thenReturn(true);
+        User viewer = new User();
+        viewer.setId(1L);
+        viewer.setEmailVerified(true);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(viewer));
     }
 
     @Test
@@ -91,6 +95,18 @@ class UserScheduleControllerTest {
     void pendingRequest_isStillForbidden() {
         when(friendRequestRepository.findBetween(1L, 2L))
                 .thenReturn(Optional.of(request(FriendRequestStatus.PENDING)));
+
+        assertThatThrownBy(() -> controller.schedule(2L)).isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void unverifiedViewer_isForbidden() {
+        User viewer = new User();
+        viewer.setId(1L);
+        viewer.setEmailVerified(false);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(viewer));
+        when(friendRequestRepository.findBetween(1L, 2L))
+                .thenReturn(Optional.of(request(FriendRequestStatus.ACCEPTED)));
 
         assertThatThrownBy(() -> controller.schedule(2L)).isInstanceOf(ForbiddenException.class);
     }

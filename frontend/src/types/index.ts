@@ -38,6 +38,7 @@ export interface User {
   major?: string | null;
   bio?: string | null;
   avatarUrl?: string | null;
+  emailVerified: boolean;
   createdAt: string;
 }
 

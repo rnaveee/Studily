@@ -28,6 +28,8 @@ class AuthServiceTest {
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     private JwtService jwtService;
     private LoginRateLimiter loginRateLimiter;
+    private AuthEmailService authEmailService;
+    private AccountTokenService accountTokenService;
     private AuthService authService;
 
     @BeforeEach
@@ -36,8 +38,11 @@ class AuthServiceTest {
         passwordEncoder = mock(org.springframework.security.crypto.password.PasswordEncoder.class);
         jwtService = mock(JwtService.class);
         loginRateLimiter = mock(LoginRateLimiter.class);
+        authEmailService = mock(AuthEmailService.class);
+        accountTokenService = mock(AccountTokenService.class);
         when(loginRateLimiter.tryConsume(anyString())).thenReturn(true);
-        authService = new AuthService(userRepository, passwordEncoder, jwtService, loginRateLimiter);
+        authService = new AuthService(userRepository, passwordEncoder, jwtService, loginRateLimiter,
+                authEmailService, accountTokenService);
     }
 
     @Test
@@ -62,6 +67,53 @@ class AuthServiceTest {
         org.mockito.Mockito.verify(userRepository).save(captor.capture());
         assertThat(captor.getValue().getEmail()).isEqualTo("new@example.com");
         assertThat(captor.getValue().getPasswordHash()).isEqualTo("hashed");
+        assertThat(captor.getValue().isEmailVerified()).isFalse();
+        org.mockito.Mockito.verify(authEmailService).sendVerification(any(User.class));
+    }
+
+    @Test
+    void verifyEmail_marksUserVerified() {
+        User user = new User();
+        user.setId(5L);
+        when(accountTokenService.consume("tok", AccountTokenType.EMAIL_VERIFY)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        authService.verifyEmail("tok");
+
+        assertThat(user.isEmailVerified()).isTrue();
+    }
+
+    @Test
+    void verifyEmail_rejectsBadToken() {
+        when(accountTokenService.consume("bad", AccountTokenType.EMAIL_VERIFY)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.verifyEmail("bad")).isInstanceOf(UnauthorizedException.class);
+    }
+
+    @Test
+    void forgotPassword_staysSilentForUnknownEmail() {
+        when(userRepository.findByEmail("ghost@example.com")).thenReturn(Optional.empty());
+
+        authService.forgotPassword("ghost@example.com");
+
+        org.mockito.Mockito.verifyNoInteractions(authEmailService);
+    }
+
+    @Test
+    void resetPassword_updatesHashAndRevokesOldTokens() {
+        User user = new User();
+        user.setId(5L);
+        user.setPasswordHash("old");
+        user.setTokenVersion(3);
+        when(accountTokenService.consume("tok", AccountTokenType.PASSWORD_RESET)).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode("newpassword1")).thenReturn("newhash");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        authService.resetPassword("tok", "newpassword1");
+
+        assertThat(user.getPasswordHash()).isEqualTo("newhash");
+        assertThat(user.getTokenVersion()).isEqualTo(4);
+        assertThat(user.isEmailVerified()).isTrue();
     }
 
     @Test

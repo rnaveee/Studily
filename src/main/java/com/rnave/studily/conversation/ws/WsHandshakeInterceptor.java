@@ -40,7 +40,7 @@ public class WsHandshakeInterceptor implements HandshakeInterceptor {
         try {
             JwtService.TokenPayload payload = jwtService.parseToken(token);
             boolean current = userRepository.findById(payload.userId())
-                    .map(u -> u.getTokenVersion() == payload.tokenVersion())
+                    .map(u -> u.getTokenVersion() == payload.tokenVersion() && u.isEmailVerified())
                     .orElse(false);
             if (!current) {
                 response.setStatusCode(HttpStatus.UNAUTHORIZED);

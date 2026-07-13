@@ -29,15 +29,18 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final AuthRateLimitFilter authRateLimitFilter;
     private final GlobalRateLimitFilter globalRateLimitFilter;
+    private final EmailVerificationFilter emailVerificationFilter;
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter, AuthRateLimitFilter authRateLimitFilter,
-                          GlobalRateLimitFilter globalRateLimitFilter) {
+                          GlobalRateLimitFilter globalRateLimitFilter,
+                          EmailVerificationFilter emailVerificationFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.authRateLimitFilter = authRateLimitFilter;
         this.globalRateLimitFilter = globalRateLimitFilter;
+        this.emailVerificationFilter = emailVerificationFilter;
     }
 
     @Bean
@@ -71,7 +74,8 @@ public class SecurityConfig {
                 .exceptionHandling(eh -> eh.authenticationEntryPoint(unauthorizedEntryPoint()))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(authRateLimitFilter, JwtAuthFilter.class)
-                .addFilterAfter(globalRateLimitFilter, JwtAuthFilter.class);
+                .addFilterAfter(globalRateLimitFilter, JwtAuthFilter.class)
+                .addFilterAfter(emailVerificationFilter, GlobalRateLimitFilter.class);
         return http.build();
     }
 

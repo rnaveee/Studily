@@ -52,7 +52,8 @@ export default function PrivacyPage() {
           <Link to="/terms" className="text-accent transition-colors hover:text-accent-2">
             Terms of Service
           </Link>
-          . If you'd like your account and data deleted, or have any privacy questions, email{" "}
+          . You can permanently delete your account and all of its data anytime from the Settings
+          page. For any privacy questions, email{" "}
           <a href="mailto:ryannave97@gmail.com" className="text-accent transition-colors hover:text-accent-2">
             ryannave97@gmail.com
           </a>

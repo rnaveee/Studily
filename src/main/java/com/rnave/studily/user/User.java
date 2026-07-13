@@ -48,6 +48,9 @@ public class User {
     @Column(nullable = false)
     private int tokenVersion = 0;
 
+    @Column(nullable = false)
+    private boolean emailVerified = false;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 }

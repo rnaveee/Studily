@@ -14,6 +14,7 @@
   --accent-fg:  #ffffff;
   --red:        #c63636;
   --green:      #2d9060;
+  --orange:     #b9701f;
   --sidebar-w:  220px;
 }
 
@@ -30,6 +31,7 @@
   --accent-fg:  #ffffff;
   --red:        #dc4444;
   --green:      #42a870;
+  --orange:     #e0913c;
 }
 
 @theme inline {

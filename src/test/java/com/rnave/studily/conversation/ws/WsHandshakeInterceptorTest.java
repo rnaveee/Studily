@@ -45,7 +45,7 @@ class WsHandshakeInterceptorTest {
     void validToken_acceptsAndStashesUserId() {
         when(request.getURI()).thenReturn(URI.create("ws://localhost/ws?token=good"));
         when(jwtService.parseToken("good")).thenReturn(new JwtService.TokenPayload(42L, 0));
-        when(userRepository.findById(42L)).thenReturn(Optional.of(userWithTokenVersion(0)));
+        when(userRepository.findById(42L)).thenReturn(Optional.of(verifiedUserWithTokenVersion(0)));
 
         boolean accepted = interceptor.beforeHandshake(request, response, wsHandler, attributes);
 
@@ -79,7 +79,21 @@ class WsHandshakeInterceptorTest {
     void staleTokenVersion_rejectsWith401() {
         when(request.getURI()).thenReturn(URI.create("ws://localhost/ws?token=old"));
         when(jwtService.parseToken("old")).thenReturn(new JwtService.TokenPayload(42L, 0));
-        when(userRepository.findById(42L)).thenReturn(Optional.of(userWithTokenVersion(1)));
+        when(userRepository.findById(42L)).thenReturn(Optional.of(verifiedUserWithTokenVersion(1)));
+
+        boolean accepted = interceptor.beforeHandshake(request, response, wsHandler, attributes);
+
+        assertThat(accepted).isFalse();
+        verify(response).setStatusCode(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void unverifiedEmail_rejectsWith401() {
+        when(request.getURI()).thenReturn(URI.create("ws://localhost/ws?token=good"));
+        when(jwtService.parseToken("good")).thenReturn(new JwtService.TokenPayload(42L, 0));
+        User unverified = verifiedUserWithTokenVersion(0);
+        unverified.setEmailVerified(false);
+        when(userRepository.findById(42L)).thenReturn(Optional.of(unverified));
 
         boolean accepted = interceptor.beforeHandshake(request, response, wsHandler, attributes);
 
@@ -99,9 +113,10 @@ class WsHandshakeInterceptorTest {
         verify(response).setStatusCode(HttpStatus.UNAUTHORIZED);
     }
 
-    private User userWithTokenVersion(int version) {
+    private User verifiedUserWithTokenVersion(int version) {
         User user = new User();
         user.setTokenVersion(version);
+        user.setEmailVerified(true);
         return user;
     }
 }
