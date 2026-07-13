@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Edit2, Plus, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { BookOpen, Edit2, Plus, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
 import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
 import { MONTHS, formatMonth } from "../../lib/format";
-import type { Semester, SemesterRequest, SemesterTerm } from "../../types";
+import type { Course, Semester, SemesterRequest, SemesterTerm } from "../../types";
 
 const TERMS: SemesterTerm[] = ["FALL", "SPRING", "SUMMER", "WINTER"];
 const TERM_LABELS: Record<SemesterTerm, string> = {
@@ -23,6 +24,11 @@ export default function SemestersPage() {
   const { data: semesters, isLoading } = useQuery({
     queryKey: ["semesters"],
     queryFn: () => api.get<Semester[]>("/semesters"),
+  });
+
+  const { data: courses } = useQuery({
+    queryKey: ["courses", null],
+    queryFn: () => api.get<Course[]>("/courses"),
   });
 
   const create = useMutation({
@@ -54,6 +60,17 @@ export default function SemestersPage() {
         </button>
       </div>
 
+      <Link to="/courses" className="card flex items-center gap-3 p-4 transition-colors hover:bg-surface-hi">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}>
+          <BookOpen size={16} className="text-accent" />
+        </span>
+        <div className="min-w-0">
+          <div className="text-[14px] font-medium text-fg">Courses</div>
+          <div className="text-[12px] text-fg-3">Set your courses for this semester.</div>
+        </div>
+      </Link>
+
       {showForm && (
         <SemesterForm
           onSubmit={(req) => create.mutateAsync(req)}
@@ -73,6 +90,7 @@ export default function SemestersPage() {
             <SemesterRow
               key={s.id}
               semester={s}
+              courses={(courses ?? []).filter((c) => c.semesterId === s.id)}
               onDelete={async () => {
                 const ok = await confirm({
                   title: `Delete ${s.label}?`,
@@ -100,7 +118,15 @@ export default function SemestersPage() {
   );
 }
 
-function SemesterRow({ semester, onDelete }: { semester: Semester; onDelete: () => void }) {
+function SemesterRow({
+  semester,
+  courses,
+  onDelete,
+}: {
+  semester: Semester;
+  courses: Course[];
+  onDelete: () => void;
+}) {
   const [editing, setEditing] = useState(false);
   const qc = useQueryClient();
 
@@ -127,23 +153,49 @@ function SemesterRow({ semester, onDelete }: { semester: Semester; onDelete: () 
   }
 
   return (
-    <li className="flex items-center justify-between px-4 py-3">
-      <div>
-        <div className="font-medium text-fg">{semester.label}</div>
-        <div className="text-[13px] text-fg-3">
-          {formatMonth(semester.startDate)} – {formatMonth(semester.endDate)}
+    <li className="px-4 py-3">
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="font-medium text-fg">{semester.label}</div>
+          <div className="text-[13px] text-fg-3">
+            {formatMonth(semester.startDate)} – {formatMonth(semester.endDate)}
+          </div>
+        </div>
+        <div className="flex gap-1.5">
+          <button onClick={() => setEditing(true)} className="btn btn-ghost">
+            <Edit2 size={13} />
+            Edit
+          </button>
+          <button onClick={onDelete} className="btn btn-danger">
+            <Trash2 size={13} />
+            Delete
+          </button>
         </div>
       </div>
-      <div className="flex gap-1.5">
-        <button onClick={() => setEditing(true)} className="btn btn-ghost">
-          <Edit2 size={13} />
-          Edit
-        </button>
-        <button onClick={onDelete} className="btn btn-danger">
-          <Trash2 size={13} />
-          Delete
-        </button>
-      </div>
+      {courses.length > 0 ? (
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {courses.map((c) => (
+            <Link
+              key={c.id}
+              to={`/courses/${c.id}`}
+              className="flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-[12px] font-medium text-fg-2 transition-colors hover:bg-surface-hi hover:text-fg"
+            >
+              <span
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: c.color ?? "var(--accent)" }}
+              />
+              {c.name}
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2.5 text-[12px] text-fg-3">
+          No courses in this semester yet —{" "}
+          <Link to="/courses" className="text-accent hover:text-accent-2 transition-colors">
+            add one
+          </Link>.
+        </p>
+      )}
     </li>
   );
 }
