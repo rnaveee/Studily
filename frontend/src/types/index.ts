@@ -222,13 +222,3 @@ export interface Message {
   createdAt: string;
 }
 
-export type NotificationType = "DEADLINE_REMINDER";
-
-export interface Notification {
-  id: number;
-  type: NotificationType;
-  message: string;
-  relatedItemId?: number | null;
-  read: boolean;
-  createdAt: string;
-}

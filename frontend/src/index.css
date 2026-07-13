@@ -199,10 +199,6 @@ textarea.input { resize: vertical; }
   background: var(--surface-hi);
   color: var(--fg-2);
 }
-.badge-red {
-  background: color-mix(in srgb, var(--red) 10%, transparent);
-  color: var(--red);
-}
 .badge-green {
   background: color-mix(in srgb, var(--green) 10%, transparent);
   color: var(--green);
@@ -218,8 +214,3 @@ textarea.input { resize: vertical; }
   text-transform: uppercase;
 }
 
-.divider {
-  height: 1px;
-  background: var(--line);
-  margin: 0;
-}
