@@ -178,13 +178,18 @@ function SemesterRow({
             <Link
               key={c.id}
               to={`/courses/${c.id}`}
-              className="flex items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-[12px] font-medium text-fg-2 transition-colors hover:bg-surface-hi hover:text-fg"
+              className="flex w-full items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-[12px] font-medium text-fg-2 transition-colors hover:bg-surface-hi hover:text-fg sm:w-auto"
             >
               <span
                 className="h-2 w-2 shrink-0 rounded-full"
                 style={{ backgroundColor: c.color ?? "var(--accent)" }}
               />
-              {c.name}
+              <span className="truncate">{c.name}</span>
+              {c.code && (
+                <span className="ml-auto shrink-0 pl-2 text-[11px] font-normal text-fg-3 sm:ml-0.5 sm:pl-0">
+                  {c.code}
+                </span>
+              )}
             </Link>
           ))}
         </div>
