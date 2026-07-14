@@ -34,7 +34,7 @@ export default function Banners() {
   return (
     <div className="shrink-0">
       {unverified && (
-        <Banner icon={<MailWarning size={13} className="shrink-0" />} color="var(--orange)">
+        <Banner icon={<MailWarning size={13} className="shrink-0" />} color="var(--orange)" wrap>
           Your account is unverified! Some features are unavailable.{" "}
           <Link to="/settings" className="font-medium underline underline-offset-2">
             Verify now
@@ -74,11 +74,13 @@ function Banner({
   icon,
   onDismiss,
   color = "var(--accent)",
+  wrap = false,
   children,
 }: {
   icon: React.ReactNode;
   onDismiss?: () => void;
   color?: string;
+  wrap?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -91,7 +93,7 @@ function Banner({
       }}
     >
       {icon}
-      <p className="flex-1 truncate">{children}</p>
+      <p className={wrap ? "flex-1 leading-snug" : "flex-1 truncate"}>{children}</p>
       {onDismiss && (
         <button
           onClick={onDismiss}
