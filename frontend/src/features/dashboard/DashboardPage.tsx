@@ -343,9 +343,12 @@ export default function DashboardPage() {
                         to={`/courses/${m.courseId}`}
                         className="absolute inset-x-0.5 overflow-hidden rounded px-1 text-[10px] text-white transition-opacity hover:opacity-80"
                         style={{ backgroundColor: m.color ?? "var(--accent)", top, height, paddingTop: 2 }}
-                        title={`${m.courseName}${m.professor ? ` · ${m.professor}` : ""} ${hhmm(m.startTime)}–${hhmm(m.endTime)}`}
+                        title={`${m.code ? `${m.code} · ` : ""}${m.courseName}${m.professor ? ` · ${m.professor}` : ""} ${hhmm(m.startTime)}–${hhmm(m.endTime)}`}
                       >
-                        <div className="truncate font-semibold leading-tight">{m.courseName}</div>
+                        <div className="truncate font-semibold leading-tight">{m.code || m.courseName}</div>
+                        {m.code && height > 38 && (
+                          <div className="truncate leading-tight opacity-90">{m.courseName}</div>
+                        )}
                         {height > 26 && (
                           <div className="truncate leading-tight opacity-75">{hhmm(m.startTime)}</div>
                         )}

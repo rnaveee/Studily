@@ -11,6 +11,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -45,16 +46,24 @@ public class MailService {
     }
 
     public boolean send(String to, String subject, String html) {
+        return send(to, subject, html, null);
+    }
+
+    public boolean send(String to, String subject, String html, String replyTo) {
         if (!enabled()) {
             log.warn("Email disabled, dropping message to {} ({})", to, subject);
             return false;
         }
         try {
-            String body = objectMapper.writeValueAsString(Map.of(
+            Map<String, Object> payload = new HashMap<>(Map.of(
                     "from", from,
                     "to", List.of(to),
                     "subject", subject,
                     "html", html));
+            if (replyTo != null && !replyTo.isBlank()) {
+                payload.put("reply_to", replyTo);
+            }
+            String body = objectMapper.writeValueAsString(payload);
             HttpRequest request = HttpRequest.newBuilder(RESEND_URI)
                     .header("Authorization", "Bearer " + apiKey)
                     .header("Content-Type", "application/json")

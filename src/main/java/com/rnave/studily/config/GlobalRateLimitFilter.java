@@ -46,7 +46,7 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
         return "ip:" + clientIp(request);
     }
 
-    private String clientIp(HttpServletRequest request) {
+    public static String clientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
             String[] hops = forwarded.split(",");
