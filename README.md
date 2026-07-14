@@ -1,128 +1,137 @@
 # Studily
 
-A student study app: class planner + academic calendar + classmate matching.
-Spring Boot (Java) backend, React (Vite + TypeScript + Tailwind) frontend.
-See `study-app-PRD.md` for the product spec.
+A student planner with a social layer — schedule, deadlines, flashcards, and the
+classmates you share courses with, in one place. Live at **[studily.ca](https://studily.ca)**.
 
-## Status
+Spring Boot 4 (Java 21) + PostgreSQL REST API, React 19 SPA (Vite, TypeScript,
+Tailwind, TanStack Query), shipped as a single Docker image on Railway.
 
-**Phase 0 (MVP) + classmate hook** is implemented:
+## Features
 
-- Email/password auth with JWT (any email)
-- Course CRUD with color + meeting blocks
-- Exams/assignments tied to a course
-- Auto-generated weekly schedule (Sun–Sat) + next-exam countdown
-- Month calendar of academic items
-- Per-course timestamped notes
-- In-app deadline reminders (hourly scheduled job)
-- Classmate suggestions (same school + shared course code)
+- **Semesters & courses** — courses with meeting blocks, professor, color; scoped per
+  semester with auto-detection of the current term
+- **Assignments & exams** — due dates, grade weights, TODO → IN_PROGRESS → DONE
+  workflow, next-exam countdown
+- **Dashboard** — time-proportional Sun–Sat schedule grid, "due this week" list,
+  tap-a-day quick add, auto-refresh
+- **Calendar** — month view of academic items plus custom events
+- **Flashcards** — decks per course with SM-2 spaced repetition; review state lives
+  server-side, the client previews next intervals Anki-style
+- **Friends & messaging** — friend requests, real-time chat over WebSockets with
+  unread tracking
+- **Notifications** — in-app deadline reminders (hourly scheduled job, idempotent)
+  plus Web Push; installable as a PWA
+- **Account security** — email verification, password reset/change, account deletion,
+  logout-everywhere via JWT token versioning
+- **Notes & profiles** — per-course timestamped notes; profiles with server-processed
+  avatars
 
-Deferred: chat/DMs (Phase 1), RAG (Phase 2). See the PRD.
+Roadmap: RAG-powered syllabus upload and AI study chat are deliberately sequenced
+last, after launch (see `FEATURES.md` for the full feature map and `study-app-PRD.md`
+for the product spec).
 
-## Prerequisites
+## Architecture
 
-- JDK 21+ (project targets Java 21)
-- Node 20+
-- PostgreSQL running locally
+One deployable: a multi-stage `Dockerfile` builds the React app, copies it into
+`src/main/resources/static`, and packages everything into a single Spring Boot jar.
+The browser talks to the same origin that served the page — no separate frontend
+host, no reverse proxy, no runtime CORS, and CSP can be `script-src 'self'`.
+`SpaWebConfig` falls back to `index.html` for non-API paths so client-side routes
+survive a hard refresh.
 
-## Database
+```
+src/main/java/com/rnave/studily/
+  auth/ user/ course/ semester/ academic/ note/
+  dashboard/ calendar/ flashcard/ friend/ conversation/
+  notification/ push/ mail/ config/
+frontend/src/
+  lib/        api client, auth context, query client, websocket, sm2 preview
+  features/   auth, dashboard, calendar, courses, learn, friends,
+              messages, profile, semesters, settings
+```
 
-Create the database once:
+Schema is owned by Flyway migrations (`src/main/resources/db/migration`);
+`ddl-auto=validate` makes Hibernate a tripwire that entities match the real schema.
+
+## Engineering notes
+
+Decisions worth knowing about before reading the code:
+
+- **Auth**: stateless JWT (HS256, 24h) in the `Authorization` header — CSRF protection
+  is off because no credential rides in a cookie. Revocation without server-side
+  sessions via a `token_version` column checked per request: password changes and
+  logout-everywhere bump the version and stale tokens die immediately.
+- **Authorization is ownership, not roles**: every service resolves resources through
+  the current user (courses by `user_id`, conversations via `requireMember`), so IDOR
+  is blocked at the query level.
+- **Rate limiting**: hand-rolled in-memory fixed-window limiter (~40 lines, no Redis
+  needed at single-instance scale). Login attempts key per *email* so an attacker
+  can't brute-force one account from many IPs; the client IP is taken from the last
+  `X-Forwarded-For` hop — the one appended by the trusted proxy.
+- **Spaced repetition**: SM-2 with Anki's four grades mapped to quality scores
+  (`Sm2.java`). The backend is authoritative; a TypeScript twin only previews
+  intervals on the grade buttons.
+- **Messaging**: WebSocket push with an auth handshake interceptor and a session
+  registry; message history pages with `Slice` (no count query).
+- **Uploads**: avatars are re-encoded server-side to bounded JPEGs, with declared
+  image dimensions checked *before* decoding so a decompression bomb can't OOM the
+  JVM. Stored as BYTEA — one small image per user, and the host filesystem is
+  ephemeral.
+- **Service worker**: cache-first for hashed immutable `/assets/*` only — never HTML
+  or API responses, so a deploy can't be poisoned by a stale shell.
+- **Observability**: Sentry on both backend and frontend; Railway healthchecks
+  `/actuator/health` with `show-details=never`.
+- **Tests**: ~18 unit test classes over the security filters, JWT parsing, SM-2 math,
+  rate limiters, avatar validation, and scheduler dedupe. Known gaps: no
+  Testcontainers-based integration tests, no frontend tests yet.
+
+## Running locally
+
+Prerequisites: JDK 21+, Node 20+, PostgreSQL.
 
 ```bash
 createdb studily
+DB_USER=postgres DB_PASSWORD=postgres ./mvnw spring-boot:run   # API on :8080
+cd frontend && npm install && npm run dev                      # SPA on :5173, proxies /api
 ```
 
-Connection defaults to `localhost:5432`, db `studily`, user/password `postgres`/`postgres`.
-Override with env vars: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`. Schema is
-managed by Flyway migrations (`src/main/resources/db/migration`); `ddl-auto=validate` just
-checks Hibernate's model matches what Flyway created.
-
-## Run the backend
+Run the tests:
 
 ```bash
-DB_USER=postgres DB_PASSWORD=postgres ./mvnw spring-boot:run
+./mvnw test
 ```
 
-API serves on `http://localhost:8080`. All `/api/**` routes require a Bearer token except
-`/api/auth/signup` and `/api/auth/login`.
+All `/api/**` routes require a Bearer token except `/api/auth/**`; the WebSocket
+handshake at `/ws` authenticates via the same JWT.
 
-## Run the frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Opens on `http://localhost:5173` and proxies `/api` to the backend, so run both together.
-
-## Key environment variables
+## Configuration
 
 | Var | Default | Purpose |
 |---|---|---|
-| `PORT` | `8080` | Port the server listens on (Railway injects this) |
-| `DB_HOST` / `DB_PORT` | `localhost` / `5432` | Postgres host/port |
-| `DB_NAME` / `DB_USER` / `DB_PASSWORD` | `studily` / `postgres` / `postgres` | Postgres connection |
-| `JWT_SECRET` | dev placeholder | HS256 signing key — **must be ≥64 chars in prod**, app refuses to boot otherwise |
+| `PORT` | `8080` | Server port (Railway injects this) |
+| `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | `localhost` / `5432` / `studily` / `postgres` / `postgres` | Postgres connection |
+| `JWT_SECRET` | dev placeholder | HS256 key — **must be ≥64 chars in prod**, app refuses to boot otherwise |
 | `JWT_EXPIRATION_MS` | `86400000` | Token lifetime |
-| `CORS_ORIGINS` | `http://localhost:5173` | Allowed frontend origin(s), comma-separated |
-| `APP_TIMEZONE` | `America/Toronto` | Timezone used for class/event/exam reminder scheduling |
-| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | unset (push disabled) | Web Push VAPID keypair (base64url, P-256). Generate: `npx web-push generate-vapid-keys` |
-| `VAPID_SUBJECT` | `mailto:ryannave97@gmail.com` | Contact URI sent to push services |
-| `RESEND_API_KEY` | unset (email disabled) | Resend API key for verification / password-reset emails |
-| `MAIL_FROM` | `Studily <onboarding@resend.dev>` | From address — the default only delivers to the Resend account owner; verify a domain in Resend and use it in prod |
-| `APP_BASE_URL` | `http://localhost:5173` | Public URL used in email links (`https://studily.ca` in prod) |
-| `SENTRY_DSN` | unset (disabled) | Backend error tracking — DSN from your Sentry project |
-| `SENTRY_ENVIRONMENT` | `development` | Tag backend Sentry events with an environment name |
-| `VITE_SENTRY_DSN` | unset (disabled) | Frontend error tracking — **build-time** var, must be set when the Docker image is built, not at runtime |
+| `CORS_ORIGINS` | `http://localhost:5173` | Allowed dev origin(s); prod is same-origin |
+| `APP_TIMEZONE` | `America/Toronto` | Timezone for reminder scheduling |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | unset (push disabled) | Web Push keypair (`npx web-push generate-vapid-keys`) |
+| `RESEND_API_KEY` / `MAIL_FROM` | unset (email disabled) | Resend key + verified From address for verification/reset emails |
+| `APP_BASE_URL` | `http://localhost:5173` | Public URL used in email links |
+| `SENTRY_DSN` / `SENTRY_ENVIRONMENT` | unset / `development` | Backend error tracking |
+| `VITE_SENTRY_DSN` | unset | Frontend error tracking — **build-time** var, baked into the bundle |
 
-## Deploying (Railway)
+## Deploying
 
-The app is a single Docker image: the multi-stage `Dockerfile` builds the React app, copies
-it into `src/main/resources/static`, and packages everything into one Spring Boot jar. There
-is no separate frontend host, no reverse proxy, and no CORS to configure at runtime — the
-browser talks to the same origin that served the page, and `api.ts`'s relative `/api/...`
-calls just work. `SpaWebConfig` falls back to `index.html` for any non-API, non-static path
-so client-side routes (e.g. `/courses/123`) survive a hard refresh.
+Railway builds the `Dockerfile` via `railway.json` and healthchecks
+`/actuator/health`. Add a Postgres plugin, reference its variables
+(`DB_HOST` = `${{Postgres.PGHOST}}` etc.), and set `JWT_SECRET`
+(`openssl rand -base64 64`). Railway passes service variables through as Docker
+build args, so `VITE_SENTRY_DSN` is set in the same place as everything else.
 
-1. Push this repo to GitHub and create a new Railway project from it (or `railway up`).
-   Railway auto-detects `railway.json` and builds via the Dockerfile.
-2. Add a Postgres plugin to the project.
-3. Set these service variables (Railway lets you reference the Postgres plugin's own vars):
-   - `DB_HOST` = `${{Postgres.PGHOST}}`
-   - `DB_PORT` = `${{Postgres.PGPORT}}`
-   - `DB_NAME` = `${{Postgres.PGDATABASE}}`
-   - `DB_USER` = `${{Postgres.PGUSER}}`
-   - `DB_PASSWORD` = `${{Postgres.PGPASSWORD}}`
-   - `JWT_SECRET` = a random string ≥64 characters (`openssl rand -base64 64`)
-   - `CORS_ORIGINS` = your Railway-assigned domain (harmless once same-origin, but keep it
-     accurate in case you ever split the frontend out)
-   - `SENTRY_DSN` / `VITE_SENTRY_DSN` = DSNs from your Sentry project (create one at
-     sentry.io — a Java project for the backend DSN, a React project for the frontend one).
-     Railway passes service variables through as Docker build args automatically when the
-     Dockerfile declares a matching `ARG`, so `VITE_SENTRY_DSN` gets baked into the frontend
-     bundle at build time from the same place you set everything else. `SENTRY_ENVIRONMENT` =
-     `production` is worth setting too, to separate prod events from local dev noise.
-4. Railway healthchecks `/actuator/health` (configured in `railway.json`); only that one
-   endpoint is exposed, with no detail leakage (`show-details=never`).
-
-To build/run the image locally instead:
+Or locally:
 
 ```bash
 docker build -t studily .
 docker run -p 8080:8080 -e JWT_SECRET=$(openssl rand -base64 64) \
   -e DB_HOST=host.docker.internal -e DB_USER=postgres -e DB_PASSWORD=postgres studily
-```
-
-## Project layout
-
-```
-src/main/java/com/rnave/studily/
-  auth/ config/ user/ course/ academic/ note/
-  dashboard/ calendar/ classmate/ notification/
-frontend/src/
-  lib/        api client, auth context, query client, formatters
-  components/  Layout, ProtectedRoute
-  features/    auth, dashboard, calendar, courses, profile, classmates
 ```
