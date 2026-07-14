@@ -4,6 +4,7 @@ import tools.jackson.databind.ObjectMapper;
 import jakarta.annotation.PreDestroy;
 import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
+import nl.martijndwars.webpush.Urgency;
 import org.apache.http.HttpResponse;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
@@ -63,7 +64,7 @@ public class WebPushSender {
         return publicKey;
     }
 
-    public void sendToUser(Long userId, PushPayload payload) {
+    public void sendToUser(Long userId, PushPayload payload, int ttlSeconds) {
         if (!isEnabled()) {
             return;
         }
@@ -72,14 +73,22 @@ public class WebPushSender {
             String endpoint = subscription.getEndpoint();
             String p256dh = subscription.getP256dh();
             String auth = subscription.getAuth();
-            executor.submit(() -> sendOne(endpoint, p256dh, auth, payload));
+            executor.submit(() -> sendOne(endpoint, p256dh, auth, payload, ttlSeconds));
         }
     }
 
-    private void sendOne(String endpoint, String p256dh, String auth, PushPayload payload) {
+    private void sendOne(String endpoint, String p256dh, String auth, PushPayload payload, int ttlSeconds) {
         try {
             byte[] body = objectMapper.writeValueAsBytes(payload);
-            HttpResponse response = pushService.send(new Notification(endpoint, p256dh, auth, body));
+            Notification notification = Notification.builder()
+                    .endpoint(endpoint)
+                    .userPublicKey(p256dh)
+                    .userAuth(auth)
+                    .payload(body)
+                    .ttl(ttlSeconds)
+                    .urgency(Urgency.HIGH)
+                    .build();
+            HttpResponse response = pushService.send(notification);
             int status = response.getStatusLine().getStatusCode();
             if (status == 404 || status == 410) {
                 subscriptionRepository.deleteByEndpoint(endpoint);

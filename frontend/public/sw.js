@@ -22,6 +22,32 @@ self.addEventListener("push", (event) => {
   );
 });
 
+self.addEventListener("pushsubscriptionchange", (event) => {
+  const old = event.oldSubscription;
+  if (!old) return;
+  event.waitUntil(
+    self.registration.pushManager
+      .subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: old.options && old.options.applicationServerKey,
+      })
+      .then((sub) => {
+        const json = sub.toJSON();
+        if (!json.keys || !json.keys.p256dh || !json.keys.auth) return;
+        return fetch("/api/push/rotate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            oldEndpoint: old.endpoint,
+            endpoint: sub.endpoint,
+            keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+          }),
+        });
+      })
+      .catch(() => {}),
+  );
+});
+
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = (event.notification.data && event.notification.data.url) || "/";

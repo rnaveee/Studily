@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { api, getToken, setToken } from "./api";
+import { syncPush } from "./push";
 import { ws } from "./ws";
 import type { AuthResponse, User } from "../types";
 
@@ -26,6 +27,14 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const pushSynced = useRef(false);
+
+  useEffect(() => {
+    if (user && !pushSynced.current) {
+      pushSynced.current = true;
+      syncPush().catch(() => {});
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!getToken()) {

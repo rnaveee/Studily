@@ -36,6 +36,6 @@ public class NotificationDispatcher {
         } catch (DataIntegrityViolationException e) {
             return;
         }
-        webPushSender.sendToUser(user.getId(), PushPayload.of(title, body, url));
+        webPushSender.sendToUser(user.getId(), PushPayload.of(title, body, url), type.pushTtlSeconds());
     }
 }

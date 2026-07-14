@@ -24,7 +24,12 @@ function urlBase64ToUint8Array(base64: string) {
 
 async function registration() {
   if (!pushSupported()) return null;
-  return (await navigator.serviceWorker.getRegistration()) ?? null;
+  const existing = await navigator.serviceWorker.getRegistration();
+  if (existing) return existing;
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+  ]);
 }
 
 export async function getSubscription() {
@@ -53,6 +58,20 @@ export async function enablePush(): Promise<PushEnableResult> {
     keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
   });
   return "ok";
+}
+
+export async function syncPush() {
+  if (!pushSupported() || Notification.permission !== "granted") return;
+  const sub = await getSubscription();
+  if (!sub) return;
+  const json = sub.toJSON();
+  if (!json.keys?.p256dh || !json.keys?.auth) return;
+  await api
+    .post<void>("/push/subscribe", {
+      endpoint: sub.endpoint,
+      keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
+    })
+    .catch(() => {});
 }
 
 export async function disablePush() {

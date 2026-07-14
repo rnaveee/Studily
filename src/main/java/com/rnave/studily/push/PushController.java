@@ -54,6 +54,20 @@ public class PushController {
         subscriptionRepository.deleteByUserIdAndEndpoint(currentUser.id(), request.endpoint());
     }
 
+    @PostMapping("/rotate")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Transactional
+    public void rotate(@Valid @RequestBody RotateRequest request) {
+        subscriptionRepository.findByEndpoint(request.oldEndpoint()).ifPresent(subscription -> {
+            subscriptionRepository.findByEndpoint(request.endpoint())
+                    .filter(other -> !other.getId().equals(subscription.getId()))
+                    .ifPresent(subscriptionRepository::delete);
+            subscription.setEndpoint(request.endpoint());
+            subscription.setP256dh(request.keys().p256dh());
+            subscription.setAuth(request.keys().auth());
+        });
+    }
+
     public record PublicKeyDto(String publicKey) {}
 
     public record SubscribeRequest(@NotBlank String endpoint, @NotNull @Valid Keys keys) {}
@@ -61,4 +75,8 @@ public class PushController {
     public record Keys(@NotBlank String p256dh, @NotBlank String auth) {}
 
     public record UnsubscribeRequest(@NotBlank String endpoint) {}
+
+    public record RotateRequest(@NotBlank String oldEndpoint,
+                                @NotBlank String endpoint,
+                                @NotNull @Valid Keys keys) {}
 }

@@ -16,7 +16,7 @@ class WebPushSenderTest {
                 repo, new ObjectMapper());
 
         assertThat(sender.isEnabled()).isFalse();
-        sender.sendToUser(1L, PushPayload.of("t", "b", "/"));
+        sender.sendToUser(1L, PushPayload.of("t", "b", "/"), 60);
         verifyNoInteractions(repo);
     }
 

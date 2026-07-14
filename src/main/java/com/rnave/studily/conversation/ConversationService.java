@@ -30,6 +30,8 @@ import java.util.Set;
 @Service
 public class ConversationService {
 
+    private static final int MESSAGE_PUSH_TTL_SECONDS = 86_400;
+
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository conversationMemberRepository;
     private final MessageRepository messageRepository;
@@ -180,7 +182,7 @@ public class ConversationService {
                     if (!memberId.equals(senderId)
                             && !wsSessionRegistry.hasSessions(memberId)
                             && notificationPrefsService.prefsFor(memberId).isMessages()) {
-                        webPushSender.sendToUser(memberId, PushPayload.of(pushTitle, pushBody, pushUrl));
+                        webPushSender.sendToUser(memberId, PushPayload.of(pushTitle, pushBody, pushUrl), MESSAGE_PUSH_TTL_SECONDS);
                     }
                 }
             }
