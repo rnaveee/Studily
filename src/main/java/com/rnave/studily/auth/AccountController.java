@@ -4,7 +4,6 @@ import com.rnave.studily.auth.AuthDtos.AuthResponse;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.JwtService;
-import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.config.UnauthorizedException;
 import com.rnave.studily.conversation.ConversationRepository;
 import com.rnave.studily.conversation.ConversationType;
@@ -54,10 +53,7 @@ public class AccountController {
         if (user.isEmailVerified()) {
             throw new ConflictException("Your email is already verified");
         }
-        if (!authEmailService.sendVerification(user)) {
-            throw new TooManyRequestsException(
-                    "Couldn't send a verification email right now — please try again later.");
-        }
+        authEmailService.sendVerification(user);
     }
 
     @PutMapping("/password")

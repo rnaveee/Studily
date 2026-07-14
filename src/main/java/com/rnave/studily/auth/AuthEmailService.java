@@ -1,6 +1,7 @@
 package com.rnave.studily.auth;
 
 import com.rnave.studily.config.SlidingWindowRateLimiter;
+import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.mail.MailService;
 import com.rnave.studily.user.User;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,12 +26,13 @@ public class AuthEmailService {
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
     }
 
-    public boolean sendVerification(User user) {
+    public void sendVerification(User user) {
         if (!perEmailLimiter.tryConsume("verify:" + user.getEmail())) {
-            return false;
+            throw new TooManyRequestsException(
+                    "You've requested too many verification emails — please try again in an hour.");
         }
         String link = baseUrl + "/verify-email?token=" + tokenService.issue(user, AccountTokenType.EMAIL_VERIFY);
-        return mailService.send(
+        boolean sent = mailService.send(
                 user.getEmail(),
                 "Verify your Studily email",
                 template(
@@ -39,14 +41,18 @@ public class AuthEmailService {
                                 + "messaging and friends on Studily. This link expires in 24 hours.",
                         link,
                         "Verify email"));
+        if (!sent) {
+            throw new IllegalArgumentException(
+                    "Couldn't send the email — the mail service rejected it. Please try again later.");
+        }
     }
 
-    public boolean sendPasswordReset(User user) {
+    public void sendPasswordReset(User user) {
         if (!perEmailLimiter.tryConsume("reset:" + user.getEmail())) {
-            return false;
+            return;
         }
         String link = baseUrl + "/reset-password?token=" + tokenService.issue(user, AccountTokenType.PASSWORD_RESET);
-        return mailService.send(
+        mailService.send(
                 user.getEmail(),
                 "Reset your Studily password",
                 template(

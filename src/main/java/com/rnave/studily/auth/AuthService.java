@@ -53,7 +53,10 @@ public class AuthService {
         user.setName(req.name().trim());
         user.setSchool(req.school() == null ? null : req.school().trim());
         user = userRepository.save(user);
-        authEmailService.sendVerification(user);
+        try {
+            authEmailService.sendVerification(user);
+        } catch (RuntimeException ignored) {
+        }
         return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user));
     }
 
