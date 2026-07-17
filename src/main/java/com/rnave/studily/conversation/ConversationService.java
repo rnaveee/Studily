@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.LinkedHashSet;
@@ -35,6 +36,8 @@ public class ConversationService {
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository conversationMemberRepository;
     private final MessageRepository messageRepository;
+    private final MessageAttachmentRepository messageAttachmentRepository;
+    private final AttachmentProcessor attachmentProcessor;
     private final FriendRequestRepository friendRequestRepository;
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
@@ -45,6 +48,8 @@ public class ConversationService {
     public ConversationService(ConversationRepository conversationRepository,
                                ConversationMemberRepository conversationMemberRepository,
                                MessageRepository messageRepository,
+                               MessageAttachmentRepository messageAttachmentRepository,
+                               AttachmentProcessor attachmentProcessor,
                                FriendRequestRepository friendRequestRepository,
                                UserRepository userRepository,
                                CurrentUser currentUser,
@@ -54,6 +59,8 @@ public class ConversationService {
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
         this.messageRepository = messageRepository;
+        this.messageAttachmentRepository = messageAttachmentRepository;
+        this.attachmentProcessor = attachmentProcessor;
         this.friendRequestRepository = friendRequestRepository;
         this.userRepository = userRepository;
         this.currentUser = currentUser;
@@ -138,14 +145,7 @@ public class ConversationService {
     @Transactional
     public MessageDto send(Long conversationId, String body) {
         Conversation conv = requireMember(conversationId);
-        if (conv.getType() == ConversationType.DIRECT) {
-            Long me = currentUser.id();
-            conv.getMembers().stream()
-                    .map(m -> m.getUser().getId())
-                    .filter(id -> !id.equals(me))
-                    .findFirst()
-                    .ifPresent(other -> requireFriends(me, other));
-        }
+        requireCanPost(conv);
         Message message = new Message();
         message.setConversation(conv);
         message.setSender(currentUser.entity());
@@ -154,6 +154,57 @@ public class ConversationService {
         MessageDto dto = MessageDto.from(messageRepository.save(message));
         broadcastAfterCommit(conv, dto);
         return dto;
+    }
+
+    @Transactional
+    public MessageDto sendAttachment(Long conversationId, MultipartFile file) {
+        Conversation conv = requireMember(conversationId);
+        requireCanPost(conv);
+        AttachmentProcessor.Processed processed = attachmentProcessor.process(file);
+        Message message = new Message();
+        message.setConversation(conv);
+        message.setSender(currentUser.entity());
+        message.setBody("");
+        message.setAttachmentFilename(processed.filename());
+        message.setAttachmentContentType(processed.contentType());
+        message.setAttachmentSize((long) processed.data().length);
+        message.setAttachmentWidth(processed.width());
+        message.setAttachmentHeight(processed.height());
+        conv.setLastMessageAt(Instant.now());
+        message = messageRepository.save(message);
+        MessageAttachment blob = new MessageAttachment();
+        blob.setMessageId(message.getId());
+        blob.setData(processed.data());
+        messageAttachmentRepository.save(blob);
+        MessageDto dto = MessageDto.from(message);
+        broadcastAfterCommit(conv, dto);
+        return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public AttachmentContent attachment(Long conversationId, Long messageId) {
+        requireMember(conversationId);
+        Message message = messageRepository.findById(messageId)
+                .filter(m -> m.getConversation().getId().equals(conversationId) && m.hasAttachment())
+                .orElseThrow(() -> new NotFoundException("Attachment not found"));
+        MessageAttachment blob = messageAttachmentRepository.findById(messageId)
+                .orElseThrow(() -> new NotFoundException("Attachment not found"));
+        return new AttachmentContent(
+                message.getAttachmentFilename(), message.getAttachmentContentType(), blob.getData());
+    }
+
+    public record AttachmentContent(String filename, String contentType, byte[] data) {
+    }
+
+    private void requireCanPost(Conversation conv) {
+        if (conv.getType() == ConversationType.DIRECT) {
+            Long me = currentUser.id();
+            conv.getMembers().stream()
+                    .map(m -> m.getUser().getId())
+                    .filter(id -> !id.equals(me))
+                    .findFirst()
+                    .ifPresent(other -> requireFriends(me, other));
+        }
     }
 
     @Transactional
@@ -171,8 +222,9 @@ public class ConversationService {
                 ? "@" + dto.sender().username()
                 : dto.sender().name();
         boolean group = conv.getType() == ConversationType.GROUP;
+        String preview = previewText(dto);
         String pushTitle = group ? conv.getName() : senderName;
-        String pushBody = group ? senderName + ": " + dto.body() : dto.body();
+        String pushBody = group ? senderName + ": " + preview : preview;
         String pushUrl = "/messages/" + conv.getId();
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -221,9 +273,25 @@ public class ConversationService {
 
     private ConversationDto toDto(Conversation c) {
         String lastMessage = messageRepository.findTopByConversationIdOrderByCreatedAtDesc(c.getId())
-                .map(Message::getBody)
+                .map(ConversationService::previewText)
                 .orElse(null);
         return ConversationDto.from(c, lastMessage, isUnread(c));
+    }
+
+    private static String previewText(MessageDto dto) {
+        if (dto.attachment() == null) {
+            return dto.body();
+        }
+        return dto.attachment().image() ? "📷 Photo" : "📄 " + dto.attachment().filename();
+    }
+
+    private static String previewText(Message m) {
+        if (!m.hasAttachment()) {
+            return m.getBody();
+        }
+        return m.getAttachmentContentType().startsWith("image/")
+                ? "📷 Photo"
+                : "📄 " + m.getAttachmentFilename();
     }
 
     private boolean isUnread(Conversation c) {

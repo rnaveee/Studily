@@ -215,11 +215,21 @@ export interface Conversation {
   unread: boolean;
 }
 
+export interface Attachment {
+  filename: string;
+  contentType: string;
+  size: number;
+  image: boolean;
+  width?: number | null;
+  height?: number | null;
+}
+
 export interface Message {
   id: number;
   conversationId: number;
   sender: PublicUser;
   body: string;
+  attachment?: Attachment | null;
   createdAt: string;
 }
 

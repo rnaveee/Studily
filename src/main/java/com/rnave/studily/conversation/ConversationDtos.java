@@ -33,12 +33,33 @@ public class ConversationDtos {
             Long conversationId,
             PublicUserDto sender,
             String body,
+            AttachmentDto attachment,
             Instant createdAt) {
 
         public static MessageDto from(Message m) {
             return new MessageDto(
                     m.getId(), m.getConversation().getId(),
-                    PublicUserDto.from(m.getSender()), m.getBody(), m.getCreatedAt());
+                    PublicUserDto.from(m.getSender()), m.getBody(),
+                    AttachmentDto.from(m), m.getCreatedAt());
+        }
+    }
+
+    public record AttachmentDto(
+            String filename,
+            String contentType,
+            long size,
+            boolean image,
+            Integer width,
+            Integer height) {
+
+        public static AttachmentDto from(Message m) {
+            if (!m.hasAttachment()) {
+                return null;
+            }
+            return new AttachmentDto(
+                    m.getAttachmentFilename(), m.getAttachmentContentType(), m.getAttachmentSize(),
+                    m.getAttachmentContentType().startsWith("image/"),
+                    m.getAttachmentWidth(), m.getAttachmentHeight());
         }
     }
 

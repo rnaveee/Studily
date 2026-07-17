@@ -38,3 +38,9 @@ export function countdown(iso: string): string {
   if (hours > 0) return `in ${hours}h ${mins % 60}m`;
   return `in ${mins}m`;
 }
+
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}

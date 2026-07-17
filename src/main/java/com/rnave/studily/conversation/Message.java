@@ -36,6 +36,25 @@ public class Message {
     @Column(nullable = false, columnDefinition = "text")
     private String body;
 
+    @Column(name = "attachment_filename")
+    private String attachmentFilename;
+
+    @Column(name = "attachment_content_type")
+    private String attachmentContentType;
+
+    @Column(name = "attachment_size")
+    private Long attachmentSize;
+
+    @Column(name = "attachment_width")
+    private Integer attachmentWidth;
+
+    @Column(name = "attachment_height")
+    private Integer attachmentHeight;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+
+    public boolean hasAttachment() {
+        return attachmentFilename != null;
+    }
 }

@@ -1,14 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Send, Users2, X } from "lucide-react";
-import { api } from "../../lib/api";
+import { ArrowLeft, ImagePlus, Paperclip, Send, Users2, X } from "lucide-react";
+import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { queryClient } from "../../lib/queryClient";
+import { toast } from "../../lib/toast";
 import { appendMessageToCache, ws } from "../../lib/ws";
 import Avatar from "../../components/Avatar";
+import AttachmentBubble from "./AttachmentBubble";
 import type { Conversation, Message, Page, PublicUser } from "../../types";
+
+const DOC_ACCEPT = ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.md";
 
 export default function ConversationPage() {
   const { id } = useParams();
@@ -91,6 +95,33 @@ export default function ConversationPage() {
     if (!body || send.isPending) return;
     setDraft("");
     if (!ws.sendChat(convId, body)) send.mutate(body);
+  }
+
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const docInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+
+  async function uploadFiles(list: FileList | null) {
+    const files = [...(list ?? [])];
+    if (files.length === 0 || uploading) return;
+    setUploading(true);
+    try {
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const m = await api.post<Message>(`/conversations/${convId}/attachments`, fd);
+        appendMessageToCache(m);
+      }
+      queryClient.invalidateQueries({ queryKey: ["conversations", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["conversations", "direct"] });
+      queryClient.invalidateQueries({ queryKey: ["conversations", "groups"] });
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Upload failed — please try again.");
+    } finally {
+      setUploading(false);
+      if (imageInputRef.current) imageInputRef.current.value = "";
+      if (docInputRef.current) docInputRef.current.value = "";
+    }
   }
 
   const conv = conversation.data;
@@ -198,12 +229,16 @@ export default function ConversationPage() {
                       />
                     </Link>
                   )}
-                  <div
-                    className={`rounded-2xl px-3.5 py-2 text-[13px] ${mine ? "text-accent-fg" : "text-fg"}`}
-                    style={{ background: mine ? "var(--accent)" : "var(--surface-hi)" }}
-                  >
-                    {m.body}
-                  </div>
+                  {m.attachment ? (
+                    <AttachmentBubble message={m} mine={mine} />
+                  ) : (
+                    <div
+                      className={`rounded-2xl px-3.5 py-2 text-[13px] ${mine ? "text-accent-fg" : "text-fg"}`}
+                      style={{ background: mine ? "var(--accent)" : "var(--surface-hi)" }}
+                    >
+                      {m.body}
+                    </div>
+                  )}
                 </div>
                 {isLastInRun && (
                   <div className={`mt-0.5 text-[10px] text-fg-3 ${mine ? "mr-1" : "ml-8"}`}>
@@ -239,6 +274,43 @@ export default function ConversationPage() {
           paddingBottom: "var(--composer-pb, calc(env(safe-area-inset-bottom, 0px) + 12px))",
         }}
       >
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => uploadFiles(e.target.files)}
+        />
+        <input
+          ref={docInputRef}
+          type="file"
+          accept={DOC_ACCEPT}
+          className="hidden"
+          onChange={(e) => uploadFiles(e.target.files)}
+        />
+        <button
+          type="button"
+          onClick={() => imageInputRef.current?.click()}
+          disabled={uploading}
+          className="shrink-0 rounded-lg p-2 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg disabled:opacity-50"
+          aria-label="Send a photo"
+        >
+          {uploading ? (
+            <span className="inline-block h-[15px] w-[15px] animate-spin rounded-full border-2 border-line border-t-accent" />
+          ) : (
+            <ImagePlus size={15} />
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => docInputRef.current?.click()}
+          disabled={uploading}
+          className="shrink-0 rounded-lg p-2 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg disabled:opacity-50"
+          aria-label="Send a document"
+        >
+          <Paperclip size={15} />
+        </button>
         <input
           className="input"
           value={draft}
