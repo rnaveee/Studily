@@ -60,7 +60,7 @@ public class SecurityConfig {
                                 "default-src 'self'; "
                                         + "script-src 'self'; "
                                         + "style-src 'self' 'unsafe-inline'; "
-                                        + "img-src 'self' data:; "
+                                        + "img-src 'self' data: blob:; "
                                         + "connect-src 'self' wss: https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.ingest.de.sentry.io; "
                                         + "base-uri 'self'; "
                                         + "frame-ancestors 'none'")))
