@@ -26,9 +26,11 @@ let lastActivity = 0;
 const messageListeners = new Set<MessageListener>();
 const stateListeners = new Set<StateListener>();
 
-function url(token: string): string {
+const WS_PROTOCOL = "studily";
+
+function url(): string {
   const proto = window.location.protocol === "https:" ? "wss" : "ws";
-  return `${proto}://${window.location.host}/ws?token=${encodeURIComponent(token)}`;
+  return `${proto}://${window.location.host}/ws`;
 }
 
 function notifyState(connected: boolean) {
@@ -81,7 +83,7 @@ function open() {
   const token = getToken();
   if (!shouldRun || !token || socket) return;
 
-  socket = new WebSocket(url(token));
+  socket = new WebSocket(url(), [WS_PROTOCOL, token]);
 
   socket.onopen = () => {
     attempts = 0;

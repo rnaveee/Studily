@@ -5,6 +5,7 @@ import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -36,9 +37,38 @@ class WsHandshakeInterceptorTest {
         userRepository = mock(UserRepository.class);
         interceptor = new WsHandshakeInterceptor(jwtService, userRepository);
         request = mock(ServerHttpRequest.class);
+        when(request.getHeaders()).thenReturn(new HttpHeaders());
         response = mock(ServerHttpResponse.class);
         wsHandler = mock(WebSocketHandler.class);
         attributes = new HashMap<>();
+    }
+
+    @Test
+    void protocolHeaderToken_acceptsAndStashesUserId() {
+        when(request.getURI()).thenReturn(URI.create("ws://localhost/ws"));
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Sec-WebSocket-Protocol", WsHandshakeInterceptor.PROTOCOL + ", good");
+        when(request.getHeaders()).thenReturn(headers);
+        when(jwtService.parseToken("good")).thenReturn(new JwtService.TokenPayload(42L, 0));
+        when(userRepository.findById(42L)).thenReturn(Optional.of(verifiedUserWithTokenVersion(0)));
+
+        boolean accepted = interceptor.beforeHandshake(request, response, wsHandler, attributes);
+
+        assertThat(accepted).isTrue();
+        assertThat(attributes).containsEntry(WsHandshakeInterceptor.USER_ID_ATTR, 42L);
+    }
+
+    @Test
+    void protocolHeaderWithOnlyProtocolName_rejectsWith401() {
+        when(request.getURI()).thenReturn(URI.create("ws://localhost/ws"));
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Sec-WebSocket-Protocol", WsHandshakeInterceptor.PROTOCOL);
+        when(request.getHeaders()).thenReturn(headers);
+
+        boolean accepted = interceptor.beforeHandshake(request, response, wsHandler, attributes);
+
+        assertThat(accepted).isFalse();
+        verify(response).setStatusCode(HttpStatus.UNAUTHORIZED);
     }
 
     @Test

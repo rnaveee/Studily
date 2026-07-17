@@ -43,7 +43,7 @@ public class AuthService {
         if (userRepository.existsByEmail(email)) {
             throw new ConflictException("Email already registered");
         }
-        if (userRepository.existsByUsername(username)) {
+        if (userRepository.existsByUsernameIgnoreCase(username)) {
             throw new ConflictException("Username already taken");
         }
         User user = new User();

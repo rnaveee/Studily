@@ -49,7 +49,7 @@ class AuthServiceTest {
     void signup_savesUserAndReturnsToken() {
         SignupRequest req = new SignupRequest("New@Example.com", "newuser", "password123", "New User", "SFU");
         when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
-        when(userRepository.existsByUsername("newuser")).thenReturn(false);
+        when(userRepository.existsByUsernameIgnoreCase("newuser")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("hashed");
         when(userRepository.save(any(User.class))).thenAnswer(inv -> {
             User u = inv.getArgument(0);
@@ -128,7 +128,7 @@ class AuthServiceTest {
     void signup_rejectsDuplicateUsername() {
         SignupRequest req = new SignupRequest("fresh@example.com", "taken", "password123", "Someone", null);
         when(userRepository.existsByEmail("fresh@example.com")).thenReturn(false);
-        when(userRepository.existsByUsername("taken")).thenReturn(true);
+        when(userRepository.existsByUsernameIgnoreCase("taken")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.signup(req)).isInstanceOf(ConflictException.class);
     }

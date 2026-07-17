@@ -11,12 +11,14 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.util.Arrays;
 import java.util.Map;
 
 @Component
 public class WsHandshakeInterceptor implements HandshakeInterceptor {
 
     public static final String USER_ID_ATTR = "userId";
+    public static final String PROTOCOL = "studily";
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
@@ -31,8 +33,11 @@ public class WsHandshakeInterceptor implements HandshakeInterceptor {
                                    @NonNull ServerHttpResponse response,
                                    @NonNull WebSocketHandler wsHandler,
                                    @NonNull Map<String, Object> attributes) {
-        String token = UriComponentsBuilder.fromUri(request.getURI())
-                .build().getQueryParams().getFirst("token");
+        String token = tokenFromProtocolHeader(request);
+        if (token == null) {
+            token = UriComponentsBuilder.fromUri(request.getURI())
+                    .build().getQueryParams().getFirst("token");
+        }
         if (token == null || token.isBlank()) {
             response.setStatusCode(HttpStatus.UNAUTHORIZED);
             return false;
@@ -52,6 +57,19 @@ public class WsHandshakeInterceptor implements HandshakeInterceptor {
             response.setStatusCode(HttpStatus.UNAUTHORIZED);
             return false;
         }
+    }
+
+    private String tokenFromProtocolHeader(ServerHttpRequest request) {
+        var values = request.getHeaders().get("Sec-WebSocket-Protocol");
+        if (values == null) {
+            return null;
+        }
+        return values.stream()
+                .flatMap(v -> Arrays.stream(v.split(",")))
+                .map(String::trim)
+                .filter(p -> !p.isEmpty() && !p.equalsIgnoreCase(PROTOCOL))
+                .findFirst()
+                .orElse(null);
     }
 
     @Override

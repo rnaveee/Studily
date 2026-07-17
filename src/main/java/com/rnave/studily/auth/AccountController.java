@@ -4,6 +4,8 @@ import com.rnave.studily.auth.AuthDtos.AuthResponse;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.JwtService;
+import com.rnave.studily.config.SlidingWindowRateLimiter;
+import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.config.UnauthorizedException;
 import com.rnave.studily.conversation.ConversationRepository;
 import com.rnave.studily.conversation.ConversationType;
@@ -14,6 +16,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,6 +29,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/me")
 public class AccountController {
+
+    private static final long PASSWORD_ATTEMPT_WINDOW_MS = 15 * 60_000;
+
+    private final SlidingWindowRateLimiter passwordAttemptLimiter =
+            new SlidingWindowRateLimiter(10, PASSWORD_ATTEMPT_WINDOW_MS);
 
     private final CurrentUser currentUser;
     private final UserRepository userRepository;
@@ -60,6 +68,7 @@ public class AccountController {
     @Transactional
     public AuthResponse changePassword(@Valid @RequestBody ChangePasswordRequest req) {
         User user = currentUser.entity();
+        requirePasswordAttempt(user);
         if (!passwordEncoder.matches(req.currentPassword(), user.getPasswordHash())) {
             throw new UnauthorizedException("Current password is incorrect");
         }
@@ -74,12 +83,24 @@ public class AccountController {
     @Transactional
     public void deleteAccount(@Valid @RequestBody DeleteAccountRequest req) {
         User user = currentUser.entity();
+        requirePasswordAttempt(user);
         if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
             throw new UnauthorizedException("Password is incorrect");
         }
         conversationRepository.deleteAll(
                 conversationRepository.findForUserByType(user.getId(), ConversationType.DIRECT));
         userRepository.delete(user);
+    }
+
+    private void requirePasswordAttempt(User user) {
+        if (!passwordAttemptLimiter.tryConsume("user:" + user.getId())) {
+            throw new TooManyRequestsException("Too many attempts, please try again later.");
+        }
+    }
+
+    @Scheduled(fixedRate = 10 * PASSWORD_ATTEMPT_WINDOW_MS)
+    void evictStalePasswordAttempts() {
+        passwordAttemptLimiter.evictStale();
     }
 
     public record ChangePasswordRequest(

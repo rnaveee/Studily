@@ -83,7 +83,7 @@ export default function SignupPage() {
               </div>
               <div>
                 <label className="field-label">Username</label>
-                <input className="input" placeholder="alexkim" value={form.username} onChange={set("username")} required minLength={3} />
+                <input className="input" placeholder="alexkim" value={form.username} onChange={set("username")} required minLength={3} maxLength={30} pattern="[A-Za-z0-9._\-]+" title="Letters, numbers, dots, dashes, and underscores only" />
               </div>
             </div>
             <div>

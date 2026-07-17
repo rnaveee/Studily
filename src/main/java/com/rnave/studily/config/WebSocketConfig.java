@@ -9,6 +9,7 @@ import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 import org.springframework.web.socket.server.standard.ServletServerContainerFactoryBean;
+import org.springframework.web.socket.server.support.DefaultHandshakeHandler;
 
 import java.util.Arrays;
 
@@ -30,8 +31,11 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        DefaultHandshakeHandler handshakeHandler = new DefaultHandshakeHandler();
+        handshakeHandler.setSupportedProtocols(WsHandshakeInterceptor.PROTOCOL);
         registry.addHandler(messageSocketHandler, "/ws")
                 .addInterceptors(handshakeInterceptor)
+                .setHandshakeHandler(handshakeHandler)
                 .setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
                         .map(String::trim)
                         .toArray(String[]::new));
