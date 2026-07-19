@@ -12,6 +12,7 @@ import ForgotPasswordPage from "./features/auth/ForgotPasswordPage";
 import ResetPasswordPage from "./features/auth/ResetPasswordPage";
 import VerifyEmailPage from "./features/auth/VerifyEmailPage";
 import VerifyGate from "./components/VerifyGate";
+import OnboardingPage from "./features/onboarding/OnboardingPage";
 import DashboardPage from "./features/dashboard/DashboardPage";
 import CalendarPage from "./features/calendar/CalendarPage";
 import CoursesPage from "./features/courses/CoursesPage";
@@ -28,6 +29,7 @@ import LearnPage from "./features/learn/LearnPage";
 import FlashcardsPage from "./features/learn/FlashcardsPage";
 import FlashcardSetPage from "./features/learn/FlashcardSetPage";
 import AiChatPage from "./features/learn/AiChatPage";
+import PomodoroPage from "./features/learn/PomodoroPage";
 import SettingsPage from "./features/settings/SettingsPage";
 
 export default function App() {
@@ -46,6 +48,7 @@ export default function App() {
         }
       >
         <Route path="/" element={<DashboardPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/:id" element={<CourseDetailPage />} />
@@ -55,6 +58,7 @@ export default function App() {
         <Route path="/learn/flashcards" element={<FlashcardsPage />} />
         <Route path="/learn/flashcards/:id" element={<FlashcardSetPage />} />
         <Route path="/learn/ai" element={<AiChatPage />} />
+        <Route path="/pomodoro" element={<PomodoroPage />} />
         <Route path="/semesters" element={<SemestersPage />} />
         <Route path="/friends" element={<VerifyGate><FriendsPage /></VerifyGate>} />
         <Route path="/friends/schoolmates" element={<VerifyGate><SchoolmatesPage /></VerifyGate>} />

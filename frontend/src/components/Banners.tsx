@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { MailWarning, Megaphone, Smartphone, X } from "lucide-react";
+import { MailWarning, Megaphone, Smartphone, Timer, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
+import { formatMs, pomodoroColor, usePomodoro } from "../lib/pomodoro";
 
 const BETA_KEY = "studily.banner.beta";
 const INSTALL_KEY = "studily.banner.install";
@@ -28,11 +29,22 @@ export default function Banners() {
   }
 
   const unverified = !!user && !user.emailVerified;
+  const pomo = usePomodoro();
 
-  if (betaDismissed && installDismissed && !unverified) return null;
+  if (betaDismissed && installDismissed && !unverified && !pomo.running) return null;
 
   return (
     <div className="shrink-0">
+      {pomo.running && (
+        <Banner
+          icon={<Timer size={13} className="shrink-0" />}
+          color={pomodoroColor(pomo.phase)}
+        >
+          <Link to="/pomodoro" className="font-medium tabular-nums">
+            {pomo.phase === "study" ? "Study" : "Break"}: {formatMs(pomo.remainingMs)}
+          </Link>
+        </Banner>
+      )}
       {unverified && (
         <Banner icon={<MailWarning size={13} className="shrink-0" />} color="var(--orange)" wrap>
           Your account is unverified! Some features are unavailable.{" "}

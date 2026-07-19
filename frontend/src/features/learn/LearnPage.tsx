@@ -1,7 +1,15 @@
 import { Link } from "react-router-dom";
-import { Atom, Calculator, Layers, LineChart, PersonStanding, Sparkles } from "lucide-react";
+import { Atom, Calculator, Layers, LineChart, PersonStanding, Sparkles, Timer } from "lucide-react";
+import { formatMs, pomodoroColor, usePomodoro } from "../../lib/pomodoro";
 
 const TOOLS = [
+  {
+    to: "/pomodoro",
+    icon: Timer,
+    title: "Pomodoro Timer",
+    description: "Stay focused with timed study sprints and breaks.",
+    disabled: false,
+  },
   {
     to: "/learn/flashcards",
     icon: Layers,
@@ -47,6 +55,8 @@ const TOOLS = [
 ];
 
 export default function LearnPage() {
+  const p = usePomodoro();
+
   return (
     <div className="space-y-6 animate-in">
       <div>
@@ -58,6 +68,8 @@ export default function LearnPage() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {TOOLS.map(({ to, icon: Icon, title, description, disabled }) => {
+          const live = to === "/pomodoro" && p.running;
+          const liveColor = pomodoroColor(p.phase);
           const content = (
             <>
               <span
@@ -65,12 +77,16 @@ export default function LearnPage() {
                 style={{
                   background: disabled
                     ? "var(--surface-hi)"
-                    : "color-mix(in srgb, var(--accent) 12%, transparent)",
+                    : `color-mix(in srgb, ${live ? liveColor : "var(--accent)"} 12%, transparent)`,
                 }}
               >
-                <Icon size={16} className={disabled ? "text-fg-3" : "text-accent"} />
+                <Icon
+                  size={16}
+                  className={disabled ? "text-fg-3" : live ? undefined : "text-accent"}
+                  style={live ? { color: liveColor } : undefined}
+                />
               </span>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className={`text-[14px] font-medium ${disabled ? "text-fg-3" : "text-fg"}`}>
                   {title}
                   {disabled && (
@@ -79,6 +95,14 @@ export default function LearnPage() {
                 </div>
                 <div className="text-[12px] text-fg-3">{description}</div>
               </div>
+              {live && (
+                <span
+                  className="shrink-0 font-mono text-[15px] font-semibold tabular-nums"
+                  style={{ color: liveColor }}
+                >
+                  {formatMs(p.remainingMs)}
+                </span>
+              )}
             </>
           );
 
