@@ -95,6 +95,25 @@ export interface AcademicItemRequest {
   status: ItemStatus;
 }
 
+export interface CourseMatchItem {
+  type: ItemType;
+  title: string;
+  dueAt: string;
+  weight?: number | null;
+  location?: string | null;
+}
+
+export interface CourseMatch {
+  id: number;
+  name: string;
+  code?: string | null;
+  professor?: string | null;
+  school?: string | null;
+  meetingBlocks: MeetingBlock[];
+  items: CourseMatchItem[];
+  userCount: number;
+}
+
 export interface CalendarEvent {
   id: number;
   title: string;

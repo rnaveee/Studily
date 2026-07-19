@@ -63,6 +63,11 @@ export default function CoursesPage() {
           submitLabel="Create course"
           onSubmit={(req) => create.mutateAsync(req)}
           onCancel={() => setShowForm(false)}
+          onImported={() => {
+            qc.invalidateQueries({ queryKey: ["courses"] });
+            qc.invalidateQueries({ queryKey: ["dashboard"] });
+            setShowForm(false);
+          }}
         />
       )}
 

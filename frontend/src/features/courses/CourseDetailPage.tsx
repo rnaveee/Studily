@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Edit2, Plus, Trash2, X } from "lucide-react";
 import { api } from "../../lib/api";
+import { useAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
 import {
@@ -12,8 +13,10 @@ import {
   type CourseRequest,
   type ItemStatus,
   type Note,
+  type PublicUser,
 } from "../../types";
 import { formatDate, formatDateTime, hhmm } from "../../lib/format";
+import Avatar from "../../components/Avatar";
 import CourseForm from "./CourseForm";
 import ItemForm from "../../components/ItemForm";
 
@@ -142,8 +145,52 @@ export default function CourseDetailPage() {
       )}
 
       <ItemsSection courseId={courseId} items={itemsQ.data ?? []} onChange={invalidateAll} />
+      <ClassmatesSection courseId={courseId} />
       <NotesSection courseId={courseId} notes={notesQ.data ?? []} />
     </div>
+  );
+}
+
+function ClassmatesSection({ courseId }: { courseId: number }) {
+  const { user } = useAuth();
+
+  const classmates = useQuery({
+    queryKey: ["course", courseId, "classmates"],
+    queryFn: () => api.get<PublicUser[]>(`/courses/${courseId}/classmates`),
+    enabled: !!user?.emailVerified && Number.isFinite(courseId),
+  });
+
+  if (!classmates.data || classmates.data.length === 0) return null;
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-[13px] font-semibold uppercase tracking-wider text-fg-3">
+        Classmates in this course · {classmates.data.length}
+      </h2>
+      <ul className="card divide-y divide-line">
+        {classmates.data.map((u) => (
+          <li key={u.id}>
+            <Link
+              to={`/users/${u.id}`}
+              className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-hi"
+            >
+              <Avatar name={u.name} username={u.username} avatarUrl={u.avatarUrl} size={30} className="text-[12px]" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="truncate text-[13px] font-medium text-fg">{u.name}</span>
+                  <span className="truncate text-[12px] text-fg-3">@{u.username}</span>
+                </div>
+                {(u.major || u.year) && (
+                  <div className="text-[11px] text-fg-3">
+                    {[u.major, u.year ? `Year ${u.year}` : null].filter(Boolean).join(" · ")}
+                  </div>
+                )}
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
