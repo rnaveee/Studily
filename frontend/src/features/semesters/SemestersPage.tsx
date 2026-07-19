@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { BookOpen, Edit2, Plus, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
+import { useRequireAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
 import { MONTHS, formatMonth } from "../../lib/format";
@@ -19,6 +20,7 @@ const TERM_LABELS: Record<SemesterTerm, string> = {
 export default function SemestersPage() {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const requireAuth = useRequireAuth();
   const [showForm, setShowForm] = useState(false);
 
   const { data: semesters, isLoading } = useQuery({
@@ -54,7 +56,7 @@ export default function SemestersPage() {
     <div className="space-y-4 animate-in">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-fg">Semesters</h1>
-        <button onClick={() => setShowForm((s) => !s)} className="btn btn-primary">
+        <button onClick={() => requireAuth(() => setShowForm((s) => !s))} className="btn btn-primary">
           <Plus size={13} strokeWidth={2} />
           {showForm ? "Cancel" : "New semester"}
         </button>
@@ -108,7 +110,7 @@ export default function SemestersPage() {
           <p className="text-sm text-fg-3">
             No semesters yet. Create one to organize your courses by term.
           </p>
-          <button onClick={() => setShowForm(true)} className="btn btn-soft mt-3">
+          <button onClick={() => requireAuth(() => setShowForm(true))} className="btn btn-soft mt-3">
             <Plus size={13} />
             Add semester
           </button>

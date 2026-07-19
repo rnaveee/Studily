@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { X, BookOpen, CalendarDays, Brain, User } from "lucide-react";
 import { api } from "../../lib/api";
-import { useAuth } from "../../lib/auth";
+import { useAuth, useRequireAuth } from "../../lib/auth";
 import { countdown, formatDateTime, hhmm } from "../../lib/format";
 import {
   DAYS,
@@ -108,6 +108,7 @@ function MiniMonth({ marked }: { marked: Set<string> }) {
 export default function DashboardPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const requireAuth = useRequireAuth();
   const firstName = user?.name?.split(" ")[0] ?? user?.username ?? "";
   const [semesterId, setSemesterId] = useState<number | null>(null);
   const [addingDay, setAddingDay] = useState<string | null>(null);
@@ -164,7 +165,7 @@ export default function DashboardPage() {
       )}
 
       <div>
-        <h1 className="text-3xl font-bold text-fg">{greeting()}, {firstName}</h1>
+        <h1 className="text-3xl font-bold text-fg">{firstName ? `${greeting()}, ${firstName}` : greeting()}</h1>
         <p className="mt-1 text-sm text-fg-3">Here's your weekly schedule</p>
       </div>
 
@@ -285,7 +286,7 @@ export default function DashboardPage() {
               {data.days.map((day, idx) => (
                 <button
                   key={day.date}
-                  onClick={() => setAddingDay((d) => d === day.date ? null : day.date)}
+                  onClick={() => requireAuth(() => setAddingDay((d) => d === day.date ? null : day.date))}
                   className={[
                     "border-b border-l border-line py-2 text-center text-[11px] font-semibold transition-colors",
                     addingDay === day.date

@@ -4,7 +4,7 @@ import { useAuth } from "../../lib/auth";
 import { ApiError } from "../../lib/api";
 
 export default function LoginPage() {
-  const { user, login } = useAuth();
+  const { user, login, continueAsGuest } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -88,6 +88,17 @@ export default function LoginPage() {
             Sign up
           </Link>
         </p>
+
+        <button
+          type="button"
+          onClick={() => {
+            continueAsGuest();
+            navigate("/");
+          }}
+          className="mx-auto mt-3 block text-center text-[12px] text-fg-3 transition-colors hover:text-fg"
+        >
+          or continue as a guest
+        </button>
       </div>
     </div>
   );

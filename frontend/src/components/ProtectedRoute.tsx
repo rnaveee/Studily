@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { useAuth } from "../lib/auth";
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, guest, loading } = useAuth();
 
   if (loading) {
     return (
@@ -16,6 +16,6 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user && !guest) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }

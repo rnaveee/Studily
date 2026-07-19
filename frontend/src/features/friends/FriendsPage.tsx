@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Users2, School, Link2, Check, X, UserMinus, Search } from "lucide-react";
 import { api } from "../../lib/api";
-import { useAuth } from "../../lib/auth";
+import { useAuth, useRequireAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
 import { queryClient } from "../../lib/queryClient";
@@ -13,6 +13,7 @@ import type { FriendRequestItem } from "../../types";
 
 export default function FriendsPage() {
   const { user } = useAuth();
+  const requireAuth = useRequireAuth();
   const confirm = useConfirm();
   const [copied, setCopied] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -167,7 +168,7 @@ export default function FriendsPage() {
           )}
 
           <button
-            onClick={() => setShowSearch(true)}
+            onClick={() => requireAuth(() => setShowSearch(true))}
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-line bg-surface-hi px-4 py-2.5 text-[13px] font-medium text-fg-2 transition-colors hover:text-fg"
           >
             <Search size={14} className="shrink-0" />

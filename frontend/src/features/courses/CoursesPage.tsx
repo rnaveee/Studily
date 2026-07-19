@@ -3,12 +3,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { api } from "../../lib/api";
+import { useRequireAuth } from "../../lib/auth";
 import type { Course, CourseRequest, Semester } from "../../types";
 import { hhmm } from "../../lib/format";
 import CourseForm from "./CourseForm";
 
 export default function CoursesPage() {
   const qc = useQueryClient();
+  const requireAuth = useRequireAuth();
   const [showForm, setShowForm] = useState(false);
   const [semesterFilter, setSemesterFilter] = useState<number | null>(null);
 
@@ -49,7 +51,7 @@ export default function CoursesPage() {
               ))}
             </select>
           )}
-          <button onClick={() => setShowForm((s) => !s)} className="btn btn-primary">
+          <button onClick={() => requireAuth(() => setShowForm((s) => !s))} className="btn btn-primary">
             <Plus size={13} strokeWidth={2} />
             {showForm ? "Cancel" : "New course"}
           </button>
@@ -115,7 +117,7 @@ export default function CoursesPage() {
           <p className="text-sm text-fg-3">
             {semesterFilter ? "No courses in this semester." : "No courses yet."}
           </p>
-          <button onClick={() => setShowForm(true)} className="btn btn-soft mt-3">
+          <button onClick={() => requireAuth(() => setShowForm(true))} className="btn btn-soft mt-3">
             <Plus size={13} />
             Add your first course
           </button>

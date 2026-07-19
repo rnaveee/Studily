@@ -16,7 +16,20 @@ export default function ProfilePage() {
     enabled: !!user,
   });
 
-  if (!user) return null;
+  if (!user)
+    return (
+      <div className="mx-auto max-w-lg animate-in">
+        <div className="card mt-8 p-8 text-center">
+          <h1 className="text-[15px] font-semibold text-fg">You're browsing as a guest</h1>
+          <p className="mt-2 text-[13px] leading-relaxed text-fg-3">
+            Sign in to set up your profile, build your schedule, and connect with friends.
+          </p>
+          <Link to="/login" className="btn btn-primary mt-5">
+            Sign in
+          </Link>
+        </div>
+      </div>
+    );
 
   return (
     <div className="mx-auto max-w-lg space-y-5 animate-in">

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "../../lib/api";
+import { useRequireAuth } from "../../lib/auth";
 import { formatDateTime } from "../../lib/format";
 import { type AcademicItem, type CalendarEvent } from "../../types";
 import AddCalendarItemModal from "./AddCalendarItemModal";
@@ -52,6 +53,7 @@ export default function CalendarPage() {
   });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
+  const requireAuth = useRequireAuth();
 
   const today = new Date();
 
@@ -156,7 +158,7 @@ export default function CalendarPage() {
             return (
               <div
                 key={i}
-                onClick={() => day && setSelectedDay(toDayStr(day))}
+                onClick={() => day && requireAuth(() => setSelectedDay(toDayStr(day)))}
                 className={[
                   "min-h-[4.5rem] border-b border-r border-line p-1 transition-colors",
                   day

@@ -3,11 +3,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Layers, Plus, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
+import { useRequireAuth } from "../../lib/auth";
 import type { Course, FlashcardSet } from "../../types";
 import NewFlashcardSetModal from "./NewFlashcardSetModal";
 
 export default function FlashcardsPage() {
   const qc = useQueryClient();
+  const requireAuth = useRequireAuth();
   const [showCreate, setShowCreate] = useState(false);
 
   const sets = useQuery({
@@ -41,7 +43,7 @@ export default function FlashcardsPage() {
             <p className="mt-1 text-[13px] text-fg-3">Create sets and study them.</p>
           </div>
         </div>
-        <button onClick={() => setShowCreate(true)} className="btn btn-primary">
+        <button onClick={() => requireAuth(() => setShowCreate(true))} className="btn btn-primary">
           <Plus size={13} />
           Create
         </button>

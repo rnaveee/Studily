@@ -3,7 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { MessageSquare, Plus, Users2 } from "lucide-react";
 import { api } from "../../lib/api";
-import { useAuth } from "../../lib/auth";
+import { useAuth, useRequireAuth } from "../../lib/auth";
 import { queryClient } from "../../lib/queryClient";
 import Avatar from "../../components/Avatar";
 import SegmentedToggle from "../../components/SegmentedToggle";
@@ -17,6 +17,7 @@ export default function MessagesPage() {
   const [showNewGroup, setShowNewGroup] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const requireAuth = useRequireAuth();
 
   const friends = useQuery({
     queryKey: ["friends", "list"],
@@ -153,7 +154,7 @@ export default function MessagesPage() {
           )}
 
           <div className="flex justify-center">
-            <button onClick={() => setShowNewGroup(true)} className="btn btn-primary">
+            <button onClick={() => requireAuth(() => setShowNewGroup(true))} className="btn btn-primary">
               <Plus size={13} />
               New group
             </button>
