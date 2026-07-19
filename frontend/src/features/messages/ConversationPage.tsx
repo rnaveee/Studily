@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -13,6 +13,27 @@ import AttachmentBubble from "./AttachmentBubble";
 import type { Conversation, Message, Page, PublicUser } from "../../types";
 
 const DOC_ACCEPT = ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.md";
+
+function hourKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}-${d.getHours()}`;
+}
+
+function hourLabel(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const dayStart = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const dayDiff = Math.round((dayStart(now) - dayStart(d)) / 86400000);
+  if (dayDiff === 0) return time;
+  if (dayDiff === 1) return `Yesterday ${time}`;
+  if (dayDiff < 7) return `${d.toLocaleDateString([], { weekday: "long" })} ${time}`;
+  return `${d.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    year: d.getFullYear() === now.getFullYear() ? undefined : "numeric",
+  })}, ${time}`;
+}
 
 export default function ConversationPage() {
   const { id } = useParams();
@@ -201,54 +222,59 @@ export default function ConversationPage() {
             const i = thread.length - 1 - ri;
             const mine = m.sender.id === user?.id;
             const prev = thread[i - 1];
-            const next = thread[i + 1];
-            const isFirstInRun = !prev || prev.sender.id !== m.sender.id;
-            const isLastInRun = !next || next.sender.id !== m.sender.id;
+            const newHour = !prev || hourKey(prev.createdAt) !== hourKey(m.createdAt);
+            const isFirstInRun = newHour || prev.sender.id !== m.sender.id;
             return (
-              <div
-                key={m.id}
-                className={`flex flex-col ${isFirstInRun ? "mt-3" : "mt-0.5"} ${mine ? "items-end" : "items-start"}`}
-              >
-                {!mine && isGroup && isFirstInRun && (
-                  <Link
-                    to={`/users/${m.sender.id}`}
-                    className="mb-0.5 ml-8 text-[11px] text-fg-3 transition-colors hover:text-accent"
-                  >
-                    {m.sender.name}
-                  </Link>
-                )}
-                <div className={`flex max-w-[80%] items-center gap-2 ${mine ? "flex-row-reverse" : ""}`}>
-                  {!mine && (
-                    <Link to={`/users/${m.sender.id}`} className="shrink-0">
-                      <Avatar
-                        name={m.sender.name}
-                        username={m.sender.username}
-                        avatarUrl={m.sender.avatarUrl}
-                        size={26}
-                        className="text-[11px]"
-                      />
+              <Fragment key={m.id}>
+                <div
+                  className={`flex flex-col ${isFirstInRun ? "mt-3" : "mt-0.5"} ${mine ? "items-end" : "items-start"}`}
+                >
+                  {!mine && isGroup && isFirstInRun && (
+                    <Link
+                      to={`/users/${m.sender.id}`}
+                      className="mb-0.5 ml-8 text-[11px] text-fg-3 transition-colors hover:text-accent"
+                    >
+                      {m.sender.name}
                     </Link>
                   )}
-                  {m.attachment ? (
-                    <AttachmentBubble message={m} mine={mine} />
-                  ) : (
-                    <div
-                      className={`rounded-2xl px-3.5 py-2 text-[13px] ${mine ? "text-accent-fg" : "text-fg"}`}
-                      style={{ background: mine ? "var(--accent)" : "var(--surface-hi)" }}
-                    >
-                      {m.body}
-                    </div>
-                  )}
-                </div>
-                {isLastInRun && (
-                  <div className={`mt-0.5 text-[10px] text-fg-3 ${mine ? "mr-1" : "ml-8"}`}>
-                    {new Date(m.createdAt).toLocaleTimeString([], {
+                  <div
+                    className={`flex max-w-[80%] items-center gap-2 ${mine ? "flex-row-reverse" : ""}`}
+                    title={new Date(m.createdAt).toLocaleString([], {
+                      month: "short",
+                      day: "numeric",
                       hour: "numeric",
                       minute: "2-digit",
                     })}
+                  >
+                    {!mine && (
+                      <Link to={`/users/${m.sender.id}`} className="shrink-0">
+                        <Avatar
+                          name={m.sender.name}
+                          username={m.sender.username}
+                          avatarUrl={m.sender.avatarUrl}
+                          size={26}
+                          className="text-[11px]"
+                        />
+                      </Link>
+                    )}
+                    {m.attachment ? (
+                      <AttachmentBubble message={m} mine={mine} />
+                    ) : (
+                      <div
+                        className={`rounded-2xl px-3.5 py-2 text-[13px] ${mine ? "text-accent-fg" : "text-fg"}`}
+                        style={{ background: mine ? "var(--accent)" : "var(--surface-hi)" }}
+                      >
+                        {m.body}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {newHour && (
+                  <div className="select-none pb-1 pt-4 text-center text-[11px] font-medium text-fg-3">
+                    {hourLabel(m.createdAt)}
                   </div>
                 )}
-              </div>
+              </Fragment>
             );
           })
         )}
