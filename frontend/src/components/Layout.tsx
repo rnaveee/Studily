@@ -106,10 +106,10 @@ export default function Layout() {
         style={{ background: "var(--surface)", borderRight: "1px solid var(--line)" }}
       >
         <div className="px-5 py-5">
-          <div className="flex items-center gap-1.5">
+          <Link to="/onboarding" className="flex items-center gap-1.5">
             <img src="/studily-3a.svg" alt="" className="h-8 w-8" />
             <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
-          </div>
+          </Link>
           <div className="text-[10px] text-fg-3">by Ryan Nave</div>
         </div>
 
@@ -211,13 +211,13 @@ export default function Layout() {
             paddingTop: "calc(env(safe-area-inset-top, 0px) + 18px)",
           }}
         >
-          <div className="flex items-center" onClick={handleDebugTap}>
+          <Link to="/onboarding" className="flex items-center" onClick={handleDebugTap}>
             <img src="/studily-3a.svg" alt="" className="h-8 w-8" />
             <div>
               <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
               <div className="text-[9px] leading-tight text-fg-3">by Ryan Nave</div>
             </div>
-          </div>
+          </Link>
 
           <div className="flex items-center gap-0.5">
             <NavLink

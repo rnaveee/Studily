@@ -51,7 +51,7 @@ export default function SignupPage() {
               messaging and friends — until then you can still plan your semesters, courses, and
               schedule.
             </p>
-            <button onClick={() => navigate("/")} className="btn btn-primary w-full mt-5">
+            <button onClick={() => navigate("/onboarding")} className="btn btn-primary w-full mt-5">
               Continue to Studily
             </button>
             <p className="mt-3 text-center text-[11px] leading-relaxed text-fg-3">
