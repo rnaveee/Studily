@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { api, getToken, setToken, isGuestMode, setGuestMode } from "./api";
+import { api, ApiError, getToken, setToken, isGuestMode, setGuestMode } from "./api";
 import { queryClient } from "./queryClient";
 import { syncPush } from "./push";
 import { ws } from "./ws";
@@ -49,7 +49,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api
       .get<User>("/me")
       .then(setUser)
-      .catch(() => setToken(null))
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) setToken(null);
+      })
       .finally(() => setLoading(false));
   }, []);
 
