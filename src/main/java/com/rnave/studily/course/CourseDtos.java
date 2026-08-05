@@ -1,11 +1,15 @@
 package com.rnave.studily.course;
 
+import com.rnave.studily.academic.AcademicItem;
+import com.rnave.studily.academic.ItemType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+import java.time.Instant;
 import java.time.LocalTime;
+import java.util.Comparator;
 import java.util.List;
 
 public class CourseDtos {
@@ -46,5 +50,44 @@ public class CourseDtos {
             @Size(max = 255) String professor,
             @Size(max = 50) String color,
             @Valid List<MeetingBlockDto> meetingBlocks) {
+    }
+
+    public record MatchItemDto(
+            ItemType type,
+            String title,
+            Instant dueAt,
+            Double weight,
+            String location) {
+
+        public static MatchItemDto from(AcademicItem item) {
+            return new MatchItemDto(item.getType(), item.getTitle(), item.getDueAt(),
+                    item.getWeight(), item.getLocation());
+        }
+    }
+
+    public record CourseMatchDto(
+            Long id,
+            String name,
+            String code,
+            String professor,
+            String school,
+            List<MeetingBlockDto> meetingBlocks,
+            List<MatchItemDto> items,
+            int userCount) {
+
+        public static CourseMatchDto from(Course c, int userCount) {
+            return new CourseMatchDto(
+                    c.getId(), c.getName(), c.getCode(), c.getProfessor(),
+                    c.getUser().getSchool(),
+                    c.getMeetingBlocks().stream().map(MeetingBlockDto::from).toList(),
+                    c.getItems().stream()
+                            .sorted(Comparator.comparing(AcademicItem::getDueAt))
+                            .map(MatchItemDto::from)
+                            .toList(),
+                    userCount);
+        }
+    }
+
+    public record ImportRequest(@NotNull Long sourceCourseId, Long semesterId) {
     }
 }

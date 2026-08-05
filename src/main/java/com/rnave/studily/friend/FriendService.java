@@ -60,11 +60,11 @@ public class FriendService {
     @Transactional(readOnly = true)
     public PageResponse<RelationshipDto> schoolmates(int page, int size) {
         User me = currentUser.entity();
-        if (me.getSchool() == null || me.getSchool().isBlank()) {
+        if (me.getSchoolKey() == null) {
             return PageResponse.empty();
         }
-        Slice<User> mates = userRepository.findBySchoolIgnoreCaseAndIdNotOrderByNameAsc(
-                me.getSchool(), me.getId(),
+        Slice<User> mates = userRepository.findBySchoolKeyAndIdNotOrderByNameAsc(
+                me.getSchoolKey(), me.getId(),
                 PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
         if (mates.isEmpty()) {
             return PageResponse.empty();

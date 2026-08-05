@@ -46,6 +46,7 @@ class FriendServiceTest {
         me = new User();
         me.setId(1L);
         me.setSchool("SFU");
+        me.setSchoolKey("sfu");
 
         other = new User();
         other.setId(2L);
@@ -182,10 +183,11 @@ class FriendServiceTest {
     @Test
     void schoolmates_emptyWhenCallerHasNoSchool() {
         me.setSchool(null);
+        me.setSchoolKey(null);
         when(currentUser.entity()).thenReturn(me);
 
         assertThat(friendService.schoolmates(0, 30).items()).isEmpty();
-        verify(userRepository, never()).findBySchoolIgnoreCaseAndIdNotOrderByNameAsc(any(), any(), any());
+        verify(userRepository, never()).findBySchoolKeyAndIdNotOrderByNameAsc(any(), any(), any());
     }
 
     @Test
@@ -201,7 +203,7 @@ class FriendServiceTest {
         User stranger = new User();
         stranger.setId(5L);
 
-        when(userRepository.findBySchoolIgnoreCaseAndIdNotOrderByNameAsc(eq("SFU"), eq(1L), any(Pageable.class)))
+        when(userRepository.findBySchoolKeyAndIdNotOrderByNameAsc(eq("sfu"), eq(1L), any(Pageable.class)))
                 .thenReturn(new SliceImpl<>(List.of(pendingOutgoing, pendingIncoming, friend, stranger)));
 
         FriendRequest outgoing = new FriendRequest();

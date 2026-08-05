@@ -32,6 +32,7 @@ public class User {
 
     private String name;
     private String school;
+    private String schoolKey;
     private String schoolId;
     private Integer year;
     private String major;

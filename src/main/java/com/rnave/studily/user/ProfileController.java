@@ -1,6 +1,7 @@
 package com.rnave.studily.user;
 
 import com.rnave.studily.config.CurrentUser;
+import com.rnave.studily.config.MatchKeys;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,7 @@ public class ProfileController {
         User user = currentUser.entity();
         user.setName(req.name());
         user.setSchool(req.school());
+        user.setSchoolKey(MatchKeys.schoolKey(req.school()));
         user.setSchoolId(req.schoolId());
         user.setYear(req.year());
         user.setMajor(req.major());

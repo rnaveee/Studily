@@ -1,5 +1,6 @@
 package com.rnave.studily.auth;
 
+import com.rnave.studily.config.MatchKeys;
 import com.rnave.studily.auth.AuthDtos.AuthResponse;
 import com.rnave.studily.auth.AuthDtos.LoginRequest;
 import com.rnave.studily.auth.AuthDtos.SignupRequest;
@@ -52,6 +53,7 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(req.password()));
         user.setName(req.name().trim());
         user.setSchool(req.school() == null ? null : req.school().trim());
+        user.setSchoolKey(MatchKeys.schoolKey(user.getSchool()));
         user = userRepository.save(user);
         try {
             authEmailService.sendVerification(user);

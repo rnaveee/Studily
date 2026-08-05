@@ -1,6 +1,7 @@
 package com.rnave.studily.course;
 
 import com.rnave.studily.config.CurrentUser;
+import com.rnave.studily.config.MatchKeys;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.course.CourseDtos.CourseDto;
 import com.rnave.studily.course.CourseDtos.CourseRequest;
@@ -73,6 +74,7 @@ public class CourseService {
     private void apply(Course course, CourseRequest req) {
         course.setName(req.name().trim());
         course.setCode(trimToNull(req.code()));
+        course.setCodeKey(MatchKeys.codeKey(course.getCode()));
         course.setProfessor(trimToNull(req.professor()));
         course.setColor(trimToNull(req.color()));
 
