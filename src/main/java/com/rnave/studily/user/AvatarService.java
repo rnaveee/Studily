@@ -1,5 +1,6 @@
 package com.rnave.studily.user;
 
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
 import net.coobird.thumbnailator.Thumbnails;
@@ -17,6 +18,10 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.util.Base64;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -27,6 +32,7 @@ public class AvatarService {
     private static final int MAX_SOURCE_DIMENSION = 8000;
     private static final long MAX_UPLOAD_BYTES = 5L * 1024 * 1024;
     private static final Set<String> ALLOWED_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
@@ -39,21 +45,21 @@ public class AvatarService {
     @Transactional
     public UserDto upload(MultipartFile file) {
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
+            throw new BadRequestException("File is empty");
         }
         if (file.getSize() > MAX_UPLOAD_BYTES) {
-            throw new IllegalArgumentException("Image must be smaller than 5MB");
+            throw new BadRequestException("Image must be smaller than 5MB");
         }
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_TYPES.contains(contentType)) {
-            throw new IllegalArgumentException("Only JPEG, PNG, or WEBP images are supported");
+            throw new BadRequestException("Only JPEG, PNG, or WEBP images are supported");
         }
 
         byte[] bytes;
         try {
             bytes = file.getBytes();
         } catch (IOException e) {
-            throw new IllegalArgumentException("Could not read image");
+            throw new BadRequestException("Could not read image");
         }
         requireSafeDimensions(bytes);
 
@@ -61,12 +67,13 @@ public class AvatarService {
         try {
             original = Thumbnails.of(new ByteArrayInputStream(bytes)).scale(1.0).asBufferedImage();
         } catch (IOException | IllegalArgumentException e) {
-            throw new IllegalArgumentException("Could not read image");
+            throw new BadRequestException("Could not read image");
         }
 
         User user = currentUser.entity();
         user.setAvatarImage(resizeToJpeg(original));
         user.setAvatarContentType("image/jpeg");
+        user.setAvatarKey(newAvatarKey());
         user.setAvatarVersion(user.getAvatarVersion() + 1);
         return UserDto.from(userRepository.save(user));
     }
@@ -76,35 +83,51 @@ public class AvatarService {
         User user = currentUser.entity();
         user.setAvatarImage(null);
         user.setAvatarContentType(null);
+        user.setAvatarKey(null);
         user.setAvatarVersion(user.getAvatarVersion() + 1);
         return UserDto.from(userRepository.save(user));
     }
 
     @Transactional(readOnly = true)
-    public User requireForServing(Long userId) {
+    public User requireForServing(Long userId, String key) {
         return userRepository.findById(userId)
-                .filter(u -> u.getAvatarImage() != null)
+                .filter(u -> u.getAvatarImage() != null && matchesKey(u, key))
                 .orElseThrow(() -> new NotFoundException("No avatar"));
+    }
+
+    private static boolean matchesKey(User user, String key) {
+        if (user.getAvatarKey() == null || key == null) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                user.getAvatarKey().getBytes(StandardCharsets.UTF_8),
+                key.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static String newAvatarKey() {
+        byte[] bytes = new byte[12];
+        RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private void requireSafeDimensions(byte[] bytes) {
         try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
             Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
             if (!readers.hasNext()) {
-                throw new IllegalArgumentException("Could not read image");
+                throw new BadRequestException("Could not read image");
             }
             ImageReader reader = readers.next();
             try {
                 reader.setInput(in);
                 if (reader.getWidth(0) > MAX_SOURCE_DIMENSION || reader.getHeight(0) > MAX_SOURCE_DIMENSION) {
-                    throw new IllegalArgumentException(
+                    throw new BadRequestException(
                             "Image dimensions are too large (max " + MAX_SOURCE_DIMENSION + "px per side)");
                 }
             } finally {
                 reader.dispose();
             }
         } catch (IOException e) {
-            throw new IllegalArgumentException("Could not read image");
+            throw new BadRequestException("Could not read image");
         }
     }
 

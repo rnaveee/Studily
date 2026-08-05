@@ -1,5 +1,6 @@
 package com.rnave.studily.user;
 
+import com.rnave.studily.config.NotFoundException;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,8 +34,10 @@ public class AvatarController {
     }
 
     @GetMapping("/api/users/{id}/avatar")
-    public ResponseEntity<byte[]> serve(@PathVariable Long id) {
-        User user = avatarService.requireForServing(id);
+    public ResponseEntity<byte[]> serve(
+            @PathVariable Long id,
+            @RequestParam(name = "k", required = false) String key) {
+        User user = avatarService.requireForServing(id, key);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(user.getAvatarContentType()))
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(365)).cachePublic().immutable())

@@ -42,6 +42,7 @@ public class User {
 
     private byte[] avatarImage;
     private String avatarContentType;
+    private String avatarKey;
 
     @Column(nullable = false)
     private int avatarVersion = 0;
