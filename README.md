@@ -27,8 +27,7 @@ Tailwind, TanStack Query), shipped as a single Docker image on Railway.
   avatars
 
 Roadmap: RAG-powered syllabus upload and AI study chat are deliberately sequenced
-last, after launch (see `FEATURES.md` for the full feature map and `study-app-PRD.md`
-for the product spec).
+last, after launch — the core planning and social product ships first.
 
 ## Architecture
 

@@ -59,9 +59,5 @@ desktop.ini
 *.tmp
 *.bak
 
-# Project docs (internal only)
-study-app-PRD.md
-FEATURES.md
-
-# Interview prep (personal)
-INTERVIEW_PREP.md
+# Personal learning / internal docs (not shipped in the repo)
+learning/
