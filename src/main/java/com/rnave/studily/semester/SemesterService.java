@@ -1,5 +1,6 @@
 package com.rnave.studily.semester;
 
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
@@ -79,7 +80,7 @@ public class SemesterService {
         LocalDate start = req.startDate() != null ? req.startDate() : defaultStart(req.term(), req.year());
         LocalDate end = req.endDate() != null ? req.endDate() : defaultEnd(req.term(), req.year());
         if (!end.isAfter(start)) {
-            throw new IllegalArgumentException("End date must be after start date");
+            throw new BadRequestException("End date must be after start date");
         }
         s.setStartDate(start);
         s.setEndDate(end);

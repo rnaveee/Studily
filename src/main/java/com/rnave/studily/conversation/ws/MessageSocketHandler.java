@@ -2,6 +2,7 @@ package com.rnave.studily.conversation.ws;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.ForbiddenException;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.config.SlidingWindowRateLimiter;
@@ -106,7 +107,7 @@ public class MessageSocketHandler extends TextWebSocketHandler {
                 new UsernamePasswordAuthenticationToken(userId, null, List.of()));
         try {
             action.run();
-        } catch (NotFoundException | ForbiddenException | IllegalArgumentException ex) {
+        } catch (NotFoundException | ForbiddenException | BadRequestException ex) {
             registry.sendToSession(userId, session, WsEvents.ErrorEvent.of(ex.getMessage()));
         } catch (Exception ex) {
             log.error("WebSocket frame handling failed for user {}", userId, ex);

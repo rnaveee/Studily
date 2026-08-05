@@ -1,5 +1,6 @@
 package com.rnave.studily.auth;
 
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.SlidingWindowRateLimiter;
 import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.mail.MailService;
@@ -42,7 +43,7 @@ public class AuthEmailService {
                         link,
                         "Verify email"));
         if (!sent) {
-            throw new IllegalArgumentException(
+            throw new BadRequestException(
                     "Couldn't send the email — the mail service rejected it. Please try again later.");
         }
     }

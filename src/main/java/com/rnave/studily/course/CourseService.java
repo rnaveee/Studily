@@ -1,5 +1,6 @@
 package com.rnave.studily.course;
 
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.MatchKeys;
 import com.rnave.studily.config.NotFoundException;
@@ -89,7 +90,7 @@ public class CourseService {
         if (req.meetingBlocks() != null) {
             for (MeetingBlockDto dto : req.meetingBlocks()) {
                 if (dto.endTime().isBefore(dto.startTime()) || dto.endTime().equals(dto.startTime())) {
-                    throw new IllegalArgumentException("Meeting block end time must be after start time");
+                    throw new BadRequestException("Meeting block end time must be after start time");
                 }
                 MeetingBlock mb = new MeetingBlock();
                 mb.setCourse(course);

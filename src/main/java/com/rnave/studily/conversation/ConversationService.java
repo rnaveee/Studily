@@ -1,5 +1,6 @@
 package com.rnave.studily.conversation;
 
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.ForbiddenException;
 import com.rnave.studily.config.NotFoundException;
@@ -87,7 +88,7 @@ public class ConversationService {
     public ConversationDto openDirect(Long userId) {
         User me = currentUser.entity();
         if (userId.equals(me.getId())) {
-            throw new IllegalArgumentException("You can't message yourself");
+            throw new BadRequestException("You can't message yourself");
         }
         User other = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
@@ -111,7 +112,7 @@ public class ConversationService {
         Set<Long> ids = new LinkedHashSet<>(memberIds);
         ids.remove(me.getId());
         if (ids.isEmpty()) {
-            throw new IllegalArgumentException("A group needs at least one other member");
+            throw new BadRequestException("A group needs at least one other member");
         }
 
         Conversation conv = new Conversation();

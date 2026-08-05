@@ -1,5 +1,6 @@
 package com.rnave.studily.semester;
 
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
@@ -77,7 +78,7 @@ class SemesterServiceTest {
         SemesterRequest req = new SemesterRequest(
                 SemesterTerm.FALL, 2026, LocalDate.of(2026, 9, 10), LocalDate.of(2026, 9, 1));
 
-        assertThatThrownBy(() -> semesterService.create(req)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> semesterService.create(req)).isInstanceOf(BadRequestException.class);
     }
 
     @Test

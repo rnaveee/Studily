@@ -1,5 +1,6 @@
 package com.rnave.studily.support;
 
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.GlobalRateLimitFilter;
 import com.rnave.studily.config.SlidingWindowRateLimiter;
@@ -64,7 +65,7 @@ public class SupportController {
                 html,
                 replyTo);
         if (!sent) {
-            throw new IllegalArgumentException(
+            throw new BadRequestException(
                     "Couldn't send your report — please try again later, or email " + supportEmail + " directly.");
         }
     }

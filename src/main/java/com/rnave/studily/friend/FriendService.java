@@ -1,5 +1,6 @@
 package com.rnave.studily.friend;
 
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
@@ -115,7 +116,7 @@ public class FriendService {
     public FriendRequestDto sendRequest(Long targetUserId) {
         User me = currentUser.entity();
         if (targetUserId.equals(me.getId())) {
-            throw new IllegalArgumentException("You can't add yourself as a friend");
+            throw new BadRequestException("You can't add yourself as a friend");
         }
         User target = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new NotFoundException("User not found"));

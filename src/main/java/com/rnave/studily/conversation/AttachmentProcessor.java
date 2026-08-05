@@ -1,5 +1,6 @@
 package com.rnave.studily.conversation;
 
+import com.rnave.studily.config.BadRequestException;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,10 +44,10 @@ public class AttachmentProcessor {
 
     public Processed process(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
+            throw new BadRequestException("File is empty");
         }
         if (file.getSize() > MAX_BYTES) {
-            throw new IllegalArgumentException("File must be smaller than 10MB");
+            throw new BadRequestException("File must be smaller than 10MB");
         }
         String filename = sanitizeFilename(file.getOriginalFilename());
         String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
@@ -54,18 +55,18 @@ public class AttachmentProcessor {
         try {
             bytes = file.getBytes();
         } catch (IOException e) {
-            throw new IllegalArgumentException("Could not read file");
+            throw new BadRequestException("Could not read file");
         }
         if (IMAGE_TYPES.contains(contentType)) {
             return processImage(filename, bytes);
         }
         String docType = DOC_TYPES_BY_EXTENSION.get(extension(filename));
         if (docType == null || contentType.startsWith("image/")) {
-            throw new IllegalArgumentException(
+            throw new BadRequestException(
                     "Unsupported file type. Send a photo (JPEG, PNG, WEBP) or a document (PDF, Word, PowerPoint, Excel, TXT, CSV, MD).");
         }
         if (docType.equals("application/pdf") && !startsWith(bytes, "%PDF-")) {
-            throw new IllegalArgumentException("This file doesn't look like a valid PDF");
+            throw new BadRequestException("This file doesn't look like a valid PDF");
         }
         return new Processed(filename, docType, bytes, null, null);
     }
@@ -82,7 +83,7 @@ public class AttachmentProcessor {
                         .asBufferedImage();
             }
         } catch (IOException | IllegalArgumentException e) {
-            throw new IllegalArgumentException("Could not read image");
+            throw new BadRequestException("Could not read image");
         }
         boolean png = image.getColorModel().hasAlpha();
         BufferedImage canvas = png ? image : toRgb(image);
@@ -104,20 +105,20 @@ public class AttachmentProcessor {
         try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
             Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
             if (!readers.hasNext()) {
-                throw new IllegalArgumentException("Could not read image");
+                throw new BadRequestException("Could not read image");
             }
             ImageReader reader = readers.next();
             try {
                 reader.setInput(in);
                 if (reader.getWidth(0) > MAX_SOURCE_DIMENSION || reader.getHeight(0) > MAX_SOURCE_DIMENSION) {
-                    throw new IllegalArgumentException(
+                    throw new BadRequestException(
                             "Image dimensions are too large (max " + MAX_SOURCE_DIMENSION + "px per side)");
                 }
             } finally {
                 reader.dispose();
             }
         } catch (IOException e) {
-            throw new IllegalArgumentException("Could not read image");
+            throw new BadRequestException("Could not read image");
         }
     }
 

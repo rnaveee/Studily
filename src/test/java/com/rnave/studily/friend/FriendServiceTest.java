@@ -1,5 +1,6 @@
 package com.rnave.studily.friend;
 
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
@@ -56,11 +57,11 @@ class FriendServiceTest {
     }
 
     @Test
-    void sendRequest_toSelf_throwsIllegalArgument() {
+    void sendRequest_toSelf_throwsBadRequest() {
         when(currentUser.entity()).thenReturn(me);
 
         assertThatThrownBy(() -> friendService.sendRequest(1L))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(BadRequestException.class);
         verify(friendRequestRepository, never()).save(any());
     }
 
