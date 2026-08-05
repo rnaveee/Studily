@@ -25,6 +25,8 @@ self.addEventListener("push", (event) => {
 self.addEventListener("pushsubscriptionchange", (event) => {
   const old = event.oldSubscription;
   if (!old) return;
+  const oldJson = old.toJSON();
+  if (!oldJson.keys || !oldJson.keys.p256dh || !oldJson.keys.auth) return;
   event.waitUntil(
     self.registration.pushManager
       .subscribe({
@@ -39,6 +41,7 @@ self.addEventListener("pushsubscriptionchange", (event) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             oldEndpoint: old.endpoint,
+            oldKeys: { p256dh: oldJson.keys.p256dh, auth: oldJson.keys.auth },
             endpoint: sub.endpoint,
             keys: { p256dh: json.keys.p256dh, auth: json.keys.auth },
           }),

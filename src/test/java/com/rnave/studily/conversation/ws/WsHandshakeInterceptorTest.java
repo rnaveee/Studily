@@ -19,6 +19,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class WsHandshakeInterceptorTest {
@@ -45,10 +46,7 @@ class WsHandshakeInterceptorTest {
 
     @Test
     void protocolHeaderToken_acceptsAndStashesUserId() {
-        when(request.getURI()).thenReturn(URI.create("ws://localhost/ws"));
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Sec-WebSocket-Protocol", WsHandshakeInterceptor.PROTOCOL + ", good");
-        when(request.getHeaders()).thenReturn(headers);
+        givenProtocolToken("good");
         when(jwtService.parseToken("good")).thenReturn(new JwtService.TokenPayload(42L, 0));
         when(userRepository.findById(42L)).thenReturn(Optional.of(verifiedUserWithTokenVersion(0)));
 
@@ -60,7 +58,6 @@ class WsHandshakeInterceptorTest {
 
     @Test
     void protocolHeaderWithOnlyProtocolName_rejectsWith401() {
-        when(request.getURI()).thenReturn(URI.create("ws://localhost/ws"));
         HttpHeaders headers = new HttpHeaders();
         headers.add("Sec-WebSocket-Protocol", WsHandshakeInterceptor.PROTOCOL);
         when(request.getHeaders()).thenReturn(headers);
@@ -73,7 +70,7 @@ class WsHandshakeInterceptorTest {
 
     @Test
     void validToken_acceptsAndStashesUserId() {
-        when(request.getURI()).thenReturn(URI.create("ws://localhost/ws?token=good"));
+        givenProtocolToken("good");
         when(jwtService.parseToken("good")).thenReturn(new JwtService.TokenPayload(42L, 0));
         when(userRepository.findById(42L)).thenReturn(Optional.of(verifiedUserWithTokenVersion(0)));
 
@@ -85,8 +82,6 @@ class WsHandshakeInterceptorTest {
 
     @Test
     void missingToken_rejectsWith401() {
-        when(request.getURI()).thenReturn(URI.create("ws://localhost/ws"));
-
         boolean accepted = interceptor.beforeHandshake(request, response, wsHandler, attributes);
 
         assertThat(accepted).isFalse();
@@ -95,8 +90,20 @@ class WsHandshakeInterceptorTest {
     }
 
     @Test
+    void queryParameterToken_isIgnoredAndRejectsWith401() {
+        when(request.getURI()).thenReturn(URI.create("ws://localhost/ws?token=good"));
+
+        boolean accepted = interceptor.beforeHandshake(request, response, wsHandler, attributes);
+
+        assertThat(accepted).isFalse();
+        assertThat(attributes).isEmpty();
+        verify(response).setStatusCode(HttpStatus.UNAUTHORIZED);
+        verifyNoInteractions(jwtService);
+    }
+
+    @Test
     void invalidToken_rejectsWith401() {
-        when(request.getURI()).thenReturn(URI.create("ws://localhost/ws?token=garbage"));
+        givenProtocolToken("garbage");
         when(jwtService.parseToken("garbage")).thenThrow(new RuntimeException("bad signature"));
 
         boolean accepted = interceptor.beforeHandshake(request, response, wsHandler, attributes);
@@ -107,7 +114,7 @@ class WsHandshakeInterceptorTest {
 
     @Test
     void staleTokenVersion_rejectsWith401() {
-        when(request.getURI()).thenReturn(URI.create("ws://localhost/ws?token=old"));
+        givenProtocolToken("old");
         when(jwtService.parseToken("old")).thenReturn(new JwtService.TokenPayload(42L, 0));
         when(userRepository.findById(42L)).thenReturn(Optional.of(verifiedUserWithTokenVersion(1)));
 
@@ -119,7 +126,7 @@ class WsHandshakeInterceptorTest {
 
     @Test
     void unverifiedEmail_rejectsWith401() {
-        when(request.getURI()).thenReturn(URI.create("ws://localhost/ws?token=good"));
+        givenProtocolToken("good");
         when(jwtService.parseToken("good")).thenReturn(new JwtService.TokenPayload(42L, 0));
         User unverified = verifiedUserWithTokenVersion(0);
         unverified.setEmailVerified(false);
@@ -133,7 +140,7 @@ class WsHandshakeInterceptorTest {
 
     @Test
     void deletedUser_rejectsWith401() {
-        when(request.getURI()).thenReturn(URI.create("ws://localhost/ws?token=orphan"));
+        givenProtocolToken("orphan");
         when(jwtService.parseToken("orphan")).thenReturn(new JwtService.TokenPayload(99L, 0));
         when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
@@ -141,6 +148,12 @@ class WsHandshakeInterceptorTest {
 
         assertThat(accepted).isFalse();
         verify(response).setStatusCode(HttpStatus.UNAUTHORIZED);
+    }
+
+    private void givenProtocolToken(String token) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Sec-WebSocket-Protocol", WsHandshakeInterceptor.PROTOCOL + ", " + token);
+        when(request.getHeaders()).thenReturn(headers);
     }
 
     private User verifiedUserWithTokenVersion(int version) {
