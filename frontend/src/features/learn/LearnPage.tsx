@@ -29,7 +29,7 @@ const TOOLS = [
     icon: Atom,
     title: "Periodic Table",
     description: "Explore all 118 elements with detailed info.",
-    disabled: true,
+    disabled: false,
   },
   {
     to: "/learn/calculator",

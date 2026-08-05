@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
@@ -32,6 +33,8 @@ import AiChatPage from "./features/learn/AiChatPage";
 import PomodoroPage from "./features/learn/PomodoroPage";
 import SettingsPage from "./features/settings/SettingsPage";
 
+const PeriodicTablePage = lazy(() => import("./features/learn/PeriodicTablePage"));
+
 export default function App() {
   return (
     <Routes>
@@ -58,6 +61,14 @@ export default function App() {
         <Route path="/learn/flashcards" element={<FlashcardsPage />} />
         <Route path="/learn/flashcards/:id" element={<FlashcardSetPage />} />
         <Route path="/learn/ai" element={<AiChatPage />} />
+        <Route
+          path="/learn/periodic-table"
+          element={
+            <Suspense fallback={null}>
+              <PeriodicTablePage />
+            </Suspense>
+          }
+        />
         <Route path="/pomodoro" element={<PomodoroPage />} />
         <Route path="/semesters" element={<SemestersPage />} />
         <Route path="/friends" element={<VerifyGate><FriendsPage /></VerifyGate>} />
