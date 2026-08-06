@@ -13,6 +13,7 @@ import type {
   CalendarEventRequest,
   ItemType,
 } from "../../types";
+import CategorySelect from "./CategorySelect";
 
 function toLocalInput(iso: string): string {
   const d = new Date(iso);
@@ -37,6 +38,7 @@ export default function CalendarEntryModal({
   const [when, setWhen] = useState(() => toLocalInput(item?.dueAt ?? event?.startAt ?? new Date().toISOString()));
   const [weight, setWeight] = useState(item?.weight != null ? String(item.weight) : "");
   const [place, setPlace] = useState(event?.place ?? "");
+  const [categoryId, setCategoryId] = useState<number | null>(event?.categoryId ?? null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,8 +83,16 @@ export default function CalendarEntryModal({
   });
 
   const busy = saveItem.isPending || saveEvent.isPending || deleteEvent.isPending;
-  const color = event ? "var(--accent)" : item?.type === "EXAM" ? "var(--red)" : "var(--green)";
-  const badge = event ? "Event" : item?.type === "EXAM" ? "Exam" : "Assignment";
+  const color = event
+    ? (event.categoryColor ?? "var(--accent)")
+    : item?.type === "EXAM"
+      ? "var(--red)"
+      : "var(--green)";
+  const badge = event
+    ? (event.categoryName ?? "Event")
+    : item?.type === "EXAM"
+      ? "Exam"
+      : "Assignment";
 
   async function handleDelete() {
     const ok = await confirm({
@@ -105,6 +115,7 @@ export default function CalendarEntryModal({
       saveEvent.mutate({
         title: title.trim(),
         place: place.trim() || null,
+        categoryId,
         startAt: new Date(when).toISOString(),
       });
       return;
@@ -167,6 +178,18 @@ export default function CalendarEntryModal({
                   >
                     {item.courseName}
                   </Link>
+                </div>
+              )}
+              {event?.categoryName && (
+                <div className="flex justify-between gap-3">
+                  <span className="text-fg-3">Category</span>
+                  <span className="flex items-center gap-1.5 truncate font-medium text-fg">
+                    <span
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ background: event.categoryColor ?? "var(--accent)" }}
+                    />
+                    {event.categoryName}
+                  </span>
                 </div>
               )}
               {event?.place && (
@@ -237,19 +260,22 @@ export default function CalendarEntryModal({
             </div>
 
             {event && (
-              <div>
-                <label className="field-label">Place</label>
-                <input
-                  className="input"
-                  placeholder="e.g. Library room 204"
-                  value={place}
-                  onChange={(e) => setPlace(e.target.value)}
-                />
-              </div>
+              <>
+                <div>
+                  <label className="field-label">Place</label>
+                  <input
+                    className="input"
+                    placeholder="e.g. Library room 204"
+                    value={place}
+                    onChange={(e) => setPlace(e.target.value)}
+                  />
+                </div>
+                <CategorySelect value={categoryId} onChange={setCategoryId} />
+              </>
             )}
 
-            <div className="flex gap-2">
-              <div className="flex-1">
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
                 <label className="field-label">{event ? "Date & time" : "Due date & time"}</label>
                 <input
                   className="input"
@@ -260,10 +286,10 @@ export default function CalendarEntryModal({
                 />
               </div>
               {item && (
-                <div className="w-24">
+                <div className="w-[4.5rem] shrink-0">
                   <label className="field-label">Weight %</label>
                   <input
-                    className="input"
+                    className="input !px-2"
                     type="number"
                     placeholder="—"
                     value={weight}
