@@ -12,16 +12,28 @@ public class CalendarEventDtos {
             Long id,
             String title,
             String place,
+            Long categoryId,
+            String categoryName,
+            String categoryColor,
             Instant startAt) {
 
         public static CalendarEventDto from(CalendarEvent e) {
-            return new CalendarEventDto(e.getId(), e.getTitle(), e.getPlace(), e.getStartAt());
+            EventCategory category = e.getCategory();
+            return new CalendarEventDto(
+                    e.getId(),
+                    e.getTitle(),
+                    e.getPlace(),
+                    category == null ? null : category.getId(),
+                    category == null ? null : category.getName(),
+                    category == null ? null : category.getColor(),
+                    e.getStartAt());
         }
     }
 
     public record CalendarEventRequest(
             @NotBlank @Size(max = 255) String title,
             @Size(max = 255) String place,
+            Long categoryId,
             @NotNull Instant startAt) {
     }
 }

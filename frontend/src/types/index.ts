@@ -114,16 +114,31 @@ export interface CourseMatch {
   userCount: number;
 }
 
+export interface EventCategory {
+  id: number;
+  name: string;
+  color: string;
+}
+
+export interface EventCategoryRequest {
+  name: string;
+  color: string;
+}
+
 export interface CalendarEvent {
   id: number;
   title: string;
   place?: string | null;
+  categoryId?: number | null;
+  categoryName?: string | null;
+  categoryColor?: string | null;
   startAt: string;
 }
 
 export interface CalendarEventRequest {
   title: string;
   place?: string | null;
+  categoryId?: number | null;
   startAt: string;
 }
 

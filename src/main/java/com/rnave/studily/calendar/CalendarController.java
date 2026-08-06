@@ -30,12 +30,14 @@ public class CalendarController {
 
     private final AcademicItemRepository itemRepository;
     private final CalendarEventRepository eventRepository;
+    private final EventCategoryRepository categoryRepository;
     private final CurrentUser currentUser;
 
     public CalendarController(AcademicItemRepository itemRepository, CalendarEventRepository eventRepository,
-                              CurrentUser currentUser) {
+                              EventCategoryRepository categoryRepository, CurrentUser currentUser) {
         this.itemRepository = itemRepository;
         this.eventRepository = eventRepository;
+        this.categoryRepository = categoryRepository;
         this.currentUser = currentUser;
     }
 
@@ -74,6 +76,7 @@ public class CalendarController {
         event.setUser(currentUser.entity());
         event.setTitle(req.title().trim());
         event.setPlace(req.place() != null && !req.place().isBlank() ? req.place().trim() : null);
+        event.setCategory(resolveCategory(req.categoryId()));
         event.setStartAt(req.startAt());
         return CalendarEventDto.from(eventRepository.save(event));
     }
@@ -85,8 +88,17 @@ public class CalendarController {
                 .orElseThrow(() -> new NotFoundException("Event not found"));
         event.setTitle(req.title().trim());
         event.setPlace(req.place() != null && !req.place().isBlank() ? req.place().trim() : null);
+        event.setCategory(resolveCategory(req.categoryId()));
         event.setStartAt(req.startAt());
         return CalendarEventDto.from(eventRepository.save(event));
+    }
+
+    private EventCategory resolveCategory(Long categoryId) {
+        if (categoryId == null) {
+            return null;
+        }
+        return categoryRepository.findByIdAndUserId(categoryId, currentUser.id())
+                .orElseThrow(() -> new NotFoundException("Category not found"));
     }
 
     @DeleteMapping("/events/{id}")

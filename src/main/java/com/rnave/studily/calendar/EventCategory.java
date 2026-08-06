@@ -16,10 +16,10 @@ import lombok.Setter;
 import java.time.Instant;
 
 @Entity
-@Table(name = "calendar_events")
+@Table(name = "event_categories")
 @Getter
 @Setter
-public class CalendarEvent {
+public class EventCategory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,14 +30,11 @@ public class CalendarEvent {
     private User user;
 
     @Column(nullable = false)
-    private String title;
-
-    private String place;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    private EventCategory category;
+    private String name;
 
     @Column(nullable = false)
-    private Instant startAt;
+    private String color;
+
+    @Column(nullable = false, updatable = false)
+    private Instant createdAt = Instant.now();
 }
