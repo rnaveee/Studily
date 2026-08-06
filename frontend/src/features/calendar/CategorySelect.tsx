@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronDown, Plus, Trash2, X } from "lucide-react";
+import { Check, Plus, Trash2, X } from "lucide-react";
 import { api } from "../../lib/api";
 import { useConfirm } from "../../lib/confirm";
 import type { EventCategory, EventCategoryRequest } from "../../types";
@@ -167,16 +167,18 @@ export default function CategorySelect({
           onClick={() => setOpen((o) => !o)}
           aria-haspopup="listbox"
           aria-expanded={open}
-          className="input flex items-center gap-2 text-left"
+          className="input text-left"
+          style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
         >
-          <span
-            className="h-3 w-3 shrink-0 rounded-full border border-line"
-            style={{ background: selected?.color ?? "var(--surface-hi)" }}
-          />
+          {selected && (
+            <span
+              className="h-3 w-3 shrink-0 rounded-full"
+              style={{ background: selected.color }}
+            />
+          )}
           <span className={`flex-1 truncate ${selected ? "text-fg" : "text-fg-3"}`}>
             {selected?.name ?? "No category"}
           </span>
-          <ChevronDown size={14} className="shrink-0 text-fg-3" />
         </button>
 
         {open && (
@@ -194,7 +196,7 @@ export default function CategorySelect({
               }}
               className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-surface-hi"
             >
-              <span className="h-3 w-3 shrink-0 rounded-full border border-line" />
+              <span className="h-3 w-3 shrink-0" />
               <span className="flex-1 truncate text-[13px] text-fg-3">No category</span>
               {value === null && <Check size={13} className="shrink-0 text-accent" />}
             </button>
