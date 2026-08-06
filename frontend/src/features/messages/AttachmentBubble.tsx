@@ -125,7 +125,7 @@ function DocumentBubble({ message, mine }: { message: Message; mine: boolean }) 
       }
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch {
-      toast.error("Couldn't download the file — please try again.");
+      toast.error("Couldn't download the file. Please try again.");
     } finally {
       setFetching(false);
     }

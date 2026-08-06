@@ -197,7 +197,7 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
               {matchList.length} matching course{matchList.length > 1 ? "s" : ""} at your school
             </p>
             <p className="mt-0.5 text-[11px] text-fg-3">
-              Import one to copy its class times and deadlines — you can edit everything afterwards.
+              Import one to copy its class times and deadlines. You can edit everything afterwards.
             </p>
           </div>
           {matchList

@@ -291,7 +291,6 @@ export default function CalendarEntryModal({
                   <input
                     className="input !px-2"
                     type="number"
-                    placeholder="—"
                     value={weight}
                     onChange={(e) => setWeight(e.target.value)}
                     min={0}

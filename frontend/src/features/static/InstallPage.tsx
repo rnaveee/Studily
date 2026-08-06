@@ -41,7 +41,7 @@ export default function InstallPage() {
   return (
     <Page
       title="Install"
-      intro="Studily works as an app — add it to your home screen and it opens full-screen, just like a native app."
+      intro="Studily works as an app. Add it to your home screen and it opens full-screen, just like a native app."
     >
       {installed && (
         <Section>

@@ -36,7 +36,7 @@ export default function ForgotPasswordPage() {
           {sent ? (
             <p className="text-[13px] leading-relaxed text-fg-2">
               If an account exists for <span className="font-medium text-fg">{email}</span>, we've
-              sent it a password reset link. Check your inbox — the link expires in 1 hour.
+              sent it a password reset link. Check your inbox. The link expires in 1 hour.
             </p>
           ) : (
             <form onSubmit={onSubmit} className="space-y-3">

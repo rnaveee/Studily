@@ -199,9 +199,9 @@ export default function DayModal({
 
           {needsCourse ? (
             <p className="text-[13px] text-fg-3">
-              No courses yet —{" "}
+              No courses yet.{" "}
               <Link to="/courses" className="text-accent transition-colors hover:text-accent-2">
-                add one first
+                Add one first
               </Link>
               .
             </p>
@@ -295,7 +295,6 @@ export default function DayModal({
                     <input
                       className="input !px-2"
                       type="number"
-                      placeholder="—"
                       value={weight}
                       onChange={(e) => setWeight(e.target.value)}
                       min={0}

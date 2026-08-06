@@ -48,7 +48,7 @@ export default function SignupPage() {
             <p className="text-[13px] leading-relaxed text-fg-2">
               We sent a verification link to{" "}
               <span className="font-medium text-fg">{form.email}</span>. Verifying unlocks
-              messaging and friends — until then you can still plan your semesters, courses, and
+              messaging and friends. Until then you can still plan your semesters, courses, and
               schedule.
             </p>
             <button onClick={() => navigate("/onboarding")} className="btn btn-primary w-full mt-5">

@@ -86,7 +86,7 @@ public class ConversationController {
     @ResponseStatus(HttpStatus.CREATED)
     public MessageDto sendAttachment(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
         if (!uploadLimiter.tryConsume("user:" + currentUser.id())) {
-            throw new TooManyRequestsException("You're uploading too many files — please wait a few minutes.");
+            throw new TooManyRequestsException("You're uploading too many files. Please wait a few minutes.");
         }
         return conversationService.sendAttachment(id, file);
     }

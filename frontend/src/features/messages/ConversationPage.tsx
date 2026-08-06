@@ -137,7 +137,7 @@ export default function ConversationPage() {
       queryClient.invalidateQueries({ queryKey: ["conversations", "direct"] });
       queryClient.invalidateQueries({ queryKey: ["conversations", "groups"] });
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Upload failed — please try again.");
+      toast.error(err instanceof ApiError ? err.message : "Upload failed. Please try again.");
     } finally {
       setUploading(false);
       if (imageInputRef.current) imageInputRef.current.value = "";

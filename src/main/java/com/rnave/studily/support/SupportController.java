@@ -45,7 +45,7 @@ public class SupportController {
     public void submit(@Valid @RequestBody SupportRequest req, HttpServletRequest http) {
         if (!perIpLimiter.tryConsume(GlobalRateLimitFilter.clientIp(http))) {
             throw new TooManyRequestsException(
-                    "You've sent a few reports already — please try again in an hour.");
+                    "You've sent a few reports already. Please try again in an hour.");
         }
         User user = currentUser.maybe().orElse(null);
         String replyTo = user != null ? user.getEmail() : normalize(req.email());
@@ -66,7 +66,7 @@ public class SupportController {
                 replyTo);
         if (!sent) {
             throw new BadRequestException(
-                    "Couldn't send your report — please try again later, or email " + supportEmail + " directly.");
+                    "Couldn't send your report. Please try again later, or email " + supportEmail + " directly.");
         }
     }
 

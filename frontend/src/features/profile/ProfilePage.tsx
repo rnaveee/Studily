@@ -72,9 +72,9 @@ export default function ProfilePage() {
         )}
         {!user.school && !user.major && !user.year && !user.schoolId && (
           <div className="px-5 py-4 text-[13px] text-fg-3">
-            No details yet —{" "}
+            No details yet.{" "}
             <Link to="/profile/edit" className="text-accent hover:text-accent-2 transition-colors">
-              fill in your profile
+              Fill in your profile
             </Link>
             .
           </div>
@@ -99,9 +99,9 @@ export default function ProfilePage() {
               "Loading…"
             ) : (
               <>
-                No active semester —{" "}
+                No active semester.{" "}
                 <Link to="/semesters" className="text-accent hover:text-accent-2 transition-colors">
-                  set one up
+                  Set one up
                 </Link>
                 .
               </>

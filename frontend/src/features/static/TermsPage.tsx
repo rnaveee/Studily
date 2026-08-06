@@ -27,7 +27,7 @@ export default function TermsPage() {
       </Section>
 
       <Section title="3. Acceptable use">
-        <p>Studily is for academic planning. When using it — especially in profiles, notes, and anything visible to schoolmates and friends — you agree not to:</p>
+        <p>Studily is for academic planning. When using it, especially in profiles, notes, and anything visible to schoolmates and friends, you agree not to:</p>
         <ul className="list-disc space-y-1.5 pl-5">
           <li>post content that is hateful, harassing, threatening, sexually explicit, or otherwise abusive;</li>
           <li>bully, intimidate, or target other users;</li>

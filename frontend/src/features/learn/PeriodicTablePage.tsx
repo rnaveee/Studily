@@ -118,14 +118,14 @@ function ElementDetail({ el, onClose }: { el: ElementData; onClose: () => void }
       <div className="mt-4 grid grid-cols-1 gap-x-6 sm:grid-cols-2">
         <DetailRow label="Atomic number" value={String(el.number)} />
         <DetailRow label="Atomic mass" value={`${el.mass} u`} />
-        <DetailRow label="Group" value={el.group === null ? "—" : String(el.group)} />
+        <DetailRow label="Group" value={el.group === null ? "None" : String(el.group)} />
         <DetailRow label="Period" value={String(el.period)} />
         <DetailRow label="Block" value={`${el.block}-block`} />
         <DetailRow label="Phase at STP" value={el.phase} />
         <DetailRow label="Electron configuration" value={el.config} />
         <DetailRow
           label="Electronegativity"
-          value={el.electronegativity === null ? "—" : `${el.electronegativity} (Pauling)`}
+          value={el.electronegativity === null ? "Unknown" : `${el.electronegativity} (Pauling)`}
         />
         <DetailRow label="Melting point" value={kelvin(el.melt)} />
         <DetailRow label="Boiling point" value={kelvin(el.boil)} />

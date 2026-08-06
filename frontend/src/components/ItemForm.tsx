@@ -112,7 +112,6 @@ export default function ItemForm({
           <input
             className="input"
             type="number"
-            placeholder="—"
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
             min={0}

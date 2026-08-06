@@ -21,7 +21,7 @@ export default function PomodoroPage() {
         </Link>
         <div>
           <h1 className="text-xl font-semibold text-fg">Pomodoro Timer</h1>
-          <p className="mt-1 text-[13px] text-fg-3">Focus in sprints — study, break, repeat.</p>
+          <p className="mt-1 text-[13px] text-fg-3">Focus in sprints: study, break, repeat.</p>
         </div>
       </div>
 

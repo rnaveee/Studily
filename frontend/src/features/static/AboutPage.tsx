@@ -21,7 +21,7 @@ export default function AboutPage() {
           show up on your dashboard as their due dates approach!
         </p>
         <p>
-          You can also connect with others at your school — set up your{" "}
+          You can also connect with others at your school. Set up your{" "}
           <Link to="/profile" className="text-accent transition-colors hover:text-accent-2">
             profile
           </Link>{" "}
@@ -39,7 +39,7 @@ export default function AboutPage() {
             <li key={name} className="flex gap-2">
               <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-accent" />
               <span>
-                <span className="font-medium text-fg">{name}</span> — {desc}
+                <span className="font-medium text-fg">{name}</span>: {desc}
               </span>
             </li>
           ))}
@@ -57,7 +57,7 @@ export default function AboutPage() {
           <div className="space-y-2">
             <p className="text-[15px] font-semibold text-fg">Ryan Nave</p>
             <p>
-              Hello, I'm Ryan — a student and developer studying Computer Science at SFU. I currently
+              Hello, I'm Ryan, a student and developer studying Computer Science at SFU. I currently
               am pursuing a career in software development, so any feedback helps a lot!
             </p>
             <p className="text-[15px] font-semibold text-fg">Why I made Studily</p>

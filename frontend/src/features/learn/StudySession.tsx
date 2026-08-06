@@ -86,7 +86,7 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
 
       <p className="text-[12px] text-fg-3">
         Rate how well you knew each card. Easy cards come back later, tough ones
-        sooner — so you spend time where it counts.
+        sooner, so you spend time where it counts.
       </p>
 
       <button

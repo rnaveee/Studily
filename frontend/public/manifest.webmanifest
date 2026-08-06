@@ -1,7 +1,7 @@
 {
   "name": "Studily",
   "short_name": "Studily",
-  "description": "Your academic planner — courses, schedules, assignments, and friends in one place.",
+  "description": "Your academic planner: courses, schedules, assignments, and friends in one place.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -59,7 +59,7 @@ const QUOTES: Quote[] = [
   { quote: "The mind is not a vessel to be filled but a fire to be kindled.", author: "Plutarch" },
   { quote: "Study hard what interests you the most in the most undisciplined, irreverent and original manner possible.", author: "Richard Feynman" },
   { quote: "What I cannot create, I do not understand.", author: "Richard Feynman" },
-  { quote: "The first principle is that you must not fool yourself — and you are the easiest person to fool.", author: "Richard Feynman" },
+  { quote: "The first principle is that you must not fool yourself, and you are the easiest person to fool.", author: "Richard Feynman" },
   { quote: "Somewhere, something incredible is waiting to be known.", author: "Carl Sagan" },
   { quote: "The good thing about science is that it's true whether or not you believe in it.", author: "Neil deGrasse Tyson" },
   { quote: "Nothing in life is to be feared, it is only to be understood.", author: "Marie Curie" },

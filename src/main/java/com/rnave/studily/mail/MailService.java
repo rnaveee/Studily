@@ -37,7 +37,7 @@ public class MailService {
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
         if (this.apiKey.isEmpty()) {
-            log.warn("RESEND_API_KEY not set — outgoing email is disabled");
+            log.warn("RESEND_API_KEY not set, outgoing email is disabled");
         }
     }
 

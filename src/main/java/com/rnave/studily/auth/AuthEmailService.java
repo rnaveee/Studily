@@ -30,7 +30,7 @@ public class AuthEmailService {
     public void sendVerification(User user) {
         if (!perEmailLimiter.tryConsume("verify:" + user.getEmail())) {
             throw new TooManyRequestsException(
-                    "You've requested too many verification emails — please try again in an hour.");
+                    "You've requested too many verification emails. Please try again in an hour.");
         }
         String link = baseUrl + "/verify-email?token=" + tokenService.issue(user, AccountTokenType.EMAIL_VERIFY);
         boolean sent = mailService.send(
@@ -44,7 +44,7 @@ public class AuthEmailService {
                         "Verify email"));
         if (!sent) {
             throw new BadRequestException(
-                    "Couldn't send the email — the mail service rejected it. Please try again later.");
+                    "Couldn't send the email. The mail service rejected it. Please try again later.");
         }
     }
 

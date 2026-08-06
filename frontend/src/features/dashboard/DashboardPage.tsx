@@ -160,7 +160,7 @@ export default function DashboardPage() {
     <div className="space-y-4 animate-in">
       {quote && (
         <p className="text-[13px] italic font-semibold text-fg-2">
-          "{quote.quote}" <span className="not-italic">— {quote.author}</span>
+          "{quote.quote}" <span className="not-italic">· {quote.author}</span>
         </p>
       )}
 
@@ -254,7 +254,7 @@ export default function DashboardPage() {
               <div className="border-b border-line px-4 py-3 animate-slide">
                 <div className="mb-2 flex items-center justify-between">
                   <span className="text-[13px] font-semibold text-fg">
-                    Add item — {addingDay}
+                    Add item · {addingDay}
                   </span>
                   <button
                     onClick={() => setAddingDay(null)}
@@ -265,9 +265,9 @@ export default function DashboardPage() {
                 </div>
                 {courseList.length === 0 ? (
                   <p className="text-[13px] text-fg-3">
-                    No courses yet —{" "}
+                    No courses yet.{" "}
                     <Link to="/courses" className="text-accent hover:text-accent-2 transition-colors">
-                      add one first
+                      Add one first
                     </Link>.
                   </p>
                 ) : (

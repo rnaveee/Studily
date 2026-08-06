@@ -197,9 +197,9 @@ function SemesterRow({
         </div>
       ) : (
         <p className="mt-2.5 text-[12px] text-fg-3">
-          No courses in this semester yet —{" "}
+          No courses in this semester yet.{" "}
           <Link to="/courses" className="text-accent hover:text-accent-2 transition-colors">
-            add one
+            Add one
           </Link>.
         </p>
       )}

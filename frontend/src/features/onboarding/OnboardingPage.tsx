@@ -36,7 +36,7 @@ export default function OnboardingPage() {
         <img src="/studily-3a.svg" alt="" className="mx-auto mb-3 h-14 w-14" />
         <h1 className="text-3xl font-bold text-fg">Welcome to Studily, {firstName}!</h1>
         <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-fg-2">
-          Studily is your academic planner — keep your courses, weekly schedule, assignments, and
+          Studily is your academic planner. Keep your courses, weekly schedule, assignments, and
           exams in one place, connect with friends and classmates, and study smarter with built-in
           learning tools.
         </p>
@@ -73,7 +73,7 @@ export default function OnboardingPage() {
 
       <p className="text-center">
         <Link to="/" className="text-[12px] text-fg-3 transition-colors hover:text-fg">
-          Skip for now — take me to my dashboard
+          Skip for now, take me to my dashboard
         </Link>
       </p>
     </div>

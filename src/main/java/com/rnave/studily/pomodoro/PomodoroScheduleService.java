@@ -57,8 +57,8 @@ public class PomodoroScheduleService {
         long delay = Math.max(0, atEpochMs - System.currentTimeMillis());
         return scheduler.schedule(() -> {
             String body = finishing == Phase.STUDY
-                    ? "Study time is over — take a break!"
-                    : "Break time is over — back to studying!";
+                    ? "Study time is over. Take a break!"
+                    : "Break time is over. Back to studying!";
             webPushSender.sendToUser(userId, PushPayload.of("Pomodoro Timer", body, "/pomodoro"), PUSH_TTL_SECONDS);
         }, delay, TimeUnit.MILLISECONDS);
     }

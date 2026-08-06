@@ -112,8 +112,8 @@ function syncSchedule() {
 function notifyPhaseEnd(finished: PomodoroPhase) {
   const message =
     finished === "study"
-      ? "Study time is over — take a break!"
-      : "Break time is over — back to studying!";
+      ? "Study time is over. Take a break!"
+      : "Break time is over. Back to studying!";
   toast.info(message);
   try {
     if (document.hidden && "Notification" in window && Notification.permission === "granted") {

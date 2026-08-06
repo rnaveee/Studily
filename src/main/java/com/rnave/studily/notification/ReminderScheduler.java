@@ -150,7 +150,7 @@ public class ReminderScheduler {
             dispatcher.dispatch(user, NotificationType.ITEM_WEEK_AHEAD, item.getId(),
                     "ITEM7D:" + item.getId(),
                     "%s %s".formatted(kind, when),
-                    "%s — %s · %s at %s".formatted(
+                    "%s · %s · %s at %s".formatted(
                             item.getTitle(), item.getCourse().getName(),
                             DATE_FMT.format(due), TIME_FMT.format(due)),
                     "/courses/" + item.getCourse().getId());

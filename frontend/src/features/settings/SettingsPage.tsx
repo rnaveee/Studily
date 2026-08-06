@@ -69,7 +69,7 @@ export default function SettingsPage() {
         } else if (result === "unavailable") {
           toast.error("Push isn't configured on the server yet");
         } else {
-          toast.error("Push isn't supported here — install the app first");
+          toast.error("Push isn't supported here. Install the app first");
         }
       } else {
         await disablePush();
@@ -115,7 +115,7 @@ export default function SettingsPage() {
               <div className="text-[14px] font-medium text-fg">Notifications on this device</div>
               <div className="mt-0.5 text-[12px] text-fg-3">
                 {denied
-                  ? "Blocked — allow notifications in iOS Settings → Studily"
+                  ? "Blocked. Allow notifications in iOS Settings → Studily"
                   : "Allow Studily to send push notifications here"}
               </div>
             </div>
@@ -187,7 +187,7 @@ function AccountSection() {
     const ok = await confirm({
       title: "Delete your account?",
       message:
-        "This permanently erases your courses, schedule, messages, friendships — everything. There is no undo.",
+        "This permanently erases your courses, schedule, messages, friendships, and everything else. There is no undo.",
       confirmLabel: "Delete forever",
       danger: true,
     });
@@ -212,8 +212,8 @@ function AccountSection() {
             <div className="truncate text-[14px] font-medium text-fg">{user.email}</div>
             <div className="mt-0.5 text-[12px] text-fg-3">
               {user.emailVerified
-                ? "Verified — messaging and friends are unlocked"
-                : "Unverified — messaging and friends are locked"}
+                ? "Verified. Messaging and friends are unlocked"
+                : "Unverified. Messaging and friends are locked"}
             </div>
           </div>
           {user.emailVerified ? (

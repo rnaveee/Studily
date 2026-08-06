@@ -33,7 +33,7 @@ export default function SupportPage() {
       setSent(true);
       setMessage("");
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Couldn't send your report — try again later.");
+      toast.error(err instanceof ApiError ? err.message : "Couldn't send your report. Try again later.");
     } finally {
       setBusy(false);
     }
@@ -42,14 +42,14 @@ export default function SupportPage() {
   return (
     <Page
       title="Support"
-      intro="Found a bug or have an idea? Studily is in beta — reports like yours directly shape what gets fixed and built."
+      intro="Found a bug or have an idea? Studily is in beta, and reports like yours directly shape what gets fixed and built."
     >
       <Section title="Send a report">
         {sent ? (
           <div className="space-y-3">
             <p className="flex items-center gap-2 text-[14px] font-medium text-fg">
               <Check size={15} className="text-accent" />
-              Sent — thanks for the report!
+              Sent. Thanks for the report!
             </p>
             <button onClick={() => setSent(false)} className="btn btn-ghost">
               Send another
