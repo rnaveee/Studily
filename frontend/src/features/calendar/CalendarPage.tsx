@@ -5,46 +5,12 @@ import { api } from "../../lib/api";
 import { useRequireAuth } from "../../lib/auth";
 import { formatDateTime } from "../../lib/format";
 import { type AcademicItem, type CalendarEvent } from "../../types";
-import AddCalendarItemModal from "./AddCalendarItemModal";
+import DayModal from "./DayModal";
 import CalendarEntryModal from "./CalendarEntryModal";
+import { dayKey, eventEntry, itemEntry, tintBackground, type Entry } from "./entries";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-interface Entry {
-  key: string;
-  title: string;
-  color: string;
-  badge: string;
-  when: string;
-  courseName?: string;
-  place?: string | null;
-  item?: AcademicItem;
-  event?: CalendarEvent;
-}
-
-function itemEntry(it: AcademicItem): Entry {
-  return {
-    key: `item-${it.id}`,
-    title: it.title,
-    color: it.type === "EXAM" ? "var(--red)" : "var(--green)",
-    badge: it.type === "EXAM" ? "Exam" : "Assign",
-    when: it.dueAt,
-    courseName: it.courseName,
-    item: it,
-  };
-}
-
-function eventEntry(ev: CalendarEvent): Entry {
-  return {
-    key: `event-${ev.id}`,
-    title: ev.title,
-    color: "var(--accent)",
-    badge: "Event",
-    when: ev.startAt,
-    place: ev.place,
-    event: ev,
-  };
-}
+const MAX_BLOCKS_PER_DAY = 3;
 
 export default function CalendarPage() {
   const [month, setMonth] = useState(() => {
@@ -78,22 +44,19 @@ export default function CalendarPage() {
   const entries = useMemo(
     () =>
       [...(items ?? []).map(itemEntry), ...(events ?? []).map(eventEntry)].sort(
-        (a, b) => new Date(a.when).getTime() - new Date(b.when).getTime()
+        (a, b) => new Date(a.when).getTime() - new Date(b.when).getTime(),
       ),
-    [items, events]
+    [items, events],
   );
 
   const byDay = useMemo(() => {
-    const map = new Map<number, Entry[]>();
+    const map = new Map<string, Entry[]>();
     for (const en of entries) {
-      const d = new Date(en.when);
-      if (d.getMonth() === month.getMonth() && d.getFullYear() === month.getFullYear()) {
-        const day = d.getDate();
-        map.set(day, [...(map.get(day) ?? []), en]);
-      }
+      const key = dayKey(en.when);
+      map.set(key, [...(map.get(key) ?? []), en]);
     }
     return map;
-  }, [entries, month]);
+  }, [entries]);
 
   const firstWeekday = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
   const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
@@ -113,6 +76,8 @@ export default function CalendarPage() {
     return `${y}-${m}-${d}`;
   }
 
+  const selectedDayEntries = selectedDay ? (byDay.get(selectedDay) ?? []) : [];
+
   return (
     <div className="space-y-5 animate-in">
       <div className="flex items-center gap-3">
@@ -120,6 +85,7 @@ export default function CalendarPage() {
         <button
           onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
           className="btn btn-ghost p-1.5"
+          aria-label="Previous month"
         >
           <ChevronLeft size={15} />
         </button>
@@ -134,6 +100,7 @@ export default function CalendarPage() {
         <button
           onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
           className="btn btn-ghost p-1.5"
+          aria-label="Next month"
         >
           <ChevronRight size={15} />
         </button>
@@ -154,41 +121,49 @@ export default function CalendarPage() {
         <div className="grid grid-cols-7">
           {cells.map((day, i) => {
             const isToday = isCurrentMonth && day === today.getDate();
-            const dayEntries = day ? (byDay.get(day) ?? []) : [];
+            const dayEntries = day ? (byDay.get(toDayStr(day)) ?? []) : [];
             return (
               <div
                 key={i}
                 onClick={() => day && requireAuth(() => setSelectedDay(toDayStr(day)))}
                 className={[
-                  "min-h-[4.5rem] border-b border-r border-line p-1 transition-colors",
+                  "min-h-[6.5rem] border-b border-r border-line p-1 transition-colors",
                   day
                     ? "cursor-pointer hover:bg-surface-hi"
-                    : "bg-surface-hi/40 pointer-events-none",
+                    : "pointer-events-none bg-surface-hi/40",
                 ].join(" ")}
               >
                 {day && (
                   <>
                     <div
                       className={[
-                        "mb-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-medium",
+                        "mb-1 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-medium",
                         isToday ? "bg-accent text-accent-fg" : "text-fg-2",
                       ].join(" ")}
                     >
                       {day}
                     </div>
-                    <div className="space-y-0.5">
-                      {dayEntries.slice(0, 3).map((en) => (
+                    <div className="space-y-1">
+                      {dayEntries.slice(0, MAX_BLOCKS_PER_DAY).map((en) => (
                         <div
                           key={en.key}
-                          className="truncate rounded px-1 py-0.5 text-[9px] font-medium leading-tight text-white"
-                          style={{ backgroundColor: en.color }}
-                          title={en.courseName ? `${en.title} · ${en.courseName}` : en.title}
+                          className="flex items-center gap-1 overflow-hidden rounded-[4px] py-[3px] pr-1"
+                          style={{ background: tintBackground(en.tint) }}
+                          title={en.subtitle ? `${en.title} · ${en.subtitle}` : en.title}
                         >
-                          {en.title}
+                          <span
+                            className="h-3.5 w-[3px] shrink-0 rounded-full"
+                            style={{ background: en.accent }}
+                          />
+                          <span className="truncate text-[10px] font-medium leading-tight text-fg">
+                            {en.title}
+                          </span>
                         </div>
                       ))}
-                      {dayEntries.length > 3 && (
-                        <div className="text-[9px] text-fg-3 pl-0.5">+{dayEntries.length - 3} more</div>
+                      {dayEntries.length > MAX_BLOCKS_PER_DAY && (
+                        <div className="pl-0.5 text-[10px] text-fg-3">
+                          +{dayEntries.length - MAX_BLOCKS_PER_DAY} more
+                        </div>
                       )}
                     </div>
                   </>
@@ -213,7 +188,7 @@ export default function CalendarPage() {
                 >
                   <span
                     className="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
-                    style={{ backgroundColor: en.color }}
+                    style={{ backgroundColor: en.accent }}
                   >
                     {en.badge}
                   </span>
@@ -221,13 +196,13 @@ export default function CalendarPage() {
                     <span className="block truncate text-[14px] font-medium leading-snug text-fg">
                       {en.title}
                     </span>
-                    {(en.courseName ?? en.place) && (
+                    {(en.subtitle ?? en.place) && (
                       <span className="mt-0.5 block truncate text-[12px] text-fg-3">
-                        {en.courseName ?? en.place}
+                        {en.subtitle ?? en.place}
                       </span>
                     )}
                   </span>
-                  <span className="shrink-0 whitespace-nowrap pt-0.5 text-[12px] text-fg-3 tabular-nums">
+                  <span className="shrink-0 whitespace-nowrap pt-0.5 text-[12px] tabular-nums text-fg-3">
                     {formatDateTime(en.when)}
                   </span>
                 </button>
@@ -238,7 +213,12 @@ export default function CalendarPage() {
       )}
 
       {selectedDay && (
-        <AddCalendarItemModal date={selectedDay} onClose={() => setSelectedDay(null)} />
+        <DayModal
+          date={selectedDay}
+          entries={selectedDayEntries}
+          onSelectEntry={setSelectedEntry}
+          onClose={() => setSelectedDay(null)}
+        />
       )}
 
       {selectedEntry && (
