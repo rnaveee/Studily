@@ -59,15 +59,16 @@ export default function IcsPanel() {
     <div className="card p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
         <textarea
-          className="input flex-1 resize-none"
-          rows={2}
+          className="input flex-1"
+          rows={1}
+          style={{ resize: "none", whiteSpace: "nowrap", overflowX: "auto", overflowY: "hidden" }}
           placeholder="Paste an .ics link, or the contents of an .ics file"
           value={source}
           onChange={(e) => setSource(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && source.trim()) {
+            if (e.key === "Enter") {
               e.preventDefault();
-              requireAuth(() => runImport.mutate());
+              if (source.trim()) requireAuth(() => runImport.mutate());
             }
           }}
         />
