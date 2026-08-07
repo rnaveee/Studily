@@ -66,7 +66,7 @@ class AcademicItemServiceTest {
         when(itemRepository.save(any(AcademicItem.class))).thenAnswer(inv -> inv.getArgument(0));
 
         AcademicItemRequest req = new AcademicItemRequest(
-                ItemType.ASSIGNMENT, "Homework 1", Instant.parse("2026-08-01T00:00:00Z"), null, 10.0, null);
+                ItemType.ASSIGNMENT, "Homework 1", Instant.parse("2026-08-01T00:00:00Z"), null, 10.0, null, null, null);
 
         AcademicItemDto dto = itemService.create(5L, req);
 
@@ -81,7 +81,7 @@ class AcademicItemServiceTest {
         when(itemRepository.save(any(AcademicItem.class))).thenAnswer(inv -> inv.getArgument(0));
 
         AcademicItemRequest req = new AcademicItemRequest(
-                ItemType.EXAM, "Midterm", Instant.now(), "   ", null, ItemStatus.TODO);
+                ItemType.EXAM, "Midterm", Instant.now(), "   ", null, null, null, ItemStatus.TODO);
 
         AcademicItemDto dto = itemService.create(5L, req);
 
@@ -94,7 +94,7 @@ class AcademicItemServiceTest {
         when(itemRepository.findByIdAndCourseUserId(99L, 1L)).thenReturn(Optional.empty());
 
         AcademicItemRequest req = new AcademicItemRequest(
-                ItemType.ASSIGNMENT, "Title", Instant.now(), null, null, null);
+                ItemType.ASSIGNMENT, "Title", Instant.now(), null, null, null, null, null);
 
         assertThatThrownBy(() -> itemService.update(99L, req)).isInstanceOf(NotFoundException.class);
     }
