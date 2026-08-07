@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowLeft, Send, Sparkles } from "lucide-react";
+import BackButton from "../../components/BackButton";
+import { Send, Sparkles } from "lucide-react";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -34,13 +34,7 @@ export default function AiChatPage() {
   return (
     <div className="flex min-h-[60vh] flex-1 flex-col animate-in">
       <div className="flex items-center gap-3 pb-4">
-        <Link
-          to="/learn"
-          className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-          aria-label="Back to Learn"
-        >
-          <ArrowLeft size={16} />
-        </Link>
+        <BackButton fallback="/learn" />
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
           style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}

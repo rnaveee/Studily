@@ -20,21 +20,21 @@ public class AuthDtos {
     }
 
     public record LoginRequest(
-            @NotBlank String email,
-            @NotBlank String password) {
+            @NotBlank @Size(max = 255) String email,
+            @NotBlank @Size(max = 100) String password) {
     }
 
     public record AuthResponse(String token, UserDto user) {
     }
 
-    public record VerifyEmailRequest(@NotBlank String token) {
+    public record VerifyEmailRequest(@NotBlank @Size(max = 512) String token) {
     }
 
-    public record ForgotPasswordRequest(@NotBlank String email) {
+    public record ForgotPasswordRequest(@NotBlank @Size(max = 255) String email) {
     }
 
     public record ResetPasswordRequest(
-            @NotBlank String token,
+            @NotBlank @Size(max = 512) String token,
             @NotBlank @Size(min = 8, max = 100) String password) {
     }
 }

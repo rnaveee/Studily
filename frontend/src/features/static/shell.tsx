@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import BackButton from "../../components/BackButton";
 
 export function Page({
   title,
@@ -11,6 +12,7 @@ export function Page({
 }) {
   return (
     <div className="mx-auto max-w-2xl space-y-5 animate-in">
+      <BackButton />
       <div>
         <h1 className="text-xl font-semibold text-fg">{title}</h1>
         {intro && <p className="mt-1 text-[13px] text-fg-3">{intro}</p>}

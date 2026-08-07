@@ -1,9 +1,10 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, UserPlus, Check, Clock, School, GraduationCap, BookOpen, CalendarDays, MessageSquare } from "lucide-react";
+import { UserPlus, Check, Clock, School, GraduationCap, BookOpen, CalendarDays, MessageSquare } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { queryClient } from "../../lib/queryClient";
 import Avatar from "../../components/Avatar";
+import BackButton from "../../components/BackButton";
 import WeekSchedule from "../../components/WeekSchedule";
 import type { Conversation, ProfileSchedule, Relationship } from "../../types";
 
@@ -62,10 +63,7 @@ export default function UserProfilePage() {
 
   return (
     <div className="space-y-4 animate-in">
-      <button onClick={() => navigate(-1)} className="btn btn-ghost">
-        <ArrowLeft size={13} />
-        Back
-      </button>
+      <BackButton fallback="/friends" />
 
       {isLoading ? (
         <div className="flex items-center gap-2 text-sm text-fg-3">

@@ -1,9 +1,10 @@
 import { useInfiniteQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeft, School, UserPlus, Check, Clock } from "lucide-react";
+import { School, UserPlus, Check, Clock } from "lucide-react";
 import { api } from "../../lib/api";
 import { queryClient } from "../../lib/queryClient";
 import Avatar from "../../components/Avatar";
+import BackButton from "../../components/BackButton";
 import type { Page, Relationship } from "../../types";
 
 const PAGE_SIZE = 30;
@@ -36,10 +37,7 @@ export default function SchoolmatesPage() {
   return (
     <div className="space-y-4 animate-in">
       <div className="flex items-center gap-3">
-        <Link to="/friends" className="btn btn-ghost">
-          <ArrowLeft size={13} />
-          Back
-        </Link>
+        <BackButton fallback="/friends" />
         <div>
           <h1 className="text-xl font-semibold text-fg">Schoolmates</h1>
           <p className="text-[13px] text-fg-3">Other users from your school</p>

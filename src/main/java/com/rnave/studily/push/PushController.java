@@ -6,6 +6,7 @@ import com.rnave.studily.user.User;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -94,14 +95,14 @@ public class PushController {
 
     public record PublicKeyDto(String publicKey) {}
 
-    public record SubscribeRequest(@NotBlank String endpoint, @NotNull @Valid Keys keys) {}
+    public record SubscribeRequest(@NotBlank @Size(max = 2048) String endpoint, @NotNull @Valid Keys keys) {}
 
-    public record Keys(@NotBlank String p256dh, @NotBlank String auth) {}
+    public record Keys(@NotBlank @Size(max = 256) String p256dh, @NotBlank @Size(max = 256) String auth) {}
 
-    public record UnsubscribeRequest(@NotBlank String endpoint) {}
+    public record UnsubscribeRequest(@NotBlank @Size(max = 2048) String endpoint) {}
 
-    public record RotateRequest(@NotBlank String oldEndpoint,
+    public record RotateRequest(@NotBlank @Size(max = 2048) String oldEndpoint,
                                 @NotNull @Valid Keys oldKeys,
-                                @NotBlank String endpoint,
+                                @NotBlank @Size(max = 2048) String endpoint,
                                 @NotNull @Valid Keys keys) {}
 }

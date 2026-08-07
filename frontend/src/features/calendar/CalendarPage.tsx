@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "../../lib/api";
+import BackButton from "../../components/BackButton";
 import { useRequireAuth } from "../../lib/auth";
 import { formatDateTime } from "../../lib/format";
 import { type AcademicItem, type CalendarEvent } from "../../types";
@@ -82,6 +83,7 @@ export default function CalendarPage() {
   return (
     <div className="space-y-5 animate-in">
       <div className="flex items-center gap-3">
+        <BackButton />
         <h1 className="flex-1 text-xl font-semibold text-fg">{label}</h1>
         <button
           onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}

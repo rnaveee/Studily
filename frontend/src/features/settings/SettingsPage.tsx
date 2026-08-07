@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, setToken } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
+import BackButton from "../../components/BackButton";
 import { useConfirm } from "../../lib/confirm";
 import { useTheme } from "../../lib/theme";
 import { toast } from "../../lib/toast";
@@ -92,7 +93,10 @@ export default function SettingsPage() {
 
   return (
     <div className="animate-in">
-      <h1 className="text-xl font-semibold text-fg">Settings</h1>
+      <div className="flex items-center gap-3">
+        <BackButton />
+        <h1 className="text-xl font-semibold text-fg">Settings</h1>
+      </div>
 
       <h2 className="mt-6 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
         Notifications

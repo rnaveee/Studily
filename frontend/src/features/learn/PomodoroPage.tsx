@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router-dom";
-import { ArrowLeft, Maximize2, Minimize2, Pause, Play, RotateCcw, SkipForward } from "lucide-react";
+import { Maximize2, Minimize2, Pause, Play, RotateCcw, SkipForward } from "lucide-react";
 import { formatMs, pomodoro, pomodoroColor, usePomodoro } from "../../lib/pomodoro";
+import BackButton from "../../components/BackButton";
 
 export default function PomodoroPage() {
   const s = usePomodoro();
@@ -12,13 +12,7 @@ export default function PomodoroPage() {
   return (
     <div className="space-y-6 animate-in">
       <div className="flex items-center gap-3">
-        <Link
-          to="/learn"
-          className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-          aria-label="Back to Learn"
-        >
-          <ArrowLeft size={16} />
-        </Link>
+        <BackButton fallback="/learn" />
         <div>
           <h1 className="text-xl font-semibold text-fg">Pomodoro Timer</h1>
           <p className="mt-1 text-[13px] text-fg-3">Focus in sprints: study, break, repeat.</p>

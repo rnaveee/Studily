@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowLeft, Search, X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import elements from "./elements.json";
+import BackButton from "../../components/BackButton";
 
 type ElementData = (typeof elements)[number];
 
@@ -155,9 +155,7 @@ export default function PeriodicTablePage() {
   return (
     <div className="space-y-5 animate-in">
       <div className="flex items-center gap-3">
-        <Link to="/learn" className="btn btn-ghost !h-8 !w-8 !p-0" aria-label="Back to Learn">
-          <ArrowLeft size={16} />
-        </Link>
+        <BackButton fallback="/learn" />
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-fg">Periodic Table</h1>
           <p className="mt-0.5 text-[13px] text-fg-3">

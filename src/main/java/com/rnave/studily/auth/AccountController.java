@@ -104,10 +104,10 @@ public class AccountController {
     }
 
     public record ChangePasswordRequest(
-            @NotBlank String currentPassword,
+            @NotBlank @Size(max = 100) String currentPassword,
             @NotBlank @Size(min = 8, max = 100) String newPassword) {
     }
 
-    public record DeleteAccountRequest(@NotBlank String password) {
+    public record DeleteAccountRequest(@NotBlank @Size(max = 100) String password) {
     }
 }

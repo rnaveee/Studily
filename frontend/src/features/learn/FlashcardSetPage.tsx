@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ChevronLeft, ChevronRight, GraduationCap, Plus, Shuffle, X } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { ChevronLeft, ChevronRight, GraduationCap, Plus, Shuffle, X } from "lucide-react";
 import { api } from "../../lib/api";
+import BackButton from "../../components/BackButton";
 import { toast } from "../../lib/toast";
 import StudySession from "./StudySession";
 import type { Course, FlashcardSet, FlashcardSetRequest } from "../../types";
@@ -10,7 +11,6 @@ import type { Course, FlashcardSet, FlashcardSetRequest } from "../../types";
 export default function FlashcardSetPage() {
   const { id } = useParams();
   const setId = Number(id);
-  const navigate = useNavigate();
   const qc = useQueryClient();
 
   const [index, setIndex] = useState(0);
@@ -118,13 +118,7 @@ export default function FlashcardSetPage() {
   return (
     <div className="space-y-6 animate-in">
       <div className="flex items-center gap-3">
-        <button
-          onClick={() => navigate("/learn/flashcards")}
-          className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-          aria-label="Back to sets"
-        >
-          <ArrowLeft size={16} />
-        </button>
+        <BackButton fallback="/learn/flashcards" />
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold text-fg">{data.title}</h1>
           <p className="mt-1 text-[13px] text-fg-3">

@@ -2,6 +2,8 @@ package com.rnave.studily.pomodoro;
 
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.pomodoro.PomodoroScheduleService.Phase;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,7 +26,7 @@ public class PomodoroController {
     }
 
     @PostMapping("/schedule")
-    public ResponseEntity<Void> schedule(@RequestBody ScheduleRequest body) {
+    public ResponseEntity<Void> schedule(@Valid @RequestBody ScheduleRequest body) {
         Phase phase;
         try {
             phase = Phase.valueOf(body.phase());
@@ -50,6 +52,6 @@ public class PomodoroController {
         return Math.min(180, Math.max(1, n));
     }
 
-    public record ScheduleRequest(String phase, long endsAtEpochMs, int studyMin, int breakMin) {
+    public record ScheduleRequest(@Size(max = 16) String phase, long endsAtEpochMs, int studyMin, int breakMin) {
     }
 }

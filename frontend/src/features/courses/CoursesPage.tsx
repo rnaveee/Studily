@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { api } from "../../lib/api";
+import BackButton from "../../components/BackButton";
 import { useRequireAuth } from "../../lib/auth";
 import type { Course, CourseRequest, Semester } from "../../types";
 import { hhmm } from "../../lib/format";
@@ -37,7 +38,10 @@ export default function CoursesPage() {
   return (
     <div className="space-y-4 animate-in">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-fg">Courses</h1>
+        <div className="flex items-center gap-3">
+          <BackButton fallback="/semesters" />
+          <h1 className="text-xl font-semibold text-fg">Courses</h1>
+        </div>
         <div className="flex items-center gap-2">
           {semesters && semesters.length > 0 && (
             <select

@@ -29,6 +29,7 @@ import {
   parseScoreInput,
 } from "../../lib/grades";
 import Avatar from "../../components/Avatar";
+import BackButton from "../../components/BackButton";
 import CourseForm from "./CourseForm";
 import ItemForm from "../../components/ItemForm";
 
@@ -91,6 +92,7 @@ export default function CourseDetailPage() {
 
   return (
     <div className="space-y-6 animate-in">
+      <BackButton fallback="/courses" />
       {editing ? (
         <CourseForm
           submitLabel="Save changes"

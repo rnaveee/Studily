@@ -1,6 +1,7 @@
 import { Link, Navigate } from "react-router-dom";
 import { ArrowRight, Brain, GraduationCap, User } from "lucide-react";
 import { useAuth } from "../../lib/auth";
+import BackButton from "../../components/BackButton";
 
 const STEPS = [
   {
@@ -32,6 +33,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="mx-auto w-full max-w-lg space-y-8 py-4 animate-in">
+      <BackButton />
       <div className="text-center">
         <img src="/studily-3a.svg" alt="" className="mx-auto mb-3 h-14 w-14" />
         <h1 className="text-3xl font-bold text-fg">Welcome to Studily, {firstName}!</h1>

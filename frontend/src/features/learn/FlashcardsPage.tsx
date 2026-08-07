@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Layers, Plus, Trash2 } from "lucide-react";
+import { Layers, Plus, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
+import BackButton from "../../components/BackButton";
 import { useRequireAuth } from "../../lib/auth";
 import type { Course, FlashcardSet } from "../../types";
 import NewFlashcardSetModal from "./NewFlashcardSetModal";
@@ -31,13 +32,7 @@ export default function FlashcardsPage() {
     <div className="space-y-6 animate-in">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Link
-            to="/learn"
-            className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-            aria-label="Back to Learn"
-          >
-            <ArrowLeft size={16} />
-          </Link>
+          <BackButton fallback="/learn" />
           <div>
             <h1 className="text-xl font-semibold text-fg">Flashcards</h1>
             <p className="mt-1 text-[13px] text-fg-3">Create sets and study them.</p>

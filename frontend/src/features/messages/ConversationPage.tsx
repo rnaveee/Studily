@@ -2,12 +2,13 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ImagePlus, Paperclip, Send, Users2, X } from "lucide-react";
+import { ImagePlus, Paperclip, Send, Users2, X } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { queryClient } from "../../lib/queryClient";
 import { toast } from "../../lib/toast";
 import { appendMessageToCache, ws } from "../../lib/ws";
+import BackButton from "../../components/BackButton";
 import Avatar from "../../components/Avatar";
 import AttachmentBubble from "./AttachmentBubble";
 import type { Conversation, Message, Page, PublicUser } from "../../types";
@@ -166,13 +167,7 @@ export default function ConversationPage() {
           borderBottom: "1px solid var(--line)",
         }}
       >
-        <Link
-          to="/messages"
-          className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-          aria-label="Back to messages"
-        >
-          <ArrowLeft size={16} />
-        </Link>
+        <BackButton fallback="/messages" />
         {isGroup ? (
           <button
             onClick={() => setShowMembers(true)}
