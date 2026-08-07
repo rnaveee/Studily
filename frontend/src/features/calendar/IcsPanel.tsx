@@ -87,10 +87,7 @@ export default function IcsPanel() {
           </button>
         </div>
       </div>
-      <p className="mt-2 text-[11px] text-fg-3">
-        In Google Calendar, open Settings for a calendar and copy its secret address in iCal format.
-        Export downloads your deadlines and events for any other calendar app.
-      </p>
+      <p className="mt-2 text-[11px] text-fg-3">Sync your calendars by pasting an .ics link.</p>
     </div>
   );
 }
