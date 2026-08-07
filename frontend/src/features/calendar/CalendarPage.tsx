@@ -6,6 +6,7 @@ import { useRequireAuth } from "../../lib/auth";
 import { formatDateTime } from "../../lib/format";
 import { type AcademicItem, type CalendarEvent } from "../../types";
 import DayModal from "./DayModal";
+import IcsPanel from "./IcsPanel";
 import CalendarEntryModal from "./CalendarEntryModal";
 import { dayKey, eventEntry, itemEntry, tintBackground, type Entry } from "./entries";
 
@@ -105,6 +106,8 @@ export default function CalendarPage() {
           <ChevronRight size={15} />
         </button>
       </div>
+
+      <IcsPanel />
 
       <div className="card overflow-hidden">
         <div className="grid grid-cols-7 border-b border-line">

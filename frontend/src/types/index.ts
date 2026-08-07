@@ -304,3 +304,11 @@ export interface NotificationPrefs {
   examDayOf: boolean;
 }
 
+
+export interface IcsImportResult {
+  calendarName?: string | null;
+  imported: number;
+  updated: number;
+  skipped: number;
+  truncated: boolean;
+}

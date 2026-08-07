@@ -40,4 +40,7 @@ public class CalendarEvent {
 
     @Column(nullable = false)
     private Instant startAt;
+
+    @Column(name = "external_uid")
+    private String externalUid;
 }
