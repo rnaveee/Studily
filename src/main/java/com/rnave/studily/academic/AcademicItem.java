@@ -43,6 +43,8 @@ public class AcademicItem {
 
     private String location;
     private Double weight;
+    private Double score;
+    private Double maxScore;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

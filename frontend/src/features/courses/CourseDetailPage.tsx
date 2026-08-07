@@ -16,6 +16,15 @@ import {
   type PublicUser,
 } from "../../types";
 import { formatDate, formatDateTime, hhmm } from "../../lib/format";
+import {
+  courseGrade,
+  formatPercent,
+  formatScore,
+  gradeColor,
+  itemPercent,
+  neededOnRemaining,
+  parseScoreInput,
+} from "../../lib/grades";
 import Avatar from "../../components/Avatar";
 import CourseForm from "./CourseForm";
 import ItemForm from "../../components/ItemForm";
@@ -51,6 +60,7 @@ export default function CourseDetailPage() {
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["course", courseId] });
     qc.invalidateQueries({ queryKey: ["courses"] });
+    qc.invalidateQueries({ queryKey: ["semesters"] });
     qc.invalidateQueries({ queryKey: ["dashboard"] });
   };
 
@@ -144,9 +154,104 @@ export default function CourseDetailPage() {
         </div>
       )}
 
+      <GradeCard items={itemsQ.data ?? []} />
       <ItemsSection courseId={courseId} items={itemsQ.data ?? []} onChange={invalidateAll} />
       <ClassmatesSection courseId={courseId} />
       <NotesSection courseId={courseId} notes={notesQ.data ?? []} />
+    </div>
+  );
+}
+
+function GradeCard({ items }: { items: AcademicItem[] }) {
+  const [target, setTarget] = useState("80");
+  const summary = courseGrade(items);
+
+  if (items.length === 0) return null;
+
+  if (summary.percent == null) {
+    return (
+      <div className="card p-4">
+        <div className="text-[13px] font-semibold uppercase tracking-wider text-fg-3">Grade</div>
+        <p className="mt-1.5 text-[13px] text-fg-2">
+          Tap the score chip on any item below to enter what you got. Your grade updates as you go.
+        </p>
+      </div>
+    );
+  }
+
+  const scale = Math.max(100, summary.totalWeight);
+  const remaining = Math.max(0, scale - summary.gradedWeight);
+  const targetValue = Number(target);
+  const needed =
+    summary.gradedWeight > 0 && remaining > 0.01 && Number.isFinite(targetValue)
+      ? neededOnRemaining(summary, targetValue)
+      : null;
+
+  return (
+    <div className="card p-4">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <div className="text-[13px] font-semibold uppercase tracking-wider text-fg-3">Grade</div>
+          <div
+            className="mt-0.5 font-mono text-[30px] font-bold leading-none tabular-nums"
+            style={{ color: gradeColor(summary.percent) }}
+          >
+            {formatPercent(summary.percent)}
+          </div>
+        </div>
+        <div className="text-right text-[11px] text-fg-3">
+          {summary.gradedCount} of {summary.itemCount} scored
+          {summary.gradedWeight > 0 && (
+            <div>{Math.round(summary.gradedWeight)}% of the course graded</div>
+          )}
+        </div>
+      </div>
+
+      {summary.gradedWeight > 0 && (
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full" style={{ background: "var(--surface-hi)" }}>
+          <div
+            className="h-full rounded-full transition-all duration-300"
+            style={{
+              width: `${Math.min(100, (summary.gradedWeight / scale) * 100)}%`,
+              background: gradeColor(summary.percent),
+            }}
+          />
+        </div>
+      )}
+
+      {needed != null && (
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[12px] text-fg-2">
+          <span>To finish at</span>
+          <input
+            className="input py-0.5 text-center"
+            style={{ width: "4.5rem", paddingLeft: 6, paddingRight: 6 }}
+            type="number"
+            inputMode="decimal"
+            min={0}
+            max={100}
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            aria-label="Target grade"
+          />
+          <span>
+            you need{" "}
+            {needed > 100 ? (
+              <strong className="text-red">more than 100%</strong>
+            ) : needed <= 0 ? (
+              <strong className="text-green">nothing</strong>
+            ) : (
+              <strong style={{ color: gradeColor(needed) }}>{formatPercent(needed, 0)}</strong>
+            )}{" "}
+            on the remaining {Math.round(remaining)}%.
+          </span>
+        </div>
+      )}
+
+      {summary.gradedWeight === 0 && (
+        <p className="mt-2 text-[12px] text-fg-3">
+          Add a weight to each item for a weighted grade and projections.
+        </p>
+      )}
     </div>
   );
 }
@@ -251,52 +356,174 @@ function ItemsSection({
       ) : (
         <ul className="card divide-y divide-line">
           {items.map((it) => (
-            <li key={it.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-[13px]">
-              <div className="flex min-w-0 items-center gap-2">
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: it.type === "EXAM" ? "var(--red)" : "var(--green)" }}
-                />
-                <span className="min-w-0 truncate font-medium text-fg">{it.title}</span>
-                <span className="shrink-0 whitespace-nowrap text-fg-3">{formatDateTime(it.dueAt)}</span>
-                {it.weight != null && (
-                  <span className="shrink-0 text-fg-3">{it.weight}%</span>
-                )}
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <select
-                  className="input py-0.5 text-xs"
-                  value={it.status}
-                  onChange={(e) =>
-                    update.mutate({
-                      itemId: it.id,
-                      req: {
-                        type: it.type,
-                        title: it.title,
-                        dueAt: it.dueAt,
-                        location: it.location,
-                        weight: it.weight,
-                        status: e.target.value as ItemStatus,
-                      },
-                    })
-                  }
-                >
-                  {STATUSES.map((s) => (
-                    <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => remove.mutate(it.id)}
-                  className="rounded p-1 text-fg-3 transition-colors hover:text-red"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            </li>
+            <ItemRow
+              key={it.id}
+              item={it}
+              onUpdate={(req) => update.mutateAsync({ itemId: it.id, req })}
+              onDelete={() => remove.mutate(it.id)}
+            />
           ))}
         </ul>
       )}
     </section>
+  );
+}
+
+function ItemRow({
+  item,
+  onUpdate,
+  onDelete,
+}: {
+  item: AcademicItem;
+  onUpdate: (req: AcademicItemRequest) => Promise<unknown>;
+  onDelete: () => void;
+}) {
+  const [scoring, setScoring] = useState(false);
+  const percent = itemPercent(item);
+
+  const request = (changes: Partial<AcademicItemRequest>): AcademicItemRequest => ({
+    type: item.type,
+    title: item.title,
+    dueAt: item.dueAt,
+    location: item.location,
+    weight: item.weight,
+    score: item.score,
+    maxScore: item.maxScore,
+    status: item.status,
+    ...changes,
+  });
+
+  return (
+    <li className="px-4 py-2.5 text-[13px]">
+      <div className="flex items-center gap-2">
+        <span
+          className="h-2 w-2 shrink-0 rounded-full"
+          style={{ backgroundColor: item.type === "EXAM" ? "var(--red)" : "var(--green)" }}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium text-fg">{item.title}</div>
+          <div className="truncate text-[11px] text-fg-3">
+            {item.weight != null && `worth ${item.weight}% · `}
+            {formatDateTime(item.dueAt)}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+        <button
+          onClick={() => setScoring((s) => !s)}
+          className="shrink-0 rounded-full px-2 py-0.5 font-mono text-[12px] font-semibold tabular-nums transition-colors"
+          style={
+            percent != null
+              ? {
+                  color: gradeColor(percent),
+                  background: `color-mix(in srgb, ${gradeColor(percent)} 12%, transparent)`,
+                }
+              : { color: "var(--fg-3)", border: "1px dashed var(--line)" }
+          }
+          aria-label={percent != null ? "Edit score" : "Add score"}
+        >
+          {percent != null ? formatScore(item) : "Score"}
+        </button>
+
+        <select
+          className="input shrink-0 py-0.5 text-xs"
+          style={{ width: "auto", paddingLeft: 6, paddingRight: 6 }}
+          value={item.status}
+          onChange={(e) => onUpdate(request({ status: e.target.value as ItemStatus }))}
+          aria-label="Status"
+        >
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+          ))}
+        </select>
+
+        <button
+          onClick={onDelete}
+          className="shrink-0 rounded p-1 text-fg-3 transition-colors hover:text-red"
+          aria-label="Delete item"
+        >
+          <X size={12} />
+        </button>
+        </div>
+      </div>
+
+      {scoring && (
+        <ScoreEditor
+          item={item}
+          onCancel={() => setScoring(false)}
+          onSave={async (score, maxScore) => {
+            await onUpdate(
+              request({
+                score,
+                maxScore,
+                status: score != null && item.status !== "DONE" ? "DONE" : item.status,
+              }),
+            );
+            setScoring(false);
+          }}
+        />
+      )}
+    </li>
+  );
+}
+
+function ScoreEditor({
+  item,
+  onSave,
+  onCancel,
+}: {
+  item: AcademicItem;
+  onSave: (score: number | null, maxScore: number | null) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [draft, setDraft] = useState(() =>
+    item.score == null ? "" : item.maxScore === 100 ? String(item.score) : `${item.score}/${item.maxScore}`,
+  );
+  const [busy, setBusy] = useState(false);
+
+  const empty = draft.trim() === "";
+  const parsed = empty ? null : parseScoreInput(draft);
+  const preview = parsed ? (parsed.score / parsed.maxScore) * 100 : null;
+
+  async function save() {
+    if (!empty && !parsed) return;
+    setBusy(true);
+    try {
+      await onSave(parsed ? parsed.score : null, parsed ? parsed.maxScore : null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2 pl-4 animate-slide">
+      <input
+        className="input py-1"
+        style={{ width: "5.5rem", paddingLeft: 8, paddingRight: 8 }}
+        inputMode="decimal"
+        autoFocus
+        placeholder="17/20 or 85"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onFocus={(e) => e.target.select()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { e.preventDefault(); save(); }
+          if (e.key === "Escape") onCancel();
+        }}
+        aria-label={`Score for ${item.title}`}
+      />
+
+      <span className="min-w-[3.5rem] font-mono text-[12px] tabular-nums" style={{ color: preview != null ? gradeColor(preview) : "var(--fg-3)" }}>
+        {preview != null ? formatPercent(preview) : empty ? "clears score" : "17/20 or 85"}
+      </span>
+
+      <button onClick={save} disabled={busy || (!empty && !parsed)} className="btn btn-primary py-1 text-xs">
+        {busy ? "Saving…" : "Save"}
+      </button>
+      <button onClick={onCancel} className="btn btn-ghost py-1 text-xs">
+        Cancel
+      </button>
+    </div>
   );
 }
 

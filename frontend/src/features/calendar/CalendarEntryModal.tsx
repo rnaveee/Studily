@@ -52,6 +52,7 @@ export default function CalendarEntryModal({
   function invalidate() {
     qc.invalidateQueries({ queryKey: ["calendar"] });
     qc.invalidateQueries({ queryKey: ["calendar-events"] });
+    qc.invalidateQueries({ queryKey: ["semesters"] });
     qc.invalidateQueries({ queryKey: ["dashboard"] });
   }
 
@@ -126,6 +127,8 @@ export default function CalendarEntryModal({
       dueAt: new Date(when).toISOString(),
       location: item!.location ?? null,
       weight: weight ? Number(weight) : undefined,
+      score: item!.score,
+      maxScore: item!.maxScore,
       status: item!.status,
     });
   }

@@ -6,8 +6,16 @@ import { api } from "../../lib/api";
 import { useRequireAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
-import { MONTHS, formatMonth } from "../../lib/format";
-import type { Course, Semester, SemesterRequest, SemesterTerm } from "../../types";
+import { MONTHS, formatDate, formatMonth } from "../../lib/format";
+import { formatPercent, gradeColor, neededOnRemaining, remainingWeight } from "../../lib/grades";
+import type {
+  Course,
+  CourseGrade,
+  Semester,
+  SemesterRequest,
+  SemesterStats,
+  SemesterTerm,
+} from "../../types";
 
 const TERMS: SemesterTerm[] = ["FALL", "SPRING", "SUMMER", "WINTER"];
 const TERM_LABELS: Record<SemesterTerm, string> = {
@@ -31,6 +39,11 @@ export default function SemestersPage() {
   const { data: courses } = useQuery({
     queryKey: ["courses", null],
     queryFn: () => api.get<Course[]>("/courses"),
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ["semesters", "stats"],
+    queryFn: () => api.get<SemesterStats[]>("/semesters/stats"),
   });
 
   const create = useMutation({
@@ -93,6 +106,7 @@ export default function SemestersPage() {
               key={s.id}
               semester={s}
               courses={(courses ?? []).filter((c) => c.semesterId === s.id)}
+              stats={stats?.find((st) => st.semesterId === s.id)}
               onDelete={async () => {
                 const ok = await confirm({
                   title: `Delete ${s.label}?`,
@@ -123,13 +137,16 @@ export default function SemestersPage() {
 function SemesterRow({
   semester,
   courses,
+  stats,
   onDelete,
 }: {
   semester: Semester;
   courses: Course[];
+  stats?: SemesterStats;
   onDelete: () => void;
 }) {
   const [editing, setEditing] = useState(false);
+  const [target, setTarget] = useState("80");
   const qc = useQueryClient();
 
   const update = useMutation({
@@ -174,25 +191,36 @@ function SemesterRow({
           </button>
         </div>
       </div>
+      {stats && stats.courseCount > 0 && <SemesterStatsStrip stats={stats} />}
+
       {courses.length > 0 ? (
-        <div className="mt-2.5 flex flex-wrap gap-1.5">
+        <div className="mt-3 space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-medium uppercase tracking-wider text-fg-3">Courses</span>
+            {stats?.average != null && (
+              <label className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-fg-3">
+                Target
+                <input
+                  className="input py-0.5 text-center text-[12px]"
+                  style={{ width: "4.5rem", paddingLeft: 6, paddingRight: 6 }}
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  max={100}
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                  aria-label={`Target grade for ${semester.label}`}
+                />
+              </label>
+            )}
+          </div>
           {courses.map((c) => (
-            <Link
+            <CourseGradeRow
               key={c.id}
-              to={`/courses/${c.id}`}
-              className="flex w-full items-center gap-1.5 rounded-full border border-line px-2.5 py-1 text-[12px] font-medium text-fg-2 transition-colors hover:bg-surface-hi hover:text-fg sm:w-auto"
-            >
-              <span
-                className="h-2 w-2 shrink-0 rounded-full"
-                style={{ backgroundColor: c.color ?? "var(--accent)" }}
-              />
-              <span className="truncate">{c.name}</span>
-              {c.code && (
-                <span className="ml-auto shrink-0 pl-2 text-[11px] font-normal text-fg-3 sm:ml-0.5 sm:pl-0">
-                  {c.code}
-                </span>
-              )}
-            </Link>
+              course={c}
+              grade={stats?.courses.find((cg) => cg.courseId === c.id)}
+              target={Number(target)}
+            />
           ))}
         </div>
       ) : (
@@ -204,6 +232,144 @@ function SemesterRow({
         </p>
       )}
     </li>
+  );
+}
+
+function CourseGradeRow({
+  course,
+  grade,
+  target,
+}: {
+  course: Course;
+  grade?: CourseGrade;
+  target: number;
+}) {
+  const percent = grade?.grade ?? null;
+  const scale = Math.max(100, grade?.totalWeight ?? 0);
+  const graded = grade?.gradedWeight ?? 0;
+  const remaining = grade ? remainingWeight({ percent, ...grade }) : 0;
+  const needed =
+    grade && Number.isFinite(target) ? neededOnRemaining({ percent, ...grade }, target) : null;
+
+  return (
+    <Link
+      to={`/courses/${course.id}`}
+      className="block rounded-lg border border-line px-3 py-2 transition-colors hover:bg-surface-hi"
+    >
+      <div className="flex items-center gap-1.5">
+        <span
+          className="h-2 w-2 shrink-0 rounded-full"
+          style={{ backgroundColor: course.color ?? "var(--accent)" }}
+        />
+        <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-fg-2">
+          {course.name}
+        </span>
+        {course.code && (
+          <span className="shrink-0 text-[11px] text-fg-3">{course.code}</span>
+        )}
+        {percent != null && (
+          <span
+            className="shrink-0 font-mono text-[13px] font-semibold tabular-nums"
+            style={{ color: gradeColor(percent) }}
+          >
+            {formatPercent(percent, 1)}
+          </span>
+        )}
+      </div>
+
+      {percent == null ? (
+        <div className="mt-1 text-[11px] text-fg-3">
+          {grade && grade.itemCount > 0
+            ? `${grade.itemCount} item${grade.itemCount === 1 ? "" : "s"} · no scores yet`
+            : "No items yet"}
+        </div>
+      ) : (
+        <>
+          <div className="mt-1.5 h-1 overflow-hidden rounded-full" style={{ background: "var(--surface-hi)" }}>
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{
+                width: `${Math.min(100, (graded / scale) * 100)}%`,
+                background: gradeColor(percent),
+              }}
+            />
+          </div>
+          <div className="mt-1 text-[11px] text-fg-3">
+            {graded > 0 ? `${Math.round(graded)}% of the course graded` : "No weights set"}
+            {needed != null && (
+              <>
+                {" · "}
+                {needed > 100 ? (
+                  <span className="text-red">a {target} is out of reach</span>
+                ) : needed <= 0 ? (
+                  <span className="text-green">{target} already locked in</span>
+                ) : (
+                  <>
+                    need{" "}
+                    <span style={{ color: gradeColor(needed) }}>{formatPercent(needed, 0)}</span> on
+                    the remaining {Math.round(remaining)}% for a {target}
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </Link>
+  );
+}
+
+function SemesterStatsStrip({ stats }: { stats: SemesterStats }) {
+  const done = stats.itemsTotal > 0 ? Math.round((stats.itemsDone / stats.itemsTotal) * 100) : 0;
+
+  return (
+    <div className="mt-3 grid grid-cols-3 gap-2">
+      <StatTile
+        label="Average"
+        value={stats.average != null ? formatPercent(stats.average, 1) : "—"}
+        color={stats.average != null ? gradeColor(stats.average) : undefined}
+        sub={
+          stats.average != null
+            ? `${stats.gradedCourseCount} of ${stats.courseCount} courses`
+            : "No scores yet"
+        }
+      />
+      <StatTile
+        label="Done"
+        value={`${stats.itemsDone}/${stats.itemsTotal}`}
+        sub={stats.itemsTotal > 0 ? `${done}% complete` : "No items yet"}
+      />
+      <StatTile
+        label="Upcoming"
+        value={String(stats.upcomingCount)}
+        sub={stats.nextDueAt ? `Next ${formatDate(stats.nextDueAt)}` : "Nothing due"}
+      />
+    </div>
+  );
+}
+
+function StatTile({
+  label,
+  value,
+  sub,
+  color,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  color?: string;
+}) {
+  return (
+    <div className="rounded-lg px-2.5 py-2" style={{ background: "var(--surface-hi)" }}>
+      <div className="text-[10px] font-medium uppercase tracking-wider text-fg-3">{label}</div>
+      <div
+        className="font-mono text-[17px] font-bold leading-tight tabular-nums"
+        style={{ color: color ?? "var(--fg)" }}
+      >
+        {value}
+      </div>
+      {sub && <div className="truncate text-[10px] text-fg-3">{sub}</div>}
+    </div>
   );
 }
 

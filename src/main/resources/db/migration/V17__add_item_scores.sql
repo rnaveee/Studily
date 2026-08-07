@@ -1,0 +1,2 @@
+ALTER TABLE academic_items ADD COLUMN score     DOUBLE PRECISION;
+ALTER TABLE academic_items ADD COLUMN max_score DOUBLE PRECISION;

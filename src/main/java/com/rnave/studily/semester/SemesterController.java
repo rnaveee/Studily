@@ -2,6 +2,7 @@ package com.rnave.studily.semester;
 
 import com.rnave.studily.semester.SemesterDtos.SemesterDto;
 import com.rnave.studily.semester.SemesterDtos.SemesterRequest;
+import com.rnave.studily.semester.SemesterDtos.SemesterStatsDto;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -22,14 +23,21 @@ import java.util.Optional;
 public class SemesterController {
 
     private final SemesterService semesterService;
+    private final SemesterStatsService statsService;
 
-    public SemesterController(SemesterService semesterService) {
+    public SemesterController(SemesterService semesterService, SemesterStatsService statsService) {
         this.semesterService = semesterService;
+        this.statsService = statsService;
     }
 
     @GetMapping
     public List<SemesterDto> list() {
         return semesterService.list();
+    }
+
+    @GetMapping("/stats")
+    public List<SemesterStatsDto> stats() {
+        return statsService.list();
     }
 
     @GetMapping("/current")

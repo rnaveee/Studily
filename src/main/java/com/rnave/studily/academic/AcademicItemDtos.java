@@ -1,7 +1,10 @@
 package com.rnave.studily.academic;
 
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
@@ -18,6 +21,8 @@ public class AcademicItemDtos {
             Instant dueAt,
             String location,
             Double weight,
+            Double score,
+            Double maxScore,
             ItemStatus status) {
 
         public static AcademicItemDto from(AcademicItem i) {
@@ -31,6 +36,8 @@ public class AcademicItemDtos {
                     i.getDueAt(),
                     i.getLocation(),
                     i.getWeight(),
+                    i.getScore(),
+                    i.getMaxScore(),
                     i.getStatus());
         }
     }
@@ -40,7 +47,9 @@ public class AcademicItemDtos {
             @NotBlank @Size(max = 255) String title,
             @NotNull Instant dueAt,
             @Size(max = 255) String location,
-            Double weight,
+            @PositiveOrZero @Max(1000) Double weight,
+            @PositiveOrZero @Max(1_000_000) Double score,
+            @Positive @Max(1_000_000) Double maxScore,
             ItemStatus status) {
     }
 }

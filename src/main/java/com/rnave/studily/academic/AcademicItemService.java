@@ -64,6 +64,8 @@ public class AcademicItemService {
         item.setDueAt(req.dueAt());
         item.setLocation(req.location() == null || req.location().isBlank() ? null : req.location().trim());
         item.setWeight(req.weight());
+        item.setScore(req.score());
+        item.setMaxScore(req.score() == null ? null : req.maxScore() == null ? 100d : req.maxScore());
         item.setStatus(req.status() == null ? ItemStatus.TODO : req.status());
     }
 }

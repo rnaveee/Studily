@@ -14,6 +14,31 @@ export interface Semester {
   endDate: string;
 }
 
+export interface CourseGrade {
+  courseId: number;
+  name: string;
+  code?: string | null;
+  color?: string | null;
+  grade?: number | null;
+  gradedWeight: number;
+  totalWeight: number;
+  gradedCount: number;
+  itemCount: number;
+}
+
+export interface SemesterStats {
+  semesterId: number;
+  average?: number | null;
+  courseCount: number;
+  gradedCourseCount: number;
+  itemsTotal: number;
+  itemsDone: number;
+  itemsGraded: number;
+  upcomingCount: number;
+  nextDueAt?: string | null;
+  courses: CourseGrade[];
+}
+
 export interface SemesterRequest {
   term: SemesterTerm;
   year: number;
@@ -83,6 +108,8 @@ export interface AcademicItem {
   dueAt: string;
   location?: string | null;
   weight?: number | null;
+  score?: number | null;
+  maxScore?: number | null;
   status: ItemStatus;
 }
 
@@ -92,6 +119,8 @@ export interface AcademicItemRequest {
   dueAt: string;
   location?: string | null;
   weight?: number | null;
+  score?: number | null;
+  maxScore?: number | null;
   status: ItemStatus;
 }
 

@@ -4,7 +4,9 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 public class SemesterDtos {
 
@@ -32,6 +34,31 @@ public class SemesterDtos {
             };
             return t + " " + year;
         }
+    }
+
+    public record CourseGradeDto(
+            Long courseId,
+            String name,
+            String code,
+            String color,
+            Double grade,
+            double gradedWeight,
+            double totalWeight,
+            int gradedCount,
+            int itemCount) {
+    }
+
+    public record SemesterStatsDto(
+            Long semesterId,
+            Double average,
+            int courseCount,
+            int gradedCourseCount,
+            int itemsTotal,
+            int itemsDone,
+            int itemsGraded,
+            int upcomingCount,
+            Instant nextDueAt,
+            List<CourseGradeDto> courses) {
     }
 
     public record SemesterRequest(
