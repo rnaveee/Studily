@@ -59,10 +59,10 @@ html, body {
   overscroll-behavior: none;
 }
 
-html { background: var(--bg); }
+html { background: var(--surface); }
 
 body {
-  background: var(--bg);
+  background: var(--surface);
   color: var(--fg);
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
   font-size: 14px;

@@ -154,6 +154,11 @@ function FullscreenTimer({ onClose }: { onClose: () => void }) {
       className="fixed inset-0 z-[95] flex flex-col items-center justify-center animate-in"
       style={{ background: "var(--bg)" }}
     >
+      <div
+        className="absolute inset-x-0 top-0"
+        style={{ height: "env(safe-area-inset-top, 0px)", background: "var(--surface)" }}
+      />
+
       <button
         onClick={onClose}
         aria-label="Exit fullscreen"

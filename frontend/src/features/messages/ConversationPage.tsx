@@ -160,7 +160,7 @@ export default function ConversationPage() {
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-bg h-[var(--app-height,auto)] md:static md:z-auto md:h-auto md:min-h-0 md:flex-1 animate-in">
       <header
-        className="flex shrink-0 items-center gap-3 px-3 pb-2.5 md:px-0"
+        className="flex shrink-0 items-center gap-3 bg-surface px-3 pb-2.5 md:bg-transparent md:px-0"
         style={{
           paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)",
           borderBottom: "1px solid var(--line)",
