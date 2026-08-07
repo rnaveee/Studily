@@ -79,6 +79,7 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
   const [semesterId, setSemesterId] = useState<number | null>(initial?.semesterId ?? null);
   const [code, setCode] = useState(initial?.code ?? "");
   const [professor, setProfessor] = useState(initial?.professor ?? "");
+  const [location, setLocation] = useState(initial?.location ?? "");
   const [color, setColor] = useState(initial?.color ?? COLORS[0]);
   const [blocks, setBlocks] = useState<MeetingBlock[]>(initial?.meetingBlocks ?? []);
   const [error, setError] = useState<string | null>(null);
@@ -129,6 +130,7 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
         semesterId: semesterId ?? null,
         code: code.trim() || undefined,
         professor: professor.trim() || undefined,
+        location: location.trim() || undefined,
         color,
         meetingBlocks: blocks.map((b) => ({
           dayOfWeek: b.dayOfWeek,
@@ -190,6 +192,18 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
         </div>
       </div>
 
+      <div>
+        <label className="field-label">
+          Location <span className="normal-case font-normal text-fg-3">(optional)</span>
+        </label>
+        <input
+          className="input"
+          placeholder="e.g. AQ 3005"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+        />
+      </div>
+
       {matchList.length > 0 && (
         <div className="space-y-2.5 rounded-lg border border-line p-3" style={{ background: "var(--surface-hi)" }}>
           <div>
@@ -229,9 +243,9 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
                     Import
                   </button>
                 </div>
-                {(m.professor ?? m.school) && (
+                {(m.professor ?? m.location ?? m.school) && (
                   <p className="text-[12px] text-fg-2">
-                    {[m.professor, m.school].filter(Boolean).join(" · ")}
+                    {[m.professor, m.location, m.school].filter(Boolean).join(" · ")}
                   </p>
                 )}
                 {m.meetingBlocks.length > 0 && (

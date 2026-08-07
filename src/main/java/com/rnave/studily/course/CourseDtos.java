@@ -31,6 +31,7 @@ public class CourseDtos {
             String name,
             String code,
             String professor,
+            String location,
             String color,
             List<MeetingBlockDto> meetingBlocks) {
 
@@ -38,7 +39,7 @@ public class CourseDtos {
             return new CourseDto(
                     c.getId(),
                     c.getSemester() != null ? c.getSemester().getId() : null,
-                    c.getName(), c.getCode(), c.getProfessor(), c.getColor(),
+                    c.getName(), c.getCode(), c.getProfessor(), c.getLocation(), c.getColor(),
                     c.getMeetingBlocks().stream().map(MeetingBlockDto::from).toList());
         }
     }
@@ -48,6 +49,7 @@ public class CourseDtos {
             Long semesterId,
             @Size(max = 255) String code,
             @Size(max = 255) String professor,
+            @Size(max = 255) String location,
             @Size(max = 50) String color,
             @Valid List<MeetingBlockDto> meetingBlocks) {
     }
@@ -70,6 +72,7 @@ public class CourseDtos {
             String name,
             String code,
             String professor,
+            String location,
             String school,
             List<MeetingBlockDto> meetingBlocks,
             List<MatchItemDto> items,
@@ -77,7 +80,7 @@ public class CourseDtos {
 
         public static CourseMatchDto from(Course c, int userCount) {
             return new CourseMatchDto(
-                    c.getId(), c.getName(), c.getCode(), c.getProfessor(),
+                    c.getId(), c.getName(), c.getCode(), c.getProfessor(), c.getLocation(),
                     c.getUser().getSchool(),
                     c.getMeetingBlocks().stream().map(MeetingBlockDto::from).toList(),
                     c.getItems().stream()

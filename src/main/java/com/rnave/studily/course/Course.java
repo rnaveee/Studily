@@ -45,6 +45,7 @@ public class Course {
     private String code;
     private String codeKey;
     private String professor;
+    private String location;
     private String color;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

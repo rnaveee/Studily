@@ -96,8 +96,10 @@ export default function CoursesPage() {
                     </span>
                   )}
                 </div>
-                {c.professor && (
-                  <p className="mt-1.5 text-[13px] text-fg-2">{c.professor}</p>
+                {(c.professor || c.location) && (
+                  <p className="mt-1.5 text-[13px] text-fg-2">
+                    {[c.professor, c.location].filter(Boolean).join(" · ")}
+                  </p>
                 )}
                 {c.meetingBlocks.length > 0 && (
                   <p className="mt-1 text-[12px] text-fg-3">

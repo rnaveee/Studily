@@ -83,6 +83,7 @@ public class CourseMatchService {
         course.setCode(source.getCode());
         course.setCodeKey(source.getCodeKey());
         course.setProfessor(source.getProfessor());
+        course.setLocation(source.getLocation());
         course.setColor(source.getColor());
         if (semesterId != null) {
             course.setSemester(semesterService.requireOwned(semesterId));

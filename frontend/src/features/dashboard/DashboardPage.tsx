@@ -223,7 +223,12 @@ export default function DashboardPage() {
                             opacity: done ? 0.45 : 1,
                           }}
                         >
-                          <span className="flex-1 leading-snug">{m.courseName}</span>
+                          <span className="min-w-0 flex-1 leading-snug">
+                            {m.courseName}
+                            {m.location && (
+                              <span className="block truncate text-[11px] font-normal opacity-80">{m.location}</span>
+                            )}
+                          </span>
                           <span className="shrink-0 whitespace-nowrap text-[11px] opacity-80 mt-0.5">{hhmm(m.startTime)}–{hhmm(m.endTime)}</span>
                         </Link>
                       );
@@ -344,14 +349,17 @@ export default function DashboardPage() {
                         to={`/courses/${m.courseId}`}
                         className="absolute inset-x-0.5 overflow-hidden rounded px-1 text-[10px] text-white transition-opacity hover:opacity-80"
                         style={{ backgroundColor: m.color ?? "var(--accent)", top, height, paddingTop: 2 }}
-                        title={`${m.code ? `${m.code} · ` : ""}${m.courseName}${m.professor ? ` · ${m.professor}` : ""} ${hhmm(m.startTime)}–${hhmm(m.endTime)}`}
+                        title={`${m.code ? `${m.code} · ` : ""}${m.courseName}${m.professor ? ` · ${m.professor}` : ""}${m.location ? ` · ${m.location}` : ""} ${hhmm(m.startTime)}–${hhmm(m.endTime)}`}
                       >
                         <div className="truncate font-semibold leading-tight">{m.code || m.courseName}</div>
                         {m.code && height > 38 && (
                           <div className="truncate leading-tight opacity-90">{m.courseName}</div>
                         )}
                         {height > 26 && (
-                          <div className="truncate leading-tight opacity-75">{hhmm(m.startTime)}</div>
+                          <div className="truncate leading-tight opacity-75">
+                            {hhmm(m.startTime)}
+                            {m.location && height > 50 && ` · ${m.location}`}
+                          </div>
                         )}
                       </Link>
                     );

@@ -46,6 +46,9 @@ export default function WeekSchedule({ courses }: { courses: Course[] }) {
                   style={{ backgroundColor: course.color ?? "var(--accent)" }}
                 />
                 <span className="truncate font-medium text-fg">{course.code || course.name}</span>
+                {course.location && (
+                  <span className="truncate text-[12px] text-fg-3">{course.location}</span>
+                )}
                 <span className="ml-auto shrink-0 text-[12px] text-fg-3">
                   {hhmm(block.startTime)}–{hhmm(block.endTime)}
                 </span>

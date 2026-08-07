@@ -85,6 +85,7 @@ export interface Course {
   name: string;
   code?: string | null;
   professor?: string | null;
+  location?: string | null;
   color?: string | null;
   meetingBlocks: MeetingBlock[];
 }
@@ -94,6 +95,7 @@ export interface CourseRequest {
   semesterId?: number | null;
   code?: string | null;
   professor?: string | null;
+  location?: string | null;
   color?: string | null;
   meetingBlocks: MeetingBlock[];
 }
@@ -137,6 +139,7 @@ export interface CourseMatch {
   name: string;
   code?: string | null;
   professor?: string | null;
+  location?: string | null;
   school?: string | null;
   meetingBlocks: MeetingBlock[];
   items: CourseMatchItem[];
@@ -183,6 +186,7 @@ export interface ScheduledMeeting {
   courseName: string;
   code?: string | null;
   professor?: string | null;
+  location?: string | null;
   color?: string | null;
   dayOfWeek: DayOfWeek;
   startTime: string;

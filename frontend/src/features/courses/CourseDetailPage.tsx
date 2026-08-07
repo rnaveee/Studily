@@ -96,6 +96,7 @@ export default function CourseDetailPage() {
             semesterId: course.semesterId ?? null,
             code: course.code ?? undefined,
             professor: course.professor ?? undefined,
+            location: course.location ?? undefined,
             color: course.color ?? undefined,
             meetingBlocks: course.meetingBlocks,
           }}
@@ -141,8 +142,10 @@ export default function CourseDetailPage() {
             </div>
           </div>
 
-          {course.professor && (
-            <p className="mt-2 text-[13px] text-fg-2">{course.professor}</p>
+          {(course.professor || course.location) && (
+            <p className="mt-2 text-[13px] text-fg-2">
+              {[course.professor, course.location].filter(Boolean).join(" · ")}
+            </p>
           )}
           {course.meetingBlocks.length > 0 && (
             <p className="mt-1.5 text-[12px] text-fg-3">

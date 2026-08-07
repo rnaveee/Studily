@@ -15,6 +15,7 @@ public class DashboardDtos {
             String courseName,
             String code,
             String professor,
+            String location,
             String color,
             DayOfWeek dayOfWeek,
             LocalTime startTime,

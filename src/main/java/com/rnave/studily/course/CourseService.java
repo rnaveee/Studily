@@ -77,6 +77,7 @@ public class CourseService {
         course.setCode(trimToNull(req.code()));
         course.setCodeKey(MatchKeys.codeKey(course.getCode()));
         course.setProfessor(trimToNull(req.professor()));
+        course.setLocation(trimToNull(req.location()));
         course.setColor(trimToNull(req.color()));
 
         if (req.semesterId() != null) {
