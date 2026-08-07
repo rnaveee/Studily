@@ -7,6 +7,7 @@ import { useAuth, useRequireAuth } from "../../lib/auth";
 import { countdown, formatDateTime, hhmm } from "../../lib/format";
 import {
   DAYS,
+  MEETING_KIND_LABEL,
   type AcademicItem,
   type AcademicItemRequest,
   type Course,
@@ -224,9 +225,17 @@ export default function DashboardPage() {
                           }}
                         >
                           <span className="min-w-0 flex-1 leading-snug">
-                            {m.courseName}
+                            {m.code || m.courseName}
+                            {m.kind && (
+                              <span className="text-[11px] font-normal opacity-80">
+                                {" · "}
+                                {MEETING_KIND_LABEL[m.kind]}
+                              </span>
+                            )}
                             {m.location && (
-                              <span className="block truncate text-[11px] font-normal opacity-80">{m.location}</span>
+                              <span className="block break-words text-[11px] font-normal opacity-80">
+                                {m.location}
+                              </span>
                             )}
                           </span>
                           <span className="shrink-0 whitespace-nowrap text-[11px] opacity-80 mt-0.5">{hhmm(m.startTime)}–{hhmm(m.endTime)}</span>
@@ -349,17 +358,19 @@ export default function DashboardPage() {
                         to={`/courses/${m.courseId}`}
                         className="absolute inset-x-0.5 overflow-hidden rounded px-1 text-[10px] text-white transition-opacity hover:opacity-80"
                         style={{ backgroundColor: m.color ?? "var(--accent)", top, height, paddingTop: 2 }}
-                        title={`${m.code ? `${m.code} · ` : ""}${m.courseName}${m.professor ? ` · ${m.professor}` : ""}${m.location ? ` · ${m.location}` : ""} ${hhmm(m.startTime)}–${hhmm(m.endTime)}`}
+                        title={`${m.code ? `${m.code} · ` : ""}${m.courseName}${m.kind ? ` · ${MEETING_KIND_LABEL[m.kind]}` : ""}${m.professor ? ` · ${m.professor}` : ""}${m.location ? ` · ${m.location}` : ""} ${hhmm(m.startTime)}–${hhmm(m.endTime)}`}
                       >
                         <div className="truncate font-semibold leading-tight">{m.code || m.courseName}</div>
-                        {m.code && height > 38 && (
-                          <div className="truncate leading-tight opacity-90">{m.courseName}</div>
-                        )}
-                        {height > 26 && (
-                          <div className="truncate leading-tight opacity-75">
-                            {hhmm(m.startTime)}
-                            {m.location && height > 50 && ` · ${m.location}`}
+                        {m.kind && (
+                          <div className="truncate leading-tight opacity-90">
+                            {MEETING_KIND_LABEL[m.kind]}
                           </div>
+                        )}
+                        {height > 40 && (
+                          <div className="leading-tight opacity-75">{hhmm(m.startTime)}</div>
+                        )}
+                        {m.location && height > 54 && (
+                          <div className="leading-tight opacity-75 break-words">{m.location}</div>
                         )}
                       </Link>
                     );

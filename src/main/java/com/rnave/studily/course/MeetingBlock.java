@@ -34,6 +34,10 @@ public class MeetingBlock {
     @Column(nullable = false)
     private DayOfWeek dayOfWeek;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MeetingKind kind = MeetingKind.LECTURE;
+
     @Column(nullable = false)
     private LocalTime startTime;
 

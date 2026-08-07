@@ -75,7 +75,7 @@ public class DashboardService {
             for (MeetingBlock mb : course.getMeetingBlocks()) {
                 ScheduledMeeting sm = new ScheduledMeeting(
                         course.getId(), course.getName(), course.getCode(), course.getProfessor(),
-                        course.getLocation(), course.getColor(),
+                        course.getLocation(), course.getColor(), mb.getKind(),
                         mb.getDayOfWeek(), mb.getStartTime(), mb.getEndTime());
                 meetingsByDay.computeIfAbsent(dayIndex(mb.getDayOfWeek()), k -> new ArrayList<>()).add(sm);
             }

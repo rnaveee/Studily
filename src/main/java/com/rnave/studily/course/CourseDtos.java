@@ -17,11 +17,13 @@ public class CourseDtos {
     public record MeetingBlockDto(
             Long id,
             @NotNull DayOfWeek dayOfWeek,
+            MeetingKind kind,
             @NotNull LocalTime startTime,
             @NotNull LocalTime endTime) {
 
         public static MeetingBlockDto from(MeetingBlock mb) {
-            return new MeetingBlockDto(mb.getId(), mb.getDayOfWeek(), mb.getStartTime(), mb.getEndTime());
+            return new MeetingBlockDto(mb.getId(), mb.getDayOfWeek(), mb.getKind(),
+                    mb.getStartTime(), mb.getEndTime());
         }
     }
 

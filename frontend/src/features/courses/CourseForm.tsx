@@ -3,11 +3,15 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Download, Plus, Users2, X } from "lucide-react";
 import {
   DAYS,
+  MEETING_KINDS,
+  MEETING_KIND_LABEL,
+  MEETING_KIND_PLURAL,
   type Course,
   type CourseMatch,
   type CourseRequest,
   type DayOfWeek,
   type MeetingBlock,
+  type MeetingKind,
   type Semester,
 } from "../../types";
 import { formatDateTime, hhmm } from "../../lib/format";
@@ -110,14 +114,14 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
 
   const matchList = !initial && debouncedCode.length >= 3 ? (matches.data ?? []) : [];
 
-  function addBlock() {
-    setBlocks((b) => [...b, { dayOfWeek: "MON", startTime: "09:00", endTime: "09:50" }]);
+  function addBlock(kind: MeetingKind) {
+    setBlocks((b) => [...b, { dayOfWeek: "MON", kind, startTime: "09:00", endTime: "09:50" }]);
   }
-  function updateBlock(i: number, patch: Partial<MeetingBlock>) {
-    setBlocks((b) => b.map((blk, idx) => (idx === i ? { ...blk, ...patch } : blk)));
+  function updateBlock(target: MeetingBlock, patch: Partial<MeetingBlock>) {
+    setBlocks((b) => b.map((blk) => (blk === target ? { ...blk, ...patch } : blk)));
   }
-  function removeBlock(i: number) {
-    setBlocks((b) => b.filter((_, idx) => idx !== i));
+  function removeBlock(target: MeetingBlock) {
+    setBlocks((b) => b.filter((blk) => blk !== target));
   }
 
   async function submit(e: React.FormEvent) {
@@ -134,6 +138,7 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
         color,
         meetingBlocks: blocks.map((b) => ({
           dayOfWeek: b.dayOfWeek,
+          kind: b.kind ?? "LECTURE",
           startTime: hhmm(b.startTime),
           endTime: hhmm(b.endTime),
         })),
@@ -298,52 +303,60 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
         </div>
       </div>
 
-      <div>
-        <div className="mb-2 flex items-center justify-between">
-          <label className="field-label mb-0">Class times</label>
-          <button type="button" onClick={addBlock} className="btn btn-soft text-xs">
-            <Plus size={12} />
-            Add time
-          </button>
-        </div>
-        {blocks.length === 0 && (
-          <p className="text-[12px] text-fg-3">No meeting times yet.</p>
-        )}
-        <div className="space-y-2">
-          {blocks.map((b, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <select
-                className="input w-28"
-                value={b.dayOfWeek}
-                onChange={(e) => updateBlock(i, { dayOfWeek: e.target.value as DayOfWeek })}
-              >
-                {DAYS.map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-              <input
-                type="time"
-                className="input w-28"
-                value={hhmm(b.startTime)}
-                onChange={(e) => updateBlock(i, { startTime: e.target.value })}
-              />
-              <span className="text-fg-3">–</span>
-              <input
-                type="time"
-                className="input w-28"
-                value={hhmm(b.endTime)}
-                onChange={(e) => updateBlock(i, { endTime: e.target.value })}
-              />
-              <button
-                type="button"
-                onClick={() => removeBlock(i)}
-                className="rounded p-1 text-fg-3 transition-colors hover:text-red"
-              >
-                <X size={13} />
-              </button>
+      <div className="space-y-4">
+        {MEETING_KINDS.map((kind) => {
+          const kindBlocks = blocks.filter((b) => (b.kind ?? "LECTURE") === kind);
+          return (
+            <div key={kind}>
+              <div className="mb-2 flex items-center justify-between">
+                <label className="field-label mb-0">{MEETING_KIND_LABEL[kind]} times</label>
+                <button type="button" onClick={() => addBlock(kind)} className="btn btn-soft text-xs">
+                  <Plus size={12} />
+                  Add time
+                </button>
+              </div>
+              {kindBlocks.length === 0 ? (
+                <p className="text-[12px] text-fg-3">No {MEETING_KIND_PLURAL[kind].toLowerCase()}.</p>
+              ) : (
+                <div className="space-y-2">
+                  {kindBlocks.map((b, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <select
+                        className="input w-28"
+                        value={b.dayOfWeek}
+                        onChange={(e) => updateBlock(b, { dayOfWeek: e.target.value as DayOfWeek })}
+                      >
+                        {DAYS.map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="time"
+                        className="input w-28"
+                        value={hhmm(b.startTime)}
+                        onChange={(e) => updateBlock(b, { startTime: e.target.value })}
+                      />
+                      <span className="text-fg-3">–</span>
+                      <input
+                        type="time"
+                        className="input w-28"
+                        value={hhmm(b.endTime)}
+                        onChange={(e) => updateBlock(b, { endTime: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeBlock(b)}
+                        className="rounded p-1 text-fg-3 transition-colors hover:text-red"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {error && <p className="text-xs text-red animate-fade">{error}</p>}

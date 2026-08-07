@@ -7,6 +7,9 @@ import { useAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
 import {
+  MEETING_KINDS,
+  MEETING_KIND_LABEL,
+  MEETING_KIND_PLURAL,
   type AcademicItem,
   type AcademicItemRequest,
   type Course,
@@ -147,13 +150,31 @@ export default function CourseDetailPage() {
               {[course.professor, course.location].filter(Boolean).join(" · ")}
             </p>
           )}
-          {course.meetingBlocks.length > 0 && (
-            <p className="mt-1.5 text-[12px] text-fg-3">
-              {course.meetingBlocks
-                .map((b) => `${b.dayOfWeek} ${hhmm(b.startTime)}–${hhmm(b.endTime)}`)
-                .join("  ·  ")}
-            </p>
-          )}
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {MEETING_KINDS.map((kind) => {
+              const blocks = course.meetingBlocks.filter((b) => (b.kind ?? "LECTURE") === kind);
+              return (
+                <div key={kind}>
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-3">
+                    {MEETING_KIND_LABEL[kind]} times
+                  </div>
+                  {blocks.length === 0 ? (
+                    <p className="mt-1 text-[12px] text-fg-3">
+                      No {MEETING_KIND_PLURAL[kind].toLowerCase()}
+                    </p>
+                  ) : (
+                    <ul className="mt-1 space-y-0.5">
+                      {blocks.map((b, i) => (
+                        <li key={i} className="text-[12px] text-fg-2">
+                          {b.dayOfWeek} {hhmm(b.startTime)}–{hhmm(b.endTime)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

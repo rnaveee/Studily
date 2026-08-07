@@ -92,6 +92,7 @@ public class CourseMatchService {
             MeetingBlock copy = new MeetingBlock();
             copy.setCourse(course);
             copy.setDayOfWeek(block.getDayOfWeek());
+            copy.setKind(block.getKind());
             copy.setStartTime(block.getStartTime());
             copy.setEndTime(block.getEndTime());
             course.getMeetingBlocks().add(copy);

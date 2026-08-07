@@ -72,9 +72,23 @@ export interface AuthResponse {
   user: User;
 }
 
+export type MeetingKind = "LECTURE" | "LAB" | "TUTORIAL";
+export const MEETING_KINDS: MeetingKind[] = ["LECTURE", "LAB", "TUTORIAL"];
+export const MEETING_KIND_LABEL: Record<MeetingKind, string> = {
+  LECTURE: "Lecture",
+  LAB: "Lab",
+  TUTORIAL: "Tutorial",
+};
+export const MEETING_KIND_PLURAL: Record<MeetingKind, string> = {
+  LECTURE: "Lectures",
+  LAB: "Labs",
+  TUTORIAL: "Tutorials",
+};
+
 export interface MeetingBlock {
   id?: number;
   dayOfWeek: DayOfWeek;
+  kind?: MeetingKind;
   startTime: string;
   endTime: string;
 }
@@ -188,6 +202,7 @@ export interface ScheduledMeeting {
   professor?: string | null;
   location?: string | null;
   color?: string | null;
+  kind?: MeetingKind | null;
   dayOfWeek: DayOfWeek;
   startTime: string;
   endTime: string;

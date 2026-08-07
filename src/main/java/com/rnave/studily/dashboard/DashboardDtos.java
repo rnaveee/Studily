@@ -2,6 +2,7 @@ package com.rnave.studily.dashboard;
 
 import com.rnave.studily.academic.AcademicItemDtos.AcademicItemDto;
 import com.rnave.studily.course.DayOfWeek;
+import com.rnave.studily.course.MeetingKind;
 import com.rnave.studily.semester.SemesterDtos.SemesterDto;
 
 import java.time.LocalDate;
@@ -17,6 +18,7 @@ public class DashboardDtos {
             String professor,
             String location,
             String color,
+            MeetingKind kind,
             DayOfWeek dayOfWeek,
             LocalTime startTime,
             LocalTime endTime) {

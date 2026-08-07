@@ -96,6 +96,7 @@ public class CourseService {
                 MeetingBlock mb = new MeetingBlock();
                 mb.setCourse(course);
                 mb.setDayOfWeek(dto.dayOfWeek());
+                mb.setKind(dto.kind() == null ? MeetingKind.LECTURE : dto.kind());
                 mb.setStartTime(dto.startTime());
                 mb.setEndTime(dto.endTime());
                 course.getMeetingBlocks().add(mb);
