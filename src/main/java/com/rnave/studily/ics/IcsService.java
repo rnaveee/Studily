@@ -47,7 +47,10 @@ public class IcsService {
 
         ParsedCalendar parsed = IcsParser.parse(text, zoneOf(timeZone), MAX_EVENTS);
         if (parsed.events().isEmpty()) {
-            throw new BadRequestException("No events were found in that calendar");
+            throw new BadRequestException(isPublicGoogleFeed(source)
+                    ? "That calendar's public address has no events on it. In Google Calendar, open Settings for the "
+                            + "calendar and use its secret address in iCal format instead."
+                    : "No events were found in that calendar");
         }
 
         Long userId = currentUser.id();
@@ -102,6 +105,11 @@ public class IcsService {
             return fetcher.fetch(trimmed);
         }
         return trimmed;
+    }
+
+    private boolean isPublicGoogleFeed(String source) {
+        String lower = source.trim().toLowerCase(Locale.ROOT);
+        return lower.contains("calendar.google.com") && lower.contains("/public/");
     }
 
     private ZoneId zoneOf(String timeZone) {
