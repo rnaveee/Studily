@@ -188,11 +188,11 @@ export default function ConversationPage() {
       <header
         className="flex shrink-0 items-center gap-3 bg-surface px-3 pb-2.5 md:bg-transparent md:px-6"
         style={{
-          paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)",
+          paddingTop: "env(safe-area-inset-top, 0px)",
           borderBottom: "1px solid var(--line)",
         }}
       >
-        <BackButton fallback="/messages" />
+        <BackButton fallback="/messages" iconOnly />
         {isGroup ? (
           <button
             onClick={() => setShowMembers(true)}

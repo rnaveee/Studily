@@ -1,7 +1,13 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
-export default function BackButton({ fallback = "/" }: { fallback?: string }) {
+export default function BackButton({
+  fallback = "/",
+  iconOnly = false,
+}: {
+  fallback?: string;
+  iconOnly?: boolean;
+}) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -13,7 +19,7 @@ export default function BackButton({ fallback = "/" }: { fallback?: string }) {
       aria-label="Go back"
     >
       <ArrowLeft size={13} />
-      <span className="hidden sm:inline">Back</span>
+      {!iconOnly && <span className="hidden sm:inline">Back</span>}
     </button>
   );
 }
