@@ -27,6 +27,7 @@ public class AttachmentProcessor {
     private static final int MAX_IMAGE_DIMENSION = 1600;
     private static final int MAX_SOURCE_DIMENSION = 10000;
     private static final Set<String> IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
+    private static final String GIF_TYPE = "image/gif";
     private static final Map<String, String> DOC_TYPES_BY_EXTENSION = Map.ofEntries(
             Map.entry("pdf", "application/pdf"),
             Map.entry("doc", "application/msword"),
@@ -57,13 +58,16 @@ public class AttachmentProcessor {
         } catch (IOException e) {
             throw new BadRequestException("Could not read file");
         }
+        if (contentType.equals(GIF_TYPE)) {
+            return processGif(filename, bytes);
+        }
         if (IMAGE_TYPES.contains(contentType)) {
             return processImage(filename, bytes);
         }
         String docType = DOC_TYPES_BY_EXTENSION.get(extension(filename));
         if (docType == null || contentType.startsWith("image/")) {
             throw new BadRequestException(
-                    "Unsupported file type. Send a photo (JPEG, PNG, WEBP) or a document (PDF, Word, PowerPoint, Excel, TXT, CSV, MD).");
+                    "Unsupported file type. Send a photo (JPEG, PNG, WEBP, GIF) or a document (PDF, Word, PowerPoint, Excel, TXT, CSV, MD).");
         }
         if (docType.equals("application/pdf") && !startsWith(bytes, "%PDF-")) {
             throw new BadRequestException("This file doesn't look like a valid PDF");
@@ -71,8 +75,24 @@ public class AttachmentProcessor {
         return new Processed(filename, docType, bytes, null, null);
     }
 
+    private Processed processGif(String filename, byte[] bytes) {
+        if (!startsWith(bytes, "GIF87a") && !startsWith(bytes, "GIF89a")) {
+            throw new BadRequestException("This file doesn't look like a valid GIF");
+        }
+        int[] size = readDimensions(bytes);
+        if (Math.max(size[0], size[1]) > MAX_IMAGE_DIMENSION) {
+            throw new BadRequestException(
+                    "GIF dimensions are too large (max " + MAX_IMAGE_DIMENSION + "px per side)");
+        }
+        return new Processed(filename, GIF_TYPE, bytes, size[0], size[1]);
+    }
+
     private Processed processImage(String filename, byte[] bytes) {
-        requireSafeDimensions(bytes);
+        int[] source = readDimensions(bytes);
+        if (Math.max(source[0], source[1]) > MAX_SOURCE_DIMENSION) {
+            throw new BadRequestException(
+                    "Image dimensions are too large (max " + MAX_SOURCE_DIMENSION + "px per side)");
+        }
         BufferedImage image;
         try {
             image = Thumbnails.of(new ByteArrayInputStream(bytes)).scale(1.0).asBufferedImage();
@@ -101,7 +121,7 @@ public class AttachmentProcessor {
                 canvas.getWidth(), canvas.getHeight());
     }
 
-    private void requireSafeDimensions(byte[] bytes) {
+    private int[] readDimensions(byte[] bytes) {
         try (ImageInputStream in = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
             Iterator<ImageReader> readers = ImageIO.getImageReaders(in);
             if (!readers.hasNext()) {
@@ -110,10 +130,7 @@ public class AttachmentProcessor {
             ImageReader reader = readers.next();
             try {
                 reader.setInput(in);
-                if (reader.getWidth(0) > MAX_SOURCE_DIMENSION || reader.getHeight(0) > MAX_SOURCE_DIMENSION) {
-                    throw new BadRequestException(
-                            "Image dimensions are too large (max " + MAX_SOURCE_DIMENSION + "px per side)");
-                }
+                return new int[] {reader.getWidth(0), reader.getHeight(0)};
             } finally {
                 reader.dispose();
             }

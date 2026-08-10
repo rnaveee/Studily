@@ -283,7 +283,9 @@ public class ConversationService {
         if (dto.attachment() == null) {
             return dto.body();
         }
-        return dto.attachment().image() ? "📷 Photo" : "📄 " + dto.attachment().filename();
+        return dto.attachment().image()
+                ? imagePreview(dto.attachment().contentType())
+                : "📄 " + dto.attachment().filename();
     }
 
     private static String previewText(Message m) {
@@ -291,8 +293,12 @@ public class ConversationService {
             return m.getBody();
         }
         return m.getAttachmentContentType().startsWith("image/")
-                ? "📷 Photo"
+                ? imagePreview(m.getAttachmentContentType())
                 : "📄 " + m.getAttachmentFilename();
+    }
+
+    private static String imagePreview(String contentType) {
+        return contentType.equals("image/gif") ? "📷 GIF" : "📷 Photo";
     }
 
     private boolean isUnread(Conversation c) {
