@@ -14,6 +14,8 @@ import AttachmentBubble from "./AttachmentBubble";
 import type { Conversation, Message, Page, PublicUser } from "../../types";
 
 const DOC_ACCEPT = ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.md";
+const INITIAL_PAGE_SIZE = 10;
+const OLDER_PAGE_SIZE = 30;
 
 function hourKey(iso: string): string {
   const d = new Date(iso);
@@ -62,7 +64,9 @@ export default function ConversationPage() {
     queryKey: ["conversations", convId, "messages"],
     queryFn: ({ pageParam }) =>
       api.get<Page<Message>>(
-        `/conversations/${convId}/messages${pageParam ? `?before=${pageParam}` : ""}`,
+        pageParam
+          ? `/conversations/${convId}/messages?before=${pageParam}&limit=${OLDER_PAGE_SIZE}`
+          : `/conversations/${convId}/messages?limit=${INITIAL_PAGE_SIZE}`,
       ),
     initialPageParam: null as number | null,
     getNextPageParam: (last) => (last.hasMore && last.items[0] ? last.items[0].id : undefined),
@@ -80,6 +84,24 @@ export default function ConversationPage() {
     }
     return [...byId.values()].sort((a, b) => a.id - b.id);
   }, [messages.data, convId]);
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = messages;
+
+  useEffect(() => {
+    const sentinel = loadMoreRef.current;
+    const root = scrollRef.current;
+    if (!sentinel || !root || !hasNextPage) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isFetchingNextPage) fetchNextPage();
+      },
+      { root, rootMargin: "300px 0px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   useEffect(() => {
     if (!Number.isFinite(convId) || !messages.data) return;
@@ -159,9 +181,12 @@ export default function ConversationPage() {
     : "";
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col bg-bg h-[var(--app-height,auto)] md:static md:z-auto md:h-auto md:min-h-0 md:flex-1 animate-in">
+    <div
+      data-chat-panel
+      className="fixed inset-0 z-40 flex flex-col bg-bg h-[var(--app-height,auto)] md:static md:z-auto md:h-full md:min-h-0 md:flex-1 animate-in"
+    >
       <header
-        className="flex shrink-0 items-center gap-3 bg-surface px-3 pb-2.5 md:bg-transparent md:px-0"
+        className="flex shrink-0 items-center gap-3 bg-surface px-3 pb-2.5 md:bg-transparent md:px-6"
         style={{
           paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)",
           borderBottom: "1px solid var(--line)",
@@ -204,7 +229,10 @@ export default function ConversationPage() {
         )}
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto overscroll-contain px-4 py-3">
+      <div
+        ref={scrollRef}
+        className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto overscroll-contain px-4 py-3 md:px-6"
+      >
         {messages.isLoading ? (
           <div className="my-auto flex items-center justify-center gap-2 py-8 text-sm text-fg-3">
             <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
@@ -273,25 +301,20 @@ export default function ConversationPage() {
             );
           })
         )}
-        {messages.hasNextPage && (
-          <div className="flex justify-center pb-2">
-            <button
-              onClick={() => messages.fetchNextPage()}
-              disabled={messages.isFetchingNextPage}
-              className="btn btn-ghost"
-            >
-              {messages.isFetchingNextPage ? "Loading…" : "Load earlier messages"}
-            </button>
+        {hasNextPage && (
+          <div ref={loadMoreRef} className="flex h-8 items-center justify-center pb-2">
+            {isFetchingNextPage && (
+              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
+            )}
           </div>
         )}
       </div>
 
       <form
         onSubmit={handleSend}
-        className="flex shrink-0 items-center gap-2 px-3 pt-3"
+        className="flex shrink-0 items-center gap-2 bg-surface px-3 pt-3 md:bg-surface-hi md:px-6"
         style={{
           borderTop: "1px solid var(--line)",
-          background: "var(--surface)",
           paddingBottom: "var(--composer-pb, calc(env(safe-area-inset-bottom, 0px) + 12px))",
         }}
       >

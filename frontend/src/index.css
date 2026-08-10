@@ -222,3 +222,17 @@ textarea.input { resize: vertical; }
   text-transform: uppercase;
 }
 
+@media (min-width: 768px) {
+  main:has([data-chat-panel]) {
+    overflow: hidden;
+  }
+  main:has([data-chat-panel]) > div {
+    height: 100%;
+    min-height: 0;
+    max-width: none;
+    padding-left: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+  }
+}
+
