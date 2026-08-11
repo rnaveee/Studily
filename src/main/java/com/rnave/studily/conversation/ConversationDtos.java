@@ -34,14 +34,28 @@ public class ConversationDtos {
             PublicUserDto sender,
             String body,
             AttachmentDto attachment,
-            Instant createdAt) {
+            Instant createdAt,
+            int likeCount,
+            boolean likedByMe) {
 
         public static MessageDto from(Message m) {
+            return from(m, 0, false);
+        }
+
+        public static MessageDto from(Message m, int likeCount, boolean likedByMe) {
             return new MessageDto(
                     m.getId(), m.getConversation().getId(),
                     PublicUserDto.from(m.getSender()), m.getBody(),
-                    AttachmentDto.from(m), m.getCreatedAt());
+                    AttachmentDto.from(m), m.getCreatedAt(),
+                    likeCount, likedByMe);
         }
+    }
+
+    public record MessageLikeDto(
+            Long conversationId,
+            Long messageId,
+            int likeCount,
+            java.util.List<Long> likedBy) {
     }
 
     public record AttachmentDto(

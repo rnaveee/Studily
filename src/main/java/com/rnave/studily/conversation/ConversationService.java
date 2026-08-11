@@ -7,6 +7,7 @@ import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.config.PageResponse;
 import com.rnave.studily.conversation.ConversationDtos.ConversationDto;
 import com.rnave.studily.conversation.ConversationDtos.MessageDto;
+import com.rnave.studily.conversation.ConversationDtos.MessageLikeDto;
 import com.rnave.studily.conversation.ws.WsEvents;
 import com.rnave.studily.conversation.ws.WsSessionRegistry;
 import com.rnave.studily.friend.FriendRequestRepository;
@@ -25,8 +26,11 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -37,6 +41,7 @@ public class ConversationService {
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository conversationMemberRepository;
     private final MessageRepository messageRepository;
+    private final MessageLikeRepository messageLikeRepository;
     private final MessageAttachmentRepository messageAttachmentRepository;
     private final AttachmentProcessor attachmentProcessor;
     private final FriendRequestRepository friendRequestRepository;
@@ -49,6 +54,7 @@ public class ConversationService {
     public ConversationService(ConversationRepository conversationRepository,
                                ConversationMemberRepository conversationMemberRepository,
                                MessageRepository messageRepository,
+                               MessageLikeRepository messageLikeRepository,
                                MessageAttachmentRepository messageAttachmentRepository,
                                AttachmentProcessor attachmentProcessor,
                                FriendRequestRepository friendRequestRepository,
@@ -60,6 +66,7 @@ public class ConversationService {
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
         this.messageRepository = messageRepository;
+        this.messageLikeRepository = messageLikeRepository;
         this.messageAttachmentRepository = messageAttachmentRepository;
         this.attachmentProcessor = attachmentProcessor;
         this.friendRequestRepository = friendRequestRepository;
@@ -139,7 +146,8 @@ public class ConversationService {
                 ? messageRepository.findByConversationIdOrderByIdDesc(conversationId, PageRequest.of(0, size))
                 : messageRepository.findByConversationIdAndIdLessThanOrderByIdDesc(
                         conversationId, before, PageRequest.of(0, size));
-        List<MessageDto> items = slice.getContent().reversed().stream().map(MessageDto::from).toList();
+        List<Message> page = slice.getContent().reversed();
+        List<MessageDto> items = withLikes(page);
         return new PageResponse<>(items, slice.hasNext());
     }
 
@@ -195,6 +203,62 @@ public class ConversationService {
     }
 
     public record AttachmentContent(String filename, String contentType, byte[] data) {
+    }
+
+    private List<MessageDto> withLikes(List<Message> messages) {
+        if (messages.isEmpty()) {
+            return List.of();
+        }
+        Long me = currentUser.id();
+        Map<Long, Integer> counts = new HashMap<>();
+        Set<Long> mine = new HashSet<>();
+        List<Long> ids = messages.stream().map(Message::getId).toList();
+        for (MessageLikeRepository.LikeRow row : messageLikeRepository.findRowsByMessageIds(ids)) {
+            counts.merge(row.getMessageId(), 1, Integer::sum);
+            if (me.equals(row.getUserId())) {
+                mine.add(row.getMessageId());
+            }
+        }
+        return messages.stream()
+                .map(m -> MessageDto.from(m, counts.getOrDefault(m.getId(), 0), mine.contains(m.getId())))
+                .toList();
+    }
+
+    @Transactional
+    public MessageLikeDto toggleLike(Long conversationId, Long messageId) {
+        Conversation conv = requireMember(conversationId);
+        Message message = messageRepository.findById(messageId)
+                .filter(m -> m.getConversation().getId().equals(conversationId))
+                .orElseThrow(() -> new NotFoundException("Message not found"));
+
+        Long me = currentUser.id();
+        messageLikeRepository.findByMessageIdAndUserId(messageId, me)
+                .ifPresentOrElse(messageLikeRepository::delete, () -> {
+                    MessageLike like = new MessageLike();
+                    like.setMessage(message);
+                    like.setUser(currentUser.entity());
+                    messageLikeRepository.save(like);
+                });
+        messageLikeRepository.flush();
+
+        List<Long> likedBy = messageLikeRepository.findUserIdsByMessageId(messageId);
+        MessageLikeDto dto = new MessageLikeDto(conversationId, messageId, likedBy.size(), likedBy);
+        broadcastLikeAfterCommit(conv, dto);
+        return dto;
+    }
+
+    private void broadcastLikeAfterCommit(Conversation conv, MessageLikeDto dto) {
+        List<Long> memberIds = conv.getMembers().stream()
+                .map(m -> m.getUser().getId())
+                .toList();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                for (Long memberId : memberIds) {
+                    wsSessionRegistry.sendToUser(memberId, WsEvents.MessageLikeEvent.of(dto));
+                }
+            }
+        });
     }
 
     private void requireCanPost(Conversation conv) {

@@ -2,10 +2,11 @@ import type { InfiniteData } from "@tanstack/react-query";
 import { getToken } from "./api";
 import { queryClient } from "./queryClient";
 import { toast } from "./toast";
-import type { Message, Page } from "../types";
+import type { Message, MessageLike, Page } from "../types";
 
 type ServerEvent =
   | { type: "message"; message: Message }
+  | { type: "like"; like: MessageLike }
   | { type: "pong" }
   | { type: "error"; message: string };
 
@@ -22,6 +23,7 @@ let attempts = 0;
 let reconnectTimer: number | undefined;
 let heartbeatTimer: number | undefined;
 let lastActivity = 0;
+let currentUserId: number | null = null;
 
 const messageListeners = new Set<MessageListener>();
 const stateListeners = new Set<StateListener>();
@@ -35,6 +37,54 @@ function url(): string {
 
 function notifyState(connected: boolean) {
   stateListeners.forEach((fn) => fn(connected));
+}
+
+export function applyLikeToCache(like: MessageLike, meId?: number) {
+  queryClient.setQueryData<InfiniteData<Page<Message>>>(
+    ["conversations", like.conversationId, "messages"],
+    (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((p) => ({
+          ...p,
+          items: p.items.map((m) =>
+            m.id === like.messageId
+              ? {
+                  ...m,
+                  likeCount: like.likeCount,
+                  likedByMe: meId != null ? like.likedBy.includes(meId) : m.likedByMe,
+                }
+              : m,
+          ),
+        })),
+      };
+    },
+  );
+}
+
+export function optimisticToggleLike(conversationId: number, messageId: number) {
+  queryClient.setQueryData<InfiniteData<Page<Message>>>(
+    ["conversations", conversationId, "messages"],
+    (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((p) => ({
+          ...p,
+          items: p.items.map((m) =>
+            m.id === messageId
+              ? {
+                  ...m,
+                  likedByMe: !m.likedByMe,
+                  likeCount: Math.max(0, m.likeCount + (m.likedByMe ? -1 : 1)),
+                }
+              : m,
+          ),
+        })),
+      };
+    },
+  );
 }
 
 export function appendMessageToCache(message: Message) {
@@ -101,6 +151,7 @@ function open() {
       return;
     }
     if (event.type === "message") handleIncoming(event.message);
+    else if (event.type === "like") applyLikeToCache(event.like, currentUserId ?? undefined);
     else if (event.type === "error") toast.error(event.message);
   };
 
@@ -130,6 +181,11 @@ document.addEventListener("visibilitychange", () => {
 });
 
 export const ws = {
+  setUserId(id: number | null) {
+    currentUserId = id;
+  },
+
+
   connect() {
     shouldRun = true;
     open();

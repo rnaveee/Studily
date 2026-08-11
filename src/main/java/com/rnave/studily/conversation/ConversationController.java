@@ -3,6 +3,7 @@ package com.rnave.studily.conversation;
 import com.rnave.studily.conversation.ConversationDtos.ConversationDto;
 import com.rnave.studily.conversation.ConversationDtos.CreateGroupRequest;
 import com.rnave.studily.conversation.ConversationDtos.MessageDto;
+import com.rnave.studily.conversation.ConversationDtos.MessageLikeDto;
 import com.rnave.studily.conversation.ConversationDtos.OpenDirectRequest;
 import com.rnave.studily.conversation.ConversationDtos.SendMessageRequest;
 import com.rnave.studily.config.CurrentUser;
@@ -80,6 +81,11 @@ public class ConversationController {
     @ResponseStatus(HttpStatus.CREATED)
     public MessageDto send(@PathVariable Long id, @Valid @RequestBody SendMessageRequest req) {
         return conversationService.send(id, req.body());
+    }
+
+    @PostMapping("/{id}/messages/{messageId}/like")
+    public MessageLikeDto toggleLike(@PathVariable Long id, @PathVariable Long messageId) {
+        return conversationService.toggleLike(id, messageId);
     }
 
     @PostMapping("/{id}/attachments")

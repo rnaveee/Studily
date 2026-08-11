@@ -2,16 +2,17 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ImagePlus, Paperclip, Send, Users2, X } from "lucide-react";
+import { Heart, ImagePlus, Paperclip, Send, Users2, X } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { queryClient } from "../../lib/queryClient";
 import { toast } from "../../lib/toast";
-import { appendMessageToCache, ws } from "../../lib/ws";
+import { useDoubleTap } from "../../lib/useDoubleTap";
+import { appendMessageToCache, applyLikeToCache, optimisticToggleLike, ws } from "../../lib/ws";
 import BackButton from "../../components/BackButton";
 import Avatar from "../../components/Avatar";
 import AttachmentBubble from "./AttachmentBubble";
-import type { Conversation, Message, Page, PublicUser } from "../../types";
+import type { Conversation, Message, MessageLike, Page, PublicUser } from "../../types";
 
 const DOC_ACCEPT = ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.md";
 const INITIAL_PAGE_SIZE = 10;
@@ -118,6 +119,16 @@ export default function ConversationPage() {
       }
     });
   }, [convId, user?.id]);
+
+  const like = useMutation({
+    mutationFn: (messageId: number) =>
+      api.post<MessageLike>(`/conversations/${convId}/messages/${messageId}/like`),
+    onMutate: (messageId) => optimisticToggleLike(convId, messageId),
+    onSuccess: (res) => applyLikeToCache(res, user?.id),
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ["conversations", convId, "messages"] });
+    },
+  });
 
   const send = useMutation({
     mutationFn: (body: string) =>
@@ -280,16 +291,11 @@ export default function ConversationPage() {
                         />
                       </Link>
                     )}
-                    {m.attachment ? (
-                      <AttachmentBubble message={m} mine={mine} />
-                    ) : (
-                      <div
-                        className={`rounded-2xl px-3.5 py-2 text-[13px] ${mine ? "text-accent-fg" : "text-fg"}`}
-                        style={{ background: mine ? "var(--accent)" : "var(--surface-hi)" }}
-                      >
-                        {m.body}
-                      </div>
-                    )}
+                    <MessageBubble
+                      message={m}
+                      mine={mine}
+                      onLike={() => like.mutate(m.id)}
+                    />
                   </div>
                 </div>
                 {newHour && (
@@ -456,5 +462,57 @@ function MembersModal({
       </div>
     </div>,
     document.body,
+  );
+}
+
+function MessageBubble({
+  message,
+  mine,
+  onLike,
+}: {
+  message: Message;
+  mine: boolean;
+  onLike: () => void;
+}) {
+  const tap = useDoubleTap(onLike);
+  const liked = message.likedByMe;
+
+  return (
+    <div className="relative">
+      <div
+        {...tap}
+        className={message.likeCount > 0 ? "pb-1.5" : undefined}
+        role="button"
+        tabIndex={-1}
+        aria-label="Double tap to like"
+      >
+        {message.attachment ? (
+          <AttachmentBubble message={message} mine={mine} />
+        ) : (
+          <div
+            className={`select-none rounded-2xl px-3.5 py-2 text-[13px] ${mine ? "text-accent-fg" : "text-fg"}`}
+            style={{ background: mine ? "var(--accent)" : "var(--surface-hi)" }}
+          >
+            {message.body}
+          </div>
+        )}
+      </div>
+
+      {message.likeCount > 0 && (
+        <span
+          className={`absolute -bottom-1 flex items-center gap-0.5 rounded-full px-1.5 py-[1px] text-[10px] font-medium animate-fade ${
+            mine ? "left-0" : "right-0"
+          }`}
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--line)",
+            color: liked ? "var(--red)" : "var(--fg-3)",
+          }}
+        >
+          <Heart size={9} strokeWidth={2.5} fill={liked ? "var(--red)" : "none"} />
+          {message.likeCount > 1 && message.likeCount}
+        </span>
+      )}
+    </div>
   );
 }

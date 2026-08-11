@@ -332,6 +332,15 @@ export interface Message {
   body: string;
   attachment?: Attachment | null;
   createdAt: string;
+  likeCount: number;
+  likedByMe: boolean;
+}
+
+export interface MessageLike {
+  conversationId: number;
+  messageId: number;
+  likeCount: number;
+  likedBy: number[];
 }
 
 export interface NotificationPrefs {

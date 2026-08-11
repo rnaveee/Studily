@@ -63,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    ws.setUserId(user?.id ?? null);
     if (user?.emailVerified) ws.connect();
     else ws.disconnect();
   }, [user]);
