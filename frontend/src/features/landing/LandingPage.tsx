@@ -142,9 +142,9 @@ export default function LandingPage() {
               Right now it's spread across four apps.
             </h2>
             <p className="mt-3 text-[15px] leading-relaxed text-fg-2">
-              Not one of them knows what the others hold, so you end up being the glue. Studily
-              gives you the structure, the reminders and the group chat in one place, already set
-              up for a semester and pointed at the same set of courses.
+              Studily aims to combine all those apps and tools that students regularly
+              use into one app. It features stuff like a working calendar, reminders,
+              flashcards, and more.
             </p>
           </div>
 
