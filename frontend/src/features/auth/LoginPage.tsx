@@ -1,17 +1,20 @@
 import { useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 import { ApiError } from "../../lib/api";
 
 export default function LoginPage() {
   const { user, login, continueAsGuest } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    params.get("expired") === "1" ? "Your session expired. Please sign in again." : null,
+  );
   const [busy, setBusy] = useState(false);
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/dashboard" replace />;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -19,7 +22,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await login(email, password);
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Login failed");
     } finally {
@@ -93,7 +96,7 @@ export default function LoginPage() {
           type="button"
           onClick={() => {
             continueAsGuest();
-            navigate("/");
+            navigate("/dashboard");
           }}
           className="mx-auto mt-3 block text-center text-[12px] text-fg-3 transition-colors hover:text-fg"
         >

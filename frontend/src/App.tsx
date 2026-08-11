@@ -13,6 +13,7 @@ import ForgotPasswordPage from "./features/auth/ForgotPasswordPage";
 import ResetPasswordPage from "./features/auth/ResetPasswordPage";
 import VerifyEmailPage from "./features/auth/VerifyEmailPage";
 import VerifyGate from "./components/VerifyGate";
+import HomeRoute from "./features/landing/HomeRoute";
 import OnboardingPage from "./features/onboarding/OnboardingPage";
 import DashboardPage from "./features/dashboard/DashboardPage";
 import CalendarPage from "./features/calendar/CalendarPage";
@@ -38,6 +39,7 @@ const PeriodicTablePage = lazy(() => import("./features/learn/PeriodicTablePage"
 export default function App() {
   return (
     <Routes>
+      <Route path="/" element={<HomeRoute />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -50,7 +52,7 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="/" element={<DashboardPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/courses" element={<CoursesPage />} />

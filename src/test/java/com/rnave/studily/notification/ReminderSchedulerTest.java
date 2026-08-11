@@ -92,7 +92,7 @@ class ReminderSchedulerTest {
 
         verify(dispatcher).dispatch(eq(user), eq(NotificationType.CLASS_REMINDER), eq(5L),
                 eq("CLASS:5:2026-07-13"), eq("Class in 1 hour"),
-                contains("CMPT 300"), eq("/"));
+                contains("CMPT 300"), eq("/dashboard"));
     }
 
     @Test

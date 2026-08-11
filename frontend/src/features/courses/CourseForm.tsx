@@ -171,7 +171,7 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
           <label className="field-label">Course name</label>
           <input
             className="input"
-            placeholder="e.g. Algorithms"
+            placeholder="e.g. Calculus I"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -195,7 +195,7 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
           <label className="field-label">Course code</label>
           <input
             className="input"
-            placeholder="e.g. CMPT 225"
+            placeholder="e.g. MATH 101"
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />
@@ -327,7 +327,7 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
                 <div className="space-y-2">
                   <input
                     className="input"
-                    placeholder={`${MEETING_KIND_LABEL[kind]} location (e.g. AQ 3005)`}
+                    placeholder={`${MEETING_KIND_LABEL[kind]} location (e.g. Hall 210)`}
                     value={locations[kind]}
                     onChange={(e) => setLocations((l) => ({ ...l, [kind]: e.target.value }))}
                   />

@@ -79,7 +79,7 @@ public class ReminderScheduler {
                     "Class in 1 hour",
                     "%s starts at %s".formatted(
                             block.getCourse().getName(), TIME_FMT.format(block.getStartTime())),
-                    "/");
+                    "/dashboard");
         }
     }
 

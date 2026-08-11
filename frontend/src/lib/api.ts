@@ -1,4 +1,12 @@
-import { DAYS } from "../types";
+import {
+  DEMO_SEMESTER,
+  demoCourses,
+  demoFlashcardSets,
+  demoItems,
+  demoNotes,
+  demoStats,
+  demoWeek,
+} from "./demo";
 
 const TOKEN_KEY = "studily.token";
 const GUEST_KEY = "studily.guest";
@@ -22,42 +30,47 @@ export function setGuestMode(on: boolean) {
 }
 
 const GUEST_EMPTY_LISTS = new Set([
-  "/semesters",
-  "/courses",
-  "/calendar",
   "/calendar/events",
-  "/flashcard-sets",
+  "/calendar/categories",
+  "/courses/matches",
   "/friends",
   "/friends/incoming",
   "/friends/pending",
   "/conversations",
 ]);
 
-function guestWeek(): unknown {
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
-  const iso = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  const days = DAYS.map((dayOfWeek, i) => {
-    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
-    return { date: iso(d), dayOfWeek, meetings: [], items: [] };
-  });
-  return {
-    weekStart: days[0].date,
-    weekEnd: days[6].date,
-    semester: null,
-    days,
-    dueThisWeek: [],
-    nextExam: null,
-  };
-}
+const GUEST_EMPTY_PAGES = new Set(["/friends/schoolmates", "/friends/search"]);
 
 function guestStub(path: string): unknown {
   const p = path.split("?")[0];
   if (GUEST_EMPTY_LISTS.has(p)) return [];
-  if (p === "/dashboard/week") return guestWeek();
+  if (GUEST_EMPTY_PAGES.has(p)) return { items: [], hasMore: false };
+
+  if (p === "/semesters") return [DEMO_SEMESTER];
+  if (p === "/semesters/current") return DEMO_SEMESTER;
+  if (p === "/semesters/stats") return demoStats();
+  if (p === "/courses") return demoCourses();
+  if (p === "/dashboard/week") return demoWeek();
+  if (p === "/calendar") return demoItems();
+  if (p === "/flashcard-sets") return demoFlashcardSets();
+  if (p === "/push/public-key") return { publicKey: null };
   if (p === "/settings/notifications")
     return { messages: true, classReminders: true, eventDayOf: true, itemWeekAhead: true, examDayOf: true };
+
+  const course = p.match(/^\/courses\/(\d+)(\/\w+)?$/);
+  if (course) {
+    const id = Number(course[1]);
+    switch (course[2]) {
+      case undefined:      return demoCourses().find((c) => c.id === id) ?? null;
+      case "/items":       return demoItems().filter((it) => it.courseId === id);
+      case "/notes":       return demoNotes(id);
+      case "/classmates":  return [];
+    }
+  }
+
+  const set = p.match(/^\/flashcard-sets\/(\d+)$/);
+  if (set) return demoFlashcardSets().find((s) => s.id === Number(set[1])) ?? null;
+
   if (/^\/users\/\d+\/schedule$/.test(p)) return { semester: null, courses: [] };
   return undefined;
 }
@@ -81,8 +94,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       if (stub !== undefined) return stub as T;
       throw new ApiError(401, "Sign in to view this");
     }
-    window.location.assign("/login");
-    throw new ApiError(401, "Sign in to do that");
+    throw new ApiError(401, "This is demo data. Sign up to add your own.");
   }
 
   const isFormData = body instanceof FormData;
@@ -96,7 +108,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
   if (res.status === 401 && getToken()) {
     setToken(null);
-    if (window.location.pathname !== "/login") window.location.assign("/login");
+    setGuestMode(false);
+    if (window.location.pathname !== "/login") window.location.replace("/login?expired=1");
     throw new ApiError(401, "Session expired");
   }
 

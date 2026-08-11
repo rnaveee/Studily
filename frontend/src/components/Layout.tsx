@@ -22,7 +22,7 @@ import ViewportDebug from "./ViewportDebug";
 import type { Conversation, FriendRequestItem } from "../types";
 
 const NAV = [
-  { to: "/",           label: "Dashboard",  icon: LayoutDashboard, end: true },
+  { to: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard, end: true },
   { to: "/semesters",  label: "Semesters",  icon: GraduationCap },
   { to: "/messages",   label: "Messages",   icon: MessageSquare },
   { to: "/learn",      label: "Learn",      icon: Brain },

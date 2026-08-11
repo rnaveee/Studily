@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { MailWarning, Megaphone, Smartphone, Timer, X } from "lucide-react";
+import { Eye, MailWarning, Megaphone, Smartphone, Timer, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { formatMs, pomodoroColor, usePomodoro } from "../lib/pomodoro";
 
@@ -15,7 +15,7 @@ function isStandalone() {
 }
 
 export default function Banners() {
-  const { user } = useAuth();
+  const { user, guest } = useAuth();
   const [betaDismissed, setBetaDismissed] = useState(
     () => localStorage.getItem(BETA_KEY) === "1",
   );
@@ -31,10 +31,19 @@ export default function Banners() {
   const unverified = !!user && !user.emailVerified;
   const pomo = usePomodoro();
 
-  if (betaDismissed && installDismissed && !unverified && !pomo.running) return null;
+  if (betaDismissed && installDismissed && !unverified && !pomo.running && !guest) return null;
 
   return (
     <div className="shrink-0">
+      {guest && (
+        <Banner icon={<Eye size={13} className="shrink-0" />} wrap>
+          You're viewing a demo semester.{" "}
+          <Link to="/signup" className="font-medium underline underline-offset-2">
+            Create a free account
+          </Link>{" "}
+          to build your own.
+        </Banner>
+      )}
       {pomo.running && (
         <Banner
           icon={<Timer size={13} className="shrink-0" />}

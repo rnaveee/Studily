@@ -74,7 +74,7 @@ export default function OnboardingPage() {
       </div>
 
       <p className="text-center">
-        <Link to="/" className="text-[12px] text-fg-3 transition-colors hover:text-fg">
+        <Link to="/dashboard" className="text-[12px] text-fg-3 transition-colors hover:text-fg">
           Skip for now, take me to my dashboard
         </Link>
       </p>

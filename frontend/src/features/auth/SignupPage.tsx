@@ -13,7 +13,7 @@ export default function SignupPage() {
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState(false);
 
-  if (user && !created) return <Navigate to="/" replace />;
+  if (user && !created) return <Navigate to="/dashboard" replace />;
 
   function set(field: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>

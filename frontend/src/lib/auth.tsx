@@ -10,6 +10,7 @@ interface AuthState {
   user: User | null;
   guest: boolean;
   loading: boolean;
+  expired: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (input: SignupInput) => Promise<void>;
   logout: () => void;
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [guest, setGuest] = useState(isGuestMode);
   const [loading, setLoading] = useState(true);
+  const [expired, setExpired] = useState(false);
   const pushSynced = useRef(false);
 
   useEffect(() => {
@@ -50,7 +52,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .get<User>("/me")
       .then(setUser)
       .catch((err) => {
-        if (err instanceof ApiError && err.status === 401) setToken(null);
+        if (err instanceof ApiError && err.status === 401) {
+          setToken(null);
+          setGuestMode(false);
+          setGuest(false);
+          setExpired(true);
+        }
       })
       .finally(() => setLoading(false));
   }, []);
@@ -70,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api.post<AuthResponse>("/auth/login", { email, password });
     setToken(res.token);
     clearGuest();
+    setExpired(false);
     setUser(res.user);
   }
 
@@ -77,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api.post<AuthResponse>("/auth/signup", input);
     setToken(res.token);
     clearGuest();
+    setExpired(false);
     setUser(res.user);
   }
 
@@ -89,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   function continueAsGuest() {
     setGuestMode(true);
     setGuest(true);
+    setExpired(false);
     queryClient.clear();
   }
 
@@ -100,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, guest, loading, login, signup, logout, continueAsGuest, setUser, refresh }}
+      value={{ user, guest, loading, expired, login, signup, logout, continueAsGuest, setUser, refresh }}
     >
       {children}
     </AuthContext.Provider>

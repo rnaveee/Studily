@@ -17,7 +17,7 @@ self.addEventListener("push", (event) => {
       body: payload.body || "",
       icon: "/studily-3a-192.png",
       badge: "/studily-3a-192.png",
-      data: { url: payload.url || "/" },
+      data: { url: payload.url || "/dashboard" },
     }),
   );
 });
@@ -53,7 +53,7 @@ self.addEventListener("pushsubscriptionchange", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || "/";
+  const url = (event.notification.data && event.notification.data.url) || "/dashboard";
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
       for (const client of list) {
