@@ -28,6 +28,15 @@ Sentry.init({
   enabled: !!sentryDsn,
   environment: import.meta.env.MODE,
   tracesSampleRate: 0.2,
+  ignoreErrors: [
+    /window\.webkit\.messageHandlers/,
+    /^ResizeObserver loop/,
+  ],
+  denyUrls: [
+    /^chrome-extension:\/\//,
+    /^moz-extension:\/\//,
+    /^safari-(web-)?extension:\/\//,
+  ],
 });
 
 createRoot(document.getElementById("root")!).render(
