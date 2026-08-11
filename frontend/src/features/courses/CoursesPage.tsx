@@ -6,7 +6,7 @@ import { api } from "../../lib/api";
 import BackButton from "../../components/BackButton";
 import { useRequireAuth } from "../../lib/auth";
 import type { Course, CourseRequest, Semester } from "../../types";
-import { hhmm } from "../../lib/format";
+import { courseLocations, hhmm } from "../../lib/format";
 import CourseForm from "./CourseForm";
 
 export default function CoursesPage() {
@@ -100,9 +100,11 @@ export default function CoursesPage() {
                     </span>
                   )}
                 </div>
-                {(c.professor || c.location) && (
+                {(c.professor || courseLocations(c.meetingBlocks, c.location).length > 0) && (
                   <p className="mt-1.5 text-[13px] text-fg-2">
-                    {[c.professor, c.location].filter(Boolean).join(" · ")}
+                    {[c.professor, ...courseLocations(c.meetingBlocks, c.location)]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </p>
                 )}
                 {c.meetingBlocks.length > 0 && (

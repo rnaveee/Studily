@@ -43,4 +43,6 @@ public class MeetingBlock {
 
     @Column(nullable = false)
     private LocalTime endTime;
+
+    private String location;
 }

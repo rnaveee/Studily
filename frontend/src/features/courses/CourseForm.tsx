@@ -78,14 +78,25 @@ function matchSimilarity(
   return parts.reduce((sum, p) => sum + p, 0) / parts.length;
 }
 
+function initialLocations(initial?: CourseRequest): Record<MeetingKind, string> {
+  const out = {} as Record<MeetingKind, string>;
+  for (const kind of MEETING_KINDS) {
+    const block = (initial?.meetingBlocks ?? []).find(
+      (b) => (b.kind ?? "LECTURE") === kind && (b.location ?? "").trim(),
+    );
+    out[kind] = block?.location?.trim() || initial?.location?.trim() || "";
+  }
+  return out;
+}
+
 export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, onImported }: Props) {
   const [name, setName] = useState(initial?.name ?? "");
   const [semesterId, setSemesterId] = useState<number | null>(initial?.semesterId ?? null);
   const [code, setCode] = useState(initial?.code ?? "");
   const [professor, setProfessor] = useState(initial?.professor ?? "");
-  const [location, setLocation] = useState(initial?.location ?? "");
   const [color, setColor] = useState(initial?.color ?? COLORS[0]);
   const [blocks, setBlocks] = useState<MeetingBlock[]>(initial?.meetingBlocks ?? []);
+  const [locations, setLocations] = useState<Record<MeetingKind, string>>(() => initialLocations(initial));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -134,14 +145,17 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
         semesterId: semesterId ?? null,
         code: code.trim() || undefined,
         professor: professor.trim() || undefined,
-        location: location.trim() || undefined,
         color,
-        meetingBlocks: blocks.map((b) => ({
-          dayOfWeek: b.dayOfWeek,
-          kind: b.kind ?? "LECTURE",
-          startTime: hhmm(b.startTime),
-          endTime: hhmm(b.endTime),
-        })),
+        meetingBlocks: blocks.map((b) => {
+          const kind = b.kind ?? "LECTURE";
+          return {
+            dayOfWeek: b.dayOfWeek,
+            kind,
+            startTime: hhmm(b.startTime),
+            endTime: hhmm(b.endTime),
+            location: locations[kind].trim() || undefined,
+          };
+        }),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
@@ -197,18 +211,6 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
         </div>
       </div>
 
-      <div>
-        <label className="field-label">
-          Location <span className="normal-case font-normal text-fg-3">(optional)</span>
-        </label>
-        <input
-          className="input"
-          placeholder="e.g. AQ 3005"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-        />
-      </div>
-
       {matchList.length > 0 && (
         <div className="space-y-2.5 rounded-lg border border-line p-3" style={{ background: "var(--surface-hi)" }}>
           <div>
@@ -248,15 +250,19 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
                     Import
                   </button>
                 </div>
-                {(m.professor ?? m.location ?? m.school) && (
+                {(m.professor || m.school) && (
                   <p className="text-[12px] text-fg-2">
-                    {[m.professor, m.location, m.school].filter(Boolean).join(" · ")}
+                    {[m.professor, m.school].filter(Boolean).join(" · ")}
                   </p>
                 )}
                 {m.meetingBlocks.length > 0 && (
                   <p className="text-[11px] text-fg-3">
                     {m.meetingBlocks
-                      .map((b) => `${b.dayOfWeek} ${hhmm(b.startTime)}–${hhmm(b.endTime)}`)
+                      .map(
+                        (b) =>
+                          `${b.dayOfWeek} ${hhmm(b.startTime)}–${hhmm(b.endTime)}` +
+                          (b.location ? ` ${b.location}` : ""),
+                      )
                       .join("  ·  ")}
                   </p>
                 )}
@@ -319,6 +325,12 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
                 <p className="text-[12px] text-fg-3">No {MEETING_KIND_PLURAL[kind].toLowerCase()}.</p>
               ) : (
                 <div className="space-y-2">
+                  <input
+                    className="input"
+                    placeholder={`${MEETING_KIND_LABEL[kind]} location (e.g. AQ 3005)`}
+                    value={locations[kind]}
+                    onChange={(e) => setLocations((l) => ({ ...l, [kind]: e.target.value }))}
+                  />
                   {kindBlocks.map((b, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <select

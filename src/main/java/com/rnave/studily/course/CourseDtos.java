@@ -19,11 +19,12 @@ public class CourseDtos {
             @NotNull DayOfWeek dayOfWeek,
             MeetingKind kind,
             @NotNull LocalTime startTime,
-            @NotNull LocalTime endTime) {
+            @NotNull LocalTime endTime,
+            @Size(max = 255) String location) {
 
         public static MeetingBlockDto from(MeetingBlock mb) {
             return new MeetingBlockDto(mb.getId(), mb.getDayOfWeek(), mb.getKind(),
-                    mb.getStartTime(), mb.getEndTime());
+                    mb.getStartTime(), mb.getEndTime(), mb.getLocation());
         }
     }
 

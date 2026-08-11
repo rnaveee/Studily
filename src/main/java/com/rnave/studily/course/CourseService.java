@@ -99,6 +99,7 @@ public class CourseService {
                 mb.setKind(dto.kind() == null ? MeetingKind.LECTURE : dto.kind());
                 mb.setStartTime(dto.startTime());
                 mb.setEndTime(dto.endTime());
+                mb.setLocation(trimToNull(dto.location()));
                 course.getMeetingBlocks().add(mb);
             }
         }

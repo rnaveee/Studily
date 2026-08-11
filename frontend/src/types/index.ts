@@ -91,6 +91,7 @@ export interface MeetingBlock {
   kind?: MeetingKind;
   startTime: string;
   endTime: string;
+  location?: string | null;
 }
 
 export interface Course {

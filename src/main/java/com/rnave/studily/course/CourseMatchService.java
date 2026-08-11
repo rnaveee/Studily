@@ -95,6 +95,7 @@ public class CourseMatchService {
             copy.setKind(block.getKind());
             copy.setStartTime(block.getStartTime());
             copy.setEndTime(block.getEndTime());
+            copy.setLocation(block.getLocation());
             course.getMeetingBlocks().add(copy);
         }
         for (AcademicItem item : source.getItems()) {

@@ -18,7 +18,7 @@ import {
   type Note,
   type PublicUser,
 } from "../../types";
-import { formatDate, formatDateTime, hhmm } from "../../lib/format";
+import { courseLocations, formatDate, formatDateTime, hhmm } from "../../lib/format";
 import {
   courseGrade,
   formatPercent,
@@ -147,14 +147,11 @@ export default function CourseDetailPage() {
             </div>
           </div>
 
-          {(course.professor || course.location) && (
-            <p className="mt-2 text-[13px] text-fg-2">
-              {[course.professor, course.location].filter(Boolean).join(" · ")}
-            </p>
-          )}
+          {course.professor && <p className="mt-2 text-[13px] text-fg-2">{course.professor}</p>}
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
             {MEETING_KINDS.map((kind) => {
               const blocks = course.meetingBlocks.filter((b) => (b.kind ?? "LECTURE") === kind);
+              const [kindLocation] = courseLocations(blocks, course.location);
               return (
                 <div key={kind}>
                   <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-3">
@@ -165,13 +162,18 @@ export default function CourseDetailPage() {
                       No {MEETING_KIND_PLURAL[kind].toLowerCase()}
                     </p>
                   ) : (
-                    <ul className="mt-1 space-y-0.5">
-                      {blocks.map((b, i) => (
-                        <li key={i} className="text-[12px] text-fg-2">
-                          {b.dayOfWeek} {hhmm(b.startTime)}–{hhmm(b.endTime)}
-                        </li>
-                      ))}
-                    </ul>
+                    <>
+                      <ul className="mt-1 space-y-0.5">
+                        {blocks.map((b, i) => (
+                          <li key={i} className="text-[12px] text-fg-2">
+                            {b.dayOfWeek} {hhmm(b.startTime)}–{hhmm(b.endTime)}
+                          </li>
+                        ))}
+                      </ul>
+                      {kindLocation && (
+                        <p className="mt-0.5 text-[12px] text-fg-3">{kindLocation}</p>
+                      )}
+                    </>
                   )}
                 </div>
               );

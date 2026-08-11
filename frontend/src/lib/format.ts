@@ -1,5 +1,17 @@
+import type { MeetingBlock } from "../types";
+
 export function hhmm(time: string): string {
   return time.slice(0, 5);
+}
+
+export function courseLocations(blocks: MeetingBlock[], fallback?: string | null): string[] {
+  const seen = new Set<string>();
+  for (const b of blocks) {
+    const loc = (b.location ?? "").trim();
+    if (loc) seen.add(loc);
+  }
+  if (seen.size === 0 && fallback?.trim()) seen.add(fallback.trim());
+  return [...seen];
 }
 
 export function formatDateTime(iso: string): string {
