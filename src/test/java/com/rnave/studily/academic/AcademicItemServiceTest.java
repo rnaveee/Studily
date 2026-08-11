@@ -6,6 +6,8 @@ import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.course.Course;
 import com.rnave.studily.course.CourseService;
+import com.rnave.studily.recurrence.RecurrenceService;
+import com.rnave.studily.recurrence.SeriesScope;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +28,7 @@ class AcademicItemServiceTest {
     private AcademicItemRepository itemRepository;
     private CourseService courseService;
     private CurrentUser currentUser;
+    private RecurrenceService recurrenceService;
     private AcademicItemService itemService;
 
     private Course course;
@@ -35,11 +38,12 @@ class AcademicItemServiceTest {
         itemRepository = mock(AcademicItemRepository.class);
         courseService = mock(CourseService.class);
         currentUser = mock(CurrentUser.class);
-        itemService = new AcademicItemService(itemRepository, courseService, currentUser);
+        recurrenceService = new RecurrenceService("America/Toronto");
+        itemService = new AcademicItemService(itemRepository, courseService, recurrenceService, currentUser);
 
         course = new Course();
         course.setId(5L);
-        course.setName("CMPT 225");
+        course.setName("Calculus I");
         course.setColor("blue");
     }
 
@@ -66,13 +70,13 @@ class AcademicItemServiceTest {
         when(itemRepository.save(any(AcademicItem.class))).thenAnswer(inv -> inv.getArgument(0));
 
         AcademicItemRequest req = new AcademicItemRequest(
-                ItemType.ASSIGNMENT, "Homework 1", Instant.parse("2026-08-01T00:00:00Z"), null, 10.0, null, null, null);
+                ItemType.ASSIGNMENT, "Homework 1", Instant.parse("2026-08-01T00:00:00Z"), null, 10.0, null, null, null, null);
 
         AcademicItemDto dto = itemService.create(5L, req);
 
         assertThat(dto.status()).isEqualTo(ItemStatus.TODO);
         assertThat(dto.courseId()).isEqualTo(5L);
-        assertThat(dto.courseName()).isEqualTo("CMPT 225");
+        assertThat(dto.courseName()).isEqualTo("Calculus I");
     }
 
     @Test
@@ -81,7 +85,7 @@ class AcademicItemServiceTest {
         when(itemRepository.save(any(AcademicItem.class))).thenAnswer(inv -> inv.getArgument(0));
 
         AcademicItemRequest req = new AcademicItemRequest(
-                ItemType.EXAM, "Midterm", Instant.now(), "   ", null, null, null, ItemStatus.TODO);
+                ItemType.EXAM, "Midterm", Instant.now(), "   ", null, null, null, ItemStatus.TODO, null);
 
         AcademicItemDto dto = itemService.create(5L, req);
 
@@ -94,9 +98,9 @@ class AcademicItemServiceTest {
         when(itemRepository.findByIdAndCourseUserId(99L, 1L)).thenReturn(Optional.empty());
 
         AcademicItemRequest req = new AcademicItemRequest(
-                ItemType.ASSIGNMENT, "Title", Instant.now(), null, null, null, null, null);
+                ItemType.ASSIGNMENT, "Title", Instant.now(), null, null, null, null, null, null);
 
-        assertThatThrownBy(() -> itemService.update(99L, req)).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> itemService.update(99L, SeriesScope.OCCURRENCE, req)).isInstanceOf(NotFoundException.class);
     }
 
     @Test
@@ -104,7 +108,7 @@ class AcademicItemServiceTest {
         when(currentUser.id()).thenReturn(1L);
         when(itemRepository.findByIdAndCourseUserId(99L, 1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> itemService.delete(99L)).isInstanceOf(NotFoundException.class);
-        verify(itemRepository, never()).delete(any());
+        assertThatThrownBy(() -> itemService.delete(99L, SeriesScope.OCCURRENCE)).isInstanceOf(NotFoundException.class);
+        verify(itemRepository, never()).deleteAll(any());
     }
 }

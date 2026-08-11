@@ -2,16 +2,18 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Pencil, Trash2, X } from "lucide-react";
+import { Pencil, Repeat, Trash2, X } from "lucide-react";
 import { api } from "../../lib/api";
 import { formatDateTime } from "../../lib/format";
 import { useConfirm } from "../../lib/confirm";
+import { describeRule } from "../../lib/recurrence";
 import type {
   AcademicItem,
   AcademicItemRequest,
   CalendarEvent,
   CalendarEventRequest,
   ItemType,
+  SeriesScope,
 } from "../../types";
 import CategorySelect from "./CategorySelect";
 
@@ -39,7 +41,11 @@ export default function CalendarEntryModal({
   const [weight, setWeight] = useState(item?.weight != null ? String(item.weight) : "");
   const [place, setPlace] = useState(event?.place ?? "");
   const [categoryId, setCategoryId] = useState<number | null>(event?.categoryId ?? null);
+  const [scope, setScope] = useState<SeriesScope>("OCCURRENCE");
   const [error, setError] = useState<string | null>(null);
+
+  const seriesId = item?.seriesId ?? event?.seriesId ?? null;
+  const seriesLabel = describeRule(item?.recurrenceRule ?? event?.recurrenceRule);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -57,7 +63,8 @@ export default function CalendarEntryModal({
   }
 
   const saveItem = useMutation({
-    mutationFn: (req: AcademicItemRequest) => api.put<AcademicItem>(`/items/${item!.id}`, req),
+    mutationFn: (req: AcademicItemRequest) =>
+      api.put<AcademicItem>(`/items/${item!.id}?scope=${scope}`, req),
     onSuccess: () => {
       invalidate();
       onClose();
@@ -66,7 +73,8 @@ export default function CalendarEntryModal({
   });
 
   const saveEvent = useMutation({
-    mutationFn: (req: CalendarEventRequest) => api.put<CalendarEvent>(`/calendar/events/${event!.id}`, req),
+    mutationFn: (req: CalendarEventRequest) =>
+      api.put<CalendarEvent>(`/calendar/events/${event!.id}?scope=${scope}`, req),
     onSuccess: () => {
       invalidate();
       onClose();
@@ -75,7 +83,7 @@ export default function CalendarEntryModal({
   });
 
   const deleteEvent = useMutation({
-    mutationFn: () => api.del(`/calendar/events/${event!.id}`),
+    mutationFn: () => api.del(`/calendar/events/${event!.id}?scope=${scope}`),
     onSuccess: () => {
       invalidate();
       onClose();
@@ -83,7 +91,17 @@ export default function CalendarEntryModal({
     onError: (err) => setError(err instanceof Error ? err.message : "Failed"),
   });
 
-  const busy = saveItem.isPending || saveEvent.isPending || deleteEvent.isPending;
+  const deleteItem = useMutation({
+    mutationFn: () => api.del(`/items/${item!.id}?scope=${scope}`),
+    onSuccess: () => {
+      invalidate();
+      onClose();
+    },
+    onError: (err) => setError(err instanceof Error ? err.message : "Failed"),
+  });
+
+  const busy = saveItem.isPending || saveEvent.isPending
+    || deleteEvent.isPending || deleteItem.isPending;
   const color = event
     ? (event.categoryColor ?? "var(--accent)")
     : item?.type === "EXAM"
@@ -96,13 +114,19 @@ export default function CalendarEntryModal({
       : "Assignment";
 
   async function handleDelete() {
+    const name = event?.title ?? item!.title;
+    const all = seriesId != null && scope === "SERIES";
     const ok = await confirm({
-      title: "Delete event?",
-      message: `"${event!.title}" will be removed from your calendar.`,
+      title: all ? "Delete every occurrence?" : `Delete ${event ? "event" : "item"}?`,
+      message: all
+        ? `Every occurrence of "${name}" will be removed.`
+        : `"${name}" will be removed from your calendar.`,
       confirmLabel: "Delete",
       danger: true,
     });
-    if (ok) deleteEvent.mutate();
+    if (!ok) return;
+    if (event) deleteEvent.mutate();
+    else deleteItem.mutate();
   }
 
   function submit(e: React.FormEvent) {
@@ -215,10 +239,12 @@ export default function CalendarEntryModal({
               )}
             </div>
 
+            {seriesId && <ScopeChoice label={seriesLabel} scope={scope} onChange={setScope} />}
+
             {error && <p className="text-xs text-red animate-fade">{error}</p>}
 
             <div className="flex items-center justify-end gap-2">
-              {event && (
+              {(event || item) && (
                 <button
                   type="button"
                   onClick={handleDelete}
@@ -303,6 +329,8 @@ export default function CalendarEntryModal({
               )}
             </div>
 
+            {seriesId && <ScopeChoice label={seriesLabel} scope={scope} onChange={setScope} />}
+
             {error && <p className="text-xs text-red animate-fade">{error}</p>}
 
             <div className="flex justify-end gap-2">
@@ -318,5 +346,45 @@ export default function CalendarEntryModal({
       </div>
     </div>,
     document.body,
+  );
+}
+
+function ScopeChoice({
+  label,
+  scope,
+  onChange,
+}: {
+  label: string | null;
+  scope: SeriesScope;
+  onChange: (scope: SeriesScope) => void;
+}) {
+  return (
+    <div
+      className="rounded-lg px-3 py-2.5"
+      style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)" }}
+    >
+      <div className="flex items-center gap-1.5 text-[12px] font-medium text-accent">
+        <Repeat size={12} strokeWidth={2} />
+        {label ?? "Part of a repeating series"}
+      </div>
+      <div className="mt-2 flex flex-col gap-1 text-[13px] text-fg-2">
+        <label className="flex items-center gap-2">
+          <input
+            type="radio"
+            checked={scope === "OCCURRENCE"}
+            onChange={() => onChange("OCCURRENCE")}
+          />
+          This occurrence only
+        </label>
+        <label className="flex items-center gap-2">
+          <input
+            type="radio"
+            checked={scope === "SERIES"}
+            onChange={() => onChange("SERIES")}
+          />
+          All occurrences
+        </label>
+      </div>
+    </div>
   );
 }

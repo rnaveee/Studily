@@ -6,6 +6,8 @@ import com.rnave.studily.calendar.CalendarEventDtos.CalendarEventDto;
 import com.rnave.studily.calendar.CalendarEventDtos.CalendarEventRequest;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
+import com.rnave.studily.recurrence.RecurrenceService;
+import com.rnave.studily.recurrence.SeriesScope;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -31,13 +34,16 @@ public class CalendarController {
     private final AcademicItemRepository itemRepository;
     private final CalendarEventRepository eventRepository;
     private final EventCategoryRepository categoryRepository;
+    private final RecurrenceService recurrenceService;
     private final CurrentUser currentUser;
 
     public CalendarController(AcademicItemRepository itemRepository, CalendarEventRepository eventRepository,
-                              EventCategoryRepository categoryRepository, CurrentUser currentUser) {
+                              EventCategoryRepository categoryRepository, RecurrenceService recurrenceService,
+                              CurrentUser currentUser) {
         this.itemRepository = itemRepository;
         this.eventRepository = eventRepository;
         this.categoryRepository = categoryRepository;
+        this.recurrenceService = recurrenceService;
         this.currentUser = currentUser;
     }
 
@@ -72,25 +78,58 @@ public class CalendarController {
     @ResponseStatus(HttpStatus.CREATED)
     @Transactional
     public CalendarEventDto createEvent(@Valid @RequestBody CalendarEventRequest req) {
+        EventCategory category = resolveCategory(req.categoryId());
+        if (req.recurrence() == null) {
+            return CalendarEventDto.from(eventRepository.save(newEvent(req, category, req.startAt(), null, null)));
+        }
+
+        RecurrenceService.Expansion expansion = recurrenceService.expand(req.startAt(), req.recurrence());
+        List<CalendarEvent> events = new ArrayList<>(expansion.starts().size());
+        for (Instant at : expansion.starts()) {
+            events.add(newEvent(req, category, at, expansion.seriesId(), expansion.rule()));
+        }
+        return CalendarEventDto.from(eventRepository.saveAll(events).getFirst());
+    }
+
+    private CalendarEvent newEvent(CalendarEventRequest req, EventCategory category, Instant startAt,
+                                   java.util.UUID seriesId, String rule) {
         CalendarEvent event = new CalendarEvent();
         event.setUser(currentUser.entity());
         event.setTitle(req.title().trim());
         event.setPlace(req.place() != null && !req.place().isBlank() ? req.place().trim() : null);
-        event.setCategory(resolveCategory(req.categoryId()));
-        event.setStartAt(req.startAt());
-        return CalendarEventDto.from(eventRepository.save(event));
+        event.setCategory(category);
+        event.setStartAt(startAt);
+        event.setSeriesId(seriesId);
+        event.setRecurrenceRule(rule);
+        return event;
     }
 
     @PutMapping("/events/{id}")
     @Transactional
-    public CalendarEventDto updateEvent(@PathVariable Long id, @Valid @RequestBody CalendarEventRequest req) {
+    public CalendarEventDto updateEvent(@PathVariable Long id,
+                                        @RequestParam(defaultValue = "OCCURRENCE") SeriesScope scope,
+                                        @Valid @RequestBody CalendarEventRequest req) {
         CalendarEvent event = eventRepository.findByIdAndUserId(id, currentUser.id())
                 .orElseThrow(() -> new NotFoundException("Event not found"));
-        event.setTitle(req.title().trim());
-        event.setPlace(req.place() != null && !req.place().isBlank() ? req.place().trim() : null);
-        event.setCategory(resolveCategory(req.categoryId()));
-        event.setStartAt(req.startAt());
-        return CalendarEventDto.from(eventRepository.save(event));
+        EventCategory category = resolveCategory(req.categoryId());
+
+        for (CalendarEvent target : scopeOf(event, scope)) {
+            target.setTitle(req.title().trim());
+            target.setPlace(req.place() != null && !req.place().isBlank() ? req.place().trim() : null);
+            target.setCategory(category);
+            target.setStartAt(target == event
+                    ? req.startAt()
+                    : recurrenceService.withTimeOfDay(target.getStartAt(), req.startAt()));
+            eventRepository.save(target);
+        }
+        return CalendarEventDto.from(event);
+    }
+
+    private List<CalendarEvent> scopeOf(CalendarEvent event, SeriesScope scope) {
+        if (scope != SeriesScope.SERIES || event.getSeriesId() == null) {
+            return List.of(event);
+        }
+        return eventRepository.findByUserIdAndSeriesId(currentUser.id(), event.getSeriesId());
     }
 
     private EventCategory resolveCategory(Long categoryId) {
@@ -104,9 +143,10 @@ public class CalendarController {
     @DeleteMapping("/events/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Transactional
-    public void deleteEvent(@PathVariable Long id) {
+    public void deleteEvent(@PathVariable Long id,
+                            @RequestParam(defaultValue = "OCCURRENCE") SeriesScope scope) {
         CalendarEvent event = eventRepository.findByIdAndUserId(id, currentUser.id())
                 .orElseThrow(() -> new NotFoundException("Event not found"));
-        eventRepository.delete(event);
+        eventRepository.deleteAll(scopeOf(event, scope));
     }
 }

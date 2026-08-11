@@ -1,13 +1,11 @@
 package com.rnave.studily.ics;
 
-import java.time.DayOfWeek;
+import com.rnave.studily.recurrence.Recurrence;
+
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -18,8 +16,6 @@ import java.util.Set;
 
 public final class IcsParser {
 
-    private static final DateTimeFormatter DATE_TIME = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss");
-    private static final DateTimeFormatter DATE = DateTimeFormatter.BASIC_ISO_DATE;
     private static final Duration PAST_WINDOW = Duration.ofDays(180);
     private static final Duration FUTURE_WINDOW = Duration.ofDays(400);
     private static final int MAX_OCCURRENCES_PER_EVENT = 400;
@@ -138,113 +134,13 @@ public final class IcsParser {
     }
 
     private static List<Instant> expand(ZonedDateTime start, String rule, Set<Instant> exdates, int cap) {
-        Map<String, String> parts = new HashMap<>();
-        for (String piece : rule.split(";")) {
-            int eq = piece.indexOf('=');
-            if (eq > 0) {
-                parts.put(piece.substring(0, eq).trim().toUpperCase(Locale.ROOT), piece.substring(eq + 1).trim());
-            }
-        }
-
-        String freq = parts.getOrDefault("FREQ", "").toUpperCase(Locale.ROOT);
-        if (!List.of("DAILY", "WEEKLY", "MONTHLY", "YEARLY").contains(freq)) {
+        Recurrence.Rule parsed = Recurrence.parse(rule, start.getZone());
+        if (parsed == null) {
             return List.of(start.toInstant());
         }
-
-        int interval = Math.max(1, parseIntOr(parts.get("INTERVAL"), 1));
-        int count = parseIntOr(parts.get("COUNT"), 0);
-        Instant until = null;
-        if (parts.containsKey("UNTIL")) {
-            ZonedDateTime parsed = toZoned(parts.get("UNTIL"), start.getZone());
-            until = parsed == null ? null : parsed.toInstant();
-        }
-
-        Set<DayOfWeek> byDay = new HashSet<>();
-        if (parts.containsKey("BYDAY") && freq.equals("WEEKLY")) {
-            for (String day : parts.get("BYDAY").split(",")) {
-                DayOfWeek dow = dayOfWeek(day.trim());
-                if (dow != null) {
-                    byDay.add(dow);
-                }
-            }
-        }
-        if (byDay.isEmpty()) {
-            byDay.add(start.getDayOfWeek());
-        }
-
         Instant now = Instant.now();
-        Instant windowStart = now.minus(PAST_WINDOW);
-        Instant windowEnd = now.plus(FUTURE_WINDOW);
-        if (until != null && until.isBefore(windowEnd)) {
-            windowEnd = until;
-        }
-
-        List<Instant> out = new ArrayList<>();
-        LocalDate startDate = start.toLocalDate();
-        LocalDate cursor = startDate;
-        int produced = 0;
-
-        while (out.size() < cap && produced < MAX_OCCURRENCES_PER_EVENT * 4) {
-            ZonedDateTime candidate = ZonedDateTime.of(cursor, start.toLocalTime(), start.getZone());
-            Instant at = candidate.toInstant();
-            if (at.isAfter(windowEnd)) {
-                break;
-            }
-            if (matches(freq, interval, byDay, startDate, cursor)) {
-                produced++;
-                if (count > 0 && produced > count) {
-                    break;
-                }
-                if (!exdates.contains(at) && !at.isBefore(windowStart)) {
-                    out.add(at);
-                }
-            }
-            cursor = cursor.plusDays(1);
-        }
-        return out;
-    }
-
-    private static boolean matches(String freq, int interval, Set<DayOfWeek> byDay,
-                                   LocalDate start, LocalDate date) {
-        return switch (freq) {
-            case "DAILY" -> daysBetween(start, date) % interval == 0;
-            case "WEEKLY" -> byDay.contains(date.getDayOfWeek())
-                    && (weeksBetween(start, date) % interval == 0);
-            case "MONTHLY" -> date.getDayOfMonth() == start.getDayOfMonth()
-                    && (monthsBetween(start, date) % interval == 0);
-            case "YEARLY" -> date.getDayOfMonth() == start.getDayOfMonth()
-                    && date.getMonth() == start.getMonth()
-                    && ((date.getYear() - start.getYear()) % interval == 0);
-            default -> false;
-        };
-    }
-
-    private static long daysBetween(LocalDate a, LocalDate b) {
-        return b.toEpochDay() - a.toEpochDay();
-    }
-
-    private static long weeksBetween(LocalDate a, LocalDate b) {
-        LocalDate weekA = a.minusDays(a.getDayOfWeek().getValue() % 7);
-        LocalDate weekB = b.minusDays(b.getDayOfWeek().getValue() % 7);
-        return daysBetween(weekA, weekB) / 7;
-    }
-
-    private static long monthsBetween(LocalDate a, LocalDate b) {
-        return (b.getYear() - a.getYear()) * 12L + (b.getMonthValue() - a.getMonthValue());
-    }
-
-    private static DayOfWeek dayOfWeek(String token) {
-        String code = token.length() > 2 ? token.substring(token.length() - 2) : token;
-        return switch (code.toUpperCase(Locale.ROOT)) {
-            case "MO" -> DayOfWeek.MONDAY;
-            case "TU" -> DayOfWeek.TUESDAY;
-            case "WE" -> DayOfWeek.WEDNESDAY;
-            case "TH" -> DayOfWeek.THURSDAY;
-            case "FR" -> DayOfWeek.FRIDAY;
-            case "SA" -> DayOfWeek.SATURDAY;
-            case "SU" -> DayOfWeek.SUNDAY;
-            default -> null;
-        };
+        return Recurrence.expand(start, parsed, exdates,
+                now.minus(PAST_WINDOW), now.plus(FUTURE_WINDOW), cap);
     }
 
     private static ZoneId zoneOf(Prop prop, ZoneId fallback) {
@@ -260,26 +156,7 @@ public final class IcsParser {
     }
 
     private static ZonedDateTime toZoned(String value, ZoneId zone) {
-        try {
-            String raw = value.trim();
-            if (raw.endsWith("Z")) {
-                return LocalDateTime.parse(raw.substring(0, raw.length() - 1), DATE_TIME).atZone(ZoneId.of("UTC"));
-            }
-            if (raw.length() == 8) {
-                return LocalDate.parse(raw, DATE).atStartOfDay(zone);
-            }
-            return LocalDateTime.parse(raw, DATE_TIME).atZone(zone);
-        } catch (RuntimeException e) {
-            return null;
-        }
-    }
-
-    private static int parseIntOr(String value, int fallback) {
-        try {
-            return value == null ? fallback : Integer.parseInt(value.trim());
-        } catch (NumberFormatException e) {
-            return fallback;
-        }
+        return Recurrence.parseIcsDateTime(value, zone);
     }
 
     private static List<String> unfold(String text) {

@@ -18,10 +18,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class CourseMatchService {
@@ -98,6 +100,7 @@ public class CourseMatchService {
             copy.setLocation(block.getLocation());
             course.getMeetingBlocks().add(copy);
         }
+        Map<UUID, UUID> seriesRemap = new HashMap<>();
         for (AcademicItem item : source.getItems()) {
             AcademicItem copy = new AcademicItem();
             copy.setCourse(course);
@@ -107,6 +110,10 @@ public class CourseMatchService {
             copy.setLocation(item.getLocation());
             copy.setWeight(item.getWeight());
             copy.setStatus(ItemStatus.TODO);
+            if (item.getSeriesId() != null) {
+                copy.setSeriesId(seriesRemap.computeIfAbsent(item.getSeriesId(), k -> UUID.randomUUID()));
+                copy.setRecurrenceRule(item.getRecurrenceRule());
+            }
             course.getItems().add(copy);
         }
         return CourseDto.from(courseRepository.save(course));

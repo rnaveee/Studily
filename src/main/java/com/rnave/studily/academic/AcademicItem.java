@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "academic_items")
@@ -49,4 +50,10 @@ public class AcademicItem {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ItemStatus status = ItemStatus.TODO;
+
+    @Column(name = "series_id")
+    private UUID seriesId;
+
+    @Column(name = "recurrence_rule")
+    private String recurrenceRule;
 }

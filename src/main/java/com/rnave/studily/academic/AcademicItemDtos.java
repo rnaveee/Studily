@@ -1,5 +1,7 @@
 package com.rnave.studily.academic;
 
+import com.rnave.studily.recurrence.RecurrenceDto;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -8,6 +10,7 @@ import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
+import java.util.UUID;
 
 public class AcademicItemDtos {
 
@@ -23,7 +26,9 @@ public class AcademicItemDtos {
             Double weight,
             Double score,
             Double maxScore,
-            ItemStatus status) {
+            ItemStatus status,
+            UUID seriesId,
+            String recurrenceRule) {
 
         public static AcademicItemDto from(AcademicItem i) {
             return new AcademicItemDto(
@@ -38,7 +43,9 @@ public class AcademicItemDtos {
                     i.getWeight(),
                     i.getScore(),
                     i.getMaxScore(),
-                    i.getStatus());
+                    i.getStatus(),
+                    i.getSeriesId(),
+                    i.getRecurrenceRule());
         }
     }
 
@@ -50,6 +57,7 @@ public class AcademicItemDtos {
             @PositiveOrZero @Max(1000) Double weight,
             @PositiveOrZero @Max(1_000_000) Double score,
             @Positive @Max(1_000_000) Double maxScore,
-            ItemStatus status) {
+            ItemStatus status,
+            @Valid RecurrenceDto recurrence) {
     }
 }

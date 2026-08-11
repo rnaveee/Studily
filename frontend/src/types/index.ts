@@ -49,6 +49,18 @@ export interface SemesterRequest {
 export type DayOfWeek = "SUN" | "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT";
 export const DAYS: DayOfWeek[] = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
+export type SeriesScope = "OCCURRENCE" | "SERIES";
+
+export type RecurrenceFreq = "DAILY" | "WEEKLY" | "MONTHLY";
+
+export interface Recurrence {
+  freq: RecurrenceFreq;
+  interval: number;
+  byDay?: DayOfWeek[];
+  until?: string;
+  count?: number;
+}
+
 export type ItemType = "EXAM" | "ASSIGNMENT";
 export type ItemStatus = "TODO" | "IN_PROGRESS" | "DONE";
 
@@ -116,6 +128,8 @@ export interface CourseRequest {
 }
 
 export interface AcademicItem {
+  seriesId?: string | null;
+  recurrenceRule?: string | null;
   id: number;
   courseId: number;
   courseName: string;
@@ -139,6 +153,7 @@ export interface AcademicItemRequest {
   score?: number | null;
   maxScore?: number | null;
   status: ItemStatus;
+  recurrence?: Recurrence | null;
 }
 
 export interface CourseMatchItem {
@@ -173,6 +188,8 @@ export interface EventCategoryRequest {
 }
 
 export interface CalendarEvent {
+  seriesId?: string | null;
+  recurrenceRule?: string | null;
   id: number;
   title: string;
   place?: string | null;
@@ -187,6 +204,7 @@ export interface CalendarEventRequest {
   place?: string | null;
   categoryId?: number | null;
   startAt: string;
+  recurrence?: Recurrence | null;
 }
 
 export interface Note {

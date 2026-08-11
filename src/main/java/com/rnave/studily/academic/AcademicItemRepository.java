@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 import java.util.Optional;
 
 public interface AcademicItemRepository extends JpaRepository<AcademicItem, Long> {
@@ -29,4 +30,6 @@ public interface AcademicItemRepository extends JpaRepository<AcademicItem, Long
 
     Optional<AcademicItem> findFirstByCourseUserIdAndCourseSemesterIdAndTypeAndDueAtAfterOrderByDueAtAsc(
             Long userId, Long semesterId, ItemType type, Instant after);
+
+    List<AcademicItem> findByCourseUserIdAndSeriesId(Long userId, UUID seriesId);
 }

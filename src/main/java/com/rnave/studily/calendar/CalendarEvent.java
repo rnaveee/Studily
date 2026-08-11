@@ -14,6 +14,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "calendar_events")
@@ -43,4 +44,10 @@ public class CalendarEvent {
 
     @Column(name = "external_uid")
     private String externalUid;
+
+    @Column(name = "series_id")
+    private UUID seriesId;
+
+    @Column(name = "recurrence_rule")
+    private String recurrenceRule;
 }

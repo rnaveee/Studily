@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import type { AcademicItemRequest, ItemType } from "../types";
+import type { AcademicItemRequest, ItemType, Recurrence } from "../types";
+import RepeatPicker from "../features/calendar/RepeatPicker";
 
 interface Props {
   submitLabel?: string;
@@ -29,6 +30,7 @@ export default function ItemForm({
   const [selectedCourseId, setSelectedCourseId] = useState<number | "">(
     lockedCourseId ?? (courses[0]?.id ?? "")
   );
+  const [repeat, setRepeat] = useState<Recurrence | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +48,7 @@ export default function ItemForm({
         dueAt: new Date(dueLocal).toISOString(),
         weight: weight ? Number(weight) : undefined,
         status: "TODO",
+        recurrence: repeat,
       });
       setTitle("");
       setWeight("");
@@ -119,6 +122,8 @@ export default function ItemForm({
           />
         </div>
       </div>
+
+      <RepeatPicker startLocal={dueLocal} weight={weight} onChange={setRepeat} />
 
       {error && <p className="text-xs text-red animate-fade">{error}</p>}
 

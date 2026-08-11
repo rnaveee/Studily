@@ -12,8 +12,10 @@ import type {
   CalendarEventRequest,
   Course,
   ItemType,
+  Recurrence,
 } from "../../types";
 import CategorySelect from "./CategorySelect";
+import RepeatPicker from "./RepeatPicker";
 import type { Entry } from "./entries";
 
 type Kind = ItemType | "EVENT";
@@ -37,6 +39,7 @@ export default function DayModal({
   const [place, setPlace] = useState("");
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [courseId, setCourseId] = useState<number | "">("");
+  const [repeat, setRepeat] = useState<Recurrence | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -94,12 +97,14 @@ export default function DayModal({
       return;
     }
     if (isEvent) {
+      const dates = repeat ? whens.slice(0, 1) : whens;
       createEvent.mutate(
-        whens.map((w) => ({
+        dates.map((w) => ({
           title: title.trim(),
           place: place.trim() || null,
           categoryId,
           startAt: new Date(w).toISOString(),
+          recurrence: repeat,
         })),
       );
       return;
@@ -110,12 +115,13 @@ export default function DayModal({
     }
     createItem.mutate({
       cid: courseId,
-      reqs: whens.map((w) => ({
+      reqs: (repeat ? whens.slice(0, 1) : whens).map((w) => ({
         type: kind,
         title: title.trim(),
         dueAt: new Date(w).toISOString(),
         weight: weight ? Number(weight) : undefined,
         status: "TODO",
+        recurrence: repeat,
       })),
     });
   }
@@ -256,7 +262,7 @@ export default function DayModal({
                 <div className="min-w-0 flex-1">
                   <label className="field-label">{isEvent ? "Date & time" : "Due date & time"}</label>
                   <div className="space-y-2">
-                    {whens.map((w, i) => (
+                    {(repeat ? whens.slice(0, 1) : whens).map((w, i) => (
                       <div key={i} className="flex items-center gap-2">
                         <input
                           className="input"
@@ -280,14 +286,16 @@ export default function DayModal({
                       </div>
                     ))}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setWhens([...whens, `${date}T23:59`])}
-                    className="mt-2 flex items-center gap-1 text-[12px] font-medium text-accent transition-colors hover:text-accent-2"
-                  >
-                    <Plus size={12} strokeWidth={2.5} />
-                    Add another date
-                  </button>
+                  {!repeat && (
+                    <button
+                      type="button"
+                      onClick={() => setWhens([...whens, `${date}T23:59`])}
+                      className="mt-2 flex items-center gap-1 text-[12px] font-medium text-accent transition-colors hover:text-accent-2"
+                    >
+                      <Plus size={12} strokeWidth={2.5} />
+                      Add another date
+                    </button>
+                  )}
                 </div>
                 {!isEvent && (
                   <div className="w-[4.5rem] shrink-0">
@@ -303,6 +311,12 @@ export default function DayModal({
                   </div>
                 )}
               </div>
+
+              <RepeatPicker
+                startLocal={whens[0]}
+                weight={isEvent ? undefined : weight}
+                onChange={setRepeat}
+              />
 
               {error && <p className="text-xs text-red animate-fade">{error}</p>}
 
