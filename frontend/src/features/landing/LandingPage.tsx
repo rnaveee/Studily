@@ -142,9 +142,9 @@ export default function LandingPage() {
               Right now it's spread across four apps.
             </h2>
             <p className="mt-3 text-[15px] leading-relaxed text-fg-2">
-              Not one of them knows what the others hold. Studily is Notion's structure, Google
-              Calendar's reminders, and a group chat, pre-built and pointed at the same set of
-              courses.
+              Not one of them knows what the others hold, so you end up being the glue. Studily
+              gives you the structure, the reminders and the group chat in one place, already set
+              up for a semester and pointed at the same set of courses.
             </p>
           </div>
 
@@ -227,9 +227,10 @@ export default function LandingPage() {
             <h2 className="text-[15px] font-semibold text-fg">Why I built this</h2>
             <div className="mt-3 space-y-3 text-[13px] leading-relaxed text-fg-2">
               <p>
-                I used to run my semesters out of Notion and Google Calendar. Manually re-entering
-                my classes, switching between apps, building my own dashboard every term. It was
-                messy enough that I stopped bothering to stay organised at all.
+                I used to run my semesters out of a general-purpose notes app and a shared
+                calendar. Manually re-entering my classes, switching between apps, building my own
+                dashboard every term. It was messy enough that I stopped bothering to stay
+                organised at all.
               </p>
               <p>
                 So I built the thing I wanted instead: everything a student actually juggles,

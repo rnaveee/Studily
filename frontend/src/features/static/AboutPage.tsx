@@ -62,8 +62,8 @@ export default function AboutPage() {
             </p>
             <p className="text-[15px] font-semibold text-fg">Why I made Studily</p>
             <p>
-              Have you ever used Notion? or Google Calendar? I used to use them to manage my school,
-              and it was kind of messy... (no hate to those apps!)
+              I used to run my school life out of a general-purpose notes app and a shared calendar,
+              and it was kind of messy.
             </p>
             <p>Manually inputting classes, switching between those apps, creating my OWN dashboard, I was very
               demotivated to organize my classes because of those things. So as a student and app developer, I
