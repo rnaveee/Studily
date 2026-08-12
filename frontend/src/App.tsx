@@ -16,6 +16,7 @@ import VerifyEmailPage from "./features/auth/VerifyEmailPage";
 import VerifyGate from "./components/VerifyGate";
 import HomeRoute from "./features/landing/HomeRoute";
 import OnboardingPage from "./features/onboarding/OnboardingPage";
+import ProfileSetupPage from "./features/onboarding/ProfileSetupPage";
 import DashboardPage from "./features/dashboard/DashboardPage";
 import CalendarPage from "./features/calendar/CalendarPage";
 import CoursesPage from "./features/courses/CoursesPage";
@@ -55,6 +56,7 @@ export default function App() {
       >
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/profile/setup" element={<ProfileSetupPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/:id" element={<CourseDetailPage />} />
