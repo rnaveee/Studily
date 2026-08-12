@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Download, Plus, Users2, X } from "lucide-react";
 import {
@@ -15,7 +15,9 @@ import {
   type Semester,
 } from "../../types";
 import { formatDateTime, hhmm } from "../../lib/format";
+import { addMinutes, toMinutes } from "../../lib/time";
 import { api } from "../../lib/api";
+import TimeSelect from "../../components/TimeSelect";
 
 interface Props {
   initial?: CourseRequest;
@@ -42,21 +44,17 @@ function diceSimilarity(a: string, b: string): number {
   return (2 * shared) / (ta.size + tb.size);
 }
 
-function toMin(time: string): number {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
-}
-
 function blockOverlap(a: MeetingBlock[], b: MeetingBlock[]): number {
   const total = (list: MeetingBlock[]) =>
-    list.reduce((sum, x) => sum + (toMin(x.endTime) - toMin(x.startTime)), 0);
+    list.reduce((sum, x) => sum + (toMinutes(x.endTime) - toMinutes(x.startTime)), 0);
   let overlap = 0;
   for (const x of a) {
     for (const y of b) {
       if (x.dayOfWeek !== y.dayOfWeek) continue;
       overlap += Math.max(
         0,
-        Math.min(toMin(x.endTime), toMin(y.endTime)) - Math.max(toMin(x.startTime), toMin(y.startTime)),
+        Math.min(toMinutes(x.endTime), toMinutes(y.endTime)) -
+          Math.max(toMinutes(x.startTime), toMinutes(y.startTime)),
       );
     }
   }
@@ -78,6 +76,69 @@ function matchSimilarity(
   return parts.reduce((sum, p) => sum + p, 0) / parts.length;
 }
 
+interface TimeRow {
+  id: string;
+  kind: MeetingKind;
+  days: DayOfWeek[];
+  startTime: string;
+  endTime: string;
+}
+
+const DAY_LABEL: Record<DayOfWeek, string> = {
+  SUN: "Su",
+  MON: "M",
+  TUE: "Tu",
+  WED: "W",
+  THU: "Th",
+  FRI: "F",
+  SAT: "Sa",
+};
+
+const DEFAULT_START = "09:00";
+const DEFAULT_DURATION = 50;
+
+let rowSeq = 0;
+function nextRowId(): string {
+  rowSeq += 1;
+  return `row-${rowSeq}`;
+}
+
+function collapseBlocks(blocks: MeetingBlock[]): TimeRow[] {
+  const byKey = new Map<string, TimeRow>();
+  for (const b of blocks) {
+    const kind = b.kind ?? "LECTURE";
+    const start = hhmm(b.startTime);
+    const end = hhmm(b.endTime);
+    const key = `${kind}|${start}|${end}`;
+    const row = byKey.get(key);
+    if (row) {
+      if (!row.days.includes(b.dayOfWeek)) row.days.push(b.dayOfWeek);
+    } else {
+      byKey.set(key, { id: nextRowId(), kind, days: [b.dayOfWeek], startTime: start, endTime: end });
+    }
+  }
+  for (const row of byKey.values()) {
+    row.days.sort((a, b) => DAYS.indexOf(a) - DAYS.indexOf(b));
+  }
+  return [...byKey.values()];
+}
+
+function expandRows(rows: TimeRow[], locations: Record<MeetingKind, string>): MeetingBlock[] {
+  const out: MeetingBlock[] = [];
+  for (const row of rows) {
+    for (const day of row.days) {
+      out.push({
+        dayOfWeek: day,
+        kind: row.kind,
+        startTime: row.startTime,
+        endTime: row.endTime,
+        location: locations[row.kind].trim() || undefined,
+      });
+    }
+  }
+  return out;
+}
+
 function initialLocations(initial?: CourseRequest): Record<MeetingKind, string> {
   const out = {} as Record<MeetingKind, string>;
   for (const kind of MEETING_KINDS) {
@@ -95,8 +156,12 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
   const [code, setCode] = useState(initial?.code ?? "");
   const [professor, setProfessor] = useState(initial?.professor ?? "");
   const [color, setColor] = useState(initial?.color ?? COLORS[0]);
-  const [blocks, setBlocks] = useState<MeetingBlock[]>(initial?.meetingBlocks ?? []);
+  const [rows, setRows] = useState<TimeRow[]>(() => collapseBlocks(initial?.meetingBlocks ?? []));
   const [locations, setLocations] = useState<Record<MeetingKind, string>>(() => initialLocations(initial));
+  const lastTimes = useRef<{ startTime: string; endTime: string }>({
+    startTime: DEFAULT_START,
+    endTime: addMinutes(DEFAULT_START, DEFAULT_DURATION),
+  });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -125,19 +190,59 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
 
   const matchList = !initial && debouncedCode.length >= 3 ? (matches.data ?? []) : [];
 
-  function addBlock(kind: MeetingKind) {
-    setBlocks((b) => [...b, { dayOfWeek: "MON", kind, startTime: "09:00", endTime: "09:50" }]);
+  const blocks = useMemo(() => expandRows(rows, locations), [rows, locations]);
+
+  function addRow(kind: MeetingKind) {
+    setRows((r) => {
+      const sameKind = r.filter((row) => row.kind === kind);
+      const source = sameKind.length > 0 ? sameKind[sameKind.length - 1] : lastTimes.current;
+      return [
+        ...r,
+        { id: nextRowId(), kind, days: [], startTime: source.startTime, endTime: source.endTime },
+      ];
+    });
   }
-  function updateBlock(target: MeetingBlock, patch: Partial<MeetingBlock>) {
-    setBlocks((b) => b.map((blk) => (blk === target ? { ...blk, ...patch } : blk)));
+
+  function patchRow(id: string, patch: Partial<TimeRow>) {
+    setRows((r) => r.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   }
-  function removeBlock(target: MeetingBlock) {
-    setBlocks((b) => b.filter((blk) => blk !== target));
+
+  function removeRow(id: string) {
+    setRows((r) => r.filter((row) => row.id !== id));
+  }
+
+  function toggleDay(row: TimeRow, day: DayOfWeek) {
+    const days = row.days.includes(day)
+      ? row.days.filter((d) => d !== day)
+      : [...row.days, day].sort((a, b) => DAYS.indexOf(a) - DAYS.indexOf(b));
+    patchRow(row.id, { days });
+  }
+
+  function setStart(row: TimeRow, startTime: string) {
+    const duration = Math.max(5, toMinutes(row.endTime) - toMinutes(row.startTime));
+    const endTime = addMinutes(startTime, duration);
+    lastTimes.current = { startTime, endTime };
+    patchRow(row.id, { startTime, endTime });
+  }
+
+  function setEnd(row: TimeRow, endTime: string) {
+    lastTimes.current = { startTime: row.startTime, endTime };
+    patchRow(row.id, { endTime });
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    if (rows.some((r) => r.days.length === 0)) {
+      setError("Pick at least one day for every time.");
+      return;
+    }
+    if (rows.some((r) => toMinutes(r.endTime) <= toMinutes(r.startTime))) {
+      setError("Each time must end after it starts.");
+      return;
+    }
+
     setBusy(true);
     try {
       await onSubmit({
@@ -146,16 +251,7 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
         code: code.trim() || undefined,
         professor: professor.trim() || undefined,
         color,
-        meetingBlocks: blocks.map((b) => {
-          const kind = b.kind ?? "LECTURE";
-          return {
-            dayOfWeek: b.dayOfWeek,
-            kind,
-            startTime: hhmm(b.startTime),
-            endTime: hhmm(b.endTime),
-            location: locations[kind].trim() || undefined,
-          };
-        }),
+        meetingBlocks: expandRows(rows, locations),
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save");
@@ -311,17 +407,17 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
 
       <div className="space-y-4">
         {MEETING_KINDS.map((kind) => {
-          const kindBlocks = blocks.filter((b) => (b.kind ?? "LECTURE") === kind);
+          const kindRows = rows.filter((r) => r.kind === kind);
           return (
             <div key={kind}>
               <div className="mb-2 flex items-center justify-between">
                 <label className="field-label mb-0">{MEETING_KIND_LABEL[kind]} times</label>
-                <button type="button" onClick={() => addBlock(kind)} className="btn btn-soft text-xs">
+                <button type="button" onClick={() => addRow(kind)} className="btn btn-soft text-xs">
                   <Plus size={12} />
                   Add time
                 </button>
               </div>
-              {kindBlocks.length === 0 ? (
+              {kindRows.length === 0 ? (
                 <p className="text-[12px] text-fg-3">No {MEETING_KIND_PLURAL[kind].toLowerCase()}.</p>
               ) : (
                 <div className="space-y-2">
@@ -331,37 +427,58 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
                     value={locations[kind]}
                     onChange={(e) => setLocations((l) => ({ ...l, [kind]: e.target.value }))}
                   />
-                  {kindBlocks.map((b, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <select
-                        className="input w-28"
-                        value={b.dayOfWeek}
-                        onChange={(e) => updateBlock(b, { dayOfWeek: e.target.value as DayOfWeek })}
-                      >
-                        {DAYS.map((d) => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
-                      </select>
-                      <input
-                        type="time"
-                        className="input w-28"
-                        value={hhmm(b.startTime)}
-                        onChange={(e) => updateBlock(b, { startTime: e.target.value })}
-                      />
-                      <span className="text-fg-3">–</span>
-                      <input
-                        type="time"
-                        className="input w-28"
-                        value={hhmm(b.endTime)}
-                        onChange={(e) => updateBlock(b, { endTime: e.target.value })}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeBlock(b)}
-                        className="rounded p-1 text-fg-3 transition-colors hover:text-red"
-                      >
-                        <X size={13} />
-                      </button>
+                  {kindRows.map((row) => (
+                    <div
+                      key={row.id}
+                      className="space-y-2 rounded-lg p-2.5"
+                      style={{ background: "var(--surface-hi)" }}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-wrap gap-1">
+                          {DAYS.map((d) => {
+                            const on = row.days.includes(d);
+                            return (
+                              <button
+                                key={d}
+                                type="button"
+                                onClick={() => toggleDay(row, d)}
+                                aria-pressed={on}
+                                className="h-7 min-w-[28px] rounded-md px-1.5 text-[12px] font-medium transition-colors"
+                                style={{
+                                  background: on ? "var(--accent)" : "var(--surface)",
+                                  color: on ? "var(--accent-fg)" : "var(--fg-3)",
+                                  border: `1px solid ${on ? "var(--accent)" : "var(--line)"}`,
+                                }}
+                              >
+                                {DAY_LABEL[d]}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeRow(row.id)}
+                          aria-label="Remove this time"
+                          className="shrink-0 rounded p-1 text-fg-3 transition-colors hover:text-red"
+                        >
+                          <X size={13} />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <TimeSelect
+                          value={row.startTime}
+                          onChange={(v) => setStart(row, v)}
+                          label="Start time"
+                          className="flex-1"
+                        />
+                        <span className="text-fg-3">–</span>
+                        <TimeSelect
+                          value={row.endTime}
+                          onChange={(v) => setEnd(row, v)}
+                          label="End time"
+                          className="flex-1"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
