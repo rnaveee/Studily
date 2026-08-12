@@ -44,10 +44,18 @@ public class IcsService {
         if (!text.toUpperCase(Locale.ROOT).contains("BEGIN:VCALENDAR")) {
             throw new BadRequestException("That does not look like an iCalendar (.ics) feed");
         }
+        return ingest(text, timeZone, isPublicGoogleFeed(source));
+    }
 
+    @Transactional
+    public ImportResult importFile(byte[] bytes, String filename, String timeZone) {
+        return ingest(IcsUpload.textFrom(bytes, filename), timeZone, false);
+    }
+
+    private ImportResult ingest(String text, String timeZone, boolean publicGoogleFeed) {
         ParsedCalendar parsed = IcsParser.parse(text, zoneOf(timeZone), MAX_EVENTS);
         if (parsed.events().isEmpty()) {
-            throw new BadRequestException(isPublicGoogleFeed(source)
+            throw new BadRequestException(publicGoogleFeed
                     ? "That calendar's public address has no events on it. In Google Calendar, open Settings for the "
                             + "calendar and use its secret address in iCal format instead."
                     : "No events were found in that calendar");
