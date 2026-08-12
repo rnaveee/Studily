@@ -26,8 +26,9 @@ public class AttachmentProcessor {
 
     private static final int MAX_IMAGE_DIMENSION = 1600;
     private static final int MAX_SOURCE_DIMENSION = 10000;
-    private static final Set<String> IMAGE_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
+    private static final Set<String> IMAGE_TYPES = Set.of("image/jpeg", "image/png");
     private static final String GIF_TYPE = "image/gif";
+    private static final String WEBP_TYPE = "image/webp";
     private static final Map<String, String> DOC_TYPES_BY_EXTENSION = Map.ofEntries(
             Map.entry("pdf", "application/pdf"),
             Map.entry("doc", "application/msword"),
@@ -61,6 +62,9 @@ public class AttachmentProcessor {
         if (contentType.equals(GIF_TYPE)) {
             return processGif(filename, bytes);
         }
+        if (contentType.equals(WEBP_TYPE)) {
+            return processWebp(filename, bytes);
+        }
         if (IMAGE_TYPES.contains(contentType)) {
             return processImage(filename, bytes);
         }
@@ -85,6 +89,56 @@ public class AttachmentProcessor {
                     "GIF dimensions are too large (max " + MAX_IMAGE_DIMENSION + "px per side)");
         }
         return new Processed(filename, GIF_TYPE, bytes, size[0], size[1]);
+    }
+
+    private Processed processWebp(String filename, byte[] bytes) {
+        if (!startsWith(bytes, "RIFF") || bytes.length < 30 || !matchesAt(bytes, 8, "WEBP")) {
+            throw new BadRequestException("This file doesn't look like a valid WEBP");
+        }
+        int[] size = webpDimensions(bytes);
+        if (Math.max(size[0], size[1]) > MAX_IMAGE_DIMENSION) {
+            throw new BadRequestException(
+                    "Image dimensions are too large (max " + MAX_IMAGE_DIMENSION + "px per side)");
+        }
+        return new Processed(filename, WEBP_TYPE, bytes, size[0], size[1]);
+    }
+
+    private static int[] webpDimensions(byte[] b) {
+        if (matchesAt(b, 12, "VP8X")) {
+            return new int[] {u24(b, 24) + 1, u24(b, 27) + 1};
+        }
+        if (matchesAt(b, 12, "VP8L")) {
+            int bits = u8(b, 21) | (u8(b, 22) << 8) | (u8(b, 23) << 16) | (u8(b, 24) << 24);
+            return new int[] {(bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1};
+        }
+        if (matchesAt(b, 12, "VP8 ")) {
+            return new int[] {
+                ((u8(b, 27) << 8) | u8(b, 26)) & 0x3FFF,
+                ((u8(b, 29) << 8) | u8(b, 28)) & 0x3FFF,
+            };
+        }
+        throw new BadRequestException("This file doesn't look like a valid WEBP");
+    }
+
+    private static int u8(byte[] b, int i) {
+        return b[i] & 0xFF;
+    }
+
+    private static int u24(byte[] b, int i) {
+        return u8(b, i) | (u8(b, i + 1) << 8) | (u8(b, i + 2) << 16);
+    }
+
+    private static boolean matchesAt(byte[] bytes, int offset, String text) {
+        byte[] p = text.getBytes(StandardCharsets.US_ASCII);
+        if (bytes.length < offset + p.length) {
+            return false;
+        }
+        for (int i = 0; i < p.length; i++) {
+            if (bytes[offset + i] != p[i]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private Processed processImage(String filename, byte[] bytes) {

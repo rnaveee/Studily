@@ -18,13 +18,14 @@ public class ConversationDtos {
             List<PublicUserDto> members,
             String lastMessage,
             Instant lastMessageAt,
-            boolean unread) {
+            boolean unread,
+            Instant otherReadAt) {
 
-        public static ConversationDto from(Conversation c, String lastMessage, boolean unread) {
+        public static ConversationDto from(Conversation c, String lastMessage, boolean unread, Instant otherReadAt) {
             return new ConversationDto(
                     c.getId(), c.getType(), c.getName(),
                     c.getMembers().stream().map(m -> PublicUserDto.from(m.getUser())).toList(),
-                    lastMessage, c.getLastMessageAt(), unread);
+                    lastMessage, c.getLastMessageAt(), unread, otherReadAt);
         }
     }
 

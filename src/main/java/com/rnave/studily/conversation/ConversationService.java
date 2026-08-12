@@ -137,9 +137,9 @@ public class ConversationService {
 
     @Transactional
     public PageResponse<MessageDto> messages(Long conversationId, Long before, int limit) {
-        requireMember(conversationId);
+        Conversation conv = requireMember(conversationId);
         if (before == null) {
-            markRead(conversationId);
+            markRead(conv);
         }
         int size = Math.min(Math.max(limit, 1), 100);
         Slice<Message> slice = before == null
@@ -274,8 +274,7 @@ public class ConversationService {
 
     @Transactional
     public void markConversationRead(Long conversationId) {
-        requireMember(conversationId);
-        markRead(conversationId);
+        markRead(requireMember(conversationId));
     }
 
     private void broadcastAfterCommit(Conversation conv, MessageDto dto) {
@@ -315,9 +314,33 @@ public class ConversationService {
         return conv;
     }
 
-    private void markRead(Long conversationId) {
-        conversationMemberRepository.findByConversationIdAndUserId(conversationId, currentUser.id())
-                .ifPresent(m -> m.setLastReadAt(Instant.now()));
+    private void markRead(Conversation conv) {
+        User me = currentUser.entity();
+        Instant at = Instant.now();
+        conversationMemberRepository.findByConversationIdAndUserId(conv.getId(), me.getId())
+                .ifPresent(m -> m.setLastReadAt(at));
+        if (conv.getType() == ConversationType.DIRECT && me.isReadReceipts()) {
+            broadcastReadAfterCommit(conv, me.getId(), at);
+        }
+    }
+
+    private void broadcastReadAfterCommit(Conversation conv, Long readerId, Instant at) {
+        List<Long> watchers = conv.getMembers().stream()
+                .map(ConversationMember::getUser)
+                .filter(u -> !u.getId().equals(readerId) && u.isReadReceipts())
+                .map(User::getId)
+                .toList();
+        if (watchers.isEmpty()) {
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                for (Long watcher : watchers) {
+                    wsSessionRegistry.sendToUser(watcher, WsEvents.ReadEvent.of(conv.getId(), readerId, at));
+                }
+            }
+        });
     }
 
     private void requireFriends(Long me, Long other) {
@@ -340,7 +363,20 @@ public class ConversationService {
         String lastMessage = messageRepository.findTopByConversationIdOrderByCreatedAtDesc(c.getId())
                 .map(ConversationService::previewText)
                 .orElse(null);
-        return ConversationDto.from(c, lastMessage, isUnread(c));
+        return ConversationDto.from(c, lastMessage, isUnread(c), otherReadAt(c));
+    }
+
+    private Instant otherReadAt(Conversation c) {
+        if (c.getType() != ConversationType.DIRECT || !currentUser.entity().isReadReceipts()) {
+            return null;
+        }
+        Long me = currentUser.id();
+        return c.getMembers().stream()
+                .filter(m -> !m.getUser().getId().equals(me))
+                .filter(m -> m.getUser().isReadReceipts())
+                .findFirst()
+                .map(ConversationMember::getLastReadAt)
+                .orElse(null);
     }
 
     private static String previewText(MessageDto dto) {

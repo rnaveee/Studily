@@ -17,6 +17,26 @@ import type { Conversation, Message, MessageLike, Page, PublicUser } from "../..
 const DOC_ACCEPT = ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.md";
 const INITIAL_PAGE_SIZE = 10;
 const OLDER_PAGE_SIZE = 30;
+const MAX_JUMBO_EMOJI = 3;
+
+const EMOJI_ONLY =
+  /^(?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Regional_Indicator}|[\u200D\uFE0F]|\s)+$/u;
+const HAS_EMOJI = /(?:\p{Extended_Pictographic}|\p{Regional_Indicator})/u;
+
+const segmenter =
+  typeof Intl !== "undefined" && "Segmenter" in Intl ? new Intl.Segmenter() : null;
+
+function emojiCount(body: string): number {
+  const bare = body.replace(/\s/g, "");
+  return segmenter ? [...segmenter.segment(bare)].length : [...bare].length;
+}
+
+function jumboSize(body: string): number | null {
+  if (!EMOJI_ONLY.test(body) || !HAS_EMOJI.test(body)) return null;
+  const count = emojiCount(body);
+  if (count === 0 || count > MAX_JUMBO_EMOJI) return null;
+  return count === 1 ? 44 : count === 2 ? 36 : 30;
+}
 
 function hourKey(iso: string): string {
   const d = new Date(iso);
@@ -156,7 +176,31 @@ export default function ConversationPage() {
   const docInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
-  async function uploadFiles(list: FileList | null) {
+  const [dragging, setDragging] = useState(false);
+
+  function imagesFrom(data: DataTransfer | null): File[] {
+    return [...(data?.items ?? [])]
+      .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+      .map((item) => item.getAsFile())
+      .filter((f): f is File => f !== null);
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const images = imagesFrom(e.clipboardData);
+    if (images.length === 0) return;
+    e.preventDefault();
+    uploadFiles(images);
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    setDragging(false);
+    const images = imagesFrom(e.dataTransfer);
+    if (images.length === 0) return;
+    e.preventDefault();
+    uploadFiles(images);
+  }
+
+  async function uploadFiles(list: FileList | File[] | null) {
     const files = [...(list ?? [])];
     if (files.length === 0 || uploading) return;
     setUploading(true);
@@ -182,6 +226,17 @@ export default function ConversationPage() {
   const conv = conversation.data;
   const others = conv?.members.filter((m) => m.id !== user?.id) ?? [];
   const isGroup = conv?.type === "GROUP";
+
+  const otherReadAt = conv?.otherReadAt;
+  const seenMessageId = useMemo(() => {
+    if (isGroup || !otherReadAt || !user) return null;
+    const readAt = new Date(otherReadAt).getTime();
+    for (let i = thread.length - 1; i >= 0; i--) {
+      const m = thread[i];
+      if (m.sender.id === user.id && new Date(m.createdAt).getTime() <= readAt) return m.id;
+    }
+    return null;
+  }, [thread, otherReadAt, isGroup, user]);
   const title = conv ? (isGroup ? conv.name : others[0]?.name) : "…";
   const subtitle = conv
     ? isGroup
@@ -194,8 +249,29 @@ export default function ConversationPage() {
   return (
     <div
       data-chat-panel
-      className="fixed inset-0 z-40 flex flex-col bg-bg h-[var(--app-height,auto)] md:static md:z-auto md:h-full md:min-h-0 md:flex-1 animate-in"
+      className="fixed inset-0 z-40 flex flex-col bg-bg h-[var(--app-height,auto)] md:relative md:z-auto md:h-full md:min-h-0 md:flex-1 animate-in"
+      onDragOver={(e) => {
+        if (imagesFrom(e.dataTransfer).length > 0) {
+          e.preventDefault();
+          setDragging(true);
+        }
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
+      }}
+      onDrop={handleDrop}
     >
+      {dragging && (
+        <div
+          className="pointer-events-none absolute inset-3 z-50 flex items-center justify-center rounded-2xl text-[13px] font-medium text-accent"
+          style={{
+            border: "2px dashed var(--accent)",
+            background: "color-mix(in srgb, var(--accent) 8%, transparent)",
+          }}
+        >
+          Drop to send
+        </div>
+      )}
       <header
         className="flex shrink-0 items-center gap-3 bg-surface px-3 pb-2.5 md:bg-transparent md:px-6"
         style={{
@@ -260,6 +336,15 @@ export default function ConversationPage() {
             const isFirstInRun = newHour || prev.sender.id !== m.sender.id;
             return (
               <Fragment key={m.id}>
+                {m.id === seenMessageId && otherReadAt && (
+                  <div className="mt-0.5 text-right text-[11px] text-fg-3 animate-fade">
+                    Seen{" "}
+                    {new Date(otherReadAt).toLocaleTimeString([], {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                )}
                 <div
                   className={`flex flex-col ${isFirstInRun ? "mt-3" : "mt-0.5"} ${mine ? "items-end" : "items-start"}`}
                 >
@@ -365,6 +450,7 @@ export default function ConversationPage() {
           className="input"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
+          onPaste={handlePaste}
           placeholder="Type a message…"
           enterKeyHint="send"
         />
@@ -476,6 +562,7 @@ function MessageBubble({
 }) {
   const tap = useDoubleTap(onLike);
   const liked = message.likedByMe;
+  const jumbo = message.attachment ? null : jumboSize(message.body);
 
   return (
     <div className="relative">
@@ -488,6 +575,13 @@ function MessageBubble({
       >
         {message.attachment ? (
           <AttachmentBubble message={message} mine={mine} />
+        ) : jumbo ? (
+          <div
+            className="select-none py-0.5 leading-none"
+            style={{ fontSize: jumbo, lineHeight: 1.15 }}
+          >
+            {message.body}
+          </div>
         ) : (
           <div
             className={`select-none rounded-2xl px-3.5 py-2 text-[13px] ${mine ? "text-accent-fg" : "text-fg"}`}

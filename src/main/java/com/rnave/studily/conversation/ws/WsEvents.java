@@ -19,6 +19,12 @@ public final class WsEvents {
         }
     }
 
+    public record ReadEvent(String type, Long conversationId, Long userId, java.time.Instant at) {
+        public static ReadEvent of(Long conversationId, Long userId, java.time.Instant at) {
+            return new ReadEvent("read", conversationId, userId, at);
+        }
+    }
+
     public record Pong(String type) {
         public static final Pong INSTANCE = new Pong("pong");
     }

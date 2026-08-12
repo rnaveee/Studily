@@ -15,7 +15,7 @@ import {
   pushSupported,
 } from "../../lib/push";
 import Toggle from "../../components/Toggle";
-import type { AuthResponse, NotificationPrefs } from "../../types";
+import type { AuthResponse, CanvasFeedResult, NotificationPrefs, PrivacyPrefs } from "../../types";
 
 const PREF_ROWS: { key: keyof NotificationPrefs; label: string; hint: string }[] = [
   { key: "messages", label: "DMs + group chats", hint: "New messages from friends and groups" },
@@ -149,6 +149,12 @@ export default function SettingsPage() {
       </div>
 
       <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
+        Privacy
+      </h2>
+
+      <ReadReceiptsRow />
+
+      <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
         Preferences
       </h2>
 
@@ -162,8 +168,147 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      <IntegrationsSection />
+
       <AccountSection />
     </div>
+  );
+}
+
+function ReadReceiptsRow() {
+  const qc = useQueryClient();
+
+  const privacyQ = useQuery({
+    queryKey: ["settings", "privacy"],
+    queryFn: () => api.get<PrivacyPrefs>("/settings/privacy"),
+  });
+
+  const save = useMutation({
+    mutationFn: (next: PrivacyPrefs) => api.put<PrivacyPrefs>("/settings/privacy", next),
+    onMutate: async (next) => {
+      await qc.cancelQueries({ queryKey: ["settings", "privacy"] });
+      const prev = qc.getQueryData<PrivacyPrefs>(["settings", "privacy"]);
+      qc.setQueryData(["settings", "privacy"], next);
+      return { prev };
+    },
+    onError: (_e, _next, ctx) => {
+      if (ctx?.prev) qc.setQueryData(["settings", "privacy"], ctx.prev);
+      toast.error("Couldn't save settings");
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["settings", "privacy"] });
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+    },
+  });
+
+  return (
+    <div className="card mt-3">
+      <div className="flex items-center justify-between gap-4 p-4">
+        <div>
+          <div className="text-[14px] font-medium text-fg">Read receipts</div>
+          <div className="mt-0.5 text-[12px] text-fg-3">
+            Let friends see when you've read their messages. Turning this off also hides their Seen
+            labels from you.
+          </div>
+        </div>
+        <Toggle
+          checked={privacyQ.data?.readReceipts ?? true}
+          onChange={(v) => save.mutate({ readReceipts: v })}
+          disabled={privacyQ.isLoading}
+        />
+      </div>
+    </div>
+  );
+}
+
+function IntegrationsSection() {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [source, setSource] = useState("");
+
+  const runImport = useMutation({
+    mutationFn: () =>
+      api.post<CanvasFeedResult>("/canvas/feed", {
+        source: source.trim(),
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      }),
+    onSuccess: (result) => {
+      setSource("");
+      setOpen(false);
+      qc.invalidateQueries({ queryKey: ["courses"] });
+      qc.invalidateQueries({ queryKey: ["calendar"] });
+      qc.invalidateQueries({ queryKey: ["calendar-events"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+
+      const courses = result.coursesCreated + result.coursesMatched;
+      const parts = [`${courses} course${courses === 1 ? "" : "s"}`];
+      if (result.itemsImported > 0) parts.push(`${result.itemsImported} added`);
+      if (result.itemsUpdated > 0) parts.push(`${result.itemsUpdated} updated`);
+      if (result.eventsImported > 0) parts.push(`${result.eventsImported} events`);
+      toast.success(parts.join(" · "));
+      if (result.truncated) {
+        toast.info("That feed was large, so only the first 2000 entries were imported.");
+      }
+    },
+    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Import failed"),
+  });
+
+  return (
+    <>
+      <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
+        Integrations
+      </h2>
+
+      <div className="card mt-3 divide-y" style={{ borderColor: "var(--line)" }}>
+        <div className="p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <div className="text-[14px] font-medium text-fg">Canvas</div>
+              <div className="mt-0.5 text-[12px] text-fg-3">
+                Pull your courses, assignments and quizzes in from Canvas
+              </div>
+            </div>
+            <button
+              onClick={() => setOpen((v) => !v)}
+              className="btn btn-ghost shrink-0"
+            >
+              {open ? "Cancel" : "Import"}
+            </button>
+          </div>
+
+          {open && (
+            <form
+              className="mt-3 space-y-3 animate-slide"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (source.trim()) runImport.mutate();
+              }}
+            >
+              <div>
+                <label className="field-label">Canvas calendar feed link</label>
+                <input
+                  className="input"
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  placeholder="https://yourschool.instructure.com/feeds/calendars/user_….ics"
+                  autoFocus
+                  required
+                />
+              </div>
+              <p className="text-[11px] text-fg-3">
+                In Canvas, open <span className="text-fg-2">Calendar</span> and click{" "}
+                <span className="text-fg-2">Calendar Feed</span> at the bottom right, then paste the
+                link here. Re-import any time to pick up new assignments — your grades, weights and
+                progress stay untouched.
+              </p>
+              <button type="submit" disabled={runImport.isPending} className="btn btn-primary">
+                {runImport.isPending ? "Importing…" : "Import from Canvas"}
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 

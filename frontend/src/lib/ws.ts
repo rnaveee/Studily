@@ -2,11 +2,12 @@ import type { InfiniteData } from "@tanstack/react-query";
 import { getToken } from "./api";
 import { queryClient } from "./queryClient";
 import { toast } from "./toast";
-import type { Message, MessageLike, Page } from "../types";
+import type { Conversation, Message, MessageLike, Page } from "../types";
 
 type ServerEvent =
   | { type: "message"; message: Message }
   | { type: "like"; like: MessageLike }
+  | { type: "read"; conversationId: number; userId: number; at: string }
   | { type: "pong" }
   | { type: "error"; message: string };
 
@@ -100,6 +101,17 @@ export function appendMessageToCache(message: Message) {
   );
 }
 
+export function applyReadToCache(conversationId: number, at: string) {
+  queryClient.setQueryData<Conversation>(["conversations", conversationId], (old) =>
+    old ? { ...old, otherReadAt: at } : old,
+  );
+  for (const key of ["direct", "list"] as const) {
+    queryClient.setQueryData<Conversation[]>(["conversations", key], (old) =>
+      old?.map((c) => (c.id === conversationId ? { ...c, otherReadAt: at } : c)),
+    );
+  }
+}
+
 function handleIncoming(message: Message) {
   appendMessageToCache(message);
   queryClient.invalidateQueries({ queryKey: ["conversations", "list"] });
@@ -152,6 +164,7 @@ function open() {
     }
     if (event.type === "message") handleIncoming(event.message);
     else if (event.type === "like") applyLikeToCache(event.like, currentUserId ?? undefined);
+    else if (event.type === "read") applyReadToCache(event.conversationId, event.at);
     else if (event.type === "error") toast.error(event.message);
   };
 

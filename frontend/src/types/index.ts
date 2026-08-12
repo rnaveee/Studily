@@ -142,6 +142,7 @@ export interface AcademicItem {
   score?: number | null;
   maxScore?: number | null;
   status: ItemStatus;
+  canvasSynced?: boolean;
 }
 
 export interface AcademicItemRequest {
@@ -314,6 +315,11 @@ export interface Conversation {
   lastMessage?: string | null;
   lastMessageAt?: string | null;
   unread: boolean;
+  otherReadAt?: string | null;
+}
+
+export interface PrivacyPrefs {
+  readReceipts: boolean;
 }
 
 export interface Attachment {
@@ -356,6 +362,17 @@ export interface IcsImportResult {
   calendarName?: string | null;
   imported: number;
   updated: number;
+  skipped: number;
+  truncated: boolean;
+}
+
+export interface CanvasFeedResult {
+  coursesCreated: number;
+  coursesMatched: number;
+  itemsImported: number;
+  itemsUpdated: number;
+  eventsImported: number;
+  eventsUpdated: number;
   skipped: number;
   truncated: boolean;
 }

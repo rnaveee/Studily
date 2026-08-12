@@ -43,6 +43,21 @@ export default function MessagesPage() {
     return map;
   }, [directConvos.data, user?.id]);
 
+  const sortedFriends = useMemo(() => {
+    const at = (r: FriendRequestItem) => {
+      const iso = directByUserId.get(r.user.id)?.lastMessageAt;
+      return iso ? new Date(iso).getTime() : null;
+    };
+    return [...(friends.data ?? [])].sort((a, b) => {
+      const x = at(a);
+      const y = at(b);
+      if (x !== null && y !== null) return y - x;
+      if (x !== null) return -1;
+      if (y !== null) return 1;
+      return a.user.name.localeCompare(b.user.name);
+    });
+  }, [friends.data, directByUserId]);
+
   const openDirect = useMutation({
     mutationFn: (userId: number) =>
       api.post<Conversation>("/conversations/direct", { userId }),
@@ -73,9 +88,9 @@ export default function MessagesPage() {
       {tab === "messages" ? (
         friends.isLoading ? (
           <Loading />
-        ) : friends.data && friends.data.length > 0 ? (
+        ) : sortedFriends.length > 0 ? (
           <ul className="card divide-y divide-line">
-            {friends.data.map((r) => {
+            {sortedFriends.map((r) => {
               const convo = directByUserId.get(r.user.id);
               const unread = convo?.unread ?? false;
               const textClass = unread ? "font-semibold text-fg" : "font-normal text-fg-3";
