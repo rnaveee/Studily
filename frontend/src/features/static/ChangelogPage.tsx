@@ -9,13 +9,6 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
-    version: 28,
-    date: "2026-08-11",
-    title: "Messaging improvements",
-    description:
-      "Emoji-only messages send big without a bubble, stickers can be pasted or dragged into a chat, direct messages show a Seen label you can turn off in settings, and your most recent chats sit at the top.",
-  },
-  {
     version: 27,
     date: "2026-08-11",
     title: "Canvas import",
