@@ -66,16 +66,18 @@ public class CourseMatchService {
     }
 
     @Transactional
-    public CourseDto importCourse(Long sourceCourseId, Long semesterId) {
+    public CourseDto importCourse(Long sourceCourseId, String code, Long semesterId) {
         User me = currentUser.entity();
         if (!me.isEmailVerified()) {
             throw new ForbiddenException("Verify your email to import a shared course");
         }
         Course source = courseRepository.findById(sourceCourseId)
                 .orElseThrow(() -> new NotFoundException("Course not found"));
+        String codeKey = MatchKeys.codeKey(code);
         boolean sameSchool = me.getSchoolKey() != null
                 && me.getSchoolKey().equals(source.getUser().getSchoolKey());
-        if (source.getUser().getId().equals(me.getId()) || !sameSchool) {
+        boolean discoverable = codeKey != null && codeKey.equals(source.getCodeKey());
+        if (source.getUser().getId().equals(me.getId()) || !sameSchool || !discoverable) {
             throw new NotFoundException("Course not found");
         }
 

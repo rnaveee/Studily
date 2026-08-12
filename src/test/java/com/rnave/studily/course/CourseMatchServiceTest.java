@@ -2,6 +2,7 @@ package com.rnave.studily.course;
 
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.ForbiddenException;
+import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.semester.SemesterService;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
@@ -66,9 +67,63 @@ class CourseMatchServiceTest {
     void importCourse_rejectsUnverifiedUser() {
         when(currentUser.entity()).thenReturn(user(1L, "queensuniversity", false));
 
-        assertThatThrownBy(() -> service.importCourse(5L, null))
+        assertThatThrownBy(() -> service.importCourse(5L, "CISC 121", null))
                 .isInstanceOf(ForbiddenException.class);
         verify(courseRepository, never()).findById(any());
+    }
+
+    @Test
+    void importCourse_rejectsCourseWhoseCodeWasNotSupplied() {
+        when(currentUser.entity()).thenReturn(user(1L, "queensuniversity", true));
+        when(courseRepository.findById(5L))
+                .thenReturn(java.util.Optional.of(shared(5L, 2L, "queensuniversity", "MATH121")));
+
+        assertThatThrownBy(() -> service.importCourse(5L, "CISC 121", null))
+                .isInstanceOf(NotFoundException.class);
+        verify(courseRepository, never()).save(any());
+    }
+
+    @Test
+    void importCourse_rejectsCourseWithNoCode() {
+        when(currentUser.entity()).thenReturn(user(1L, "queensuniversity", true));
+        when(courseRepository.findById(5L))
+                .thenReturn(java.util.Optional.of(shared(5L, 2L, "queensuniversity", null)));
+
+        assertThatThrownBy(() -> service.importCourse(5L, "CISC 121", null))
+                .isInstanceOf(NotFoundException.class);
+        verify(courseRepository, never()).save(any());
+    }
+
+    @Test
+    void importCourse_rejectsCourseFromAnotherSchool() {
+        when(currentUser.entity()).thenReturn(user(1L, "queensuniversity", true));
+        when(courseRepository.findById(5L))
+                .thenReturn(java.util.Optional.of(shared(5L, 2L, "torontometropolitan", "CISC121")));
+
+        assertThatThrownBy(() -> service.importCourse(5L, "CISC 121", null))
+                .isInstanceOf(NotFoundException.class);
+        verify(courseRepository, never()).save(any());
+    }
+
+    @Test
+    void importCourse_copiesCourseWhenCodeMatches() {
+        when(currentUser.entity()).thenReturn(user(1L, "queensuniversity", true));
+        Course source = shared(5L, 2L, "queensuniversity", "CISC121");
+        source.setName("Intro to Programming");
+        when(courseRepository.findById(5L)).thenReturn(java.util.Optional.of(source));
+        when(courseRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThat(service.importCourse(5L, "cisc 121", null).name()).isEqualTo("Intro to Programming");
+        verify(courseRepository).save(any());
+    }
+
+    private static Course shared(Long courseId, Long ownerId, String schoolKey, String codeKey) {
+        Course course = new Course();
+        course.setId(courseId);
+        course.setUser(user(ownerId, schoolKey, true));
+        course.setName("Shared course");
+        course.setCodeKey(codeKey);
+        return course;
     }
 
     @Test

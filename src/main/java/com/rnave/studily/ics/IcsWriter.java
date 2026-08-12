@@ -91,7 +91,8 @@ public final class IcsWriter {
                 .replace(";", "\\;")
                 .replace(",", "\\,")
                 .replace("\r\n", "\\n")
-                .replace("\n", "\\n");
+                .replace("\n", "\\n")
+                .replace("\r", "\\n");
     }
 
     private static String fold(String line) {

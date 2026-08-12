@@ -184,7 +184,11 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
 
   const importCourse = useMutation({
     mutationFn: (sourceCourseId: number) =>
-      api.post<Course>("/courses/import", { sourceCourseId, semesterId: semesterId ?? null }),
+      api.post<Course>("/courses/import", {
+        sourceCourseId,
+        code: debouncedCode,
+        semesterId: semesterId ?? null,
+      }),
     onSuccess: (course) => onImported?.(course),
   });
 

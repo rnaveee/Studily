@@ -94,6 +94,9 @@ public class CourseDtos {
         }
     }
 
-    public record ImportRequest(@NotNull Long sourceCourseId, Long semesterId) {
+    public record ImportRequest(
+            @NotNull Long sourceCourseId,
+            @NotBlank @Size(max = 255) String code,
+            Long semesterId) {
     }
 }

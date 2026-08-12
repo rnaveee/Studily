@@ -65,7 +65,10 @@ public class CourseController {
     @PostMapping("/import")
     @ResponseStatus(HttpStatus.CREATED)
     public CourseDto importCourse(@Valid @RequestBody ImportRequest req) {
-        return courseMatchService.importCourse(req.sourceCourseId(), req.semesterId());
+        if (!matchLimiter.tryConsume("user:" + currentUser.id())) {
+            throw new TooManyRequestsException("Too many course lookups, please slow down.");
+        }
+        return courseMatchService.importCourse(req.sourceCourseId(), req.code(), req.semesterId());
     }
 
     @GetMapping("/{id}/classmates")

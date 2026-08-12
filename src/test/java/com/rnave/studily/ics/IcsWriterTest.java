@@ -50,6 +50,17 @@ class IcsWriterTest {
     }
 
     @Test
+    void write_escapesBareCarriageReturnsSoTitlesCannotInjectProperties() {
+        CalendarEvent event = event();
+        event.setTitle("Study\rATTENDEE:mailto:someone@example.com\rX-INJECTED:1");
+
+        String ics = IcsWriter.write(List.of(), List.of(event));
+
+        assertThat(ics).doesNotContain("\rATTENDEE:").doesNotContain("\rX-INJECTED:");
+        assertThat(ics).contains("SUMMARY:Study\\nATTENDEE:mailto:someone@example.com\\nX-INJEC");
+    }
+
+    @Test
     void write_escapesReservedCharactersAndFoldsLongLines() {
         String ics = IcsWriter.write(List.of(item()), List.of());
 
