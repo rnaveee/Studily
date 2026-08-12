@@ -16,6 +16,7 @@ import type {
   SeriesScope,
 } from "../../types";
 import CategorySelect from "./CategorySelect";
+import DateTimeSelect from "../../components/DateTimeSelect";
 
 function toLocalInput(iso: string): string {
   const d = new Date(iso);
@@ -306,13 +307,7 @@ export default function CalendarEntryModal({
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
                 <label className="field-label">{event ? "Date & time" : "Due date & time"}</label>
-                <input
-                  className="input"
-                  type="datetime-local"
-                  value={when}
-                  onChange={(e) => setWhen(e.target.value)}
-                  required
-                />
+                <DateTimeSelect value={when} onChange={setWhen} required />
               </div>
               {item && (
                 <div className="w-[4.5rem] shrink-0">

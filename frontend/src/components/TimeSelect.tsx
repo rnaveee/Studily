@@ -1,14 +1,21 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { formatTime12, fromMinutes, parseTime } from "../lib/time";
 
-const FIRST_MINUTE = 7 * 60;
-const LAST_MINUTE = 22 * 60;
 const STEP_MINUTES = 15;
 
-const PRESETS: string[] = [];
-for (let m = FIRST_MINUTE; m <= LAST_MINUTE; m += STEP_MINUTES) {
-  PRESETS.push(fromMinutes(m));
+function buildPresets(firstHour: number, lastHour: number, extra: string[] = []): string[] {
+  const out: string[] = [];
+  for (let m = firstHour * 60; m <= lastHour * 60; m += STEP_MINUTES) {
+    out.push(fromMinutes(m));
+  }
+  for (const t of extra) {
+    if (!out.includes(t)) out.push(t);
+  }
+  return out.sort();
 }
+
+export const CLASS_PRESETS = buildPresets(7, 22);
+export const DAY_PRESETS = buildPresets(0, 23, ["23:59"]);
 
 function digitsOf(text: string): string {
   return text.replace(/\D/g, "");
@@ -19,11 +26,13 @@ export default function TimeSelect({
   onChange,
   label,
   className = "",
+  presets = CLASS_PRESETS,
 }: {
   value: string;
   onChange: (value: string) => void;
   label: string;
   className?: string;
+  presets?: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -35,25 +44,28 @@ export default function TimeSelect({
   const editing = open && text !== "";
 
   const options = useMemo(() => {
+    const all = presets.includes(value) ? presets : [...presets, value].sort();
     const typed = digitsOf(text);
     const parsed = editing ? parseTime(text) : null;
-    let list = PRESETS;
+    let list = all;
     if (typed) {
-      const filtered = PRESETS.filter((p) => digitsOf(formatTime12(p)).startsWith(typed));
+      const filtered = all.filter((p) => digitsOf(formatTime12(p)).startsWith(typed));
       if (filtered.length > 0) list = filtered;
     }
     if (parsed && !list.includes(parsed)) list = [parsed, ...list];
     return list;
-  }, [text, editing]);
+  }, [text, editing, presets, value]);
 
   useEffect(() => {
     if (!open) return;
     function onPointerDown(e: PointerEvent) {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+      if (wrapRef.current?.contains(e.target as Node)) return;
+      if (text) commitTyped();
+      else setOpen(false);
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
+  });
 
   useEffect(() => {
     if (!open) return;

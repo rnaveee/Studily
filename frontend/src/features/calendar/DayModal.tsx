@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import { ChevronRight, Plus, X } from "lucide-react";
 import { api } from "../../lib/api";
 import { formatTime } from "../../lib/format";
+import DateTimeSelect from "../../components/DateTimeSelect";
 import type {
   AcademicItem,
   AcademicItemRequest,
@@ -264,14 +265,11 @@ export default function DayModal({
                   <div className="space-y-2">
                     {(repeat ? whens.slice(0, 1) : whens).map((w, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <input
-                          className="input"
-                          type="datetime-local"
+                        <DateTimeSelect
                           value={w}
-                          onChange={(e) =>
-                            setWhens(whens.map((prev, j) => (j === i ? e.target.value : prev)))
-                          }
+                          onChange={(v) => setWhens(whens.map((prev, j) => (j === i ? v : prev)))}
                           required
+                          className="min-w-0 flex-1"
                         />
                         {i > 0 && (
                           <button

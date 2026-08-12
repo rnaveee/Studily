@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import type { AcademicItemRequest, ItemType, Recurrence } from "../types";
 import RepeatPicker from "../features/calendar/RepeatPicker";
+import DateTimeSelect from "./DateTimeSelect";
 
 interface Props {
   submitLabel?: string;
@@ -102,13 +103,7 @@ export default function ItemForm({
       <div className="flex gap-2">
         <div className="flex-1">
           <label className="field-label">Due date & time</label>
-          <input
-            className="input"
-            type="datetime-local"
-            value={dueLocal}
-            onChange={(e) => setDueLocal(e.target.value)}
-            required
-          />
+          <DateTimeSelect value={dueLocal} onChange={setDueLocal} required />
         </div>
         <div className="w-24">
           <label className="field-label">Weight %</label>
