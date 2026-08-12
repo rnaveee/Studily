@@ -275,6 +275,7 @@ export default function LandingPage() {
           {[
             ["About", "/about"],
             ["Install", "/install"],
+            ["Changelog", "/changelog"],
             ["Support", "/support"],
             ["Privacy", "/privacy"],
             ["Terms", "/terms"],

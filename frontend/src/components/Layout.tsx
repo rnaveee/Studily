@@ -36,6 +36,7 @@ const SUB_LINKS = [
   { label: "Privacy", to: "/privacy" },
   { label: "Support", to: "/support" },
   { label: "Install", to: "/install" },
+  { label: "Changelog", to: "/changelog" },
 ];
 
 function useTypingInField() {

@@ -7,6 +7,7 @@ import TermsPage from "./features/static/TermsPage";
 import PrivacyPage from "./features/static/PrivacyPage";
 import SupportPage from "./features/static/SupportPage";
 import InstallPage from "./features/static/InstallPage";
+import ChangelogPage from "./features/static/ChangelogPage";
 import LoginPage from "./features/auth/LoginPage";
 import SignupPage from "./features/auth/SignupPage";
 import ForgotPasswordPage from "./features/auth/ForgotPasswordPage";
@@ -87,6 +88,7 @@ export default function App() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/support" element={<SupportPage />} />
         <Route path="/install" element={<InstallPage />} />
+        <Route path="/changelog" element={<ChangelogPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
