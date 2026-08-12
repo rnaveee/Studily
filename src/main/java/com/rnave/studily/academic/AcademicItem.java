@@ -51,6 +51,9 @@ public class AcademicItem {
     @Column(nullable = false)
     private ItemStatus status = ItemStatus.TODO;
 
+    @Column(name = "external_uid")
+    private String externalUid;
+
     @Column(name = "series_id")
     private UUID seriesId;
 

@@ -23,7 +23,8 @@ public final class IcsParser {
     private IcsParser() {
     }
 
-    public record ParsedEvent(String uid, String title, String place, Instant startAt, boolean recurring) {
+    public record ParsedEvent(String uid, String title, String place, Instant startAt, boolean recurring,
+                              String url, String description) {
     }
 
     public record ParsedCalendar(String name, List<ParsedEvent> events, int skipped, boolean truncated) {
@@ -109,6 +110,12 @@ public final class IcsParser {
                 ? null
                 : trimTo(unescape(location.value()), 255);
         String uid = props.containsKey("UID") ? props.get("UID").value() : null;
+        Prop urlProp = props.get("URL");
+        String url = urlProp == null || urlProp.value().isBlank() ? null : unescape(urlProp.value());
+        Prop descProp = props.get("DESCRIPTION");
+        String description = descProp == null || descProp.value().isBlank()
+                ? null
+                : trimTo(unescape(descProp.value()), 2000);
 
         Set<Instant> exdates = new HashSet<>();
         for (Prop ex : exdateProps) {
@@ -128,7 +135,7 @@ public final class IcsParser {
 
         List<ParsedEvent> events = new ArrayList<>(starts.size());
         for (Instant at : starts) {
-            events.add(new ParsedEvent(uid, title, place, at, rrule != null));
+            events.add(new ParsedEvent(uid, title, place, at, rrule != null, url, description));
         }
         return events;
     }

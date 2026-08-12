@@ -17,6 +17,10 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 
     Optional<Course> findByIdAndUserId(Long id, Long userId);
 
+    Optional<Course> findByUserIdAndCanvasCourseId(Long userId, Long canvasCourseId);
+
+    Optional<Course> findFirstByUserIdAndCodeKeyOrderByIdAsc(Long userId, String codeKey);
+
     List<Course> findByCodeNotNullAndCodeKeyIsNull();
 
     @Query("""

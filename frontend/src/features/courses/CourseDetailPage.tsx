@@ -433,6 +433,9 @@ function ItemRow({
           <div className="truncate text-[11px] text-fg-3">
             {item.weight != null && `worth ${item.weight}% · `}
             {formatDateTime(item.dueAt)}
+            {item.canvasSynced && (
+              <span title="Title and due date are kept in sync with Canvas"> · from Canvas</span>
+            )}
           </div>
         </div>
 

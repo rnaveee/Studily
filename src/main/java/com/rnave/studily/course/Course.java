@@ -18,6 +18,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -47,6 +48,12 @@ public class Course {
     private String professor;
     private String location;
     private String color;
+
+    @Column(name = "canvas_course_id")
+    private Long canvasCourseId;
+
+    @Column(name = "canvas_synced_at")
+    private Instant canvasSyncedAt;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<MeetingBlock> meetingBlocks = new ArrayList<>();

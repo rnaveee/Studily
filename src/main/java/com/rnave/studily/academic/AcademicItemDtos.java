@@ -28,7 +28,8 @@ public class AcademicItemDtos {
             Double maxScore,
             ItemStatus status,
             UUID seriesId,
-            String recurrenceRule) {
+            String recurrenceRule,
+            boolean canvasSynced) {
 
         public static AcademicItemDto from(AcademicItem i) {
             return new AcademicItemDto(
@@ -45,7 +46,8 @@ public class AcademicItemDtos {
                     i.getMaxScore(),
                     i.getStatus(),
                     i.getSeriesId(),
-                    i.getRecurrenceRule());
+                    i.getRecurrenceRule(),
+                    i.getExternalUid() != null);
         }
     }
 

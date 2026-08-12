@@ -13,6 +13,10 @@ public interface AcademicItemRepository extends JpaRepository<AcademicItem, Long
 
     Optional<AcademicItem> findByIdAndCourseUserId(Long id, Long userId);
 
+    Optional<AcademicItem> findByCourseIdAndExternalUid(Long courseId, String externalUid);
+
+    Optional<AcademicItem> findFirstByCourseUserIdAndExternalUidOrderByIdAsc(Long userId, String externalUid);
+
     List<AcademicItem> findByCourseUserId(Long userId);
 
     List<AcademicItem> findByCourseUserIdAndDueAtBetweenOrderByDueAtAsc(Long userId, Instant from, Instant to);
