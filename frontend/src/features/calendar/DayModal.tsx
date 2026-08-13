@@ -195,13 +195,28 @@ export default function DayModal({
             Add to calendar
           </h3>
 
-          <div>
-            <label className="field-label">Type</label>
-            <select className="input" value={kind} onChange={(e) => setKind(e.target.value as Kind)}>
-              <option value="ASSIGNMENT">Assignment</option>
-              <option value="EXAM">Exam</option>
-              <option value="EVENT">Event</option>
-            </select>
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <label className="field-label">Type</label>
+              <select className="input" value={kind} onChange={(e) => setKind(e.target.value as Kind)}>
+                <option value="ASSIGNMENT">Assignment</option>
+                <option value="EXAM">Exam</option>
+                <option value="EVENT">Event</option>
+              </select>
+            </div>
+            {!isEvent && (
+              <div className="w-[5.5rem] shrink-0">
+                <label className="field-label">Weight %</label>
+                <input
+                  className="input !px-2"
+                  type="number"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  min={0}
+                  max={100}
+                />
+              </div>
+            )}
           </div>
 
           {needsCourse ? (
@@ -259,54 +274,41 @@ export default function DayModal({
                 </>
               )}
 
-              <div className="flex items-start gap-2">
-                <div className="min-w-0 flex-1">
-                  <label className="field-label">{isEvent ? "Date & time" : "Due date & time"}</label>
-                  <div className="space-y-2">
-                    {(repeat ? whens.slice(0, 1) : whens).map((w, i) => (
-                      <div key={i} className="flex items-center gap-2">
-                        <DateTimeSelect
-                          value={w}
-                          onChange={(v) => setWhens(whens.map((prev, j) => (j === i ? v : prev)))}
-                          required
-                          className="min-w-0 flex-1"
-                        />
-                        {i > 0 && (
+              <div>
+                <label className="field-label">{isEvent ? "Date & time" : "Due date & time"}</label>
+                <div className="space-y-2">
+                  {(repeat ? whens.slice(0, 1) : whens).map((w, i) => (
+                    <div key={i}>
+                      {i > 0 && (
+                        <div className="mb-1 flex items-center justify-between">
+                          <span className="text-[11px] font-medium text-fg-3">Date {i + 1}</span>
                           <button
                             type="button"
                             onClick={() => setWhens(whens.filter((_, j) => j !== i))}
-                            className="shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
-                            aria-label="Remove date"
+                            className="-mr-1 rounded-lg p-1 text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
+                            aria-label={`Remove date ${i + 1}`}
                           >
-                            <X size={14} />
+                            <X size={13} />
                           </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  {!repeat && (
-                    <button
-                      type="button"
-                      onClick={() => setWhens([...whens, `${date}T23:59`])}
-                      className="mt-2 flex items-center gap-1 text-[12px] font-medium text-accent transition-colors hover:text-accent-2"
-                    >
-                      <Plus size={12} strokeWidth={2.5} />
-                      Add another date
-                    </button>
-                  )}
+                        </div>
+                      )}
+                      <DateTimeSelect
+                        value={w}
+                        onChange={(v) => setWhens(whens.map((prev, j) => (j === i ? v : prev)))}
+                        required
+                      />
+                    </div>
+                  ))}
                 </div>
-                {!isEvent && (
-                  <div className="w-[4.5rem] shrink-0">
-                    <label className="field-label">Weight %</label>
-                    <input
-                      className="input !px-2"
-                      type="number"
-                      value={weight}
-                      onChange={(e) => setWeight(e.target.value)}
-                      min={0}
-                      max={100}
-                    />
-                  </div>
+                {!repeat && (
+                  <button
+                    type="button"
+                    onClick={() => setWhens([...whens, `${date}T23:59`])}
+                    className="mt-2 flex items-center gap-1 text-[12px] font-medium text-accent transition-colors hover:text-accent-2"
+                  >
+                    <Plus size={12} strokeWidth={2.5} />
+                    Add another date
+                  </button>
                 )}
               </div>
 

@@ -36,7 +36,7 @@ export default function DateTimeSelect({
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <input
-        className="input min-w-0 flex-1"
+        className="input min-w-0 flex-[3]"
         type="date"
         value={parts.date}
         onChange={(e) => setDate(e.target.value)}
@@ -47,7 +47,7 @@ export default function DateTimeSelect({
         onChange={pickTime}
         label="Time"
         presets={DAY_PRESETS}
-        className="w-[7.5rem] shrink-0"
+        className="min-w-0 flex-[2]"
       />
     </div>
   );
