@@ -275,12 +275,25 @@ export default function CalendarEntryModal({
             }}
           >
             {item && (
-              <div>
-                <label className="field-label">Type</label>
-                <select className="input" value={kind} onChange={(e) => setKind(e.target.value as ItemType)}>
-                  <option value="ASSIGNMENT">Assignment</option>
-                  <option value="EXAM">Exam</option>
-                </select>
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1">
+                  <label className="field-label">Type</label>
+                  <select className="input" value={kind} onChange={(e) => setKind(e.target.value as ItemType)}>
+                    <option value="ASSIGNMENT">Assignment</option>
+                    <option value="EXAM">Exam</option>
+                  </select>
+                </div>
+                <div className="w-[5.5rem] shrink-0">
+                  <label className="field-label">Weight %</label>
+                  <input
+                    className="input !px-2"
+                    type="number"
+                    value={weight}
+                    onChange={(e) => setWeight(e.target.value)}
+                    min={0}
+                    max={100}
+                  />
+                </div>
               </div>
             )}
 
@@ -304,24 +317,9 @@ export default function CalendarEntryModal({
               </>
             )}
 
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1">
-                <label className="field-label">{event ? "Date & time" : "Due date & time"}</label>
-                <DateTimeSelect value={when} onChange={setWhen} required />
-              </div>
-              {item && (
-                <div className="w-[4.5rem] shrink-0">
-                  <label className="field-label">Weight %</label>
-                  <input
-                    className="input !px-2"
-                    type="number"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    min={0}
-                    max={100}
-                  />
-                </div>
-              )}
+            <div>
+              <label className="field-label">{event ? "Date & time" : "Due date & time"}</label>
+              <DateTimeSelect value={when} onChange={setWhen} required />
             </div>
 
             {seriesId && <ScopeChoice label={seriesLabel} scope={scope} onChange={setScope} />}
