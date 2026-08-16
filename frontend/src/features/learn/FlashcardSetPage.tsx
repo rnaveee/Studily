@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import { ChevronLeft, ChevronRight, GraduationCap, Plus, Shuffle, X } from "lucide-react";
 import { api } from "../../lib/api";
 import BackButton from "../../components/BackButton";
+import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
 import StudySession from "./StudySession";
 import type { Course, FlashcardSet, FlashcardSetRequest } from "../../types";
@@ -12,6 +13,7 @@ export default function FlashcardSetPage() {
   const { id } = useParams();
   const setId = Number(id);
   const qc = useQueryClient();
+  const confirm = useConfirm();
 
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -105,7 +107,14 @@ export default function FlashcardSetPage() {
     setBack("");
   }
 
-  function deleteCard(actualIndex: number) {
+  async function deleteCard(actualIndex: number) {
+    const ok = await confirm({
+      title: "Delete this card?",
+      message: data.cards[actualIndex]?.front,
+      confirmLabel: "Delete card",
+      danger: true,
+    });
+    if (!ok) return;
     update.mutate({
       title: data.title,
       description: data.description,

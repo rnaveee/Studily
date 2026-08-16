@@ -5,12 +5,14 @@ import { Layers, Plus, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
 import BackButton from "../../components/BackButton";
 import { useRequireAuth } from "../../lib/auth";
+import { useConfirm } from "../../lib/confirm";
 import type { Course, FlashcardSet } from "../../types";
 import NewFlashcardSetModal from "./NewFlashcardSetModal";
 
 export default function FlashcardsPage() {
   const qc = useQueryClient();
   const requireAuth = useRequireAuth();
+  const confirm = useConfirm();
   const [showCreate, setShowCreate] = useState(false);
 
   const sets = useQuery({
@@ -91,7 +93,15 @@ export default function FlashcardsPage() {
                   </div>
                 </Link>
                 <button
-                  onClick={() => remove.mutate(s.id)}
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: `Delete ${s.title}?`,
+                      message: `This permanently removes the set and its ${s.cards.length} ${s.cards.length === 1 ? "card" : "cards"}.`,
+                      confirmLabel: "Delete set",
+                      danger: true,
+                    });
+                    if (ok) remove.mutate(s.id);
+                  }}
                   className="shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
                   aria-label="Delete set"
                 >
