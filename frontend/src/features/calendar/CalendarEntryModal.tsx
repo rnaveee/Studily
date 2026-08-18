@@ -17,7 +17,6 @@ import type {
 } from "../../types";
 import CategorySelect from "../../components/CategorySelect";
 import DateTimeSelect from "../../components/DateTimeSelect";
-import { useModalScrim } from "../../lib/themeColor";
 
 export default function CalendarEntryModal({
   item,
@@ -152,8 +151,6 @@ export default function CalendarEntryModal({
       status: item!.status,
     });
   }
-
-  useModalScrim();
 
   return createPortal(
     <div

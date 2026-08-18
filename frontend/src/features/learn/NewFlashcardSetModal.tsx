@@ -6,7 +6,6 @@ import { X } from "lucide-react";
 import { api } from "../../lib/api";
 import { toast } from "../../lib/toast";
 import type { Course, FlashcardSet, FlashcardSetRequest, Semester } from "../../types";
-import { useModalScrim } from "../../lib/themeColor";
 
 export default function NewFlashcardSetModal({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState("");
@@ -58,8 +57,6 @@ export default function NewFlashcardSetModal({ onClose }: { onClose: () => void 
       cards: [],
     });
   }
-
-  useModalScrim();
 
   return createPortal(
     <div

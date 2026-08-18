@@ -10,7 +10,6 @@ import { toast } from "../../lib/toast";
 import type { Todo, TodoChecklistItem, TodoPriority, TodoRequest } from "../../types";
 import TodoCategorySelect from "./TodoCategorySelect";
 import { PRIORITIES } from "./priority";
-import { useModalScrim } from "../../lib/themeColor";
 
 export default function TodoModal({ todo, onClose }: { todo?: Todo; onClose: () => void }) {
   const [title, setTitle] = useState(todo?.title ?? "");
@@ -59,8 +58,6 @@ export default function TodoModal({ todo, onClose }: { todo?: Todo; onClose: () 
   function updateItem(index: number, patch: Partial<TodoChecklistItem>) {
     setChecklist((prev) => prev.map((c, i) => (i === index ? { ...c, ...patch } : c)));
   }
-
-  useModalScrim();
 
   return createPortal(
     <div

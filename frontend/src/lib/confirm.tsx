@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useModalScrim } from "./themeColor";
 
 interface ConfirmOptions {
   title: string;
@@ -32,8 +31,6 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [state]);
-
-  useModalScrim(0.45, !!state);
 
   const confirm = useCallback(
     (opts: ConfirmOptions): Promise<boolean> =>

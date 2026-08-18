@@ -6,7 +6,6 @@ import { Search, X, Clock } from "lucide-react";
 import { api } from "../../lib/api";
 import Avatar from "../../components/Avatar";
 import type { Page, Relationship } from "../../types";
-import { useModalScrim } from "../../lib/themeColor";
 
 export default function UserSearchModal({ onClose }: { onClose: () => void }) {
   const [q, setQ] = useState("");
@@ -37,8 +36,6 @@ export default function UserSearchModal({ onClose }: { onClose: () => void }) {
     onClose();
     navigate(`/users/${userId}`);
   }
-
-  useModalScrim();
 
   return createPortal(
     <div

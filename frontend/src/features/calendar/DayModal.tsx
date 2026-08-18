@@ -18,7 +18,6 @@ import type {
 import CategorySelect from "../../components/CategorySelect";
 import RepeatPicker from "./RepeatPicker";
 import type { Entry } from "./entries";
-import { useModalScrim } from "../../lib/themeColor";
 
 type Kind = ItemType | "EVENT";
 
@@ -133,8 +132,6 @@ export default function DayModal({
     month: "long",
     day: "numeric",
   });
-
-  useModalScrim();
 
   return createPortal(
     <div
