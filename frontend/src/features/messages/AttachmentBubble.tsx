@@ -6,6 +6,7 @@ import { api } from "../../lib/api";
 import { formatBytes } from "../../lib/format";
 import { toast } from "../../lib/toast";
 import type { Message } from "../../types";
+import { useModalScrim } from "../../lib/themeColor";
 
 function useAttachmentBlob(m: Message, enabled: boolean) {
   return useQuery({
@@ -82,6 +83,8 @@ function Lightbox({ url, alt, onClose }: { url: string; alt: string; onClose: ()
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  useModalScrim(0.88);
 
   return createPortal(
     <div

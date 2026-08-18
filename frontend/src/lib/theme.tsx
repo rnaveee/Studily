@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { syncThemeColor } from "./themeColor";
 
 interface ThemeCtx {
   dark: boolean;
@@ -15,9 +16,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem("studily.theme", dark ? "dark" : "light");
-    document
-      .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", dark ? "#16161e" : "#ffffff");
+    syncThemeColor();
   }, [dark]);
 
   return (

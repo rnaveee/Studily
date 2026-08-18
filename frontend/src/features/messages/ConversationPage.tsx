@@ -13,6 +13,7 @@ import BackButton from "../../components/BackButton";
 import Avatar from "../../components/Avatar";
 import AttachmentBubble from "./AttachmentBubble";
 import type { Conversation, Message, MessageLike, Page, PublicUser } from "../../types";
+import { useModalScrim } from "../../lib/themeColor";
 
 const DOC_ACCEPT = ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.md";
 const INITIAL_PAGE_SIZE = 10;
@@ -494,6 +495,8 @@ function MembersModal({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  useModalScrim();
 
   return createPortal(
     <div

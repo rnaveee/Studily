@@ -8,6 +8,7 @@ import { queryClient } from "../../lib/queryClient";
 import { toast } from "../../lib/toast";
 import Avatar from "../../components/Avatar";
 import type { Conversation, FriendRequestItem } from "../../types";
+import { useModalScrim } from "../../lib/themeColor";
 
 export default function NewGroupModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
@@ -46,6 +47,8 @@ export default function NewGroupModal({ onClose }: { onClose: () => void }) {
   }
 
   const canCreate = name.trim().length > 0 && selected.length > 0 && !create.isPending;
+
+  useModalScrim();
 
   return createPortal(
     <div
