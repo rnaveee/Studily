@@ -32,6 +32,8 @@ export function setGuestMode(on: boolean) {
 const GUEST_EMPTY_LISTS = new Set([
   "/calendar/events",
   "/calendar/categories",
+  "/todos",
+  "/todo-categories",
   "/courses/matches",
   "/friends",
   "/friends/incoming",

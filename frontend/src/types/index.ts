@@ -208,6 +208,49 @@ export interface CalendarEventRequest {
   recurrence?: Recurrence | null;
 }
 
+export type TodoPriority = "HIGH" | "MEDIUM" | "LOW";
+
+export interface TodoCategory {
+  id: number;
+  name: string;
+  color: string;
+}
+
+export interface TodoCategoryRequest {
+  name: string;
+  color: string;
+}
+
+export interface TodoChecklistItem {
+  id?: number | null;
+  text: string;
+  done: boolean;
+}
+
+export interface Todo {
+  id: number;
+  title: string;
+  notes?: string | null;
+  priority: TodoPriority;
+  dueAt?: string | null;
+  completed: boolean;
+  completedAt?: string | null;
+  categoryId?: number | null;
+  categoryName?: string | null;
+  categoryColor?: string | null;
+  checklist: TodoChecklistItem[];
+  createdAt: string;
+}
+
+export interface TodoRequest {
+  title: string;
+  notes?: string | null;
+  priority: TodoPriority;
+  dueAt?: string | null;
+  categoryId?: number | null;
+  checklist: TodoChecklistItem[];
+}
+
 export interface Note {
   id: number;
   courseId: number;
@@ -241,6 +284,7 @@ export interface WeekView {
   semester: Semester | null;
   days: DayColumn[];
   dueThisWeek: AcademicItem[];
+  todosDueThisWeek: Todo[];
   nextExam: AcademicItem | null;
 }
 

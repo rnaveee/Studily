@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 28,
+    date: "2026-08-17",
+    title: "To-do list",
+    description:
+      "Track anything that isn't a graded item: tasks with their own categories, priority, due date, notes, and a checklist of steps. Tasks due this week show up on your dashboard alongside your coursework.",
+  },
+  {
     version: 27,
     date: "2026-08-11",
     title: "Canvas import",

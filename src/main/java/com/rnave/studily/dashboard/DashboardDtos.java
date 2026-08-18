@@ -4,6 +4,7 @@ import com.rnave.studily.academic.AcademicItemDtos.AcademicItemDto;
 import com.rnave.studily.course.DayOfWeek;
 import com.rnave.studily.course.MeetingKind;
 import com.rnave.studily.semester.SemesterDtos.SemesterDto;
+import com.rnave.studily.todo.TodoDtos.TodoDto;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -37,6 +38,7 @@ public class DashboardDtos {
             SemesterDto semester,
             List<DayColumn> days,
             List<AcademicItemDto> dueThisWeek,
+            List<TodoDto> todosDueThisWeek,
             AcademicItemDto nextExam) {
     }
 }

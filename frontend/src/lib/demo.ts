@@ -210,6 +210,7 @@ export function demoWeek(): WeekView {
     semester: DEMO_SEMESTER,
     days,
     dueThisWeek: inWeek.sort((a, b) => a.dueAt.localeCompare(b.dueAt)),
+    todosDueThisWeek: [],
     nextExam,
   };
 }

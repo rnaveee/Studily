@@ -14,6 +14,8 @@ import com.rnave.studily.dashboard.DashboardDtos.ScheduledMeeting;
 import com.rnave.studily.dashboard.DashboardDtos.WeekView;
 import com.rnave.studily.semester.SemesterDtos.SemesterDto;
 import com.rnave.studily.semester.SemesterService;
+import com.rnave.studily.todo.TodoDtos.TodoDto;
+import com.rnave.studily.todo.TodoRepository;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,13 +38,16 @@ public class DashboardService {
 
     private final CourseRepository courseRepository;
     private final AcademicItemRepository itemRepository;
+    private final TodoRepository todoRepository;
     private final SemesterService semesterService;
     private final CurrentUser currentUser;
 
     public DashboardService(CourseRepository courseRepository, AcademicItemRepository itemRepository,
-                            @Lazy SemesterService semesterService, CurrentUser currentUser) {
+                            TodoRepository todoRepository, @Lazy SemesterService semesterService,
+                            CurrentUser currentUser) {
         this.courseRepository = courseRepository;
         this.itemRepository = itemRepository;
+        this.todoRepository = todoRepository;
         this.semesterService = semesterService;
         this.currentUser = currentUser;
     }
@@ -113,7 +118,12 @@ public class DashboardService {
                         userId, ItemType.EXAM, Instant.now()))
                 .map(AcademicItemDto::from).orElse(null);
 
-        return new WeekView(weekStart, weekEnd, semester, days, dueThisWeek, nextExam);
+        List<TodoDto> todosDueThisWeek = todoRepository
+                .findByUserIdAndCompletedAtIsNullAndDueAtBetweenOrderByDueAtAsc(
+                        userId, weekStartInstant, weekEndInstant)
+                .stream().map(TodoDto::from).toList();
+
+        return new WeekView(weekStart, weekEnd, semester, days, dueThisWeek, todosDueThisWeek, nextExam);
     }
 
     private static int dayIndex(DayOfWeek d) {

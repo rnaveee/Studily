@@ -15,7 +15,7 @@ import type {
   ItemType,
   Recurrence,
 } from "../../types";
-import CategorySelect from "./CategorySelect";
+import CategorySelect from "../../components/CategorySelect";
 import RepeatPicker from "./RepeatPicker";
 import type { Entry } from "./entries";
 

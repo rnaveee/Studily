@@ -15,6 +15,7 @@
   --red:        #c63636;
   --green:      #2d9060;
   --orange:     #b9701f;
+  --yellow:     #a37d12;
   --sidebar-w:  220px;
 }
 
@@ -32,6 +33,7 @@
   --red:        #dc4444;
   --green:      #42a870;
   --orange:     #e0913c;
+  --yellow:     #d6ab3d;
 }
 
 @theme inline {
@@ -47,6 +49,8 @@
   --color-accent-fg:  var(--accent-fg);
   --color-red:        var(--red);
   --color-green:      var(--green);
+  --color-orange:     var(--orange);
+  --color-yellow:     var(--yellow);
   --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
   --font-mono: "SF Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace;
 }

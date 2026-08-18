@@ -35,6 +35,7 @@ import FlashcardSetPage from "./features/learn/FlashcardSetPage";
 import AiChatPage from "./features/learn/AiChatPage";
 import PomodoroPage from "./features/learn/PomodoroPage";
 import SettingsPage from "./features/settings/SettingsPage";
+import TodosPage from "./features/todos/TodosPage";
 
 const PeriodicTablePage = lazy(() => import("./features/learn/PeriodicTablePage"));
 
@@ -75,6 +76,7 @@ export default function App() {
           }
         />
         <Route path="/pomodoro" element={<PomodoroPage />} />
+        <Route path="/todos" element={<TodosPage />} />
         <Route path="/semesters" element={<SemestersPage />} />
         <Route path="/friends" element={<VerifyGate><FriendsPage /></VerifyGate>} />
         <Route path="/friends/schoolmates" element={<VerifyGate><SchoolmatesPage /></VerifyGate>} />

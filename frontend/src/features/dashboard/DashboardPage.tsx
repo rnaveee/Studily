@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { X, BookOpen, CalendarDays, Brain, User } from "lucide-react";
+import { X, BookOpen, CalendarDays, Brain, ListChecks, User } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth, useRequireAuth } from "../../lib/auth";
-import { countdown, formatDateTime, hhmm } from "../../lib/format";
+import { countdown, dueUrgency, formatDateTime, hhmm } from "../../lib/format";
 import {
   DAYS,
   MEETING_KIND_LABEL,
@@ -12,9 +12,11 @@ import {
   type AcademicItemRequest,
   type Course,
   type Semester,
+  type Todo,
   type WeekView,
 } from "../../types";
 import ItemForm from "../../components/ItemForm";
+import { priorityLabel, priorityTone } from "../todos/priority";
 import { quoteOfTheDay } from "./quotes";
 
 const GRID_START = 8 * 60;
@@ -106,6 +108,20 @@ function MiniMonth({ marked }: { marked: Set<string> }) {
   );
 }
 
+interface DueEntry {
+  key: string;
+  dueAt: string;
+  item?: AcademicItem;
+  todo?: Todo;
+}
+
+function badgeStyle(color: string): React.CSSProperties {
+  return {
+    background: `color-mix(in srgb, ${color} 12%, transparent)`,
+    color,
+  };
+}
+
 export default function DashboardPage() {
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -146,6 +162,15 @@ export default function DashboardPage() {
     () => (courses ?? []).map((c) => ({ id: c.id, name: c.name })),
     [courses]
   );
+
+  const dueThisWeek = useMemo<DueEntry[]>(() => {
+    if (!data) return [];
+    const entries: DueEntry[] = [
+      ...data.dueThisWeek.map((item) => ({ key: `item-${item.id}`, dueAt: item.dueAt, item })),
+      ...data.todosDueThisWeek.map((todo) => ({ key: `todo-${todo.id}`, dueAt: todo.dueAt!, todo })),
+    ];
+    return entries.sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+  }, [data]);
 
   const quote = quoteOfTheDay();
 
@@ -415,21 +440,48 @@ export default function DashboardPage() {
             <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
               Due this week
             </h2>
-            {data.dueThisWeek.length === 0 ? (
+            {dueThisWeek.length === 0 ? (
               <p className="text-sm text-fg-3">Nothing due. Enjoy it.</p>
             ) : (
               <ul className="card divide-y divide-line">
-                {data.dueThisWeek.map((it) => (
-                  <li key={it.id} className="flex items-center gap-3 px-4 py-2.5 text-[13px]">
-                    <div className="min-w-0 flex-1 truncate">
-                      <Link to={`/courses/${it.courseId}`} className="font-medium text-fg hover:text-accent transition-colors">
-                        {it.title}
-                      </Link>
-                      <span className="ml-2 text-fg-3">· {it.courseName}</span>
-                    </div>
-                    <span className="shrink-0 whitespace-nowrap text-fg-3 tabular-nums">{formatDateTime(it.dueAt)}</span>
-                  </li>
-                ))}
+                {dueThisWeek.map((entry) =>
+                  entry.todo ? (
+                    <li key={entry.key} className="flex items-center gap-3 px-4 py-2.5 text-[13px]">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <Link to="/todos" className="font-medium text-fg hover:text-accent transition-colors">
+                            {entry.todo.title}
+                          </Link>
+                          <span className="badge badge-muted">To-do</span>
+                          {entry.todo.categoryName && (
+                            <span className="badge" style={badgeStyle(entry.todo.categoryColor ?? "var(--accent)")}>
+                              {entry.todo.categoryName}
+                            </span>
+                          )}
+                          <span className="badge" style={badgeStyle(priorityTone(entry.todo.priority))}>
+                            {priorityLabel(entry.todo.priority)}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className="shrink-0 whitespace-nowrap tabular-nums"
+                        style={{ color: dueUrgency(entry.dueAt)?.color ?? "var(--fg-3)" }}
+                      >
+                        {formatDateTime(entry.dueAt)}
+                      </span>
+                    </li>
+                  ) : (
+                    <li key={entry.key} className="flex items-center gap-3 px-4 py-2.5 text-[13px]">
+                      <div className="min-w-0 flex-1 truncate">
+                        <Link to={`/courses/${entry.item!.courseId}`} className="font-medium text-fg hover:text-accent transition-colors">
+                          {entry.item!.title}
+                        </Link>
+                        <span className="ml-2 text-fg-3">· {entry.item!.courseName}</span>
+                      </div>
+                      <span className="shrink-0 whitespace-nowrap text-fg-3 tabular-nums">{formatDateTime(entry.dueAt)}</span>
+                    </li>
+                  ),
+                )}
               </ul>
             )}
           </div>
@@ -445,7 +497,7 @@ export default function DashboardPage() {
                 <div className="text-[12px] text-fg-3">See and plan your full calendar.</div>
               </div>
             </div>
-            <MiniMonth marked={new Set(data.dueThisWeek.map((it) => it.dueAt.slice(0, 10)))} />
+            <MiniMonth marked={new Set(dueThisWeek.map((e) => e.dueAt.slice(0, 10)))} />
           </Link>
 
           <div>
@@ -471,6 +523,16 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <div className="text-[14px] font-medium text-fg">Learn</div>
                   <div className="text-[12px] text-fg-3">Improve your learning in your classes.</div>
+                </div>
+              </Link>
+              <Link to="/todos" className="card flex items-center gap-3 p-4 transition-colors hover:bg-surface-hi">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                      style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}>
+                  <ListChecks size={16} className="text-accent" />
+                </span>
+                <div className="min-w-0">
+                  <div className="text-[14px] font-medium text-fg">To-Do List</div>
+                  <div className="text-[12px] text-fg-3">Track tasks, checklists, and deadlines.</div>
                 </div>
               </Link>
               <Link to="/profile" className="card flex items-center gap-3 p-4 transition-colors hover:bg-surface-hi">

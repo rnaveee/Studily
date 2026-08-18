@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Pencil, Repeat, Trash2, X } from "lucide-react";
 import { api } from "../../lib/api";
-import { formatDateTime } from "../../lib/format";
+import { formatDateTime, toLocalInput } from "../../lib/format";
 import { useConfirm } from "../../lib/confirm";
 import { describeRule } from "../../lib/recurrence";
 import type {
@@ -15,14 +15,8 @@ import type {
   ItemType,
   SeriesScope,
 } from "../../types";
-import CategorySelect from "./CategorySelect";
+import CategorySelect from "../../components/CategorySelect";
 import DateTimeSelect from "../../components/DateTimeSelect";
-
-function toLocalInput(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 export default function CalendarEntryModal({
   item,

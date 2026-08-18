@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Atom, Calculator, Layers, LineChart, PersonStanding, Sparkles, Timer } from "lucide-react";
+import { Atom, Calculator, Layers, LineChart, ListChecks, PersonStanding, Sparkles, Timer } from "lucide-react";
 import { formatMs, pomodoroColor, usePomodoro } from "../../lib/pomodoro";
 
 const TOOLS = [
@@ -8,6 +8,13 @@ const TOOLS = [
     icon: Timer,
     title: "Pomodoro Timer",
     description: "Stay focused with timed study sprints and breaks.",
+    disabled: false,
+  },
+  {
+    to: "/todos",
+    icon: ListChecks,
+    title: "To-Do List",
+    description: "Track tasks, checklists, and deadlines.",
     disabled: false,
   },
   {

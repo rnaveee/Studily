@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Plus, Trash2, X } from "lucide-react";
-import { api } from "../../lib/api";
-import { useConfirm } from "../../lib/confirm";
-import type { EventCategory, EventCategoryRequest } from "../../types";
+import { api } from "../lib/api";
+import { useConfirm } from "../lib/confirm";
+import type { EventCategory, EventCategoryRequest } from "../types";
 
 export const CATEGORY_COLORS = [
   "#3b82f6",
@@ -16,23 +16,38 @@ export const CATEGORY_COLORS = [
   "#0ea5e9",
 ];
 
+const EVENT_ENDPOINT = "/calendar/categories";
+const EVENT_QUERY_KEY = "event-categories";
+
 export function useEventCategories() {
+  return useCategories(EVENT_QUERY_KEY, EVENT_ENDPOINT);
+}
+
+function useCategories(queryKey: string, endpoint: string) {
   return useQuery({
-    queryKey: ["event-categories"],
-    queryFn: () => api.get<EventCategory[]>("/calendar/categories"),
+    queryKey: [queryKey],
+    queryFn: () => api.get<EventCategory[]>(endpoint),
   });
 }
 
 export default function CategorySelect({
   value,
   onChange,
+  endpoint = EVENT_ENDPOINT,
+  queryKey = EVENT_QUERY_KEY,
+  invalidateKey = "calendar-events",
+  deleteMessage = "Events in this category keep their date and details, but lose the category label.",
 }: {
   value: number | null;
   onChange: (id: number | null) => void;
+  endpoint?: string;
+  queryKey?: string;
+  invalidateKey?: string;
+  deleteMessage?: string;
 }) {
   const qc = useQueryClient();
   const confirm = useConfirm();
-  const { data: categories } = useEventCategories();
+  const { data: categories } = useCategories(queryKey, endpoint);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
@@ -61,9 +76,9 @@ export default function CategorySelect({
 
   const create = useMutation({
     mutationFn: (req: EventCategoryRequest) =>
-      api.post<EventCategory>("/calendar/categories", req),
+      api.post<EventCategory>(endpoint, req),
     onSuccess: (category) => {
-      qc.invalidateQueries({ queryKey: ["event-categories"] });
+      qc.invalidateQueries({ queryKey: [queryKey] });
       onChange(category.id);
       setCreating(false);
       setName("");
@@ -73,10 +88,10 @@ export default function CategorySelect({
   });
 
   const remove = useMutation({
-    mutationFn: (id: number) => api.del(`/calendar/categories/${id}`),
+    mutationFn: (id: number) => api.del(`${endpoint}/${id}`),
     onSuccess: (_result, id) => {
-      qc.invalidateQueries({ queryKey: ["event-categories"] });
-      qc.invalidateQueries({ queryKey: ["calendar-events"] });
+      qc.invalidateQueries({ queryKey: [queryKey] });
+      qc.invalidateQueries({ queryKey: [invalidateKey] });
       if (value === id) onChange(null);
     },
     onError: (err) => setError(err instanceof Error ? err.message : "Couldn't delete category"),
@@ -95,7 +110,7 @@ export default function CategorySelect({
     setError(null);
     const ok = await confirm({
       title: `Are you sure you want to delete "${category.name}"?`,
-      message: "Events in this category keep their date and details, but lose the category label.",
+      message: deleteMessage,
       confirmLabel: "Delete",
       danger: true,
     });
