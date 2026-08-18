@@ -497,12 +497,12 @@ function MembersModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center sm:p-4"
-      style={{ background: "rgba(0,0,0,0.45)" }}
+      className="fixed inset-x-0 top-0 z-[90] flex items-end justify-center sm:items-center sm:p-4"
+      style={{ background: "rgba(0,0,0,0.45)", height: "var(--app-height, 100%)" }}
       onClick={onClose}
     >
       <div
-        className="card flex max-h-[70vh] w-full max-w-sm flex-col gap-3 rounded-b-none p-5 shadow-xl animate-sheet sm:rounded-b-xl"
+        className="card flex max-h-[min(70vh,100%)] w-full max-w-sm flex-col gap-3 rounded-b-none p-5 shadow-xl animate-sheet sm:rounded-b-xl"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}
         onClick={(e) => e.stopPropagation()}
       >

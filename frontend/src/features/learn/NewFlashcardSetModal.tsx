@@ -60,12 +60,12 @@ export default function NewFlashcardSetModal({ onClose }: { onClose: () => void 
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[90] flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.45)" }}
+      className="fixed inset-x-0 top-0 z-[90] flex overflow-y-auto overscroll-contain p-4"
+      style={{ background: "rgba(0,0,0,0.45)", height: "var(--app-height, 100%)" }}
       onClick={onClose}
     >
       <div
-        className="card flex w-full max-w-sm flex-col gap-4 p-5 shadow-xl animate-in"
+        className="card m-auto flex w-full max-w-sm flex-col gap-4 p-5 shadow-xl animate-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between">
