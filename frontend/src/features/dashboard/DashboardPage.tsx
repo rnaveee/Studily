@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { X, BookOpen, CalendarDays, Brain, ListChecks, User } from "lucide-react";
+import { X, BookOpen, CalendarDays, Brain, User } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth, useRequireAuth } from "../../lib/auth";
 import { countdown, dueUrgency, formatDateTime, hhmm } from "../../lib/format";
@@ -16,6 +16,7 @@ import {
   type WeekView,
 } from "../../types";
 import ItemForm from "../../components/ItemForm";
+import TodoQuickView from "../todos/TodoQuickView";
 import { priorityLabel, priorityTone } from "../todos/priority";
 import { quoteOfTheDay } from "./quotes";
 
@@ -500,6 +501,8 @@ export default function DashboardPage() {
             <MiniMonth marked={new Set(dueThisWeek.map((e) => e.dueAt.slice(0, 10)))} />
           </Link>
 
+          <TodoQuickView />
+
           <div>
             <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
               Explore
@@ -523,16 +526,6 @@ export default function DashboardPage() {
                 <div className="min-w-0">
                   <div className="text-[14px] font-medium text-fg">Learn</div>
                   <div className="text-[12px] text-fg-3">Improve your learning in your classes.</div>
-                </div>
-              </Link>
-              <Link to="/todos" className="card flex items-center gap-3 p-4 transition-colors hover:bg-surface-hi">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-                      style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}>
-                  <ListChecks size={16} className="text-accent" />
-                </span>
-                <div className="min-w-0">
-                  <div className="text-[14px] font-medium text-fg">To-Do List</div>
-                  <div className="text-[12px] text-fg-3">Track tasks, checklists, and deadlines.</div>
                 </div>
               </Link>
               <Link to="/profile" className="card flex items-center gap-3 p-4 transition-colors hover:bg-surface-hi">

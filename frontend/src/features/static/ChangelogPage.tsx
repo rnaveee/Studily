@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 29,
+    date: "2026-08-18",
+    title: "To-do list on your dashboard",
+    description:
+      "Your dashboard now has a to-do panel under the calendar showing the five tasks at the top of your list, including ones with no due date. Check anything off right from there, or jump to the full list.",
+  },
+  {
     version: 28,
     date: "2026-08-17",
     title: "To-do list",
