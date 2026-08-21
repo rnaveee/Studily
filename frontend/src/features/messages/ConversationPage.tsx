@@ -626,7 +626,6 @@ function MembersModal({
     <div
       className="fixed inset-x-0 top-0 z-[90] flex items-end justify-center sm:items-center sm:p-4"
       style={{ background: "rgba(0,0,0,0.45)", height: "var(--app-height, 100%)" }}
-      onClick={onClose}
     >
       <div
         className="card flex max-h-[min(70vh,100%)] w-full max-w-sm flex-col gap-3 rounded-b-none p-5 shadow-xl animate-sheet sm:rounded-b-xl"

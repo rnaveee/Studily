@@ -137,7 +137,6 @@ export default function DayModal({
     <div
       className="fixed inset-x-0 top-0 z-[90] flex overflow-y-auto overscroll-contain p-4"
       style={{ background: "rgba(0,0,0,0.45)", height: "var(--app-height, 100%)" }}
-      onClick={onClose}
     >
       <div
         className="card m-auto flex w-full max-w-sm flex-col shadow-xl animate-in"

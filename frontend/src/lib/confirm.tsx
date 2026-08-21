@@ -51,7 +51,6 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           <div
             className="fixed inset-0 z-[95] flex items-center justify-center p-4"
             style={{ background: "rgba(0,0,0,0.45)" }}
-            onClick={() => respond(false)}
           >
             <div
               className="card w-full max-w-sm space-y-4 p-5 shadow-xl animate-in"
