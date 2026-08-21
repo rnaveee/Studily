@@ -36,6 +36,7 @@ public class ConversationDtos {
             String body,
             AttachmentDto attachment,
             Instant createdAt,
+            Instant editedAt,
             int likeCount,
             boolean likedByMe) {
 
@@ -47,7 +48,7 @@ public class ConversationDtos {
             return new MessageDto(
                     m.getId(), m.getConversation().getId(),
                     PublicUserDto.from(m.getSender()), m.getBody(),
-                    AttachmentDto.from(m), m.getCreatedAt(),
+                    AttachmentDto.from(m), m.getCreatedAt(), m.getEditedAt(),
                     likeCount, likedByMe);
         }
     }
@@ -87,5 +88,8 @@ public class ConversationDtos {
     }
 
     public record SendMessageRequest(@NotBlank @Size(max = 5000) String body) {
+    }
+
+    public record EditMessageRequest(@NotBlank @Size(max = 5000) String body) {
     }
 }

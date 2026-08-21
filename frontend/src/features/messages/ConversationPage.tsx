@@ -1,14 +1,36 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Heart, ImagePlus, Paperclip, Send, Users2, X } from "lucide-react";
+import {
+  Check,
+  Heart,
+  ImagePlus,
+  MoreHorizontal,
+  MoreVertical,
+  Paperclip,
+  Pencil,
+  Send,
+  Trash2,
+  Users2,
+  X,
+} from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
+import { useConfirm } from "../../lib/confirm";
 import { queryClient } from "../../lib/queryClient";
 import { toast } from "../../lib/toast";
 import { useDoubleTap } from "../../lib/useDoubleTap";
-import { appendMessageToCache, applyLikeToCache, optimisticToggleLike, ws } from "../../lib/ws";
+import {
+  appendMessageToCache,
+  applyEditToCache,
+  applyLikeToCache,
+  clearMessagesInCache,
+  invalidateConversationLists,
+  optimisticToggleLike,
+  removeMessageFromCache,
+  ws,
+} from "../../lib/ws";
 import BackButton from "../../components/BackButton";
 import Avatar from "../../components/Avatar";
 import AttachmentBubble from "./AttachmentBubble";
@@ -18,6 +40,7 @@ const DOC_ACCEPT = ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.md";
 const INITIAL_PAGE_SIZE = 10;
 const OLDER_PAGE_SIZE = 30;
 const MAX_JUMBO_EMOJI = 3;
+const MENU_GAP = 8;
 
 const EMOJI_ONLY =
   /^(?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Regional_Indicator}|[\u200D\uFE0F]|\s)+$/u;
@@ -66,6 +89,9 @@ export default function ConversationPage() {
   const navigate = useNavigate();
   const [draft, setDraft] = useState("");
   const [showMembers, setShowMembers] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [openMenu, setOpenMenu] = useState<number | "header" | null>(null);
+  const confirm = useConfirm();
 
   const [wsConnected, setWsConnected] = useState(ws.isConnected());
   useEffect(() => ws.onState(setWsConnected), []);
@@ -150,14 +176,40 @@ export default function ConversationPage() {
     },
   });
 
+  const editMessage = useMutation({
+    mutationFn: ({ messageId, body }: { messageId: number; body: string }) =>
+      api.put<Message>(`/conversations/${convId}/messages/${messageId}`, { body }),
+    onSuccess: (m) => {
+      applyEditToCache(m);
+      setEditingId(null);
+    },
+    onError: (err) => {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't edit that message.");
+    },
+  });
+
+  const deleteMessage = useMutation({
+    mutationFn: (messageId: number) => api.del<void>(`/conversations/${convId}/messages/${messageId}`),
+    onSuccess: (_res, messageId) => removeMessageFromCache(convId, messageId),
+    onError: (err) => {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't delete that message.");
+    },
+  });
+
+  const clearChat = useMutation({
+    mutationFn: () => api.del<void>(`/conversations/${convId}/messages`),
+    onSuccess: () => clearMessagesInCache(convId),
+    onError: (err) => {
+      toast.error(err instanceof ApiError ? err.message : "Couldn't clear this chat.");
+    },
+  });
+
   const send = useMutation({
     mutationFn: (body: string) =>
       api.post<Message>(`/conversations/${convId}/messages`, { body }),
     onSuccess: (m) => {
       appendMessageToCache(m);
-      queryClient.invalidateQueries({ queryKey: ["conversations", "list"] });
-      queryClient.invalidateQueries({ queryKey: ["conversations", "direct"] });
-      queryClient.invalidateQueries({ queryKey: ["conversations", "groups"] });
+      invalidateConversationLists();
     },
     onError: (_err, body) => {
       setDraft((current) => (current ? current : body));
@@ -211,9 +263,7 @@ export default function ConversationPage() {
         const m = await api.post<Message>(`/conversations/${convId}/attachments`, fd);
         appendMessageToCache(m);
       }
-      queryClient.invalidateQueries({ queryKey: ["conversations", "list"] });
-      queryClient.invalidateQueries({ queryKey: ["conversations", "direct"] });
-      queryClient.invalidateQueries({ queryKey: ["conversations", "groups"] });
+      invalidateConversationLists();
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Upload failed. Please try again.");
     } finally {
@@ -223,9 +273,46 @@ export default function ConversationPage() {
     }
   }
 
+  useEffect(() => {
+    if (openMenu === null) return;
+    const close = () => setOpenMenu(null);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenMenu(null);
+    };
+    window.addEventListener("click", close);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [openMenu]);
+
   const conv = conversation.data;
   const others = conv?.members.filter((m) => m.id !== user?.id) ?? [];
   const isGroup = conv?.type === "GROUP";
+
+  async function handleDeleteMessage(messageId: number) {
+    const ok = await confirm({
+      title: "Delete this message?",
+      message: "It disappears for everyone in the chat.",
+      confirmLabel: "Delete message",
+      danger: true,
+    });
+    if (ok) deleteMessage.mutate(messageId);
+  }
+
+  async function handleClearChat() {
+    setOpenMenu(null);
+    const ok = await confirm({
+      title: "Clear this chat?",
+      message: isGroup
+        ? "The messages disappear from your view. Other members keep their copy."
+        : `The messages disappear from your view. ${others[0]?.name ?? "They"} keeps their copy.`,
+      confirmLabel: "Clear chat",
+      danger: true,
+    });
+    if (ok) clearChat.mutate();
+  }
 
   const otherReadAt = conv?.otherReadAt;
   const seenMessageId = useMemo(() => {
@@ -273,7 +360,7 @@ export default function ConversationPage() {
         </div>
       )}
       <header
-        className="flex shrink-0 items-center gap-3 bg-surface px-3 pb-2.5 md:bg-transparent md:px-6"
+        className="relative flex shrink-0 items-center gap-3 bg-surface px-3 pb-2.5 md:bg-transparent md:px-6"
         style={{
           paddingTop: "calc(env(safe-area-inset-top, 0px) + 10px)",
           borderBottom: "1px solid var(--line)",
@@ -314,6 +401,36 @@ export default function ConversationPage() {
             </span>
           </Link>
         )}
+
+        <div className="relative ml-auto shrink-0">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpenMenu((open) => (open === "header" ? null : "header"));
+            }}
+            className="rounded-lg p-2 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+            aria-label="Conversation options"
+          >
+            <MoreVertical size={16} />
+          </button>
+          {openMenu === "header" && (
+            <div
+              className="card absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden py-1 shadow-xl animate-slide"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={handleClearChat}
+                disabled={clearChat.isPending}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-red transition-colors hover:bg-surface-hi disabled:opacity-50"
+              >
+                <Trash2 size={13} />
+                Clear chat
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       <div
@@ -379,7 +496,17 @@ export default function ConversationPage() {
                     <MessageBubble
                       message={m}
                       mine={mine}
+                      editing={editingId === m.id}
+                      menuOpen={openMenu === m.id}
+                      onToggleMenu={() =>
+                        setOpenMenu((open) => (open === m.id ? null : m.id))
+                      }
+                      onCloseMenu={() => setOpenMenu(null)}
                       onLike={() => like.mutate(m.id)}
+                      onStartEdit={() => setEditingId(m.id)}
+                      onCancelEdit={() => setEditingId(null)}
+                      onSubmitEdit={(body) => editMessage.mutate({ messageId: m.id, body })}
+                      onDelete={() => handleDeleteMessage(m.id)}
                     />
                   </div>
                 </div>
@@ -554,58 +681,187 @@ function MembersModal({
 function MessageBubble({
   message,
   mine,
+  editing,
+  menuOpen,
+  onToggleMenu,
+  onCloseMenu,
   onLike,
+  onStartEdit,
+  onCancelEdit,
+  onSubmitEdit,
+  onDelete,
 }: {
   message: Message;
   mine: boolean;
+  editing: boolean;
+  menuOpen: boolean;
+  onToggleMenu: () => void;
+  onCloseMenu: () => void;
   onLike: () => void;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onSubmitEdit: (body: string) => void;
+  onDelete: () => void;
 }) {
   const tap = useDoubleTap(onLike);
+  const [menuSide, setMenuSide] = useState<"left" | "right">("left");
+  const dotsRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [editDraft, setEditDraft] = useState(message.body);
   const liked = message.likedByMe;
   const jumbo = message.attachment ? null : jumboSize(message.body);
 
-  return (
-    <div className="relative">
-      <div
-        {...tap}
-        className={message.likeCount > 0 ? "pb-1.5" : undefined}
-        role="button"
-        tabIndex={-1}
-        aria-label="Double tap to like"
+  useEffect(() => {
+    if (editing) setEditDraft(message.body);
+  }, [editing, message.body]);
+
+  useLayoutEffect(() => {
+    const menu = menuRef.current;
+    const dots = dotsRef.current;
+    if (!menuOpen || !menu || !dots) return;
+    const width = menu.offsetWidth;
+    const rect = dots.getBoundingClientRect();
+    const fitsLeft = rect.left - MENU_GAP - width >= MENU_GAP;
+    const fitsRight = rect.right + MENU_GAP + width <= window.innerWidth - MENU_GAP;
+    if (fitsLeft) setMenuSide("left");
+    else if (fitsRight) setMenuSide("right");
+    else setMenuSide(rect.left > window.innerWidth - rect.right ? "left" : "right");
+  }, [menuOpen]);
+
+  if (editing) {
+    return (
+      <form
+        className="flex w-full items-center gap-1.5"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const body = editDraft.trim();
+          if (!body || body === message.body) onCancelEdit();
+          else onSubmitEdit(body);
+        }}
       >
-        {message.attachment ? (
-          <AttachmentBubble message={message} mine={mine} />
-        ) : jumbo ? (
-          <div
-            className="select-none py-0.5 leading-none"
-            style={{ fontSize: jumbo, lineHeight: 1.15 }}
+        <input
+          className="input"
+          value={editDraft}
+          autoFocus
+          onChange={(e) => setEditDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") onCancelEdit();
+          }}
+          aria-label="Edit message"
+        />
+        <button type="submit" className="btn btn-primary shrink-0" aria-label="Save changes">
+          <Check size={13} />
+        </button>
+        <button type="button" onClick={onCancelEdit} className="btn btn-ghost shrink-0" aria-label="Cancel edit">
+          <X size={13} />
+        </button>
+      </form>
+    );
+  }
+
+  const edited = message.editedAt ? (
+    <span className="ml-1.5 text-[10px] opacity-60">edited</span>
+  ) : null;
+
+  return (
+    <div className={`group/msg flex items-center gap-0.5 ${mine ? "flex-row-reverse" : ""}`}>
+      <div className="relative">
+        <div
+          {...tap}
+          className={message.likeCount > 0 ? "pb-1.5" : undefined}
+          role="button"
+          tabIndex={-1}
+          aria-label="Double tap to like"
+        >
+          {message.attachment ? (
+            <AttachmentBubble message={message} mine={mine} />
+          ) : jumbo ? (
+            <div
+              className="select-none py-0.5 leading-none"
+              style={{ fontSize: jumbo, lineHeight: 1.15 }}
+            >
+              {message.body}
+              {edited}
+            </div>
+          ) : (
+            <div
+              className={`select-none rounded-2xl px-3.5 py-2 text-[13px] ${mine ? "text-accent-fg" : "text-fg"}`}
+              style={{ background: mine ? "var(--accent)" : "var(--surface-hi)" }}
+            >
+              {message.body}
+              {edited}
+            </div>
+          )}
+        </div>
+
+        {message.likeCount > 0 && (
+          <span
+            className={`absolute -bottom-1 flex items-center gap-0.5 rounded-full px-1.5 py-[1px] text-[10px] font-medium animate-fade ${
+              mine ? "left-0" : "right-0"
+            }`}
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              color: liked ? "var(--red)" : "var(--fg-3)",
+            }}
           >
-            {message.body}
-          </div>
-        ) : (
-          <div
-            className={`select-none rounded-2xl px-3.5 py-2 text-[13px] ${mine ? "text-accent-fg" : "text-fg"}`}
-            style={{ background: mine ? "var(--accent)" : "var(--surface-hi)" }}
-          >
-            {message.body}
-          </div>
+            <Heart size={9} strokeWidth={2.5} fill={liked ? "var(--red)" : "none"} />
+            {message.likeCount > 1 && message.likeCount}
+          </span>
         )}
       </div>
 
-      {message.likeCount > 0 && (
-        <span
-          className={`absolute -bottom-1 flex items-center gap-0.5 rounded-full px-1.5 py-[1px] text-[10px] font-medium animate-fade ${
-            mine ? "left-0" : "right-0"
-          }`}
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--line)",
-            color: liked ? "var(--red)" : "var(--fg-3)",
-          }}
-        >
-          <Heart size={9} strokeWidth={2.5} fill={liked ? "var(--red)" : "none"} />
-          {message.likeCount > 1 && message.likeCount}
-        </span>
+      {mine && (
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            ref={dotsRef}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleMenu();
+            }}
+            className={`rounded-full p-1 text-fg-3 transition-opacity hover:text-fg md:opacity-0 md:group-hover/msg:opacity-100 ${
+              menuOpen ? "md:opacity-100" : ""
+            }`}
+            aria-label="Message options"
+          >
+            <MoreHorizontal size={14} />
+          </button>
+          {menuOpen && (
+            <div
+              ref={menuRef}
+              className={`card absolute top-1/2 z-50 w-40 -translate-y-1/2 overflow-hidden py-1 shadow-xl animate-fade ${
+                menuSide === "left" ? "right-full mr-1" : "left-full ml-1"
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {!message.attachment && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onCloseMenu();
+                    onStartEdit();
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-fg transition-colors hover:bg-surface-hi"
+                >
+                  <Pencil size={13} />
+                  Edit message
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  onCloseMenu();
+                  onDelete();
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-red transition-colors hover:bg-surface-hi"
+              >
+                <Trash2 size={13} />
+                Delete message
+              </button>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

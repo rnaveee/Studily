@@ -54,6 +54,9 @@ public class Message {
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    @Column(name = "edited_at")
+    private Instant editedAt;
+
     public boolean hasAttachment() {
         return attachmentFilename != null;
     }

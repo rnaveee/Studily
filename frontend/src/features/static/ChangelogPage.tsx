@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 30,
+    date: "2026-08-19",
+    title: "Edit, delete, and clear messages",
+    description:
+      "Hover a message you sent and tap the three dots to edit or delete it — edits show up for everyone with an \"edited\" mark, and deletes remove the message from the chat for both sides. The menu in the chat header also lets you clear a whole conversation from your own view, leaving your friend's copy untouched.",
+  },
+  {
     version: 29,
     date: "2026-08-18",
     title: "To-do list on your dashboard",

@@ -2,6 +2,7 @@ package com.rnave.studily.conversation;
 
 import com.rnave.studily.conversation.ConversationDtos.ConversationDto;
 import com.rnave.studily.conversation.ConversationDtos.CreateGroupRequest;
+import com.rnave.studily.conversation.ConversationDtos.EditMessageRequest;
 import com.rnave.studily.conversation.ConversationDtos.MessageDto;
 import com.rnave.studily.conversation.ConversationDtos.MessageLikeDto;
 import com.rnave.studily.conversation.ConversationDtos.OpenDirectRequest;
@@ -17,9 +18,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -81,6 +84,24 @@ public class ConversationController {
     @ResponseStatus(HttpStatus.CREATED)
     public MessageDto send(@PathVariable Long id, @Valid @RequestBody SendMessageRequest req) {
         return conversationService.send(id, req.body());
+    }
+
+    @PutMapping("/{id}/messages/{messageId}")
+    public MessageDto editMessage(@PathVariable Long id, @PathVariable Long messageId,
+                                  @Valid @RequestBody EditMessageRequest req) {
+        return conversationService.editMessage(id, messageId, req.body());
+    }
+
+    @DeleteMapping("/{id}/messages/{messageId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteMessage(@PathVariable Long id, @PathVariable Long messageId) {
+        conversationService.deleteMessage(id, messageId);
+    }
+
+    @DeleteMapping("/{id}/messages")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void clearMessages(@PathVariable Long id) {
+        conversationService.clearConversation(id);
     }
 
     @PostMapping("/{id}/messages/{messageId}/like")

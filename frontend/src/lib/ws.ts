@@ -6,6 +6,9 @@ import type { Conversation, Message, MessageLike, Page } from "../types";
 
 type ServerEvent =
   | { type: "message"; message: Message }
+  | { type: "messageEdited"; message: Message }
+  | { type: "messageDeleted"; conversationId: number; messageId: number }
+  | { type: "conversationCleared"; conversationId: number }
   | { type: "like"; like: MessageLike }
   | { type: "read"; conversationId: number; userId: number; at: string }
   | { type: "pong" }
@@ -101,6 +104,53 @@ export function appendMessageToCache(message: Message) {
   );
 }
 
+export function applyEditToCache(message: Message) {
+  queryClient.setQueryData<InfiniteData<Page<Message>>>(
+    ["conversations", message.conversationId, "messages"],
+    (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((p) => ({
+          ...p,
+          items: p.items.map((m) =>
+            m.id === message.id ? { ...m, body: message.body, editedAt: message.editedAt } : m,
+          ),
+        })),
+      };
+    },
+  );
+  invalidateConversationLists();
+}
+
+export function removeMessageFromCache(conversationId: number, messageId: number) {
+  queryClient.setQueryData<InfiniteData<Page<Message>>>(
+    ["conversations", conversationId, "messages"],
+    (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((p) => ({ ...p, items: p.items.filter((m) => m.id !== messageId) })),
+      };
+    },
+  );
+  invalidateConversationLists();
+}
+
+export function clearMessagesInCache(conversationId: number) {
+  queryClient.setQueryData<InfiniteData<Page<Message>>>(
+    ["conversations", conversationId, "messages"],
+    (old) => (old ? { pages: [{ items: [], hasMore: false }], pageParams: [null] } : old),
+  );
+  invalidateConversationLists();
+}
+
+export function invalidateConversationLists() {
+  queryClient.invalidateQueries({ queryKey: ["conversations", "list"] });
+  queryClient.invalidateQueries({ queryKey: ["conversations", "direct"] });
+  queryClient.invalidateQueries({ queryKey: ["conversations", "groups"] });
+}
+
 export function applyReadToCache(conversationId: number, at: string) {
   queryClient.setQueryData<Conversation>(["conversations", conversationId], (old) =>
     old ? { ...old, otherReadAt: at } : old,
@@ -114,9 +164,7 @@ export function applyReadToCache(conversationId: number, at: string) {
 
 function handleIncoming(message: Message) {
   appendMessageToCache(message);
-  queryClient.invalidateQueries({ queryKey: ["conversations", "list"] });
-  queryClient.invalidateQueries({ queryKey: ["conversations", "direct"] });
-  queryClient.invalidateQueries({ queryKey: ["conversations", "groups"] });
+  invalidateConversationLists();
   messageListeners.forEach((fn) => fn(message));
 }
 
@@ -163,6 +211,10 @@ function open() {
       return;
     }
     if (event.type === "message") handleIncoming(event.message);
+    else if (event.type === "messageEdited") applyEditToCache(event.message);
+    else if (event.type === "messageDeleted")
+      removeMessageFromCache(event.conversationId, event.messageId);
+    else if (event.type === "conversationCleared") clearMessagesInCache(event.conversationId);
     else if (event.type === "like") applyLikeToCache(event.like, currentUserId ?? undefined);
     else if (event.type === "read") applyReadToCache(event.conversationId, event.at);
     else if (event.type === "error") toast.error(event.message);

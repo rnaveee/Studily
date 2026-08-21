@@ -37,4 +37,7 @@ public class ConversationMember {
     private Instant joinedAt = Instant.now();
 
     private Instant lastReadAt;
+
+    @Column(name = "cleared_up_to_message_id", nullable = false)
+    private long clearedUpToMessageId = 0;
 }

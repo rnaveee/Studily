@@ -382,6 +382,7 @@ export interface Message {
   body: string;
   attachment?: Attachment | null;
   createdAt: string;
+  editedAt?: string | null;
   likeCount: number;
   likedByMe: boolean;
 }

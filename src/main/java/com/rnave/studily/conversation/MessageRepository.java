@@ -9,11 +9,13 @@ import java.util.Optional;
 
 public interface MessageRepository extends JpaRepository<Message, Long> {
 
-    Slice<Message> findByConversationIdOrderByIdDesc(Long conversationId, Pageable pageable);
+    Slice<Message> findByConversationIdAndIdLessThanAndIdGreaterThanOrderByIdDesc(
+            Long conversationId, Long beforeId, long afterId, Pageable pageable);
 
-    Slice<Message> findByConversationIdAndIdLessThanOrderByIdDesc(Long conversationId, Long beforeId, Pageable pageable);
+    Optional<Message> findTopByConversationIdAndIdGreaterThanOrderByIdDesc(Long conversationId, long afterId);
 
-    Optional<Message> findTopByConversationIdOrderByCreatedAtDesc(Long conversationId);
+    Optional<Message> findTopByConversationIdOrderByIdDesc(Long conversationId);
 
-    boolean existsByConversationIdAndSenderIdNotAndCreatedAtAfter(Long conversationId, Long senderId, Instant after);
+    boolean existsByConversationIdAndSenderIdNotAndIdGreaterThanAndCreatedAtAfter(
+            Long conversationId, Long senderId, long afterId, Instant after);
 }

@@ -13,6 +13,24 @@ public final class WsEvents {
         }
     }
 
+    public record MessageEditEvent(String type, MessageDto message) {
+        public static MessageEditEvent of(MessageDto message) {
+            return new MessageEditEvent("messageEdited", message);
+        }
+    }
+
+    public record MessageDeleteEvent(String type, Long conversationId, Long messageId) {
+        public static MessageDeleteEvent of(Long conversationId, Long messageId) {
+            return new MessageDeleteEvent("messageDeleted", conversationId, messageId);
+        }
+    }
+
+    public record ConversationClearedEvent(String type, Long conversationId) {
+        public static ConversationClearedEvent of(Long conversationId) {
+            return new ConversationClearedEvent("conversationCleared", conversationId);
+        }
+    }
+
     public record MessageLikeEvent(String type, MessageLikeDto like) {
         public static MessageLikeEvent of(MessageLikeDto like) {
             return new MessageLikeEvent("like", like);

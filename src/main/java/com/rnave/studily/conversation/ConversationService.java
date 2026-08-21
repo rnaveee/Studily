@@ -142,10 +142,9 @@ public class ConversationService {
             markRead(conv);
         }
         int size = Math.min(Math.max(limit, 1), 100);
-        Slice<Message> slice = before == null
-                ? messageRepository.findByConversationIdOrderByIdDesc(conversationId, PageRequest.of(0, size))
-                : messageRepository.findByConversationIdAndIdLessThanOrderByIdDesc(
-                        conversationId, before, PageRequest.of(0, size));
+        Slice<Message> slice = messageRepository.findByConversationIdAndIdLessThanAndIdGreaterThanOrderByIdDesc(
+                conversationId, before == null ? Long.MAX_VALUE : before, clearedUpTo(conv),
+                PageRequest.of(0, size));
         List<Message> page = slice.getContent().reversed();
         List<MessageDto> items = withLikes(page);
         return new PageResponse<>(items, slice.hasNext());
@@ -188,6 +187,61 @@ public class ConversationService {
         MessageDto dto = MessageDto.from(message);
         broadcastAfterCommit(conv, dto);
         return dto;
+    }
+
+    @Transactional
+    public MessageDto editMessage(Long conversationId, Long messageId, String body) {
+        Conversation conv = requireMember(conversationId);
+        Message message = requireOwnMessage(conv, messageId);
+        if (message.hasAttachment()) {
+            throw new BadRequestException("Attachments can't be edited");
+        }
+        message.setBody(body.trim());
+        message.setEditedAt(Instant.now());
+        messageRepository.flush();
+        MessageDto dto = MessageDto.from(message);
+        broadcastToMembersAfterCommit(conv, WsEvents.MessageEditEvent.of(dto));
+        return dto;
+    }
+
+    @Transactional
+    public void deleteMessage(Long conversationId, Long messageId) {
+        Conversation conv = requireMember(conversationId);
+        Message message = requireOwnMessage(conv, messageId);
+        messageRepository.delete(message);
+        messageRepository.flush();
+        conv.setLastMessageAt(messageRepository.findTopByConversationIdOrderByIdDesc(conversationId)
+                .map(Message::getCreatedAt)
+                .orElse(null));
+        broadcastToMembersAfterCommit(conv, WsEvents.MessageDeleteEvent.of(conversationId, messageId));
+    }
+
+    @Transactional
+    public void clearConversation(Long conversationId) {
+        requireMember(conversationId);
+        Long me = currentUser.id();
+        ConversationMember member = conversationMemberRepository
+                .findByConversationIdAndUserId(conversationId, me)
+                .orElseThrow(() -> new NotFoundException("Conversation not found"));
+        messageRepository.findTopByConversationIdOrderByIdDesc(conversationId)
+                .ifPresent(m -> member.setClearedUpToMessageId(m.getId()));
+        member.setLastReadAt(Instant.now());
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                wsSessionRegistry.sendToUser(me, WsEvents.ConversationClearedEvent.of(conversationId));
+            }
+        });
+    }
+
+    private Message requireOwnMessage(Conversation conv, Long messageId) {
+        Message message = messageRepository.findById(messageId)
+                .filter(m -> m.getConversation().getId().equals(conv.getId()))
+                .orElseThrow(() -> new NotFoundException("Message not found"));
+        if (!message.getSender().getId().equals(currentUser.id())) {
+            throw new ForbiddenException("You can only change your own messages");
+        }
+        return message;
     }
 
     @Transactional(readOnly = true)
@@ -243,11 +297,11 @@ public class ConversationService {
 
         List<Long> likedBy = messageLikeRepository.findUserIdsByMessageId(messageId);
         MessageLikeDto dto = new MessageLikeDto(conversationId, messageId, likedBy.size(), likedBy);
-        broadcastLikeAfterCommit(conv, dto);
+        broadcastToMembersAfterCommit(conv, WsEvents.MessageLikeEvent.of(dto));
         return dto;
     }
 
-    private void broadcastLikeAfterCommit(Conversation conv, MessageLikeDto dto) {
+    private void broadcastToMembersAfterCommit(Conversation conv, Object event) {
         List<Long> memberIds = conv.getMembers().stream()
                 .map(m -> m.getUser().getId())
                 .toList();
@@ -255,7 +309,7 @@ public class ConversationService {
             @Override
             public void afterCommit() {
                 for (Long memberId : memberIds) {
-                    wsSessionRegistry.sendToUser(memberId, WsEvents.MessageLikeEvent.of(dto));
+                    wsSessionRegistry.sendToUser(memberId, event);
                 }
             }
         });
@@ -360,10 +414,21 @@ public class ConversationService {
     }
 
     private ConversationDto toDto(Conversation c) {
-        String lastMessage = messageRepository.findTopByConversationIdOrderByCreatedAtDesc(c.getId())
+        long clearedUpTo = clearedUpTo(c);
+        String lastMessage = messageRepository
+                .findTopByConversationIdAndIdGreaterThanOrderByIdDesc(c.getId(), clearedUpTo)
                 .map(ConversationService::previewText)
                 .orElse(null);
-        return ConversationDto.from(c, lastMessage, isUnread(c), otherReadAt(c));
+        return ConversationDto.from(c, lastMessage, isUnread(c, clearedUpTo), otherReadAt(c));
+    }
+
+    private long clearedUpTo(Conversation c) {
+        Long me = currentUser.id();
+        return c.getMembers().stream()
+                .filter(m -> m.getUser().getId().equals(me))
+                .findFirst()
+                .map(ConversationMember::getClearedUpToMessageId)
+                .orElse(0L);
     }
 
     private Instant otherReadAt(Conversation c) {
@@ -401,7 +466,7 @@ public class ConversationService {
         return contentType.equals("image/gif") ? "📷 GIF" : "📷 Photo";
     }
 
-    private boolean isUnread(Conversation c) {
+    private boolean isUnread(Conversation c, long clearedUpTo) {
         if (c.getLastMessageAt() == null) {
             return false;
         }
@@ -411,7 +476,7 @@ public class ConversationService {
                 .findFirst()
                 .map(ConversationMember::getLastReadAt)
                 .orElse(null);
-        return messageRepository.existsByConversationIdAndSenderIdNotAndCreatedAtAfter(
-                c.getId(), me, lastReadAt == null ? Instant.EPOCH : lastReadAt);
+        return messageRepository.existsByConversationIdAndSenderIdNotAndIdGreaterThanAndCreatedAtAfter(
+                c.getId(), me, clearedUpTo, lastReadAt == null ? Instant.EPOCH : lastReadAt);
     }
 }
