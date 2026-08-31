@@ -1,5 +1,6 @@
 package com.rnave.studily.user;
 
+import com.rnave.studily.admin.AdminGuard;
 import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
@@ -36,10 +37,12 @@ public class AvatarService {
 
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
+    private final AdminGuard adminGuard;
 
-    public AvatarService(UserRepository userRepository, CurrentUser currentUser) {
+    public AvatarService(UserRepository userRepository, CurrentUser currentUser, AdminGuard adminGuard) {
         this.userRepository = userRepository;
         this.currentUser = currentUser;
+        this.adminGuard = adminGuard;
     }
 
     @Transactional
@@ -75,7 +78,7 @@ public class AvatarService {
         user.setAvatarContentType("image/jpeg");
         user.setAvatarKey(newAvatarKey());
         user.setAvatarVersion(user.getAvatarVersion() + 1);
-        return UserDto.from(userRepository.save(user));
+        return UserDto.from(userRepository.save(user), adminGuard.isAdmin(user));
     }
 
     @Transactional
@@ -85,7 +88,7 @@ public class AvatarService {
         user.setAvatarContentType(null);
         user.setAvatarKey(null);
         user.setAvatarVersion(user.getAvatarVersion() + 1);
-        return UserDto.from(userRepository.save(user));
+        return UserDto.from(userRepository.save(user), adminGuard.isAdmin(user));
     }
 
     @Transactional(readOnly = true)

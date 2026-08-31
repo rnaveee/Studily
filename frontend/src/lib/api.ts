@@ -10,6 +10,7 @@ import {
 
 const TOKEN_KEY = "studily.token";
 const GUEST_KEY = "studily.guest";
+const ADMIN_TOKEN_KEY = "studily.admin";
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -18,6 +19,15 @@ export function getToken(): string | null {
 export function setToken(token: string | null) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
   else localStorage.removeItem(TOKEN_KEY);
+}
+
+export function getAdminToken(): string | null {
+  return sessionStorage.getItem(ADMIN_TOKEN_KEY);
+}
+
+export function setAdminToken(token: string | null) {
+  if (token) sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+  else sessionStorage.removeItem(ADMIN_TOKEN_KEY);
 }
 
 export function isGuestMode(): boolean {
@@ -79,9 +89,11 @@ function guestStub(path: string): unknown {
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  code?: string;
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -89,6 +101,11 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const headers: Record<string, string> = {};
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  if (path.startsWith("/admin")) {
+    const adminToken = getAdminToken();
+    if (adminToken) headers["X-Admin-Token"] = adminToken;
+  }
 
   if (!token && isGuestMode() && !path.startsWith("/auth") && path !== "/support") {
     if (method === "GET") {
@@ -108,21 +125,30 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
   });
 
-  if (res.status === 401 && getToken()) {
-    setToken(null);
-    setGuestMode(false);
-    if (window.location.pathname !== "/login") window.location.replace("/login?expired=1");
-    throw new ApiError(401, "Session expired");
-  }
-
   if (!res.ok) {
     let message = res.statusText;
+    let code: string | undefined;
     try {
       const data = await res.json();
       if (data?.message) message = data.message;
+      if (data?.code) code = data.code;
     } catch {
     }
-    throw new ApiError(res.status, message);
+
+    if (res.status === 401 && code === "ADMIN_LOCKED") {
+      setAdminToken(null);
+      throw new ApiError(res.status, message, code);
+    }
+
+    if (res.status === 401 && getToken()) {
+      setToken(null);
+      setAdminToken(null);
+      setGuestMode(false);
+      if (window.location.pathname !== "/login") window.location.replace("/login?expired=1");
+      throw new ApiError(401, "Session expired");
+    }
+
+    throw new ApiError(res.status, message, code);
   }
 
   if (res.status === 204) return undefined as T;
@@ -133,6 +159,10 @@ async function requestBlob(path: string): Promise<Blob> {
   const headers: Record<string, string> = {};
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (path.startsWith("/admin")) {
+    const adminToken = getAdminToken();
+    if (adminToken) headers["X-Admin-Token"] = adminToken;
+  }
   const res = await fetch(`/api${path}`, { headers });
   if (!res.ok) throw new ApiError(res.status, res.statusText);
   return res.blob();

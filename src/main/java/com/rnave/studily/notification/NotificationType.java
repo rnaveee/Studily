@@ -5,7 +5,8 @@ public enum NotificationType {
     CLASS_REMINDER(2_700),
     EVENT_TODAY(21_600),
     ITEM_WEEK_AHEAD(86_400),
-    EXAM_TODAY(21_600);
+    EXAM_TODAY(21_600),
+    ANNOUNCEMENT(86_400);
 
     private final int pushTtlSeconds;
 

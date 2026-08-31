@@ -38,6 +38,7 @@ import SettingsPage from "./features/settings/SettingsPage";
 import TodosPage from "./features/todos/TodosPage";
 
 const PeriodicTablePage = lazy(() => import("./features/learn/PeriodicTablePage"));
+const AdminPage = lazy(() => import("./features/admin/AdminPage"));
 
 export default function App() {
   return (
@@ -83,6 +84,14 @@ export default function App() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/edit" element={<ProfileEditPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route
+          path="/admin"
+          element={
+            <Suspense fallback={null}>
+              <AdminPage />
+            </Suspense>
+          }
+        />
         <Route path="/users/:userId" element={<VerifyGate><UserProfilePage /></VerifyGate>} />
         <Route path="/profile/:userId/add" element={<VerifyGate><UserProfilePage /></VerifyGate>} />
       </Route>

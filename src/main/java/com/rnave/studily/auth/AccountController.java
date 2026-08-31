@@ -1,5 +1,6 @@
 package com.rnave.studily.auth;
 
+import com.rnave.studily.admin.AdminGuard;
 import com.rnave.studily.auth.AuthDtos.AuthResponse;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
@@ -41,16 +42,18 @@ public class AccountController {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthEmailService authEmailService;
+    private final AdminGuard adminGuard;
 
     public AccountController(CurrentUser currentUser, UserRepository userRepository,
                              ConversationRepository conversationRepository, PasswordEncoder passwordEncoder,
-                             JwtService jwtService, AuthEmailService authEmailService) {
+                             JwtService jwtService, AuthEmailService authEmailService, AdminGuard adminGuard) {
         this.currentUser = currentUser;
         this.userRepository = userRepository;
         this.conversationRepository = conversationRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authEmailService = authEmailService;
+        this.adminGuard = adminGuard;
     }
 
     @PostMapping("/verification-email")
@@ -75,7 +78,7 @@ public class AccountController {
         user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
         user.setTokenVersion(user.getTokenVersion() + 1);
         user = userRepository.save(user);
-        return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user));
+        return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user, adminGuard.isAdmin(user)));
     }
 
     @PostMapping("/delete")

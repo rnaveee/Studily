@@ -1,5 +1,6 @@
 package com.rnave.studily.user;
 
+import com.rnave.studily.admin.AdminGuard;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.MatchKeys;
 import jakarta.validation.Valid;
@@ -17,15 +18,18 @@ public class ProfileController {
 
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
+    private final AdminGuard adminGuard;
 
-    public ProfileController(UserRepository userRepository, CurrentUser currentUser) {
+    public ProfileController(UserRepository userRepository, CurrentUser currentUser, AdminGuard adminGuard) {
         this.userRepository = userRepository;
         this.currentUser = currentUser;
+        this.adminGuard = adminGuard;
     }
 
     @GetMapping
     public UserDto me() {
-        return UserDto.from(currentUser.entity());
+        User user = currentUser.entity();
+        return UserDto.from(user, adminGuard.isAdmin(user));
     }
 
     @PutMapping
@@ -39,7 +43,7 @@ public class ProfileController {
         user.setYear(req.year());
         user.setMajor(req.major());
         user.setBio(req.bio());
-        return UserDto.from(userRepository.save(user));
+        return UserDto.from(userRepository.save(user), adminGuard.isAdmin(user));
     }
 
     public record ProfileUpdateRequest(

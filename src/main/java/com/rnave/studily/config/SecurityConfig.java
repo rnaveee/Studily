@@ -1,5 +1,7 @@
 package com.rnave.studily.config;
 
+import com.rnave.studily.admin.ActivityTracker;
+import com.rnave.studily.admin.AdminAuthFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,17 +33,23 @@ public class SecurityConfig {
     private final AuthRateLimitFilter authRateLimitFilter;
     private final GlobalRateLimitFilter globalRateLimitFilter;
     private final EmailVerificationFilter emailVerificationFilter;
+    private final AdminAuthFilter adminAuthFilter;
+    private final ActivityTracker activityTracker;
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter, AuthRateLimitFilter authRateLimitFilter,
                           GlobalRateLimitFilter globalRateLimitFilter,
-                          EmailVerificationFilter emailVerificationFilter) {
+                          EmailVerificationFilter emailVerificationFilter,
+                          AdminAuthFilter adminAuthFilter,
+                          ActivityTracker activityTracker) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.authRateLimitFilter = authRateLimitFilter;
         this.globalRateLimitFilter = globalRateLimitFilter;
         this.emailVerificationFilter = emailVerificationFilter;
+        this.adminAuthFilter = adminAuthFilter;
+        this.activityTracker = activityTracker;
     }
 
     @Bean
@@ -82,7 +90,9 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(authRateLimitFilter, JwtAuthFilter.class)
                 .addFilterAfter(globalRateLimitFilter, JwtAuthFilter.class)
-                .addFilterAfter(emailVerificationFilter, GlobalRateLimitFilter.class);
+                .addFilterAfter(emailVerificationFilter, GlobalRateLimitFilter.class)
+                .addFilterAfter(adminAuthFilter, EmailVerificationFilter.class)
+                .addFilterAfter(activityTracker, AdminAuthFilter.class);
         return http.build();
     }
 
@@ -96,7 +106,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(Arrays.stream(allowedOrigins.split(",")).map(String::trim).toList());
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "X-Admin-Token"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

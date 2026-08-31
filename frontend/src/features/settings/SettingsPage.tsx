@@ -171,7 +171,36 @@ export default function SettingsPage() {
       <IntegrationsSection />
 
       <AccountSection />
+
+      <AdminSection />
     </div>
+  );
+}
+
+function AdminSection() {
+  const { user } = useAuth();
+  if (!user?.admin) return null;
+
+  return (
+    <>
+      <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
+        Admin
+      </h2>
+
+      <div className="card mt-3">
+        <div className="flex items-center justify-between gap-4 p-4">
+          <div>
+            <div className="text-[14px] font-medium text-fg">Admin dashboard</div>
+            <div className="mt-0.5 text-[12px] text-fg-3">
+              Analytics, user support and direct database access
+            </div>
+          </div>
+          <Link to="/admin" className="btn btn-ghost shrink-0">
+            Open
+          </Link>
+        </div>
+      </div>
+    </>
   );
 }
 

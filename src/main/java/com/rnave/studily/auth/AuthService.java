@@ -1,5 +1,6 @@
 package com.rnave.studily.auth;
 
+import com.rnave.studily.admin.AdminGuard;
 import com.rnave.studily.config.MatchKeys;
 import com.rnave.studily.auth.AuthDtos.AuthResponse;
 import com.rnave.studily.auth.AuthDtos.LoginRequest;
@@ -25,16 +26,18 @@ public class AuthService {
     private final LoginRateLimiter loginRateLimiter;
     private final AuthEmailService authEmailService;
     private final AccountTokenService accountTokenService;
+    private final AdminGuard adminGuard;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
                        LoginRateLimiter loginRateLimiter, AuthEmailService authEmailService,
-                       AccountTokenService accountTokenService) {
+                       AccountTokenService accountTokenService, AdminGuard adminGuard) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.loginRateLimiter = loginRateLimiter;
         this.authEmailService = authEmailService;
         this.accountTokenService = accountTokenService;
+        this.adminGuard = adminGuard;
     }
 
     @Transactional
@@ -59,7 +62,7 @@ public class AuthService {
             authEmailService.sendVerification(user);
         } catch (RuntimeException ignored) {
         }
-        return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user));
+        return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user, adminGuard.isAdmin(user)));
     }
 
     @Transactional
@@ -97,6 +100,6 @@ public class AuthService {
         if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
             throw new UnauthorizedException("Invalid email or password");
         }
-        return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user));
+        return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user, adminGuard.isAdmin(user)));
     }
 }

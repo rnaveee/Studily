@@ -76,6 +76,7 @@ export interface User {
   bio?: string | null;
   avatarUrl?: string | null;
   emailVerified: boolean;
+  admin?: boolean;
   createdAt: string;
 }
 
@@ -420,4 +421,179 @@ export interface CanvasFeedResult {
   eventsUpdated: number;
   skipped: number;
   truncated: boolean;
+}
+
+export interface AdminStatus {
+  unlocked: boolean;
+  totpEnabled: boolean;
+  expiresAt: string | null;
+  sessionMs: number;
+  username: string;
+}
+
+export interface AdminUnlockResponse {
+  token: string;
+  expiresAt: string;
+}
+
+export interface AdminTotpSetup {
+  secret: string;
+  provisioningUri: string;
+}
+
+export interface AdminUserMetrics {
+  total: number;
+  verified: number;
+  newToday: number;
+  new7d: number;
+  prev7d: number;
+  new30d: number;
+  deletedNever: number;
+}
+
+export interface AdminActivityMetrics {
+  dau: number;
+  wau: number;
+  mau: number;
+  wauPrev: number;
+  stickiness: number;
+  neverActive: number;
+}
+
+export interface AdminFunnelStep {
+  label: string;
+  count: number;
+  rate: number;
+}
+
+export interface AdminContentMetric {
+  label: string;
+  total: number;
+  last7d: number;
+}
+
+export interface AdminSchoolCount {
+  school: string;
+  users: number;
+}
+
+export interface AdminRecentUser {
+  id: number;
+  username: string;
+  name: string | null;
+  email: string;
+  school: string | null;
+  emailVerified: boolean;
+  createdAt: string;
+  lastActiveAt: string | null;
+}
+
+export interface AdminOverview {
+  users: AdminUserMetrics;
+  activity: AdminActivityMetrics;
+  funnel: AdminFunnelStep[];
+  content: AdminContentMetric[];
+  schools: AdminSchoolCount[];
+  recentSignups: AdminRecentUser[];
+}
+
+export interface AdminGrowthPoint {
+  date: string;
+  signups: number;
+  messages: number;
+  items: number;
+}
+
+export interface AdminUserRow {
+  id: number;
+  username: string;
+  name: string | null;
+  email: string;
+  school: string | null;
+  emailVerified: boolean;
+  createdAt: string;
+  lastActiveAt: string | null;
+  courses: number;
+  items: number;
+}
+
+export interface AdminUserDetail {
+  user: AdminUserRow;
+  year: number | null;
+  major: string | null;
+  bio: string | null;
+  tokenVersion: number;
+  counts: Record<string, number>;
+}
+
+export interface AdminResetLink {
+  url: string;
+  expiresAt: string;
+}
+
+export interface AdminTableInfo {
+  name: string;
+  rows: number;
+  sizeBytes: number;
+  sizePretty: string;
+}
+
+export interface AdminColumnInfo {
+  name: string;
+  type: string;
+  nullable: boolean;
+  primaryKey: boolean;
+  binary: boolean;
+}
+
+export interface AdminTableRows {
+  table: string;
+  primaryKey: string | null;
+  columns: AdminColumnInfo[];
+  rows: Record<string, unknown>[];
+  total: number;
+  page: number;
+  size: number;
+}
+
+export interface AdminQueryResult {
+  columns: string[];
+  rows: unknown[][];
+  rowsAffected: number | null;
+  millis: number;
+  truncated: boolean;
+  statementType: string;
+}
+
+export interface AdminHealth {
+  status: string;
+  dbLatencyMs: number;
+  dbVersion: string;
+  dbSize: string;
+  schemaVersion: number;
+  uptimeMs: number;
+  heapUsedMb: number;
+  heapMaxMb: number;
+  availableProcessors: number;
+  mailConfigured: boolean;
+  pushConfigured: boolean;
+  sentryConfigured: boolean;
+  totpEnabled: boolean;
+  timezone: string;
+}
+
+export interface AdminAuditRow {
+  id: number;
+  actorName: string;
+  action: string;
+  target: string | null;
+  detail: string | null;
+  ip: string | null;
+  createdAt: string;
+}
+
+export interface AdminPaged<T> {
+  items: T[];
+  hasMore: boolean;
+  total: number;
 }
