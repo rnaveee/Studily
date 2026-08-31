@@ -597,3 +597,15 @@ export interface AdminPaged<T> {
   hasMore: boolean;
   total: number;
 }
+
+export interface OnboardingStatus {
+  profile: boolean;
+  semester: boolean;
+  courses: boolean;
+  coursework: boolean;
+  avatar: boolean;
+  completed: number;
+  total: number;
+  complete: boolean;
+  courseCount: number;
+}

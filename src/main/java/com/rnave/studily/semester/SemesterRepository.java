@@ -14,6 +14,8 @@ public interface SemesterRepository extends JpaRepository<Semester, Long> {
 
     boolean existsByUserIdAndTermAndYear(Long userId, SemesterTerm term, Integer year);
 
+    boolean existsByUserId(Long userId);
+
     Optional<Semester> findFirstByUserIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(
             Long userId, LocalDate date, LocalDate date2);
 }

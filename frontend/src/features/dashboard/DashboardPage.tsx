@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { X, BookOpen, CalendarDays, Brain, User } from "lucide-react";
+import { X, BookOpen, CalendarDays, Brain, User, ArrowRight } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth, useRequireAuth } from "../../lib/auth";
 import { countdown, dueUrgency, formatDateTime, hhmm } from "../../lib/format";
@@ -12,6 +12,7 @@ import {
   type AcademicItemRequest,
   type Course,
   type Semester,
+  type OnboardingStatus,
   type Todo,
   type WeekView,
 } from "../../types";
@@ -28,6 +29,64 @@ const HOURS = Array.from(
   { length: (GRID_END - GRID_START) / 60 + 1 },
   (_, i) => GRID_START / 60 + i
 );
+
+
+function SetupNudge() {
+  const { user, guest } = useAuth();
+  const [dismissed, setDismissed] = useState(
+    () => localStorage.getItem("studily.setupNudge") === "off",
+  );
+
+  const statusQ = useQuery({
+    queryKey: ["onboarding"],
+    queryFn: () => api.get<OnboardingStatus>("/me/onboarding"),
+    enabled: !!user && !guest,
+  });
+
+  const status = statusQ.data;
+  if (!status || status.complete || dismissed) return null;
+
+  function dismiss() {
+    localStorage.setItem("studily.setupNudge", "off");
+    setDismissed(true);
+  }
+
+  return (
+    <div className="card flex items-center gap-3 p-3 animate-in">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-2">
+          <span className="text-[13px] font-medium text-fg">Finish setting up</span>
+          <span className="text-[11px] text-fg-3">
+            {status.completed} of {status.total}
+          </span>
+        </div>
+        <div
+          className="mt-1.5 h-1 overflow-hidden rounded-full"
+          style={{ background: "var(--surface-hi)" }}
+        >
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${(status.completed / status.total) * 100}%`,
+              background: "var(--accent)",
+            }}
+          />
+        </div>
+      </div>
+      <Link to="/onboarding" className="btn btn-soft shrink-0">
+        Continue
+        <ArrowRight size={13} strokeWidth={2} />
+      </Link>
+      <button
+        onClick={dismiss}
+        aria-label="Dismiss"
+        className="shrink-0 rounded p-1 text-fg-3 transition-colors hover:text-fg"
+      >
+        <X size={13} />
+      </button>
+    </div>
+  );
+}
 
 function toMin(time: string): number {
   const [h, m] = time.split(":").map(Number);
@@ -196,10 +255,13 @@ export default function DashboardPage() {
         <p className="mt-1 text-sm text-fg-3">Here's your weekly schedule</p>
       </div>
 
+      <SetupNudge />
+
       <div className="flex flex-wrap items-center gap-2">
         {semesters && semesters.length > 0 && (
           <select
-            className="input w-auto"
+            className="input"
+            style={{ width: "auto" }}
             value={semesterId ?? ""}
             onChange={(e) => setSemesterId(e.target.value ? Number(e.target.value) : null)}
           >

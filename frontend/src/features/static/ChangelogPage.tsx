@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 31,
+    date: "2026-08-30",
+    title: "A guided setup checklist",
+    description:
+      "Setting up your first semester is now a checklist that keeps track of itself. It ticks off each step as you finish it, starts your semester in one tap with the usual dates filled in, and puts Canvas import right up front so one link can bring in your courses, assignments and exams together. Your dashboard shows how far along you are until it's done.",
+  },
+  {
     version: 30,
     date: "2026-08-19",
     title: "Edit, delete, and clear messages",

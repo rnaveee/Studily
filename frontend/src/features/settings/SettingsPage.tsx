@@ -15,7 +15,8 @@ import {
   pushSupported,
 } from "../../lib/push";
 import Toggle from "../../components/Toggle";
-import type { AuthResponse, CanvasFeedResult, NotificationPrefs, PrivacyPrefs } from "../../types";
+import CanvasImportForm from "../canvas/CanvasImportForm";
+import type { AuthResponse, NotificationPrefs, PrivacyPrefs } from "../../types";
 
 const PREF_ROWS: { key: keyof NotificationPrefs; label: string; hint: string }[] = [
   { key: "messages", label: "DMs + group chats", hint: "New messages from friends and groups" },
@@ -251,36 +252,7 @@ function ReadReceiptsRow() {
 }
 
 function IntegrationsSection() {
-  const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [source, setSource] = useState("");
-
-  const runImport = useMutation({
-    mutationFn: () =>
-      api.post<CanvasFeedResult>("/canvas/feed", {
-        source: source.trim(),
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      }),
-    onSuccess: (result) => {
-      setSource("");
-      setOpen(false);
-      qc.invalidateQueries({ queryKey: ["courses"] });
-      qc.invalidateQueries({ queryKey: ["calendar"] });
-      qc.invalidateQueries({ queryKey: ["calendar-events"] });
-      qc.invalidateQueries({ queryKey: ["dashboard"] });
-
-      const courses = result.coursesCreated + result.coursesMatched;
-      const parts = [`${courses} course${courses === 1 ? "" : "s"}`];
-      if (result.itemsImported > 0) parts.push(`${result.itemsImported} added`);
-      if (result.itemsUpdated > 0) parts.push(`${result.itemsUpdated} updated`);
-      if (result.eventsImported > 0) parts.push(`${result.eventsImported} events`);
-      toast.success(parts.join(" · "));
-      if (result.truncated) {
-        toast.info("That feed was large, so only the first 2000 entries were imported.");
-      }
-    },
-    onError: (e) => toast.error(e instanceof ApiError ? e.message : "Import failed"),
-  });
 
   return (
     <>
@@ -306,34 +278,9 @@ function IntegrationsSection() {
           </div>
 
           {open && (
-            <form
-              className="mt-3 space-y-3 animate-slide"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (source.trim()) runImport.mutate();
-              }}
-            >
-              <div>
-                <label className="field-label">Canvas calendar feed link</label>
-                <input
-                  className="input"
-                  value={source}
-                  onChange={(e) => setSource(e.target.value)}
-                  placeholder="https://yourschool.instructure.com/feeds/calendars/user_….ics"
-                  autoFocus
-                  required
-                />
-              </div>
-              <p className="text-[11px] text-fg-3">
-                In Canvas, open <span className="text-fg-2">Calendar</span> and click{" "}
-                <span className="text-fg-2">Calendar Feed</span> at the bottom right, then paste the
-                link here. Re-import any time to pick up new assignments — your grades, weights and
-                progress stay untouched.
-              </p>
-              <button type="submit" disabled={runImport.isPending} className="btn btn-primary">
-                {runImport.isPending ? "Importing…" : "Import from Canvas"}
-              </button>
-            </form>
+            <div className="mt-3 animate-slide">
+              <CanvasImportForm autoFocus onImported={() => setOpen(false)} />
+            </div>
           )}
         </div>
       </div>
