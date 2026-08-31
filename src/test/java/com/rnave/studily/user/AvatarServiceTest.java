@@ -1,5 +1,6 @@
 package com.rnave.studily.user;
 
+import com.rnave.studily.admin.AdminGuard;
 import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
@@ -22,6 +23,7 @@ class AvatarServiceTest {
 
     private UserRepository userRepository;
     private CurrentUser currentUser;
+    private AdminGuard adminGuard;
     private AvatarService avatarService;
     private User user;
 
@@ -29,7 +31,8 @@ class AvatarServiceTest {
     void setUp() {
         userRepository = mock(UserRepository.class);
         currentUser = mock(CurrentUser.class);
-        avatarService = new AvatarService(userRepository, currentUser);
+        adminGuard = mock(AdminGuard.class);
+        avatarService = new AvatarService(userRepository, currentUser, adminGuard);
 
         user = new User();
         user.setId(1L);

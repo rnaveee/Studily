@@ -1,5 +1,6 @@
 package com.rnave.studily.auth;
 
+import com.rnave.studily.admin.AdminGuard;
 import com.rnave.studily.auth.AuthDtos.LoginRequest;
 import com.rnave.studily.auth.AuthDtos.SignupRequest;
 import com.rnave.studily.config.ConflictException;
@@ -30,6 +31,7 @@ class AuthServiceTest {
     private LoginRateLimiter loginRateLimiter;
     private AuthEmailService authEmailService;
     private AccountTokenService accountTokenService;
+    private AdminGuard adminGuard;
     private AuthService authService;
 
     @BeforeEach
@@ -40,9 +42,10 @@ class AuthServiceTest {
         loginRateLimiter = mock(LoginRateLimiter.class);
         authEmailService = mock(AuthEmailService.class);
         accountTokenService = mock(AccountTokenService.class);
+        adminGuard = mock(AdminGuard.class);
         when(loginRateLimiter.tryConsume(anyString())).thenReturn(true);
         authService = new AuthService(userRepository, passwordEncoder, jwtService, loginRateLimiter,
-                authEmailService, accountTokenService);
+                authEmailService, accountTokenService, adminGuard);
     }
 
     @Test
