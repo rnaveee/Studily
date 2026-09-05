@@ -370,3 +370,7 @@ textarea.input { resize: vertical; }
   background: var(--line);
   max-width: 40px;
 }
+
+@media (max-width: 639px) {
+  .btn-nav { padding-left: 10px; padding-right: 10px; }
+}

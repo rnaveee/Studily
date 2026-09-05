@@ -87,10 +87,12 @@ export default function LandingPage() {
           transition: "border-color 0.25s ease",
         }}
       >
-        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3">
-          <img src="/studily-3a.svg" alt="" className="h-7 w-7" />
-          <span className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</span>
-          <nav className="ml-auto flex items-center gap-2">
+        <div className="mx-auto flex max-w-5xl items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
+          <img src="/studily-3a.svg" alt="" className="h-7 w-7 shrink-0" />
+          <span className="hidden font-mono text-[15px] font-bold tracking-tight text-fg min-[340px]:block">
+            Studily
+          </span>
+          <nav className="ml-auto flex items-center gap-1.5 sm:gap-2">
             <Link to="/about" className="hidden px-2 text-[13px] text-fg-2 hover:text-fg sm:block">
               About
             </Link>
@@ -99,14 +101,14 @@ export default function LandingPage() {
               onClick={toggle}
               aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
               title={dark ? "Switch to light mode" : "Switch to dark mode"}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-fg-2 transition-colors hover:bg-surface-hi hover:text-fg"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-fg-2 transition-colors hover:bg-surface-hi hover:text-fg sm:h-8 sm:w-8"
             >
               {dark ? <Sun size={16} strokeWidth={1.8} /> : <Moon size={16} strokeWidth={1.8} />}
             </button>
-            <Link to="/login" className="btn btn-ghost">
+            <Link to="/login" className="btn btn-ghost btn-nav">
               Log in
             </Link>
-            <Link to="/signup" className="btn btn-primary">
+            <Link to="/signup" className="btn btn-primary btn-nav">
               Get started
             </Link>
           </nav>
@@ -117,7 +119,7 @@ export default function LandingPage() {
         <section className="relative grid items-center gap-12 py-16 md:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] md:py-24">
           <div className="hero-glow" aria-hidden="true" />
 
-          <div className="relative z-[1] animate-in">
+          <div className="relative z-[1] min-w-0 animate-in">
             <span className="badge badge-accent">Free · In beta</span>
             <h1 className="display mt-5 text-[2.35rem] font-bold text-fg sm:text-[2.9rem] lg:text-[3.25rem]">
               Your whole semester on one screen.
@@ -140,7 +142,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="relative z-[1] animate-in">
+          <div className="relative z-[1] min-w-0 animate-in">
             <MockWeekGrid large />
           </div>
         </section>
@@ -357,7 +359,7 @@ function Feature({
 }) {
   return (
     <section className="grid items-center gap-10 py-16 md:grid-cols-2 md:gap-14">
-      <div className={reverse ? "md:order-2" : undefined}>
+      <div className={`min-w-0 ${reverse ? "md:order-2" : ""}`}>
         <Reveal>
           <p className="eyebrow">
             <span className="eyebrow-num">{num}</span>
@@ -370,7 +372,7 @@ function Feature({
           <p className="measure mt-4 text-[15px] leading-relaxed text-fg-2">{body}</p>
         </Reveal>
       </div>
-      <div className={reverse ? "md:order-1" : undefined}>{mock}</div>
+      <div className={`min-w-0 ${reverse ? "md:order-1" : ""}`}>{mock}</div>
     </section>
   );
 }
