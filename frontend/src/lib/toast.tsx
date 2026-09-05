@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { AlertCircle, CheckCircle, Info, X } from "lucide-react";
 
 type ToastType = "success" | "error" | "info";
@@ -7,6 +7,7 @@ interface ToastItem {
   id: string;
   message: string;
   type: ToastType;
+  leaving?: boolean;
 }
 
 type Listener = (item: ToastItem) => void;
@@ -33,16 +34,23 @@ const COLOR: Record<ToastType, string> = {
   info: "var(--accent)",
 };
 
+const EXIT_MS = 170;
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+
+  const dismiss = useCallback((id: string) => {
+    setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, leaving: true } : t)));
+    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), EXIT_MS);
+  }, []);
 
   useEffect(() => {
     function listener(item: ToastItem) {
       setToasts((prev) => [...prev, item]);
-      setTimeout(
-        () => setToasts((prev) => prev.filter((t) => t.id !== item.id)),
-        DURATION[item.type],
-      );
+      setTimeout(() => {
+        setToasts((prev) => prev.map((t) => (t.id === item.id ? { ...t, leaving: true } : t)));
+        setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== item.id)), EXIT_MS);
+      }, DURATION[item.type]);
     }
     _listeners.add(listener);
     return () => { _listeners.delete(listener); };
@@ -60,12 +68,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           return (
             <div
               key={t.id}
-              className="card flex min-w-[260px] max-w-sm items-start gap-3 px-4 py-3 shadow-lg animate-in"
+              className={`card flex min-w-[260px] max-w-sm items-start gap-3 px-4 py-3 shadow-lg ${
+                t.leaving ? "toast-out" : "animate-in"
+              }`}
             >
               <Icon size={15} style={{ color: COLOR[t.type] }} className="mt-0.5 shrink-0" />
               <span className="flex-1 text-[13px] text-fg">{t.message}</span>
               <button
-                onClick={() => setToasts((prev) => prev.filter((x) => x.id !== t.id))}
+                onClick={() => dismiss(t.id)}
                 className="shrink-0 rounded p-0.5 text-fg-3 transition-colors hover:text-fg"
               >
                 <X size={13} />

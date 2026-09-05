@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Bell, CalendarDays, FileText, MessagesSquare } from "lucide-react";
 import { demoCourseGrades, demoCourses, demoFlashcardSets, demoItems, demoWeek } from "../../lib/demo";
 import { hhmm } from "../../lib/format";
+import { prefersReducedMotion } from "../../lib/motion";
 import { revealClass, useReveal } from "../../lib/useReveal";
 import { MEETING_KIND_LABEL, type DayOfWeek } from "../../types";
 
@@ -22,20 +23,13 @@ function fmtHour(h: number): string {
   return h > 12 ? `${h - 12}p` : `${h}a`;
 }
 
-function reducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
-  );
-}
-
 function useCountUp(target: number, active: boolean, duration = 900): number {
   const [value, setValue] = useState(0);
   const frame = useRef<number>(0);
 
   useEffect(() => {
     if (!active) return;
-    if (reducedMotion()) {
+    if (prefersReducedMotion()) {
       setValue(target);
       return;
     }
@@ -306,7 +300,7 @@ export function MockGradeCard() {
               style={{
                 width: inView ? `${grade.gradedWeight}%` : "0%",
                 background: "var(--accent)",
-                transition: reducedMotion()
+                transition: prefersReducedMotion()
                   ? "none"
                   : "width 1s cubic-bezier(0.22, 0.61, 0.36, 1) 120ms",
               }}
@@ -350,7 +344,7 @@ export function MockFlashcard() {
 
   useEffect(() => {
     if (!inView) return;
-    if (reducedMotion()) {
+    if (prefersReducedMotion()) {
       setFlipped(true);
       return;
     }
@@ -372,7 +366,7 @@ export function MockFlashcard() {
               style={{
                 opacity: flipped ? 1 : 0,
                 transform: flipped ? "none" : "translateY(4px)",
-                transition: reducedMotion()
+                transition: prefersReducedMotion()
                   ? "none"
                   : "opacity 0.35s ease-out, transform 0.35s ease-out",
               }}

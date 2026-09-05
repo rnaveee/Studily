@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard,
@@ -15,6 +15,7 @@ import {
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useKeyboardViewport } from "../lib/keyboardDock";
+import { prefersReducedMotion } from "../lib/motion";
 import Avatar from "./Avatar";
 import Banners from "./Banners";
 import MobileFooter from "./MobileFooter";
@@ -59,8 +60,12 @@ function useTypingInField() {
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const typing = useTypingInField();
   useKeyboardViewport();
+  const outletRef = useRef<HTMLDivElement>(null);
+  const sideNavRef = useRef<HTMLElement>(null);
+  const [indicator, setIndicator] = useState<{ top: number; height: number } | null>(null);
   const [debug, setDebug] = useState(false);
   const debugTaps = useRef({ n: 0, t: 0 });
 
@@ -95,6 +100,19 @@ export default function Layout() {
     "/friends": (incomingRequests.data?.length ?? 0) > 0,
   };
 
+  useEffect(() => {
+    const el = outletRef.current;
+    if (!el || prefersReducedMotion()) return;
+    el.classList.remove("page-in");
+    void el.offsetWidth;
+    el.classList.add("page-in");
+  }, [pathname]);
+
+  useEffect(() => {
+    const active = sideNavRef.current?.querySelector<HTMLElement>(".nav-active");
+    setIndicator(active ? { top: active.offsetTop, height: active.offsetHeight } : null);
+  }, [pathname]);
+
   function handleLogout() {
     logout();
     navigate("/login");
@@ -114,7 +132,18 @@ export default function Layout() {
           <div className="text-[10px] text-fg-3">by Ryan Nave</div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
+        <nav ref={sideNavRef} className="relative flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
+          {indicator && (
+            <span
+              aria-hidden="true"
+              className="nav-ind pointer-events-none absolute left-2 right-2 top-0 rounded-lg"
+              style={{
+                height: indicator.height,
+                transform: `translateY(${indicator.top}px)`,
+                background: "color-mix(in srgb, var(--accent) 10%, transparent)",
+              }}
+            />
+          )}
           {NAV.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
@@ -122,16 +151,11 @@ export default function Layout() {
               end={end}
               className={({ isActive }) =>
                 [
-                  "flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 select-none",
+                  "relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors duration-150 select-none",
                   isActive
-                    ? "text-accent"
+                    ? "nav-active text-accent"
                     : "text-fg-2 hover:bg-surface-hi hover:text-fg",
                 ].join(" ")
-              }
-              style={({ isActive }) =>
-                isActive
-                  ? { background: "color-mix(in srgb, var(--accent) 10%, transparent)" }
-                  : {}
               }
             >
               <span className="relative inline-flex">
@@ -263,7 +287,8 @@ export default function Layout() {
 
         <main className="flex-1 overflow-y-auto overscroll-contain">
           <div
-            className={`mx-auto flex min-h-full max-w-5xl flex-col px-4 pt-6 md:px-10 md:pt-8 md:pb-24 ${
+            ref={outletRef}
+            className={`page-in mx-auto flex min-h-full max-w-5xl flex-col px-4 pt-6 md:px-10 md:pt-8 md:pb-24 ${
               typing ? "pb-0" : "pb-24"
             }`}
           >

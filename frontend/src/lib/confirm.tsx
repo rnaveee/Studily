@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import Modal, { useModalClose } from "../components/Modal";
 
 interface ConfirmOptions {
   title: string;
@@ -8,9 +8,7 @@ interface ConfirmOptions {
   danger?: boolean;
 }
 
-interface ConfirmState extends ConfirmOptions {
-  resolve: (ok: boolean) => void;
-}
+type ConfirmState = ConfirmOptions;
 
 const ConfirmCtx = createContext<(opts: ConfirmOptions) => Promise<boolean>>(
   () => Promise.resolve(false),
@@ -20,63 +18,85 @@ export function useConfirm() {
   return useContext(ConfirmCtx);
 }
 
+function ConfirmButtons({
+  danger,
+  confirmLabel,
+  onPick,
+}: {
+  danger?: boolean;
+  confirmLabel?: string;
+  onPick: (ok: boolean) => void;
+}) {
+  const close = useModalClose();
+
+  return (
+    <>
+      <button
+        onClick={() => {
+          onPick(false);
+          close();
+        }}
+        className="btn btn-ghost"
+        autoFocus
+      >
+        Cancel
+      </button>
+      <button
+        onClick={() => {
+          onPick(true);
+          close();
+        }}
+        className={danger ? "btn btn-danger" : "btn btn-primary"}
+      >
+        {confirmLabel ?? "Confirm"}
+      </button>
+    </>
+  );
+}
+
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<ConfirmState | null>(null);
-
-  useEffect(() => {
-    if (!state) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") respond(false);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [state]);
+  const answer = useRef(false);
+  const pending = useRef<((ok: boolean) => void) | null>(null);
 
   const confirm = useCallback(
     (opts: ConfirmOptions): Promise<boolean> =>
-      new Promise((resolve) => setState({ ...opts, resolve })),
+      new Promise((resolve) => {
+        answer.current = false;
+        pending.current = resolve;
+        setState(opts);
+      }),
     [],
   );
 
-  function respond(ok: boolean) {
-    state?.resolve(ok);
+  const finish = useCallback(() => {
+    const resolve = pending.current;
+    pending.current = null;
     setState(null);
-  }
+    resolve?.(answer.current);
+  }, []);
 
   return (
     <ConfirmCtx.Provider value={confirm}>
       {children}
-      {state &&
-        createPortal(
-          <div
-            className="fixed inset-0 z-[95] flex items-center justify-center p-4"
-            style={{ background: "rgba(0,0,0,0.45)" }}
-          >
-            <div
-              className="card w-full max-w-sm space-y-4 p-5 shadow-xl animate-in"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div>
-                <h2 className="text-[15px] font-semibold text-fg">{state.title}</h2>
-                {state.message && (
-                  <p className="mt-1.5 text-[13px] text-fg-2">{state.message}</p>
-                )}
-              </div>
-              <div className="flex justify-end gap-2">
-                <button onClick={() => respond(false)} className="btn btn-ghost" autoFocus>
-                  Cancel
-                </button>
-                <button
-                  onClick={() => respond(true)}
-                  className={state.danger ? "btn btn-danger" : "btn btn-primary"}
-                >
-                  {state.confirmLabel ?? "Confirm"}
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )}
+      {state && (
+        <Modal
+          onClose={finish}
+          title={state.title}
+          showClose={false}
+          footer={
+            <ConfirmButtons
+              danger={state.danger}
+              confirmLabel={state.confirmLabel}
+              onPick={(ok) => {
+                answer.current = ok;
+              }}
+            />
+          }
+        >
+          {state.message && <p className="text-[13px] text-fg-2">{state.message}</p>}
+        </Modal>
+      )}
     </ConfirmCtx.Provider>
   );
 }

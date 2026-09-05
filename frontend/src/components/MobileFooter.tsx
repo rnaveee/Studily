@@ -1,4 +1,4 @@
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 
 type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean };
@@ -17,7 +17,13 @@ export default function MobileFooter({
   hidden: boolean;
   onCopyrightTap: () => void;
 }) {
+  const { pathname } = useLocation();
   if (hidden) return null;
+
+  const activeIndex = nav.findIndex(({ to, end }) =>
+    end ? pathname === to : pathname === to || pathname.startsWith(`${to}/`),
+  );
+
   return (
     <footer
       className="md:hidden shrink-0"
@@ -27,7 +33,17 @@ export default function MobileFooter({
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >
-      <nav className="grid grid-cols-6">
+      <nav className="relative grid grid-cols-6">
+        {activeIndex >= 0 && (
+          <span
+            aria-hidden="true"
+            className="nav-ind pointer-events-none absolute left-0 top-0 h-[2px] rounded-full bg-accent"
+            style={{
+              width: `${100 / nav.length}%`,
+              transform: `translateX(${activeIndex * 100}%)`,
+            }}
+          />
+        )}
         {nav.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -35,7 +51,7 @@ export default function MobileFooter({
             end={end}
             className={({ isActive }) =>
               [
-                "flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors",
+                "press flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors",
                 isActive ? "text-accent" : "text-fg-3",
               ].join(" ")
             }
