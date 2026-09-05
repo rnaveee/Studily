@@ -46,7 +46,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="animate-in">
+    <div className="stagger-children">
       <div className="flex items-center gap-3">
         <BackButton />
         <h1 className="text-xl font-semibold text-fg">Admin</h1>

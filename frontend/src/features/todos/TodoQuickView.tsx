@@ -6,6 +6,7 @@ import { useRequireAuth } from "../../lib/auth";
 import { dueUrgency, formatDateTime } from "../../lib/format";
 import type { Todo } from "../../types";
 import { priorityLabel, priorityTone } from "./priority";
+import { Spinner } from "../../components/Skeleton";
 
 const LIMIT = 5;
 
@@ -63,10 +64,7 @@ export default function TodoQuickView() {
       </div>
 
       {todos.isLoading ? (
-        <div className="flex items-center gap-2 border-t border-line px-4 py-3 text-[13px] text-fg-3">
-          <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-          Loading…
-        </div>
+        <div className="border-t border-line px-4 py-3"><Spinner label="Loading…" /></div>
       ) : top.length > 0 ? (
         <ul className="divide-y divide-line border-t border-line">
           {top.map((todo) => {

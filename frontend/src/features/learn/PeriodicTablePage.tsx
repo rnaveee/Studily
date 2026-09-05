@@ -153,7 +153,7 @@ export default function PeriodicTablePage() {
   );
 
   return (
-    <div className="space-y-5 animate-in">
+    <div className="space-y-5 stagger-children">
       <div className="flex items-center gap-3">
         <BackButton fallback="/learn" />
         <div className="min-w-0">

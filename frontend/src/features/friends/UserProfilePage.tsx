@@ -7,6 +7,7 @@ import Avatar from "../../components/Avatar";
 import BackButton from "../../components/BackButton";
 import WeekSchedule from "../../components/WeekSchedule";
 import type { Conversation, ProfileSchedule, Relationship } from "../../types";
+import { Spinner } from "../../components/Skeleton";
 
 export default function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>();
@@ -62,14 +63,11 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="space-y-4 animate-in">
+    <div className="space-y-4 stagger-children">
       <BackButton fallback="/friends" />
 
       {isLoading ? (
-        <div className="flex items-center gap-2 text-sm text-fg-3">
-          <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-          Loading…
-        </div>
+        <Spinner label="Loading…" />
       ) : error || !data ? (
         <div className="card p-10 text-center">
           <p className="text-sm text-fg-3">

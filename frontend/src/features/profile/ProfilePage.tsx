@@ -32,7 +32,7 @@ export default function ProfilePage() {
     );
 
   return (
-    <div className="mx-auto max-w-lg space-y-5 animate-in">
+    <div className="mx-auto max-w-lg space-y-5 stagger-children">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-fg">Profile</h1>
         <Link to="/profile/edit" className="btn btn-ghost">

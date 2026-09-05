@@ -8,6 +8,7 @@ import { useRequireAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
 import type { Course, FlashcardSet } from "../../types";
 import NewFlashcardSetModal from "./NewFlashcardSetModal";
+import { SkeletonList } from "../../components/Skeleton";
 
 export default function FlashcardsPage() {
   const qc = useQueryClient();
@@ -31,7 +32,7 @@ export default function FlashcardsPage() {
   });
 
   return (
-    <div className="space-y-6 animate-in">
+    <div className="space-y-6 stagger-children">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <BackButton fallback="/learn" />
@@ -47,10 +48,7 @@ export default function FlashcardsPage() {
       </div>
 
       {sets.isLoading ? (
-        <div className="flex items-center gap-2 text-sm text-fg-3">
-          <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-          Loading…
-        </div>
+        <SkeletonList rows={3} />
       ) : sets.data && sets.data.length > 0 ? (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {sets.data.map((s) => {

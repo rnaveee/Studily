@@ -1,26 +1,19 @@
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Check, X } from "lucide-react";
+import { Check } from "lucide-react";
 import { api } from "../../lib/api";
 import { queryClient } from "../../lib/queryClient";
 import { toast } from "../../lib/toast";
 import Avatar from "../../components/Avatar";
+import Modal from "../../components/Modal";
 import type { Conversation, FriendRequestItem } from "../../types";
+import { Spinner } from "../../components/Skeleton";
 
 export default function NewGroupModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState("");
   const [selected, setSelected] = useState<number[]>([]);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const friends = useQuery({
     queryKey: ["friends", "list"],
@@ -47,28 +40,17 @@ export default function NewGroupModal({ onClose }: { onClose: () => void }) {
 
   const canCreate = name.trim().length > 0 && selected.length > 0 && !create.isPending;
 
-  return createPortal(
-    <div
-      className="fixed inset-x-0 top-0 z-[90] flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.45)", height: "var(--app-height, 100%)" }}
-    >
-      <div
-        className="card flex max-h-[min(80vh,100%)] w-full max-w-sm flex-col gap-4 p-5 shadow-xl animate-in"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-[15px] font-semibold text-fg">New group</h2>
-            <p className="mt-1 text-[13px] text-fg-2">Pick friends to add to the group.</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-            aria-label="Close"
-          >
-            <X size={14} />
-          </button>
+  return (
+    <Modal
+      onClose={onClose}
+      bodyClassName="max-h-[min(80vh,100%)]"
+      title={
+        <div>
+          <h2 className="text-[15px] font-semibold text-fg">New group</h2>
+          <p className="mt-1 text-[13px] text-fg-2">Pick friends to add to the group.</p>
         </div>
+      }
+    >
 
         <div>
           <label className="field-label">Group name</label>
@@ -83,10 +65,7 @@ export default function NewGroupModal({ onClose }: { onClose: () => void }) {
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {friends.isLoading ? (
-            <div className="flex items-center gap-2 py-4 text-sm text-fg-3">
-              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-              Loading…
-            </div>
+            <div className="py-4"><Spinner label="Loading…" /></div>
           ) : friends.data && friends.data.length > 0 ? (
             <ul className="divide-y divide-line">
               {friends.data.map((r) => {
@@ -138,8 +117,6 @@ export default function NewGroupModal({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }

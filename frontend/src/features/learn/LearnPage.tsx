@@ -65,7 +65,7 @@ export default function LearnPage() {
   const p = usePomodoro();
 
   return (
-    <div className="space-y-6 animate-in">
+    <div className="space-y-6 stagger-children">
       <div>
         <h1 className="text-xl font-semibold text-fg">Learn</h1>
         <p className="mt-1 text-[13px] text-fg-3">

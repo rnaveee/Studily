@@ -11,7 +11,7 @@ export function Page({
   children: ReactNode;
 }) {
   return (
-    <div className="mx-auto max-w-2xl space-y-5 animate-in">
+    <div className="mx-auto max-w-2xl space-y-5 stagger-children">
       <BackButton />
       <div>
         <h1 className="text-xl font-semibold text-fg">{title}</h1>

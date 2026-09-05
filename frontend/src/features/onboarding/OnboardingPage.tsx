@@ -78,7 +78,7 @@ export default function OnboardingPage() {
     : undefined;
 
   return (
-    <div className="mx-auto w-full max-w-lg space-y-6 py-4 animate-in">
+    <div className="mx-auto w-full max-w-lg space-y-6 py-4 stagger-children">
       <BackButton />
 
       <div className="text-center">

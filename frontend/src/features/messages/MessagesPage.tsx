@@ -9,6 +9,7 @@ import Avatar from "../../components/Avatar";
 import SegmentedToggle from "../../components/SegmentedToggle";
 import type { Conversation, FriendRequestItem } from "../../types";
 import NewGroupModal from "./NewGroupModal";
+import { SkeletonList } from "../../components/Skeleton";
 
 type Tab = "messages" | "groups";
 
@@ -68,7 +69,7 @@ export default function MessagesPage() {
   });
 
   return (
-    <div className="space-y-6 animate-in">
+    <div className="space-y-6 stagger-children">
       <div>
         <h1 className="text-xl font-semibold text-fg">Messages</h1>
         <p className="mt-1 text-[13px] text-fg-3">
@@ -184,10 +185,7 @@ export default function MessagesPage() {
 
 function Loading() {
   return (
-    <div className="flex items-center gap-2 text-sm text-fg-3">
-      <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-      Loading…
-    </div>
+    <SkeletonList rows={5} />
   );
 }
 

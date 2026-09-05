@@ -11,7 +11,7 @@ export default function ProfileSetupPage() {
   const next = () => navigate("/onboarding", { replace: true });
 
   return (
-    <div className="mx-auto w-full max-w-lg space-y-5 py-4 animate-in">
+    <div className="mx-auto w-full max-w-lg space-y-5 py-4 stagger-children">
       <div className="text-center">
         <img src="/studily-3a.svg" alt="" className="mx-auto mb-3 h-14 w-14" />
         <h1 className="text-2xl font-bold text-fg">Finish creating your profile!</h1>

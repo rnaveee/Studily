@@ -397,6 +397,19 @@ textarea.input { resize: vertical; }
 
 .page-in { animation: page-in 0.24s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
 
+.stagger-children > * {
+  animation: fade-up 0.42s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 50ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 100ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 200ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 250ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 350ms; }
+.stagger-children > *:nth-child(n+9) { animation-delay: 400ms; }
+
 @keyframes toast-out {
   from { opacity: 1; transform: none; }
   to   { opacity: 0; transform: translateX(14px) scale(0.98); }
@@ -443,6 +456,7 @@ textarea.input { resize: vertical; }
   .reveal,
   .reveal-scale,
   .stagger-item,
+  .stagger-children > *,
   .overlay-in,
   .overlay-out,
   .panel-in,

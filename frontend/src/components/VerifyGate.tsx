@@ -9,7 +9,7 @@ export default function VerifyGate({ children }: { children: ReactNode }) {
   if (!user || user.emailVerified) return <>{children}</>;
 
   return (
-    <div className="animate-in">
+    <div className="stagger-children">
       <div className="card mx-auto mt-8 max-w-md p-8 text-center">
         <span
           className="mx-auto flex h-11 w-11 items-center justify-center rounded-full"

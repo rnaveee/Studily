@@ -6,7 +6,7 @@ export default function ProfileEditPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="mx-auto max-w-lg space-y-5 animate-in">
+    <div className="mx-auto max-w-lg space-y-5 stagger-children">
       <div className="flex items-center gap-3">
         <BackButton fallback="/profile" />
         <h1 className="text-xl font-semibold text-fg">Edit profile</h1>

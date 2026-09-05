@@ -8,6 +8,7 @@ import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
 import StudySession from "./StudySession";
 import type { Course, FlashcardSet, FlashcardSetRequest } from "../../types";
+import { SkeletonList } from "../../components/Skeleton";
 
 export default function FlashcardSetPage() {
   const { id } = useParams();
@@ -49,10 +50,7 @@ export default function FlashcardSetPage() {
 
   if (set.isLoading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-fg-3">
-        <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-        Loading…
-      </div>
+      <SkeletonList rows={5} />
     );
   }
 
@@ -125,7 +123,7 @@ export default function FlashcardSetPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in">
+    <div className="space-y-6 stagger-children">
       <div className="flex items-center gap-3">
         <BackButton fallback="/learn/flashcards" />
         <div className="min-w-0 flex-1">

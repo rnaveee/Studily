@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
+import { Spinner } from "../../components/Skeleton";
 
 export default function VerifyEmailPage() {
   const [params] = useSearchParams();
@@ -36,10 +37,7 @@ export default function VerifyEmailPage() {
 
         <div className="card p-6 text-center">
           {status === "working" && (
-            <div className="flex items-center justify-center gap-2 text-sm text-fg-3">
-              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-              Verifying your email…
-            </div>
+            <div className="flex justify-center"><Spinner label="Verifying your email…" /></div>
           )}
 
           {status === "ok" && (

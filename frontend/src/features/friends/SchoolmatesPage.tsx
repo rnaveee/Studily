@@ -6,6 +6,7 @@ import { queryClient } from "../../lib/queryClient";
 import Avatar from "../../components/Avatar";
 import BackButton from "../../components/BackButton";
 import type { Page, Relationship } from "../../types";
+import { SkeletonList } from "../../components/Skeleton";
 
 const PAGE_SIZE = 30;
 
@@ -35,7 +36,7 @@ export default function SchoolmatesPage() {
   });
 
   return (
-    <div className="space-y-4 animate-in">
+    <div className="space-y-4 stagger-children">
       <div className="flex items-center gap-3">
         <BackButton fallback="/friends" />
         <div>
@@ -45,10 +46,7 @@ export default function SchoolmatesPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center gap-2 text-sm text-fg-3">
-          <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-          Loading…
-        </div>
+        <SkeletonList rows={4} />
       ) : mates.length > 0 ? (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {mates.map((r) => (

@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { X } from "lucide-react";
+import Modal from "../../components/Modal";
 import { api } from "../../lib/api";
 import { toast } from "../../lib/toast";
 import type { Course, FlashcardSet, FlashcardSetRequest, Semester } from "../../types";
@@ -13,14 +12,6 @@ export default function NewFlashcardSetModal({ onClose }: { onClose: () => void 
   const [courseId, setCourseId] = useState<number | "">("");
   const navigate = useNavigate();
   const qc = useQueryClient();
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const currentSemester = useQuery({
     queryKey: ["semesters", "current"],
@@ -58,28 +49,16 @@ export default function NewFlashcardSetModal({ onClose }: { onClose: () => void 
     });
   }
 
-  return createPortal(
-    <div
-      className="fixed inset-x-0 top-0 z-[90] flex overflow-y-auto overscroll-contain p-4"
-      style={{ background: "rgba(0,0,0,0.45)", height: "var(--app-height, 100%)" }}
-    >
-      <div
-        className="card m-auto flex w-full max-w-sm flex-col gap-4 p-5 shadow-xl animate-in"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-[15px] font-semibold text-fg">New flashcard set</h2>
-            <p className="mt-1 text-[13px] text-fg-2">Give it a title and, optionally, a course.</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-            aria-label="Close"
-          >
-            <X size={14} />
-          </button>
+  return (
+    <Modal
+      onClose={onClose}
+      title={
+        <div>
+          <h2 className="text-[15px] font-semibold text-fg">New flashcard set</h2>
+          <p className="mt-1 text-[13px] text-fg-2">Give it a title and, optionally, a course.</p>
         </div>
+      }
+    >
 
         <div>
           <label className="field-label">Title</label>
@@ -133,8 +112,6 @@ export default function NewFlashcardSetModal({ onClose }: { onClose: () => void 
             Create
           </button>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }

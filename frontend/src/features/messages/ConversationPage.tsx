@@ -1,5 +1,4 @@
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
@@ -33,6 +32,7 @@ import {
 } from "../../lib/ws";
 import BackButton from "../../components/BackButton";
 import Avatar from "../../components/Avatar";
+import Modal from "../../components/Modal";
 import AttachmentBubble from "./AttachmentBubble";
 import type { Conversation, Message, MessageLike, Page, PublicUser } from "../../types";
 
@@ -614,34 +614,13 @@ function MembersModal({
 }) {
   const navigate = useNavigate();
 
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  return createPortal(
-    <div
-      className="fixed inset-x-0 top-0 z-[90] flex items-end justify-center sm:items-center sm:p-4"
-      style={{ background: "rgba(0,0,0,0.45)", height: "var(--app-height, 100%)" }}
+  return (
+    <Modal
+      onClose={onClose}
+      variant="sheet"
+      title="Members"
+      bodyClassName="max-h-[min(70vh,100%)]"
     >
-      <div
-        className="card flex max-h-[min(70vh,100%)] w-full max-w-sm flex-col gap-3 rounded-b-none p-5 shadow-xl animate-sheet sm:rounded-b-xl"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between">
-          <h2 className="text-[15px] font-semibold text-fg">Members</h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-            aria-label="Close"
-          >
-            <X size={14} />
-          </button>
-        </div>
 
         <ul className="min-h-0 flex-1 divide-y divide-line overflow-y-auto">
           {members.map((m) => (
@@ -671,9 +650,7 @@ function MembersModal({
             </li>
           ))}
         </ul>
-      </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }
 

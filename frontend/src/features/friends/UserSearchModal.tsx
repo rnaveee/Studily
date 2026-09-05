@@ -1,24 +1,17 @@
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { Search, X, Clock } from "lucide-react";
+import { Search, Clock } from "lucide-react";
 import { api } from "../../lib/api";
 import Avatar from "../../components/Avatar";
+import Modal from "../../components/Modal";
 import type { Page, Relationship } from "../../types";
+import { Spinner } from "../../components/Skeleton";
 
 export default function UserSearchModal({ onClose }: { onClose: () => void }) {
   const [q, setQ] = useState("");
   const [debounced, setDebounced] = useState("");
   const navigate = useNavigate();
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(q.trim().replace(/^@/, "")), 250);
@@ -37,29 +30,18 @@ export default function UserSearchModal({ onClose }: { onClose: () => void }) {
     navigate(`/users/${userId}`);
   }
 
-  return createPortal(
-    <div
-      className="fixed inset-x-0 top-0 z-[90] flex items-end justify-center sm:items-center sm:p-4"
-      style={{ background: "rgba(0,0,0,0.45)", height: "var(--app-height, 100%)" }}
-    >
-      <div
-        className="card flex max-h-[min(50vh,100%)] w-full max-w-sm flex-col gap-3 rounded-b-none p-5 shadow-xl animate-sheet sm:max-h-[70vh] sm:rounded-b-xl"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex shrink-0 items-start justify-between">
-          <div>
-            <h2 className="text-[15px] font-semibold text-fg">Find people</h2>
-            <p className="mt-1 text-[13px] text-fg-2">Search by username.</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-            aria-label="Close"
-          >
-            <X size={14} />
-          </button>
+  return (
+    <Modal
+      onClose={onClose}
+      variant="sheet"
+      bodyClassName="max-h-[min(50vh,100%)] sm:max-h-[70vh]"
+      title={
+        <div>
+          <h2 className="text-[15px] font-semibold text-fg">Find people</h2>
+          <p className="mt-1 text-[13px] text-fg-2">Search by username.</p>
         </div>
+      }
+    >
 
         <div className="relative shrink-0">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-3" />
@@ -79,10 +61,7 @@ export default function UserSearchModal({ onClose }: { onClose: () => void }) {
               Type a username to find someone.
             </p>
           ) : results.isLoading ? (
-            <div className="flex items-center gap-2 py-4 text-sm text-fg-3">
-              <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-              Searching…
-            </div>
+            <div className="py-4"><Spinner label="Searching…" /></div>
           ) : results.data && results.data.items.length > 0 ? (
             <ul className="divide-y divide-line">
               {results.data.items.map((r) => (
@@ -119,8 +98,6 @@ export default function UserSearchModal({ onClose }: { onClose: () => void }) {
             </p>
           )}
         </div>
-      </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }

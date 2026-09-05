@@ -10,6 +10,7 @@ import { queryClient } from "../../lib/queryClient";
 import Avatar from "../../components/Avatar";
 import UserSearchModal from "./UserSearchModal";
 import type { FriendRequestItem } from "../../types";
+import { SkeletonList } from "../../components/Skeleton";
 
 export default function FriendsPage() {
   const { user } = useAuth();
@@ -74,7 +75,7 @@ export default function FriendsPage() {
   const loading = incoming.isLoading || pending.isLoading || friends.isLoading;
 
   return (
-    <div className="space-y-6 animate-in">
+    <div className="space-y-6 stagger-children">
       {user && (
         <div className="card flex items-center gap-2.5 p-2.5">
           <button onClick={copyInviteLink} className="btn btn-soft shrink-0">
@@ -109,10 +110,7 @@ export default function FriendsPage() {
       </Link>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-fg-3">
-          <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-          Loading…
-        </div>
+        <SkeletonList rows={4} />
       ) : (
         <>
           {incoming.data && incoming.data.length > 0 && (
