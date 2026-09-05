@@ -2,9 +2,11 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { BookOpen, Edit2, Plus, Trash2 } from "lucide-react";
+import { SkeletonList } from "../../components/Skeleton";
 import { api } from "../../lib/api";
 import { useRequireAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
+import { staggerDelay } from "../../lib/motion";
 import { toast } from "../../lib/toast";
 import { MONTHS, formatDate, formatMonth } from "../../lib/format";
 import { formatPercent, gradeColor, neededOnRemaining, remainingWeight } from "../../lib/grades";
@@ -66,8 +68,8 @@ export default function SemestersPage() {
   });
 
   return (
-    <div className="space-y-4 animate-in">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="stagger-item flex items-center justify-between">
         <h1 className="text-xl font-semibold text-fg">Semesters</h1>
         <button onClick={() => requireAuth(() => setShowForm((s) => !s))} className="btn btn-primary">
           <Plus size={13} strokeWidth={2} />
@@ -75,7 +77,8 @@ export default function SemestersPage() {
         </button>
       </div>
 
-      <Link to="/courses" className="card flex items-center gap-3 p-4 transition-colors hover:bg-surface-hi">
+      <div className="stagger-item" style={staggerDelay(1)}>
+      <Link to="/courses" className="card card-lift flex items-center gap-3 p-4">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
               style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}>
           <BookOpen size={16} className="text-accent" />
@@ -85,6 +88,7 @@ export default function SemestersPage() {
           <div className="text-[12px] text-fg-3">Set your courses for your semesters.</div>
         </div>
       </Link>
+      </div>
 
       {showForm && (
         <SemesterForm
@@ -95,15 +99,13 @@ export default function SemestersPage() {
       )}
 
       {isLoading ? (
-        <div className="flex items-center gap-2 text-sm text-fg-3">
-          <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-          Loading…
-        </div>
+        <SkeletonList rows={3} className="stagger-item" style={staggerDelay(2)} />
       ) : semesters && semesters.length > 0 ? (
         <ul className="card divide-y divide-line">
-          {semesters.map((s) => (
+          {semesters.map((s, index) => (
             <SemesterRow
               key={s.id}
+              index={index}
               semester={s}
               courses={(courses ?? []).filter((c) => c.semesterId === s.id)}
               stats={stats?.find((st) => st.semesterId === s.id)}
@@ -120,7 +122,7 @@ export default function SemestersPage() {
           ))}
         </ul>
       ) : (
-        <div className="card p-8 text-center">
+        <div className="stagger-item card p-8 text-center" style={staggerDelay(2)}>
           <p className="text-sm text-fg-3">
             No semesters yet. Create one to organize your courses by term.
           </p>
@@ -139,11 +141,13 @@ function SemesterRow({
   courses,
   stats,
   onDelete,
+  index,
 }: {
   semester: Semester;
   courses: Course[];
   stats?: SemesterStats;
   onDelete: () => void;
+  index: number;
 }) {
   const [editing, setEditing] = useState(false);
   const [target, setTarget] = useState("80");
@@ -172,7 +176,7 @@ function SemesterRow({
   }
 
   return (
-    <li className="px-4 py-3">
+    <li className="stagger-item px-4 py-3" style={staggerDelay(index + 2, 45)}>
       <div className="flex items-start justify-between">
         <div>
           <div className="font-medium text-fg">{semester.label}</div>

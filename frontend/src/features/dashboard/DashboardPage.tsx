@@ -5,6 +5,7 @@ import { X, BookOpen, CalendarDays, Brain, User, ArrowRight } from "lucide-react
 import { api } from "../../lib/api";
 import { useAuth, useRequireAuth } from "../../lib/auth";
 import { countdown, dueUrgency, formatDateTime, hhmm } from "../../lib/format";
+import { staggerDelay } from "../../lib/motion";
 import {
   DAYS,
   MEETING_KIND_LABEL,
@@ -17,6 +18,7 @@ import {
   type WeekView,
 } from "../../types";
 import ItemForm from "../../components/ItemForm";
+import { SkeletonBlock } from "../../components/Skeleton";
 import TodoQuickView from "../todos/TodoQuickView";
 import { priorityLabel, priorityTone } from "../todos/priority";
 import { quoteOfTheDay } from "./quotes";
@@ -243,21 +245,21 @@ export default function DashboardPage() {
   const todayLabel = new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
   return (
-    <div className="space-y-4 animate-in">
+    <div className="space-y-4">
       {quote && (
-        <p className="text-[13px] italic font-semibold text-fg-2">
+        <p className="stagger-item text-[13px] italic font-semibold text-fg-2">
           "{quote.quote}" <span className="not-italic">· {quote.author}</span>
         </p>
       )}
 
-      <div>
-        <h1 className="text-3xl font-bold text-fg">{firstName ? `${greeting()}, ${firstName}` : greeting()}</h1>
+      <div className="stagger-item" style={staggerDelay(1)}>
+        <h1 className="display text-3xl font-bold text-fg">{firstName ? `${greeting()}, ${firstName}` : greeting()}</h1>
         <p className="mt-1 text-sm text-fg-3">Here's your weekly schedule</p>
       </div>
 
       <SetupNudge />
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="stagger-item flex flex-wrap items-center gap-2" style={staggerDelay(2)}>
         {semesters && semesters.length > 0 && (
           <select
             className="input"
@@ -282,16 +284,16 @@ export default function DashboardPage() {
       </div>
 
       {isLoading && (
-        <div className="flex items-center gap-2 text-sm text-fg-3">
-          <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-          Loading…
+        <div className="stagger-item flex flex-col gap-4 md:flex-row" style={staggerDelay(3)}>
+          <SkeletonBlock height={180} className="md:w-56 md:shrink-0" />
+          <SkeletonBlock height={320} className="min-w-0 flex-1" />
         </div>
       )}
       {error && <p className="text-sm text-red">Failed to load dashboard.</p>}
 
       {data && (
         <>
-          <div className="flex flex-col gap-4 md:flex-row md:items-stretch">
+          <div className="stagger-item flex flex-col gap-4 md:flex-row md:items-stretch" style={staggerDelay(3)}>
             <div className="card p-4 md:w-56 md:shrink-0">
               <p className="mb-3 text-[15px] font-semibold text-fg md:text-[11px] md:uppercase md:tracking-wider md:text-fg-3">
                 Today, {todayLabel}
@@ -306,7 +308,7 @@ export default function DashboardPage() {
                         <Link
                           key={i}
                           to={`/courses/${m.courseId}`}
-                          className="flex items-start gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-white transition-opacity hover:opacity-80"
+                          className="press flex items-start gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-white hover:opacity-80"
                           style={{
                             backgroundColor: m.color ?? "var(--accent)",
                             opacity: done ? 0.45 : 1,

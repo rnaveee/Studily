@@ -81,8 +81,8 @@ export default function CalendarPage() {
   const selectedDayEntries = selectedDay ? (byDay.get(selectedDay) ?? []) : [];
 
   return (
-    <div className="space-y-5 animate-in">
-      <div className="flex items-center gap-3">
+    <div className="space-y-5">
+      <div className="stagger-item flex items-center gap-3">
         <BackButton />
         <h1 className="flex-1 text-xl font-semibold text-fg">{label}</h1>
         <button

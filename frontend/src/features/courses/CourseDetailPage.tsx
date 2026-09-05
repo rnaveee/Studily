@@ -19,6 +19,7 @@ import {
   type PublicUser,
 } from "../../types";
 import { courseLocations, formatDate, formatDateTime, hhmm } from "../../lib/format";
+import { staggerDelay } from "../../lib/motion";
 import {
   courseGrade,
   formatPercent,
@@ -29,6 +30,7 @@ import {
   parseScoreInput,
 } from "../../lib/grades";
 import Avatar from "../../components/Avatar";
+import { SkeletonBlock, SkeletonList } from "../../components/Skeleton";
 import BackButton from "../../components/BackButton";
 import CourseForm from "./CourseForm";
 import ItemForm from "../../components/ItemForm";
@@ -79,9 +81,9 @@ export default function CourseDetailPage() {
 
   if (courseQ.isLoading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-fg-3">
-        <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-        Loading…
+      <div className="space-y-4">
+        <SkeletonBlock height={92} className="stagger-item" />
+        <SkeletonList rows={4} className="stagger-item" style={staggerDelay(1)} />
       </div>
     );
   }
@@ -91,8 +93,10 @@ export default function CourseDetailPage() {
   const course = courseQ.data;
 
   return (
-    <div className="space-y-6 animate-in">
-      <BackButton fallback="/courses" />
+    <div className="space-y-6">
+      <div className="stagger-item">
+        <BackButton fallback="/courses" />
+      </div>
       {editing ? (
         <CourseForm
           submitLabel="Save changes"

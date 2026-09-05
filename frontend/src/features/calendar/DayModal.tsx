@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ChevronRight, Plus, X } from "lucide-react";
 import { api } from "../../lib/api";
 import { formatTime } from "../../lib/format";
 import DateTimeSelect from "../../components/DateTimeSelect";
+import Modal from "../../components/Modal";
 import type {
   AcademicItem,
   AcademicItemRequest,
@@ -42,14 +42,6 @@ export default function DayModal({
   const [courseId, setCourseId] = useState<number | "">("");
   const [repeat, setRepeat] = useState<Recurrence | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const { data: courses } = useQuery({
     queryKey: ["courses"],
@@ -133,33 +125,21 @@ export default function DayModal({
     day: "numeric",
   });
 
-  return createPortal(
-    <div
-      className="fixed inset-x-0 top-0 z-[90] flex overflow-y-auto overscroll-contain p-4"
-      style={{ background: "rgba(0,0,0,0.45)", height: "var(--app-height, 100%)" }}
-    >
-      <div
-        className="card m-auto flex w-full max-w-sm flex-col shadow-xl animate-in"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between p-5 pb-3">
-          <div>
-            <h2 className="text-[15px] font-semibold text-fg">{dateLabel}</h2>
-            <p className="mt-0.5 text-[13px] text-fg-2">
-              {entries.length === 0
-                ? "Nothing due"
-                : `${entries.length} due ${entries.length === 1 ? "date" : "dates"}`}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-            aria-label="Close"
-          >
-            <X size={14} />
-          </button>
+  return (
+    <Modal
+      onClose={onClose}
+      padded={false}
+      title={
+        <div>
+          <h2 className="text-[15px] font-semibold text-fg">{dateLabel}</h2>
+          <p className="mt-0.5 text-[13px] text-fg-2">
+            {entries.length === 0
+              ? "Nothing due"
+              : `${entries.length} due ${entries.length === 1 ? "date" : "dates"}`}
+          </p>
         </div>
+      }
+    >
 
         {entries.length > 0 && (
           <ul className="border-y border-line">
@@ -331,8 +311,6 @@ export default function DayModal({
             </>
           )}
         </form>
-      </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }

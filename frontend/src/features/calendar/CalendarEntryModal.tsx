@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Pencil, Repeat, Trash2, X } from "lucide-react";
+import { Pencil, Repeat, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
 import { formatDateTime, toLocalInput } from "../../lib/format";
 import { useConfirm } from "../../lib/confirm";
@@ -17,6 +16,7 @@ import type {
 } from "../../types";
 import CategorySelect from "../../components/CategorySelect";
 import DateTimeSelect from "../../components/DateTimeSelect";
+import Modal from "../../components/Modal";
 
 export default function CalendarEntryModal({
   item,
@@ -41,14 +41,6 @@ export default function CalendarEntryModal({
 
   const seriesId = item?.seriesId ?? event?.seriesId ?? null;
   const seriesLabel = describeRule(item?.recurrenceRule ?? event?.recurrenceRule);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   function invalidate() {
     qc.invalidateQueries({ queryKey: ["calendar"] });
@@ -152,31 +144,18 @@ export default function CalendarEntryModal({
     });
   }
 
-  return createPortal(
-    <div
-      className="fixed inset-x-0 top-0 z-[90] flex overflow-y-auto overscroll-contain p-4"
-      style={{ background: "rgba(0,0,0,0.45)", height: "var(--app-height, 100%)" }}
+  return (
+    <Modal
+      onClose={onClose}
+      title={
+        <span
+          className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
+          style={{ backgroundColor: color }}
+        >
+          {badge}
+        </span>
+      }
     >
-      <div
-        className="card m-auto flex w-full max-w-sm flex-col gap-4 p-5 shadow-xl animate-in"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between">
-          <span
-            className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
-            style={{ backgroundColor: color }}
-          >
-            {badge}
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-            aria-label="Close"
-          >
-            <X size={14} />
-          </button>
-        </div>
 
         {!editing ? (
           <>
@@ -329,9 +308,7 @@ export default function CalendarEntryModal({
             </div>
           </form>
         )}
-      </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }
 

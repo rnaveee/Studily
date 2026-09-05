@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, X } from "lucide-react";
 import DateTimeSelect from "../../components/DateTimeSelect";
+import Modal from "../../components/Modal";
 import SegmentedToggle from "../../components/SegmentedToggle";
 import { api } from "../../lib/api";
 import { toLocalInput } from "../../lib/format";
@@ -19,14 +19,7 @@ export default function TodoModal({ todo, onClose }: { todo?: Todo; onClose: () 
   const [dueLocal, setDueLocal] = useState(() => (todo?.dueAt ? toLocalInput(todo.dueAt) : ""));
   const [checklist, setChecklist] = useState<TodoChecklistItem[]>(() => todo?.checklist ?? []);
   const qc = useQueryClient();
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const closeRef = useRef<(() => void) | null>(null);
 
   const save = useMutation({
     mutationFn: (req: TodoRequest) =>
@@ -35,7 +28,7 @@ export default function TodoModal({ todo, onClose }: { todo?: Todo; onClose: () 
       toast.success(todo ? "Task updated" : "Task created");
       qc.invalidateQueries({ queryKey: ["todos"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
-      onClose();
+      (closeRef.current ?? onClose)();
     },
   });
 
@@ -59,30 +52,8 @@ export default function TodoModal({ todo, onClose }: { todo?: Todo; onClose: () 
     setChecklist((prev) => prev.map((c, i) => (i === index ? { ...c, ...patch } : c)));
   }
 
-  return createPortal(
-    <div
-      className="fixed inset-x-0 top-0 z-[90] flex overflow-y-auto overscroll-contain p-4"
-      style={{ background: "rgba(0,0,0,0.45)", height: "var(--app-height, 100%)" }}
-    >
-      <div
-        className="card m-auto flex w-full max-w-sm flex-col gap-4 p-5 shadow-xl animate-in"
-        onClick={(e) => e.stopPropagation()}
-        onFocus={(e) => {
-          const el = e.target;
-          window.setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 350);
-        }}
-      >
-        <div className="flex items-start justify-between">
-          <h2 className="text-[15px] font-semibold text-fg">{todo ? "Edit task" : "New task"}</h2>
-          <button
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-            aria-label="Close"
-          >
-            <X size={14} />
-          </button>
-        </div>
-
+  return (
+    <Modal onClose={onClose} closeRef={closeRef} title={todo ? "Edit task" : "New task"}>
         <div>
           <label className="field-label">Task</label>
           <input
@@ -168,15 +139,13 @@ export default function TodoModal({ todo, onClose }: { todo?: Todo; onClose: () 
         </div>
 
         <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="btn btn-ghost">
+          <button onClick={() => (closeRef.current ?? onClose)()} className="btn btn-ghost">
             Cancel
           </button>
           <button onClick={handleSave} disabled={!canSave} className="btn btn-primary">
             {save.isPending ? "Saving…" : todo ? "Save" : "Create"}
           </button>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }

@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronDown, ChevronRight, ListChecks, Pencil, Plus, Trash2 } from "lucide-react";
 import BackButton from "../../components/BackButton";
+import { SkeletonList } from "../../components/Skeleton";
 import { api } from "../../lib/api";
 import { useRequireAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
 import { dueUrgency, formatDateTime } from "../../lib/format";
+import { staggerDelay } from "../../lib/motion";
 import type { Todo } from "../../types";
 import TodoModal from "./TodoModal";
 import { priorityLabel, priorityTone } from "./priority";
@@ -82,8 +84,8 @@ export default function TodosPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-6">
+      <div className="stagger-item flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <BackButton fallback="/learn" />
           <div>
@@ -100,20 +102,22 @@ export default function TodosPage() {
       </div>
 
       {todos.isLoading ? (
-        <div className="flex items-center gap-2 text-sm text-fg-3">
-          <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-          Loading…
-        </div>
+        <SkeletonList rows={4} className="stagger-item" style={staggerDelay(1)} />
       ) : todos.data && todos.data.length > 0 ? (
         <ul className="card divide-y divide-line">
-          {todos.data.map((todo) => {
+          {todos.data.map((todo, index) => {
             const urgency = todo.completed ? null : dueUrgency(todo.dueAt);
             const isOpen = expanded.has(todo.id);
             const hasDetail = !!todo.notes || todo.checklist.length > 0;
             const doneCount = todo.checklist.filter((c) => c.done).length;
 
             return (
-              <li key={todo.id} className={`px-4 py-3 ${todo.completed ? "opacity-60" : ""}`}>
+              <li
+                key={todo.id}
+                className="stagger-item"
+                style={staggerDelay(index + 1, 45)}
+              >
+                <div className={`px-4 py-3 transition-opacity ${todo.completed ? "opacity-60" : ""}`}>
                 <div className="flex items-start gap-3">
                   <button
                     onClick={() =>
@@ -237,12 +241,13 @@ export default function TodosPage() {
                     </button>
                   </div>
                 </div>
+                </div>
               </li>
             );
           })}
         </ul>
       ) : (
-        <div className="card p-10 text-center">
+        <div className="stagger-item card p-10 text-center" style={staggerDelay(1)}>
           <ListChecks className="mx-auto mb-2 text-fg-3" size={28} strokeWidth={1.5} />
           <p className="text-sm text-fg-3">Nothing on your list yet. Add your first task!</p>
         </div>

@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type MutableRefObject, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useDeferredClose } from "../lib/motion";
@@ -25,6 +25,8 @@ export default function Modal({
   footer,
   bodyClassName = "",
   showClose = true,
+  padded = true,
+  closeRef,
 }: {
   onClose: () => void;
   title?: ReactNode;
@@ -34,8 +36,18 @@ export default function Modal({
   footer?: ReactNode;
   bodyClassName?: string;
   showClose?: boolean;
+  padded?: boolean;
+  closeRef?: MutableRefObject<(() => void) | null>;
 }) {
   const { closing, close } = useDeferredClose(onClose, 170);
+
+  useEffect(() => {
+    if (!closeRef) return;
+    closeRef.current = close;
+    return () => {
+      closeRef.current = null;
+    };
+  }, [close, closeRef]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -71,7 +83,11 @@ export default function Modal({
         >
           {title && (
             <div className="flex items-start justify-between gap-3 px-5 pt-5">
-              <h2 className="text-[15px] font-semibold text-fg">{title}</h2>
+              {typeof title === "string" ? (
+                <h2 className="text-[15px] font-semibold text-fg">{title}</h2>
+              ) : (
+                title
+              )}
               {showClose && (
               <button
                 type="button"
@@ -85,7 +101,11 @@ export default function Modal({
             </div>
           )}
 
-          <div className={`flex min-h-0 flex-col gap-4 p-5 ${title ? "pt-4" : ""} ${bodyClassName}`}>
+          <div
+            className={`flex min-h-0 flex-col ${
+              padded ? `gap-4 p-5 ${title ? "pt-4" : ""}` : ""
+            } ${bodyClassName}`}
+          >
             {children}
           </div>
 

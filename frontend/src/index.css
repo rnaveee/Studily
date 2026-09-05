@@ -395,9 +395,6 @@ textarea.input { resize: vertical; }
 .panel-in  { animation: scale-in  0.19s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
 .panel-out { animation: scale-out 0.14s ease-in both; }
 
-.sheet-in  { animation: sheet-up   0.22s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
-.sheet-out { animation: sheet-down 0.16s ease-in both; }
-
 .page-in { animation: page-in 0.24s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
 
 @keyframes toast-out {
@@ -436,10 +433,11 @@ textarea.input { resize: vertical; }
 .press { transition: transform 0.12s ease, background 0.13s ease, opacity 0.13s ease; }
 .press:active { transform: scale(0.985); }
 
-.nav-ind { transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1), width 0.28s cubic-bezier(0.22, 0.61, 0.36, 1); }
+.card-lift { transition: box-shadow 0.2s ease, transform 0.2s ease; }
+.card-lift:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+.card-lift:active { transform: translateY(0) scale(0.99); }
 
-.footer-dock { transition: transform 0.22s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.18s ease; }
-.footer-dock-out { transform: translateY(100%); opacity: 0; pointer-events: none; }
+.nav-ind { transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1), width 0.28s cubic-bezier(0.22, 0.61, 0.36, 1); }
 
 @media (prefers-reduced-motion: reduce) {
   .reveal,
@@ -449,8 +447,6 @@ textarea.input { resize: vertical; }
   .overlay-out,
   .panel-in,
   .panel-out,
-  .sheet-in,
-  .sheet-out,
   .modal-in,
   .modal-out,
   .toast-out,
@@ -466,13 +462,15 @@ textarea.input { resize: vertical; }
   }
   .overlay-out,
   .panel-out,
-  .sheet-out,
   .modal-out,
   .toast-out { opacity: 0; }
   .skeleton::after { animation: none; }
   .press { transition: none; }
   .press:active { transform: none; }
-  .nav-ind,
-  .footer-dock { transition: none; }
+  .card-lift { transition: none; }
+  .card-lift:hover,
+  .card-lift:active { transform: none; }
+  .btn:active:not(:disabled) { transform: none; }
+  .nav-ind { transition: none; }
   .frame-hover:hover { transform: none; }
 }

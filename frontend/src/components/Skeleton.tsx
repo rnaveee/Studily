@@ -22,9 +22,17 @@ export function Skeleton({
   return <span className={`skeleton block ${className}`} style={{ width, height }} />;
 }
 
-export function SkeletonList({ rows = 4, className = "" }: { rows?: number; className?: string }) {
+export function SkeletonList({
+  rows = 4,
+  className = "",
+  style,
+}: {
+  rows?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   return (
-    <div className={`card divide-y divide-line ${className}`} aria-hidden="true">
+    <div className={`card divide-y divide-line ${className}`} style={style} aria-hidden="true">
       {Array.from({ length: rows }, (_, i) => (
         <div key={i} className="flex items-center gap-3 px-3 py-3">
           <Skeleton width={3} height={32} className="shrink-0 rounded-full" />
@@ -42,12 +50,14 @@ export function SkeletonList({ rows = 4, className = "" }: { rows?: number; clas
 export function SkeletonCards({
   count = 3,
   className = "",
+  style,
 }: {
   count?: number;
   className?: string;
+  style?: React.CSSProperties;
 }) {
   return (
-    <div className={`grid gap-3 sm:grid-cols-2 lg:grid-cols-3 ${className}`} aria-hidden="true">
+    <div className={`grid gap-3 ${className}`} style={style} aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="card space-y-3 p-4">
           <Skeleton width={`${44 + ((i * 19) % 26)}%`} height={13} />
@@ -59,6 +69,18 @@ export function SkeletonCards({
   );
 }
 
-export function SkeletonBlock({ height = 180, className = "" }: { height?: number; className?: string }) {
-  return <div className={`card overflow-hidden ${className}`} aria-hidden="true"><Skeleton height={height} className="rounded-none" /></div>;
+export function SkeletonBlock({
+  height = 180,
+  className = "",
+  style,
+}: {
+  height?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div className={`card overflow-hidden ${className}`} style={style} aria-hidden="true">
+      <Skeleton height={height} className="rounded-none" />
+    </div>
+  );
 }

@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { api } from "../../lib/api";
 import BackButton from "../../components/BackButton";
+import { SkeletonCards } from "../../components/Skeleton";
+import { staggerDelay } from "../../lib/motion";
 import { useRequireAuth } from "../../lib/auth";
 import type { Course, CourseRequest, Semester } from "../../types";
 import { courseLocations, hhmm } from "../../lib/format";
@@ -36,8 +38,8 @@ export default function CoursesPage() {
   });
 
   return (
-    <div className="space-y-4 animate-in">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4">
+      <div className="stagger-item flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <BackButton fallback="/semesters" />
           <h1 className="text-xl font-semibold text-fg">Courses</h1>
@@ -76,18 +78,12 @@ export default function CoursesPage() {
       )}
 
       {isLoading ? (
-        <div className="flex items-center gap-2 text-sm text-fg-3">
-          <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-line border-t-accent" />
-          Loading…
-        </div>
+        <SkeletonCards count={4} className="stagger-item grid-cols-1 sm:grid-cols-2" style={staggerDelay(1)} />
       ) : courses && courses.length > 0 ? (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {courses.map((c) => (
-            <li key={c.id}>
-              <Link
-                to={`/courses/${c.id}`}
-                className="card block p-4 transition-shadow hover:shadow-md"
-              >
+          {courses.map((c, index) => (
+            <li key={c.id} className="stagger-item" style={staggerDelay(index + 1, 45)}>
+              <Link to={`/courses/${c.id}`} className="card card-lift block p-4">
                 <div className="flex min-w-0 items-center gap-2">
                   <span
                     className="h-2.5 w-2.5 shrink-0 rounded-full"
