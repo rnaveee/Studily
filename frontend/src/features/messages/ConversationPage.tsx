@@ -336,7 +336,7 @@ export default function ConversationPage() {
   return (
     <div
       data-chat-panel
-      className="fixed inset-0 z-40 flex flex-col bg-bg h-[var(--app-height,auto)] md:relative md:z-auto md:h-full md:min-h-0 md:flex-1 animate-in"
+      className="fixed inset-0 z-40 flex flex-col bg-bg h-[var(--app-height,auto)] md:relative md:z-auto md:h-full md:min-h-0 md:flex-1 chat-in"
       onDragOver={(e) => {
         if (imagesFrom(e.dataTransfer).length > 0) {
           e.preventDefault();

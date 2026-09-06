@@ -384,6 +384,10 @@ textarea.input { resize: vertical; }
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: none; }
 }
+@keyframes chat-in {
+  from { transform: translateX(100%); }
+  to   { transform: none; }
+}
 @keyframes shimmer-sweep {
   from { transform: translateX(-100%); }
   to   { transform: translateX(100%); }
@@ -396,6 +400,11 @@ textarea.input { resize: vertical; }
 .panel-out { animation: scale-out 0.14s ease-in both; }
 
 .page-in { animation: page-in 0.24s cubic-bezier(0.22, 0.61, 0.36, 1) backwards; }
+
+.chat-in { animation: chat-in 0.28s cubic-bezier(0.22, 0.61, 0.36, 1) backwards; }
+@media (min-width: 768px) {
+  .chat-in { animation: fade-up 0.18s ease-out backwards; }
+}
 
 .stagger-children > * {
   animation: fade-up 0.42s cubic-bezier(0.22, 0.61, 0.36, 1) both;
@@ -465,6 +474,7 @@ textarea.input { resize: vertical; }
   .modal-out,
   .toast-out,
   .page-in,
+  .chat-in,
   .animate-in,
   .animate-fade,
   .animate-slide,
