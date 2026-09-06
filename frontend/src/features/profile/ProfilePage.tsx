@@ -4,7 +4,9 @@ import { Edit2, GraduationCap, BookOpen, CalendarDays, School } from "lucide-rea
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import Avatar from "../../components/Avatar";
-import WeekSchedule from "../../components/WeekSchedule";
+import ScheduleCard from "../../components/ScheduleCard";
+import ScheduleExportButtons from "../../components/ScheduleExportButtons";
+import { hasMeetings } from "../../lib/scheduleImage";
 import type { ProfileSchedule } from "../../types";
 
 export default function ProfilePage() {
@@ -81,19 +83,28 @@ export default function ProfilePage() {
         )}
       </div>
 
-      <div className="card">
-        <div className="flex items-center justify-between px-5 pb-1 pt-4">
-          <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-fg">
-            <CalendarDays size={14} className="text-fg-3" />
-            Current semester
-          </h3>
-          {schedule.data?.semester && (
-            <span className="badge badge-muted">{schedule.data.semester.label}</span>
-          )}
-        </div>
-        {schedule.data?.semester ? (
-          <WeekSchedule courses={schedule.data.courses} />
-        ) : (
+      {schedule.data?.semester ? (
+        <ScheduleCard
+          courses={schedule.data.courses}
+          semesterLabel={schedule.data.semester.label}
+          actions={
+            <ScheduleExportButtons
+              name={user.name || user.username}
+              school={user.school}
+              semesterLabel={schedule.data.semester.label}
+              courses={schedule.data.courses}
+              disabled={!hasMeetings(schedule.data.courses)}
+            />
+          }
+        />
+      ) : (
+        <div className="card">
+          <div className="flex items-center justify-between px-5 pb-1 pt-4">
+            <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-fg">
+              <CalendarDays size={14} className="text-fg-3" />
+              Current semester
+            </h3>
+          </div>
           <p className="px-5 py-4 text-[13px] text-fg-3">
             {schedule.isLoading ? (
               "Loading…"
@@ -107,8 +118,8 @@ export default function ProfilePage() {
               </>
             )}
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

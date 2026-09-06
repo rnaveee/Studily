@@ -1,11 +1,11 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { UserPlus, Check, Clock, School, GraduationCap, BookOpen, CalendarDays, MessageSquare } from "lucide-react";
+import { UserPlus, Check, Clock, School, GraduationCap, BookOpen, CalendarDays, Lock, MessageSquare } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { queryClient } from "../../lib/queryClient";
 import Avatar from "../../components/Avatar";
 import BackButton from "../../components/BackButton";
-import WeekSchedule from "../../components/WeekSchedule";
+import ScheduleCard from "../../components/ScheduleCard";
 import type { Conversation, ProfileSchedule, Relationship } from "../../types";
 import { Spinner } from "../../components/Skeleton";
 
@@ -24,7 +24,8 @@ export default function UserProfilePage() {
   const schedule = useQuery({
     queryKey: ["schedule", id],
     queryFn: () => api.get<ProfileSchedule>(`/users/${id}/schedule`),
-    enabled: Number.isFinite(id) && data?.status === "FRIENDS",
+    enabled: Number.isFinite(id) && !!data && data.status !== "SELF",
+    retry: false,
   });
 
   function invalidateAll() {
@@ -113,7 +114,7 @@ export default function UserProfilePage() {
                 <UserPlus size={13} />
                 Add friend
               </button>
-              <p className="mt-2 text-[11px] text-fg-3">Friends can see each other's semester schedule.</p>
+              <p className="mt-2 text-[11px] text-fg-3">Add them to message and see their shared schedule.</p>
             </div>
           )}
           {data.status === "OUTGOING_PENDING" && data.requestId && (
@@ -132,23 +133,36 @@ export default function UserProfilePage() {
           )}
         </div>
 
-        {data.status === "FRIENDS" && schedule.data && (
-          <div className="card">
-            <div className="flex items-center justify-between px-5 pb-1 pt-4">
-              <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-fg">
-                <CalendarDays size={14} className="text-fg-3" />
-                Current semester
-              </h3>
-              {schedule.data.semester && (
-                <span className="badge badge-muted">{schedule.data.semester.label}</span>
+        {(schedule.data || schedule.error) && (
+          schedule.data?.visible && schedule.data.semester ? (
+            <ScheduleCard
+              courses={schedule.data.courses}
+              semesterLabel={schedule.data.semester.label}
+            />
+          ) : (
+            <div className="card">
+              <div className="flex items-center justify-between px-5 pb-1 pt-4">
+                <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-fg">
+                  <CalendarDays size={14} className="text-fg-3" />
+                  Current semester
+                </h3>
+              </div>
+              {schedule.error ? (
+                <p className="px-5 py-4 text-[13px] text-fg-3">
+                  {schedule.error instanceof ApiError
+                    ? schedule.error.message
+                    : "Couldn't load this schedule."}
+                </p>
+              ) : schedule.data?.visible ? (
+                <p className="px-5 py-4 text-[13px] text-fg-3">No active semester.</p>
+              ) : (
+                <p className="flex items-center gap-2 px-5 py-4 text-[13px] text-fg-3">
+                  <Lock size={13} />
+                  {data.user.name} hasn't shared their schedule.
+                </p>
               )}
             </div>
-            {schedule.data.semester ? (
-              <WeekSchedule courses={schedule.data.courses} />
-            ) : (
-              <p className="px-5 py-4 text-[13px] text-fg-3">No active semester.</p>
-            )}
-          </div>
+          )
         )}
         </>
       )}
