@@ -388,6 +388,10 @@ textarea.input { resize: vertical; }
   from { transform: translateX(100%); }
   to   { transform: none; }
 }
+@keyframes chat-out {
+  from { transform: none; }
+  to   { transform: translateX(100%); }
+}
 @keyframes shimmer-sweep {
   from { transform: translateX(-100%); }
   to   { transform: translateX(100%); }
@@ -401,9 +405,11 @@ textarea.input { resize: vertical; }
 
 .page-in { animation: page-in 0.24s cubic-bezier(0.22, 0.61, 0.36, 1) backwards; }
 
-.chat-in { animation: chat-in 0.28s cubic-bezier(0.22, 0.61, 0.36, 1) backwards; }
+.chat-in  { animation: chat-in  0.28s cubic-bezier(0.22, 0.61, 0.36, 1) backwards; }
+.chat-out { animation: chat-out 0.22s cubic-bezier(0.55, 0, 0.68, 0.53) both; }
 @media (min-width: 768px) {
-  .chat-in { animation: fade-up 0.18s ease-out backwards; }
+  .chat-in  { animation: fade-up  0.18s ease-out backwards; }
+  .chat-out { animation: fade-out 0.14s ease-in both; }
 }
 
 .stagger-children > * {
@@ -475,6 +481,7 @@ textarea.input { resize: vertical; }
   .toast-out,
   .page-in,
   .chat-in,
+  .chat-out,
   .animate-in,
   .animate-fade,
   .animate-slide,
@@ -487,6 +494,7 @@ textarea.input { resize: vertical; }
   .overlay-out,
   .panel-out,
   .modal-out,
+  .chat-out,
   .toast-out { opacity: 0; }
   .skeleton::after { animation: none; }
   .press { transition: none; }

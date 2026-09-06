@@ -319,6 +319,7 @@ export interface Relationship {
 export interface ProfileSchedule {
   semester: Semester | null;
   courses: Course[];
+  visible: boolean;
 }
 
 export interface Flashcard {
@@ -363,8 +364,11 @@ export interface Conversation {
   otherReadAt?: string | null;
 }
 
+export type ScheduleVisibility = "PUBLIC" | "FRIENDS" | "PRIVATE";
+
 export interface PrivacyPrefs {
   readReceipts: boolean;
+  scheduleVisibility: ScheduleVisibility;
 }
 
 export interface Attachment {

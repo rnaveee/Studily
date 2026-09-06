@@ -15,8 +15,14 @@ import {
   pushSupported,
 } from "../../lib/push";
 import Toggle from "../../components/Toggle";
+import SegmentedToggle from "../../components/SegmentedToggle";
 import CanvasImportForm from "../canvas/CanvasImportForm";
-import type { AuthResponse, NotificationPrefs, PrivacyPrefs } from "../../types";
+import type {
+  AuthResponse,
+  NotificationPrefs,
+  PrivacyPrefs,
+  ScheduleVisibility,
+} from "../../types";
 
 const PREF_ROWS: { key: keyof NotificationPrefs; label: string; hint: string }[] = [
   { key: "messages", label: "DMs + group chats", hint: "New messages from friends and groups" },
@@ -25,6 +31,18 @@ const PREF_ROWS: { key: keyof NotificationPrefs; label: string; hint: string }[]
   { key: "itemWeekAhead", label: "Assignments and exams", hint: "7 days before a due date" },
   { key: "examDayOf", label: "Day of exams", hint: "The morning of an exam" },
 ];
+
+const SCHEDULE_VISIBILITY_OPTIONS: { value: ScheduleVisibility; label: string }[] = [
+  { value: "PUBLIC", label: "Everyone" },
+  { value: "FRIENDS", label: "Friends" },
+  { value: "PRIVATE", label: "Only me" },
+];
+
+const SCHEDULE_VISIBILITY_HINT: Record<ScheduleVisibility, string> = {
+  PUBLIC: "Any signed-in Studily user can see it.",
+  FRIENDS: "Only accepted friends can see it.",
+  PRIVATE: "Nobody else can see it.",
+};
 
 export default function SettingsPage() {
   const { dark, toggle } = useTheme();
@@ -153,7 +171,7 @@ export default function SettingsPage() {
         Privacy
       </h2>
 
-      <ReadReceiptsRow />
+      <PrivacySection />
 
       <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
         Preferences
@@ -205,7 +223,7 @@ function AdminSection() {
   );
 }
 
-function ReadReceiptsRow() {
+function PrivacySection() {
   const qc = useQueryClient();
 
   const privacyQ = useQuery({
@@ -228,11 +246,21 @@ function ReadReceiptsRow() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ["settings", "privacy"] });
       qc.invalidateQueries({ queryKey: ["conversations"] });
+      qc.invalidateQueries({ queryKey: ["schedule"] });
     },
   });
 
+  const current: PrivacyPrefs = {
+    readReceipts: privacyQ.data?.readReceipts ?? true,
+    scheduleVisibility: privacyQ.data?.scheduleVisibility ?? "FRIENDS",
+  };
+
+  function update(patch: Partial<PrivacyPrefs>) {
+    save.mutate({ ...current, ...patch });
+  }
+
   return (
-    <div className="card mt-3">
+    <div className="card mt-3 divide-y" style={{ borderColor: "var(--line)" }}>
       <div className="flex items-center justify-between gap-4 p-4">
         <div>
           <div className="text-[14px] font-medium text-fg">Read receipts</div>
@@ -242,10 +270,27 @@ function ReadReceiptsRow() {
           </div>
         </div>
         <Toggle
-          checked={privacyQ.data?.readReceipts ?? true}
-          onChange={(v) => save.mutate({ readReceipts: v })}
+          checked={current.readReceipts}
+          onChange={(v) => update({ readReceipts: v })}
           disabled={privacyQ.isLoading}
         />
+      </div>
+
+      <div className="p-4">
+        <div className="text-[14px] font-medium text-fg">Schedule visibility</div>
+        <div className="mt-0.5 text-[12px] text-fg-3">
+          Who can see your semester schedule on your profile.
+        </div>
+        <SegmentedToggle
+          className="mt-3 w-full"
+          options={SCHEDULE_VISIBILITY_OPTIONS}
+          value={current.scheduleVisibility}
+          onChange={(v) => update({ scheduleVisibility: v })}
+          disabled={privacyQ.isLoading}
+        />
+        <div className="mt-2 text-[12px] text-fg-3">
+          {SCHEDULE_VISIBILITY_HINT[current.scheduleVisibility]}
+        </div>
       </div>
     </div>
   );

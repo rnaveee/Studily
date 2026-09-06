@@ -25,7 +25,8 @@ public class PrivacyPrefsController {
     @GetMapping
     @Transactional(readOnly = true)
     public PrivacyDto get() {
-        return new PrivacyDto(currentUser.entity().isReadReceipts());
+        User me = currentUser.entity();
+        return new PrivacyDto(me.isReadReceipts(), me.getScheduleVisibility());
     }
 
     @PutMapping
@@ -33,9 +34,12 @@ public class PrivacyPrefsController {
     public PrivacyDto update(@Valid @RequestBody PrivacyDto body) {
         User me = currentUser.entity();
         me.setReadReceipts(body.readReceipts());
-        return new PrivacyDto(userRepository.save(me).isReadReceipts());
+        me.setScheduleVisibility(body.scheduleVisibility());
+        User saved = userRepository.save(me);
+        return new PrivacyDto(saved.isReadReceipts(), saved.getScheduleVisibility());
     }
 
-    public record PrivacyDto(@NotNull Boolean readReceipts) {
+    public record PrivacyDto(@NotNull Boolean readReceipts,
+                             @NotNull ScheduleVisibility scheduleVisibility) {
     }
 }

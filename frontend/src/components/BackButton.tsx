@@ -1,20 +1,31 @@
+import { useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+
+export function useGoBack(fallback = "/") {
+  const navigate = useNavigate();
+  const location = useLocation();
+  return useCallback(
+    () => (location.key === "default" ? navigate(fallback) : navigate(-1)),
+    [location.key, navigate, fallback],
+  );
+}
 
 export default function BackButton({
   fallback = "/",
   iconOnly = false,
+  onClick,
 }: {
   fallback?: string;
   iconOnly?: boolean;
+  onClick?: () => void;
 }) {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const goBack = useGoBack(fallback);
 
   return (
     <button
       type="button"
-      onClick={() => (location.key === "default" ? navigate(fallback) : navigate(-1))}
+      onClick={onClick ?? goBack}
       className="btn btn-ghost shrink-0"
       aria-label="Go back"
     >

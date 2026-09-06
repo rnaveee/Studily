@@ -41,23 +41,22 @@ public class UserScheduleController {
         this.currentUser = currentUser;
     }
 
-    public record ScheduleDto(SemesterDto semester, List<CourseDto> courses) {
+    public record ScheduleDto(SemesterDto semester, List<CourseDto> courses, boolean visible) {
     }
 
     @GetMapping
     @Transactional(readOnly = true)
     public ScheduleDto schedule(@PathVariable Long id) {
         Long me = currentUser.id();
-        if (!userRepository.existsById(id)) {
-            throw new NotFoundException("User not found");
-        }
+        User target = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("User not found"));
         if (!me.equals(id)) {
             boolean verified = userRepository.findById(me).map(User::isEmailVerified).orElse(false);
             if (!verified) {
                 throw new ForbiddenException("Verify your email to view schedules");
             }
-            if (!isFriend(me, id)) {
-                throw new ForbiddenException("Only friends can view schedules");
+            if (!canView(target, me)) {
+                return new ScheduleDto(null, List.of(), false);
             }
         }
         LocalDate today = LocalDate.now();
@@ -66,14 +65,22 @@ public class UserScheduleController {
                         id, today, today)
                 .orElse(null);
         if (current == null) {
-            return new ScheduleDto(null, List.of());
+            return new ScheduleDto(null, List.of(), true);
         }
         List<CourseDto> courses = courseRepository
                 .findByUserIdAndSemesterIdOrderByNameAsc(id, current.getId())
                 .stream()
                 .map(CourseDto::from)
                 .toList();
-        return new ScheduleDto(SemesterDto.from(current), courses);
+        return new ScheduleDto(SemesterDto.from(current), courses, true);
+    }
+
+    private boolean canView(User target, Long viewer) {
+        return switch (target.getScheduleVisibility()) {
+            case PUBLIC -> true;
+            case FRIENDS -> isFriend(viewer, target.getId());
+            case PRIVATE -> false;
+        };
     }
 
     private boolean isFriend(Long a, Long b) {

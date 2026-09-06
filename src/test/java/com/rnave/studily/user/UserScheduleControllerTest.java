@@ -21,9 +21,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class UserScheduleControllerTest {
@@ -45,11 +45,8 @@ class UserScheduleControllerTest {
         controller = new UserScheduleController(
                 semesterRepository, courseRepository, friendRequestRepository, userRepository, currentUser);
         when(currentUser.id()).thenReturn(1L);
-        when(userRepository.existsById(anyLong())).thenReturn(true);
-        User viewer = new User();
-        viewer.setId(1L);
-        viewer.setEmailVerified(true);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(viewer));
+        viewer(true, ScheduleVisibility.FRIENDS);
+        target(ScheduleVisibility.FRIENDS);
     }
 
     @Test
@@ -64,9 +61,27 @@ class UserScheduleControllerTest {
 
         UserScheduleController.ScheduleDto dto = controller.schedule(1L);
 
+        assertThat(dto.visible()).isTrue();
         assertThat(dto.semester().label()).isEqualTo("Fall 2026");
         assertThat(dto.courses()).hasSize(1);
         assertThat(dto.courses().get(0).name()).isEqualTo("Biology");
+    }
+
+    @Test
+    void ownSchedule_isVisibleEvenWhenPrivate() {
+        viewer(true, ScheduleVisibility.PRIVATE);
+        Semester semester = semesterWithId(10L);
+        when(semesterRepository
+                .findFirstByUserIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(
+                        eq(1L), any(), any()))
+                .thenReturn(Optional.of(semester));
+        when(courseRepository.findByUserIdAndSemesterIdOrderByNameAsc(1L, 10L))
+                .thenReturn(List.of(course("Biology")));
+
+        UserScheduleController.ScheduleDto dto = controller.schedule(1L);
+
+        assertThat(dto.visible()).isTrue();
+        assertThat(dto.courses()).hasSize(1);
     }
 
     @Test
@@ -80,31 +95,83 @@ class UserScheduleControllerTest {
 
         UserScheduleController.ScheduleDto dto = controller.schedule(2L);
 
+        assertThat(dto.visible()).isTrue();
         assertThat(dto.semester()).isNull();
         assertThat(dto.courses()).isEmpty();
     }
 
     @Test
-    void strangersSchedule_isForbidden() {
+    void publicSchedule_isVisibleToNonFriend() {
+        target(ScheduleVisibility.PUBLIC);
         when(friendRequestRepository.findBetween(1L, 2L)).thenReturn(Optional.empty());
+        when(semesterRepository
+                .findFirstByUserIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(
+                        eq(2L), any(), any()))
+                .thenReturn(Optional.of(semesterWithId(20L)));
+        when(courseRepository.findByUserIdAndSemesterIdOrderByNameAsc(2L, 20L))
+                .thenReturn(List.of(course("Physics")));
 
-        assertThatThrownBy(() -> controller.schedule(2L)).isInstanceOf(ForbiddenException.class);
+        UserScheduleController.ScheduleDto dto = controller.schedule(2L);
+
+        assertThat(dto.visible()).isTrue();
+        assertThat(dto.courses()).hasSize(1);
+        assertThat(dto.courses().get(0).name()).isEqualTo("Physics");
     }
 
     @Test
-    void pendingRequest_isStillForbidden() {
+    void publicSchedule_isVisibleToPendingRequester() {
+        target(ScheduleVisibility.PUBLIC);
+        when(friendRequestRepository.findBetween(1L, 2L))
+                .thenReturn(Optional.of(request(FriendRequestStatus.PENDING)));
+        when(semesterRepository
+                .findFirstByUserIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(
+                        eq(2L), any(), any()))
+                .thenReturn(Optional.empty());
+
+        UserScheduleController.ScheduleDto dto = controller.schedule(2L);
+
+        assertThat(dto.visible()).isTrue();
+    }
+
+    @Test
+    void friendsOnlySchedule_isHiddenFromStranger() {
+        when(friendRequestRepository.findBetween(1L, 2L)).thenReturn(Optional.empty());
+
+        UserScheduleController.ScheduleDto dto = controller.schedule(2L);
+
+        assertThat(dto.visible()).isFalse();
+        assertThat(dto.semester()).isNull();
+        assertThat(dto.courses()).isEmpty();
+        verifyNoInteractions(semesterRepository);
+    }
+
+    @Test
+    void pendingRequest_isStillHidden() {
         when(friendRequestRepository.findBetween(1L, 2L))
                 .thenReturn(Optional.of(request(FriendRequestStatus.PENDING)));
 
-        assertThatThrownBy(() -> controller.schedule(2L)).isInstanceOf(ForbiddenException.class);
+        UserScheduleController.ScheduleDto dto = controller.schedule(2L);
+
+        assertThat(dto.visible()).isFalse();
+        verifyNoInteractions(semesterRepository);
+    }
+
+    @Test
+    void privateSchedule_isHiddenFromFriend() {
+        target(ScheduleVisibility.PRIVATE);
+        when(friendRequestRepository.findBetween(1L, 2L))
+                .thenReturn(Optional.of(request(FriendRequestStatus.ACCEPTED)));
+
+        UserScheduleController.ScheduleDto dto = controller.schedule(2L);
+
+        assertThat(dto.visible()).isFalse();
+        assertThat(dto.courses()).isEmpty();
+        verifyNoInteractions(semesterRepository);
     }
 
     @Test
     void unverifiedViewer_isForbidden() {
-        User viewer = new User();
-        viewer.setId(1L);
-        viewer.setEmailVerified(false);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(viewer));
+        viewer(false, ScheduleVisibility.FRIENDS);
         when(friendRequestRepository.findBetween(1L, 2L))
                 .thenReturn(Optional.of(request(FriendRequestStatus.ACCEPTED)));
 
@@ -112,10 +179,34 @@ class UserScheduleControllerTest {
     }
 
     @Test
+    void unverifiedViewer_isForbiddenForPublicSchedule() {
+        viewer(false, ScheduleVisibility.FRIENDS);
+        target(ScheduleVisibility.PUBLIC);
+
+        assertThatThrownBy(() -> controller.schedule(2L)).isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
     void unknownUser_isNotFound() {
-        when(userRepository.existsById(99L)).thenReturn(false);
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> controller.schedule(99L)).isInstanceOf(NotFoundException.class);
+    }
+
+    private void viewer(boolean verified, ScheduleVisibility visibility) {
+        User u = new User();
+        u.setId(1L);
+        u.setEmailVerified(verified);
+        u.setScheduleVisibility(visibility);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(u));
+    }
+
+    private void target(ScheduleVisibility visibility) {
+        User u = new User();
+        u.setId(2L);
+        u.setEmailVerified(true);
+        u.setScheduleVisibility(visibility);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(u));
     }
 
     private Semester semesterWithId(Long id) {

@@ -19,6 +19,7 @@ import { useAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
 import { queryClient } from "../../lib/queryClient";
 import { toast } from "../../lib/toast";
+import { useDeferredClose } from "../../lib/motion";
 import { useDoubleTap } from "../../lib/useDoubleTap";
 import {
   appendMessageToCache,
@@ -30,7 +31,7 @@ import {
   removeMessageFromCache,
   ws,
 } from "../../lib/ws";
-import BackButton from "../../components/BackButton";
+import BackButton, { useGoBack } from "../../components/BackButton";
 import Avatar from "../../components/Avatar";
 import Modal from "../../components/Modal";
 import AttachmentBubble from "./AttachmentBubble";
@@ -92,6 +93,8 @@ export default function ConversationPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [openMenu, setOpenMenu] = useState<number | "header" | null>(null);
   const confirm = useConfirm();
+  const goBack = useGoBack("/messages");
+  const { closing, close } = useDeferredClose(goBack, 220);
 
   const [wsConnected, setWsConnected] = useState(ws.isConnected());
   useEffect(() => ws.onState(setWsConnected), []);
@@ -336,7 +339,9 @@ export default function ConversationPage() {
   return (
     <div
       data-chat-panel
-      className="fixed inset-0 z-40 flex flex-col bg-bg h-[var(--app-height,auto)] md:relative md:z-auto md:h-full md:min-h-0 md:flex-1 chat-in"
+      className={`fixed inset-0 z-40 flex flex-col bg-bg h-[var(--app-height,auto)] md:relative md:z-auto md:h-full md:min-h-0 md:flex-1 ${
+        closing ? "chat-out" : "chat-in"
+      }`}
       onDragOver={(e) => {
         if (imagesFrom(e.dataTransfer).length > 0) {
           e.preventDefault();
@@ -366,7 +371,7 @@ export default function ConversationPage() {
           borderBottom: "1px solid var(--line)",
         }}
       >
-        <BackButton fallback="/messages" iconOnly />
+        <BackButton fallback="/messages" iconOnly onClick={close} />
         {isGroup ? (
           <button
             onClick={() => setShowMembers(true)}

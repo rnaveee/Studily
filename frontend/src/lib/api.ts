@@ -66,6 +66,7 @@ function guestStub(path: string): unknown {
   if (p === "/calendar") return demoItems();
   if (p === "/flashcard-sets") return demoFlashcardSets();
   if (p === "/push/public-key") return { publicKey: null };
+  if (p === "/settings/privacy") return { readReceipts: true, scheduleVisibility: "FRIENDS" };
   if (p === "/settings/notifications")
     return { messages: true, classReminders: true, eventDayOf: true, itemWeekAhead: true, examDayOf: true };
 
@@ -83,7 +84,7 @@ function guestStub(path: string): unknown {
   const set = p.match(/^\/flashcard-sets\/(\d+)$/);
   if (set) return demoFlashcardSets().find((s) => s.id === Number(set[1])) ?? null;
 
-  if (/^\/users\/\d+\/schedule$/.test(p)) return { semester: null, courses: [] };
+  if (/^\/users\/\d+\/schedule$/.test(p)) return { semester: null, courses: [], visible: true };
   return undefined;
 }
 

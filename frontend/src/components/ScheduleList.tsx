@@ -12,7 +12,7 @@ const DAY_LABELS: Record<DayOfWeek, string> = {
   SAT: "Sat",
 };
 
-export default function WeekSchedule({ courses }: { courses: Course[] }) {
+export default function ScheduleList({ courses }: { courses: Course[] }) {
   const days = DAYS.map((day) => ({
     day,
     blocks: courses

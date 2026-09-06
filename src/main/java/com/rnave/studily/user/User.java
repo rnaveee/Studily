@@ -2,6 +2,8 @@ package com.rnave.studily.user;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -55,6 +57,10 @@ public class User {
 
     @Column(nullable = false)
     private boolean readReceipts = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ScheduleVisibility scheduleVisibility = ScheduleVisibility.FRIENDS;
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();

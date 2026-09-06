@@ -3,6 +3,7 @@ interface SegmentedToggleProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   className?: string;
+  disabled?: boolean;
 }
 
 export default function SegmentedToggle<T extends string>({
@@ -10,12 +11,15 @@ export default function SegmentedToggle<T extends string>({
   value,
   onChange,
   className = "",
+  disabled = false,
 }: SegmentedToggleProps<T>) {
   const index = Math.max(0, options.findIndex((o) => o.value === value));
 
   return (
     <div
-      className={`relative grid rounded-lg bg-surface-hi p-1 ${className}`}
+      className={`relative grid rounded-lg bg-surface-hi p-1 ${
+        disabled ? "pointer-events-none opacity-50" : ""
+      } ${className}`}
       style={{ gridTemplateColumns: `repeat(${options.length}, 1fr)` }}
     >
       <span
@@ -32,6 +36,7 @@ export default function SegmentedToggle<T extends string>({
         <button
           key={o.value}
           type="button"
+          disabled={disabled}
           onClick={() => onChange(o.value)}
           className={`relative z-10 rounded-md px-4 py-1.5 text-[13px] font-medium transition-colors ${
             o.value === value ? "text-accent" : "text-fg-3 hover:text-fg"
