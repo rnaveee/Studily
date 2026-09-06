@@ -48,17 +48,24 @@ export default function ScheduleCard({
   }
 
   return (
-    <div className="card">
-      <div className="flex flex-wrap items-center justify-between gap-2 px-5 pb-2 pt-4">
-        <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-fg">
-          <CalendarDays size={14} className="text-fg-3" />
-          Current semester
-        </h3>
-        <div className="flex items-center gap-2">
-          {semesterLabel && <span className="badge badge-muted">{semesterLabel}</span>}
-          {actions}
-          <SegmentedToggle options={VIEW_OPTIONS} value={view} onChange={change} />
+    <div className="card min-w-0">
+      <div className="px-5 pb-3 pt-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-fg">
+            <CalendarDays size={14} className="text-fg-3" />
+            Current semester
+          </h3>
+          <div className="flex shrink-0 items-center gap-2">
+            {semesterLabel && <span className="badge badge-muted">{semesterLabel}</span>}
+            {actions}
+          </div>
         </div>
+        <SegmentedToggle
+          className="mt-3 w-full"
+          options={VIEW_OPTIONS}
+          value={view}
+          onChange={change}
+        />
       </div>
       {view === "list" ? (
         <ScheduleList courses={courses} />

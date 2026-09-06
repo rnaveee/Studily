@@ -64,7 +64,7 @@ export default function UserProfilePage() {
   }
 
   return (
-    <div className="space-y-4 stagger-children">
+    <div className="w-full space-y-4 stagger-children">
       <BackButton fallback="/friends" />
 
       {isLoading ? (
