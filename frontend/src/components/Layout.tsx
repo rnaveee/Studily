@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -30,6 +30,8 @@ const NAV = [
   { to: "/friends",    label: "Friends",    icon: Users2 },
   { to: "/profile",    label: "Profile",    icon: User },
 ];
+
+const FULL_BLEED = [/^\/messages\/[^/]+$/];
 
 const SUB_LINKS = [
   { label: "About",   to: "/about" },
@@ -100,13 +102,16 @@ export default function Layout() {
     "/friends": (incomingRequests.data?.length ?? 0) > 0,
   };
 
-  useEffect(() => {
+  const fullBleed = FULL_BLEED.some((re) => re.test(pathname));
+
+  useLayoutEffect(() => {
     const el = outletRef.current;
-    if (!el || prefersReducedMotion()) return;
+    if (!el) return;
     el.classList.remove("page-in");
+    if (fullBleed || prefersReducedMotion()) return;
     void el.offsetWidth;
     el.classList.add("page-in");
-  }, [pathname]);
+  }, [pathname, fullBleed]);
 
   useEffect(() => {
     const active = sideNavRef.current?.querySelector<HTMLElement>(".nav-active");
@@ -288,7 +293,7 @@ export default function Layout() {
         <main className="flex-1 overflow-y-auto overscroll-contain">
           <div
             ref={outletRef}
-            className={`page-in mx-auto flex min-h-full max-w-5xl flex-col px-4 pt-6 md:px-10 md:pt-8 md:pb-24 ${
+            className={`mx-auto flex min-h-full max-w-5xl flex-col px-4 pt-6 md:px-10 md:pt-8 md:pb-24 ${
               typing ? "pb-0" : "pb-24"
             }`}
           >
