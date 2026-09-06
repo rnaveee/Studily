@@ -8,22 +8,11 @@ export function slugFilename(label?: string | null): string {
   return `studily-schedule-${slug || "schedule"}.png`;
 }
 
-export async function copyImage(blob: Promise<Blob>): Promise<void> {
+export async function copyImage(blob: Blob | Promise<Blob>): Promise<void> {
   await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
 }
 
-export async function saveImage(blob: Blob, filename: string): Promise<void> {
-  const file = new File([blob], filename, { type: "image/png" });
-
-  if (navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file] });
-      return;
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") return;
-    }
-  }
-
+export function downloadImage(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -31,5 +20,5 @@ export async function saveImage(blob: Blob, filename: string): Promise<void> {
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
