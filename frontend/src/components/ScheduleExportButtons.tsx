@@ -56,7 +56,8 @@ export default function ScheduleExportButtons({
           disabled={off}
           title="Copy schedule as an image"
           aria-label="Copy schedule as an image"
-          className="btn btn-ghost h-7 w-7 p-0 disabled:opacity-50"
+          className="btn btn-ghost"
+          style={{ padding: 6 }}
         >
           {busy === "copy" ? <Spinner size={13} /> : <Copy size={13} />}
         </button>
@@ -67,7 +68,8 @@ export default function ScheduleExportButtons({
         disabled={off}
         title={canShareFiles ? "Share or save schedule image" : "Download schedule image"}
         aria-label={canShareFiles ? "Share or save schedule image" : "Download schedule image"}
-        className="btn btn-ghost h-7 w-7 p-0 disabled:opacity-50"
+        className="btn btn-ghost"
+        style={{ padding: 6 }}
       >
         {busy === "save" ? (
           <Spinner size={13} />

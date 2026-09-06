@@ -40,6 +40,7 @@ export default function ScheduleCard({
   actions?: React.ReactNode;
 }) {
   const [view, setView] = useState<ScheduleView>(readView);
+  const days = coursesToDays(courses);
 
   function change(next: ScheduleView) {
     setView(next);
@@ -63,7 +64,7 @@ export default function ScheduleCard({
         <ScheduleList courses={courses} />
       ) : (
         <div className="overflow-x-auto px-5 pb-4">
-          <WeekGrid days={coursesToDays(courses)} />
+          <WeekGrid days={days} minWidth={days.length * 78 + 46} />
         </div>
       )}
     </div>

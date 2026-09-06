@@ -83,6 +83,7 @@ interface WeekGridProps {
   onDayClick?: (key: string) => void;
   activeDayKey?: string | null;
   footer?: React.ReactNode;
+  minWidth?: number;
 }
 
 export default function WeekGrid({
@@ -91,12 +92,13 @@ export default function WeekGrid({
   onDayClick,
   activeDayKey,
   footer,
+  minWidth = 580,
 }: WeekGridProps) {
   const columns = `2.5rem repeat(${days.length}, 1fr)`;
 
   return (
     <>
-      <div className="grid min-w-[580px]" style={{ gridTemplateColumns: columns }}>
+      <div className="grid" style={{ gridTemplateColumns: columns, minWidth }}>
         <div className="border-b border-r border-line" />
         {days.map((day) => {
           const content = (

@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 32,
+    date: "2026-09-06",
+    title: "Choose who sees your schedule, and share it as an image",
+    description:
+      "Settings now has a schedule visibility control: keep your semester schedule to friends the way it has always worked, open it up to everyone on Studily, or make it private so nobody but you can see it. Profiles also gained a List/Week switch, so you can read a schedule as a day-by-day list or as the same time-block grid your dashboard uses. And on your own profile you can now copy your schedule as an image or save it to your camera roll \u2014 a clean dark card with your name, school and semester on it.",
+  },
+  {
     version: 31,
     date: "2026-08-30",
     title: "A guided setup checklist",
