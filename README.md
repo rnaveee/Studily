@@ -116,6 +116,9 @@ handshake at `/ws` authenticates via the same JWT.
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | unset (push disabled) | Web Push keypair (`npx web-push generate-vapid-keys`) |
 | `RESEND_API_KEY` / `MAIL_FROM` | unset (email disabled) | Resend key + verified From address for verification/reset emails |
 | `APP_BASE_URL` | `http://localhost:5173` | Public URL used in email links |
+| `ANTHROPIC_API_KEY` | unset (automatic course creation disabled) | Anthropic API key for reading uploaded course outlines; billed per parse from Console credits |
+| `PARSE_ENABLED` | `true` | Kill switch for automatic course creation, independent of the key |
+| `PARSE_MODEL_TEXT` / `PARSE_MODEL_VISION` | `claude-sonnet-5` / `claude-haiku-4-5` | Models used for PDF/pasted text and for images |
 | `SENTRY_DSN` / `SENTRY_ENVIRONMENT` | unset / `development` | Backend error tracking |
 | `VITE_SENTRY_DSN` | unset | Frontend error tracking — **build-time** var, baked into the bundle |
 
