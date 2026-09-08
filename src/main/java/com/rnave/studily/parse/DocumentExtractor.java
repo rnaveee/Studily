@@ -35,6 +35,7 @@ public class DocumentExtractor {
     static final int TARGET_DIMENSION = 1600;
     static final int MIN_CHARS_PER_PAGE = 100;
     static final int MAX_RENDERED_PAGES = 8;
+    static final int MAX_TOTAL_IMAGES = 12;
     static final int RENDER_DPI = 150;
     static final long EXTRACT_TIMEOUT_SECONDS = 20;
 
@@ -70,7 +71,11 @@ public class DocumentExtractor {
             Kind kind = sniff(bytes);
             switch (kind) {
                 case PDF -> readPdf(bytes, text, images);
-                case IMAGE -> images.add(normalizeImage(bytes));
+                case IMAGE -> {
+                    if (images.size() < MAX_TOTAL_IMAGES) {
+                        images.add(normalizeImage(bytes));
+                    }
+                }
                 case ZIP -> throw new BadRequestException(
                         "Archives are not supported. Upload the outline itself as a PDF or an image.");
                 case UNKNOWN -> throw new BadRequestException(
@@ -98,7 +103,7 @@ public class DocumentExtractor {
                 if (body != null && body.strip().length() >= (long) pages * MIN_CHARS_PER_PAGE) {
                     return new Extracted(body, List.of());
                 }
-                return new Extracted(null, render(doc, pages));
+                return new Extracted(null, render(doc, pages, MAX_TOTAL_IMAGES - images.size()));
             }
         });
 
@@ -108,10 +113,10 @@ public class DocumentExtractor {
         images.addAll(extracted.images());
     }
 
-    private List<ExtractedImage> render(PDDocument doc, int pages) throws Exception {
+    private List<ExtractedImage> render(PDDocument doc, int pages, int remaining) throws Exception {
         PDFRenderer renderer = new PDFRenderer(doc);
         List<ExtractedImage> out = new ArrayList<>();
-        int limit = Math.min(pages, MAX_RENDERED_PAGES);
+        int limit = Math.min(Math.min(pages, MAX_RENDERED_PAGES), Math.max(remaining, 0));
         for (int i = 0; i < limit; i++) {
             BufferedImage page = renderer.renderImageWithDPI(i, RENDER_DPI);
             out.add(encode(downscale(page)));

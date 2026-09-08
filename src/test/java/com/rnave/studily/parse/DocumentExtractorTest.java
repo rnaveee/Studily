@@ -75,6 +75,18 @@ class DocumentExtractorTest {
     }
 
     @Test
+    void extract_capsTotalImagesAcrossEveryFile() throws Exception {
+        MockMultipartFile image = pngFile(50, 50);
+        List<org.springframework.web.multipart.MultipartFile> files =
+                List.of(image, image, image, image, image);
+
+        ExtractedInput input = extractor.extract(files, null);
+
+        assertThat(input.images().size())
+                .isLessThanOrEqualTo(DocumentExtractor.MAX_TOTAL_IMAGES);
+    }
+
+    @Test
     void extract_truncatesPastedTextToTheCap() {
         String huge = "x".repeat(DocumentExtractor.MAX_TEXT_CHARS + 5_000);
 

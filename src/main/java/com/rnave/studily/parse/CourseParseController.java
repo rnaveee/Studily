@@ -1,10 +1,12 @@
 package com.rnave.studily.parse;
 
 import com.rnave.studily.config.CurrentUser;
+import com.rnave.studily.config.GlobalRateLimitFilter;
 import com.rnave.studily.config.SlidingWindowRateLimiter;
 import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.parse.CourseParseDtos.CourseDraftDto;
 import com.rnave.studily.parse.CourseParseDtos.ParseAvailabilityDto;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,9 +24,12 @@ public class CourseParseController {
 
     private static final long PARSE_WINDOW_MS = 24 * 60 * 60_000L;
     private static final int PARSE_LIMIT = 20;
+    private static final int PARSE_LIMIT_PER_IP = 40;
 
     private final SlidingWindowRateLimiter parseLimiter =
             new SlidingWindowRateLimiter(PARSE_LIMIT, PARSE_WINDOW_MS);
+    private final SlidingWindowRateLimiter parseIpLimiter =
+            new SlidingWindowRateLimiter(PARSE_LIMIT_PER_IP, PARSE_WINDOW_MS);
 
     private final CourseParseService courseParseService;
     private final CurrentUser currentUser;
@@ -44,11 +49,16 @@ public class CourseParseController {
             @RequestParam(value = "files", required = false) List<MultipartFile> files,
             @RequestParam(value = "text", required = false) String text,
             @RequestParam(value = "semesterId", required = false) Long semesterId,
-            @RequestParam(value = "timeZone", required = false) String timeZone) {
+            @RequestParam(value = "timeZone", required = false) String timeZone,
+            HttpServletRequest request) {
 
         if (!parseLimiter.tryConsume("user:" + currentUser.id())) {
             throw new TooManyRequestsException(
                     "You have reached today's limit for automatic course creation. Add this one manually or try again tomorrow.");
+        }
+        if (!parseIpLimiter.tryConsume("ip:" + GlobalRateLimitFilter.clientIp(request))) {
+            throw new TooManyRequestsException(
+                    "Too many automatic course requests from this network today. Add this one manually or try again tomorrow.");
         }
         return courseParseService.parse(files, text, semesterId, timeZone);
     }
@@ -56,5 +66,6 @@ public class CourseParseController {
     @Scheduled(fixedRate = 10 * PARSE_WINDOW_MS)
     void evictStaleParseWindows() {
         parseLimiter.evictStale();
+        parseIpLimiter.evictStale();
     }
 }
