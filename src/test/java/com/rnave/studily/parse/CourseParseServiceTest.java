@@ -3,6 +3,8 @@ package com.rnave.studily.parse;
 import com.rnave.studily.academic.ItemType;
 import com.rnave.studily.course.DayOfWeek;
 import com.rnave.studily.course.MeetingKind;
+import com.rnave.studily.config.CurrentUser;
+import com.rnave.studily.parse.ClaudeCourseParser.ParseOutcome;
 import com.rnave.studily.parse.CourseDraft.DraftBlock;
 import com.rnave.studily.parse.CourseDraft.DraftItem;
 import com.rnave.studily.parse.CourseParseDtos.CourseDraftDto;
@@ -36,14 +38,18 @@ class CourseParseServiceTest {
         extractor = mock(DocumentExtractor.class);
         parser = mock(ClaudeCourseParser.class);
         SemesterService semesterService = mock(SemesterService.class);
-        service = new CourseParseService(extractor, parser, semesterService);
+        CourseParseUsageRepository usageRepository = mock(CourseParseUsageRepository.class);
+        CurrentUser currentUser = mock(CurrentUser.class);
+        service = new CourseParseService(
+                extractor, parser, semesterService, usageRepository, currentUser);
 
         when(extractor.extract(any(), any()))
                 .thenReturn(new ExtractedInput("outline text", List.of()));
     }
 
     private CourseDraftDto run(CourseDraft draft) {
-        when(parser.parse(any(), anyString())).thenReturn(draft);
+        when(parser.parse(any(), anyString()))
+                .thenReturn(new ParseOutcome(draft, "claude-sonnet-5", 2400, 900));
         return service.parse(List.of(), "outline text", null, ZONE);
     }
 

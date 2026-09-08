@@ -5,13 +5,17 @@ import com.rnave.studily.admin.AdminDtos.ContentMetric;
 import com.rnave.studily.admin.AdminDtos.Funnel;
 import com.rnave.studily.admin.AdminDtos.GrowthPoint;
 import com.rnave.studily.admin.AdminDtos.Overview;
+import com.rnave.studily.admin.AdminDtos.ParseSpend;
+import com.rnave.studily.admin.AdminDtos.ParseSpender;
 import com.rnave.studily.admin.AdminDtos.RecentUser;
 import com.rnave.studily.admin.AdminDtos.SchoolCount;
 import com.rnave.studily.admin.AdminDtos.UserMetrics;
+import com.rnave.studily.parse.ParsePricing;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -192,6 +196,58 @@ public class AdminAnalyticsService {
                 rs.getLong("signups"),
                 rs.getLong("messages"),
                 rs.getLong("items")), window);
+    }
+
+    public ParseSpend parseSpend() {
+        List<Row> rows = jdbc.query("""
+                SELECT model, input_tokens, output_tokens, created_at
+                FROM course_parse_usage
+                """, (rs, i) -> new Row(
+                rs.getString("model"),
+                rs.getLong("input_tokens"),
+                rs.getLong("output_tokens"),
+                rs.getTimestamp("created_at").toInstant()));
+
+        Instant dayAgo = Instant.now().minus(Duration.ofDays(1));
+        Instant weekAgo = Instant.now().minus(Duration.ofDays(7));
+
+        long today = rows.stream().filter(r -> r.at().isAfter(dayAgo)).count();
+        long week = rows.stream().filter(r -> r.at().isAfter(weekAgo)).count();
+        double usdToday = rows.stream().filter(r -> r.at().isAfter(dayAgo)).mapToDouble(Row::usd).sum();
+        double usdWeek = rows.stream().filter(r -> r.at().isAfter(weekAgo)).mapToDouble(Row::usd).sum();
+        double usdTotal = rows.stream().mapToDouble(Row::usd).sum();
+
+        List<ParseSpender> top = jdbc.query("""
+                SELECT u.username AS username, p.model AS model,
+                    sum(p.input_tokens) AS input_tokens,
+                    sum(p.output_tokens) AS output_tokens,
+                    count(*) AS parses
+                FROM course_parse_usage p
+                JOIN users u ON u.id = p.user_id
+                WHERE p.created_at >= now() - interval '7 days'
+                GROUP BY u.username, p.model
+                """, (rs, i) -> new ParseSpender(
+                rs.getString("username"),
+                rs.getLong("parses"),
+                ParsePricing.usd(rs.getString("model"),
+                        rs.getLong("input_tokens"), rs.getLong("output_tokens"))))
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        ParseSpender::username,
+                        p -> p,
+                        (a, b) -> new ParseSpender(a.username(), a.parses() + b.parses(), a.usd() + b.usd())))
+                .values().stream()
+                .sorted((a, b) -> Double.compare(b.usd(), a.usd()))
+                .limit(10)
+                .toList();
+
+        return new ParseSpend(today, week, rows.size(), usdToday, usdWeek, usdTotal, top);
+    }
+
+    private record Row(String model, long inputTokens, long outputTokens, Instant at) {
+        double usd() {
+            return ParsePricing.usd(model, inputTokens, outputTokens);
+        }
     }
 
     static Instant instant(Timestamp ts) {

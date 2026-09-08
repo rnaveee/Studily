@@ -18,8 +18,10 @@ import java.util.List;
 public class EmailVerificationFilter extends OncePerRequestFilter {
 
     static final String MESSAGE = "Verify your email to use messaging and friends";
+    static final String PARSE_MESSAGE = "Verify your email to build a course from an outline";
 
     private static final List<String> LOCKED_PREFIXES = List.of("/api/friends", "/api/conversations");
+    private static final String PARSE_PATH = "/api/courses/parse";
 
     private final UserRepository userRepository;
 
@@ -34,7 +36,8 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String uri = request.getRequestURI();
-        if (LOCKED_PREFIXES.stream().noneMatch(uri::startsWith)) {
+        boolean locked = LOCKED_PREFIXES.stream().anyMatch(uri::startsWith) || uri.equals(PARSE_PATH);
+        if (!locked) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -45,9 +48,10 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
             if (!verified) {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 response.setContentType("application/json");
+                String message = uri.equals(PARSE_PATH) ? PARSE_MESSAGE : MESSAGE;
                 response.getWriter().write(
                         "{\"status\":403,\"error\":\"Forbidden\",\"code\":\"EMAIL_UNVERIFIED\","
-                                + "\"message\":\"" + MESSAGE + "\"}");
+                                + "\"message\":\"" + message + "\"}");
                 return;
             }
         }

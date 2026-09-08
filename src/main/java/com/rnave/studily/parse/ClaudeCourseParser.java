@@ -99,7 +99,7 @@ public class ClaudeCourseParser {
         return featureEnabled && !apiKey.isBlank();
     }
 
-    public CourseDraft parse(ExtractedInput input, String context) {
+    public ParseOutcome parse(ExtractedInput input, String context) {
         if (!enabled()) {
             throw new BadRequestException("Automatic course creation is not available right now.");
         }
@@ -125,11 +125,18 @@ public class ClaudeCourseParser {
                 .orElseThrow(() -> new BadRequestException(UNREADABLE));
 
         try {
-            return MAPPER.readValue(json, CourseDraft.class);
+            return new ParseOutcome(
+                    MAPPER.readValue(json, CourseDraft.class),
+                    model,
+                    response.usage().inputTokens(),
+                    response.usage().outputTokens());
         } catch (Exception e) {
             log.warn("Course parse returned unreadable JSON: {}", e.getMessage());
             throw new BadRequestException(UNREADABLE);
         }
+    }
+
+    public record ParseOutcome(CourseDraft draft, String model, long inputTokens, long outputTokens) {
     }
 
     MessageCreateParams paramsFor(String model, boolean vision, ExtractedInput input, String context) {

@@ -519,6 +519,22 @@ export interface AdminOverview {
   recentSignups: AdminRecentUser[];
 }
 
+export interface AdminParseSpender {
+  username: string;
+  parses: number;
+  usd: number;
+}
+
+export interface AdminParseSpend {
+  parsesToday: number;
+  parses7d: number;
+  parsesTotal: number;
+  usdToday: number;
+  usd7d: number;
+  usdTotal: number;
+  topSpenders7d: AdminParseSpender[];
+}
+
 export interface AdminGrowthPoint {
   date: string;
   signups: number;

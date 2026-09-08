@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { api } from "../../lib/api";
-import type { AdminGrowthPoint, AdminOverview as Overview } from "../../types";
+import type { AdminGrowthPoint, AdminOverview as Overview, AdminParseSpend } from "../../types";
 
 const RANGES = [7, 30, 90] as const;
 
@@ -12,6 +12,12 @@ export default function AdminOverview() {
   const overviewQ = useQuery({
     queryKey: ["admin", "overview"],
     queryFn: () => api.get<Overview>("/admin/overview"),
+    refetchInterval: 60_000,
+  });
+
+  const spendQ = useQuery({
+    queryKey: ["admin", "parse-spend"],
+    queryFn: () => api.get<AdminParseSpend>("/admin/parse-spend"),
     refetchInterval: 60_000,
   });
 
@@ -77,6 +83,53 @@ export default function AdminOverview() {
           <p className="mt-3 text-[12px] text-fg-3">Loading…</p>
         )}
       </section>
+
+      {spendQ.data && (
+        <section>
+          <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
+            Course parsing spend
+          </h2>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Stat
+              label="Spent today"
+              value={usd(spendQ.data.usdToday)}
+              sub={`${spendQ.data.parsesToday} parse${spendQ.data.parsesToday === 1 ? "" : "s"}`}
+            />
+            <Stat
+              label="Spent this week"
+              value={usd(spendQ.data.usd7d)}
+              sub={`${spendQ.data.parses7d} parses`}
+            />
+            <Stat
+              label="Spent all time"
+              value={usd(spendQ.data.usdTotal)}
+              sub={`${spendQ.data.parsesTotal} parses`}
+            />
+            <Stat
+              label="Average per parse"
+              value={usd(
+                spendQ.data.parsesTotal > 0 ? spendQ.data.usdTotal / spendQ.data.parsesTotal : 0,
+              )}
+            />
+          </div>
+          {spendQ.data.topSpenders7d.length > 0 && (
+            <div className="card mt-3 p-4">
+              <h3 className="text-[12px] font-medium text-fg-2">Heaviest users this week</h3>
+              <div className="mt-2 space-y-1.5">
+                {spendQ.data.topSpenders7d.map((s) => (
+                  <div key={s.username} className="flex items-center justify-between gap-3 text-[12px]">
+                    <span className="truncate text-fg-2">{s.username}</span>
+                    <span className="shrink-0 text-fg">
+                      {s.parses} parse{s.parses === 1 ? "" : "s"}
+                      <span className="ml-1.5 text-fg-3">{usd(s.usd)}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="grid gap-3 md:grid-cols-2">
         <div className="card p-4">
@@ -230,7 +283,7 @@ function Stat({
   delta: change,
 }: {
   label: string;
-  value: number;
+  value: number | string;
   sub?: string;
   delta?: number | null;
 }) {
@@ -265,6 +318,10 @@ function Td({ children, className = "" }: { children: React.ReactNode; className
 function delta(current: number, previous: number): number | null {
   if (previous === 0) return current === 0 ? 0 : null;
   return Math.round(((current - previous) / previous) * 100);
+}
+
+function usd(value: number): string {
+  return value < 0.01 && value > 0 ? "<$0.01" : `$${value.toFixed(2)}`;
 }
 
 function pct(part: number, whole: number): string {

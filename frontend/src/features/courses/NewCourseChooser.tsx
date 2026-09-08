@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { PencilLine, Sparkles } from "lucide-react";
 import Modal from "../../components/Modal";
 import { api } from "../../lib/api";
+import { useAuth } from "../../lib/auth";
 
 interface Props {
   onManual: () => void;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function NewCourseChooser({ onManual, onAutomatic, onClose }: Props) {
+  const { user } = useAuth();
   const { data: availability } = useQuery({
     queryKey: ["course-parse-enabled"],
     queryFn: () => api.get<{ enabled: boolean }>("/courses/parse/enabled"),
@@ -17,12 +19,19 @@ export default function NewCourseChooser({ onManual, onAutomatic, onClose }: Pro
   });
 
   const autoEnabled = availability?.enabled ?? false;
+  const verified = user?.emailVerified ?? false;
 
   return (
     <Modal onClose={onClose} title="Add a course" size="lg" variant="sheet">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {autoEnabled && (
-          <button type="button" onClick={onAutomatic} className="card card-lift p-4 text-left">
+          <button
+            type="button"
+            onClick={onAutomatic}
+            disabled={!verified}
+            className={verified ? "card card-lift p-4 text-left" : "card p-4 text-left"}
+            style={verified ? undefined : { opacity: 0.6, cursor: "not-allowed" }}
+          >
             <div className="flex items-center gap-2">
               <span
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
@@ -37,7 +46,9 @@ export default function NewCourseChooser({ onManual, onAutomatic, onClose }: Pro
               Upload your course outline, a screenshot, or paste the details, and we fill in the rest.
             </p>
             <p className="mt-1 text-[11px] text-fg-3">
-              You check everything before it saves.
+              {verified
+                ? "You check everything before it saves."
+                : "Verify your email to unlock this."}
             </p>
           </button>
         )}

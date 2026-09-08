@@ -75,6 +75,19 @@ public final class AdminDtos {
             Instant lastActiveAt) {
     }
 
+    public record ParseSpend(
+            long parsesToday,
+            long parses7d,
+            long parsesTotal,
+            double usdToday,
+            double usd7d,
+            double usdTotal,
+            List<ParseSpender> topSpenders7d) {
+    }
+
+    public record ParseSpender(String username, long parses, double usd) {
+    }
+
     public record GrowthPoint(LocalDate date, long signups, long messages, long items) {
     }
 

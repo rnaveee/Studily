@@ -2,13 +2,17 @@ package com.rnave.studily.parse;
 
 import com.rnave.studily.academic.ItemType;
 import com.rnave.studily.config.BadRequestException;
+import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.course.CourseDtos.MeetingBlockDto;
 import com.rnave.studily.course.DayOfWeek;
 import com.rnave.studily.course.MeetingKind;
 import com.rnave.studily.parse.CourseParseDtos.CourseDraftDto;
 import com.rnave.studily.parse.CourseParseDtos.DraftItemDto;
+import com.rnave.studily.parse.ClaudeCourseParser.ParseOutcome;
 import com.rnave.studily.semester.Semester;
 import com.rnave.studily.semester.SemesterService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,6 +29,8 @@ import java.util.Set;
 @Service
 public class CourseParseService {
 
+    private static final Logger log = LoggerFactory.getLogger(CourseParseService.class);
+
     private static final int MAX_ITEMS = 60;
     private static final int MAX_BLOCKS = 20;
     private static final int MAX_WARNINGS = 10;
@@ -33,12 +39,17 @@ public class CourseParseService {
     private final DocumentExtractor extractor;
     private final ClaudeCourseParser parser;
     private final SemesterService semesterService;
+    private final CourseParseUsageRepository usageRepository;
+    private final CurrentUser currentUser;
 
     public CourseParseService(DocumentExtractor extractor, ClaudeCourseParser parser,
-                              SemesterService semesterService) {
+                              SemesterService semesterService,
+                              CourseParseUsageRepository usageRepository, CurrentUser currentUser) {
         this.extractor = extractor;
         this.parser = parser;
         this.semesterService = semesterService;
+        this.usageRepository = usageRepository;
+        this.currentUser = currentUser;
     }
 
     public boolean enabled() {
@@ -53,8 +64,22 @@ public class CourseParseService {
 
         Semester semester = semesterId == null ? null : semesterService.requireOwned(semesterId);
         ZoneId zone = zoneOf(timeZone);
-        CourseDraft draft = parser.parse(input, context(semester, zone));
-        return normalize(draft, zone);
+        ParseOutcome outcome = parser.parse(input, context(semester, zone));
+        record(outcome);
+        return normalize(outcome.draft(), zone);
+    }
+
+    private void record(ParseOutcome outcome) {
+        try {
+            CourseParseUsage usage = new CourseParseUsage();
+            usage.setUser(currentUser.entity());
+            usage.setModel(outcome.model());
+            usage.setInputTokens(outcome.inputTokens());
+            usage.setOutputTokens(outcome.outputTokens());
+            usageRepository.save(usage);
+        } catch (RuntimeException e) {
+            log.warn("Could not record course parse usage: {}", e.getMessage());
+        }
     }
 
     private String context(Semester semester, ZoneId zone) {

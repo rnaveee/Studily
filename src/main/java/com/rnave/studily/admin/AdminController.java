@@ -8,6 +8,7 @@ import com.rnave.studily.admin.AdminDtos.ColumnInfo;
 import com.rnave.studily.admin.AdminDtos.GrowthPoint;
 import com.rnave.studily.admin.AdminDtos.Health;
 import com.rnave.studily.admin.AdminDtos.Overview;
+import com.rnave.studily.admin.AdminDtos.ParseSpend;
 import com.rnave.studily.admin.AdminDtos.Paged;
 import com.rnave.studily.admin.AdminDtos.QueryRequest;
 import com.rnave.studily.admin.AdminDtos.QueryResult;
@@ -127,6 +128,11 @@ public class AdminController {
     @GetMapping("/overview")
     public Overview overview() {
         return analyticsService.overview();
+    }
+
+    @GetMapping("/parse-spend")
+    public ParseSpend parseSpend() {
+        return analyticsService.parseSpend();
     }
 
     @GetMapping("/growth")
