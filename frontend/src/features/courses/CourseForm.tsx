@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Download, Plus, Users2, X } from "lucide-react";
 import {
@@ -25,6 +25,9 @@ interface Props {
   onSubmit: (req: CourseRequest) => Promise<unknown>;
   onCancel?: () => void;
   onImported?: (course: Course) => void;
+  prefill?: boolean;
+  extra?: ReactNode;
+  bare?: boolean;
 }
 
 const COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#7968dc", "#0ea5e9"];
@@ -150,7 +153,16 @@ function initialLocations(initial?: CourseRequest): Record<MeetingKind, string> 
   return out;
 }
 
-export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, onImported }: Props) {
+export default function CourseForm({
+  initial,
+  submitLabel,
+  onSubmit,
+  onCancel,
+  onImported,
+  prefill = false,
+  extra,
+  bare = false,
+}: Props) {
   const [name, setName] = useState(initial?.name ?? "");
   const [semesterId, setSemesterId] = useState<number | null>(initial?.semesterId ?? null);
   const [code, setCode] = useState(initial?.code ?? "");
@@ -179,7 +191,7 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
   const matches = useQuery({
     queryKey: ["course-matches", debouncedCode],
     queryFn: () => api.get<CourseMatch[]>(`/courses/matches?code=${encodeURIComponent(debouncedCode)}`),
-    enabled: !initial && debouncedCode.length >= 3,
+    enabled: (!initial || prefill) && debouncedCode.length >= 3,
   });
 
   const importCourse = useMutation({
@@ -192,7 +204,8 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
     onSuccess: (course) => onImported?.(course),
   });
 
-  const matchList = !initial && debouncedCode.length >= 3 ? (matches.data ?? []) : [];
+  const matchList =
+    (!initial || prefill) && debouncedCode.length >= 3 ? (matches.data ?? []) : [];
 
   const blocks = useMemo(() => expandRows(rows, locations), [rows, locations]);
 
@@ -265,7 +278,10 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
   }
 
   return (
-    <form onSubmit={submit} className="card p-5 space-y-4 animate-slide">
+    <form
+      onSubmit={submit}
+      className={bare ? "space-y-4" : "card p-5 space-y-4 animate-slide"}
+    >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className="field-label">Course name</label>
@@ -491,6 +507,8 @@ export default function CourseForm({ initial, submitLabel, onSubmit, onCancel, o
           );
         })}
       </div>
+
+      {extra}
 
       {error && <p className="text-xs text-red animate-fade">{error}</p>}
 

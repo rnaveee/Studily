@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Plus } from "lucide-react";
 import { api } from "../../lib/api";
 import BackButton from "../../components/BackButton";
@@ -10,11 +10,14 @@ import { useRequireAuth } from "../../lib/auth";
 import type { Course, CourseRequest, Semester } from "../../types";
 import { courseLocations, hhmm } from "../../lib/format";
 import CourseForm from "./CourseForm";
+import NewCourseChooser from "./NewCourseChooser";
+import Modal from "../../components/Modal";
 
 export default function CoursesPage() {
   const qc = useQueryClient();
   const requireAuth = useRequireAuth();
-  const [showForm, setShowForm] = useState(false);
+  const navigate = useNavigate();
+  const [mode, setMode] = useState<"chooser" | "manual" | null>(null);
   const [semesterFilter, setSemesterFilter] = useState<number | null>(null);
 
   const { data: semesters } = useQuery({
@@ -33,7 +36,7 @@ export default function CoursesPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["courses"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
-      setShowForm(false);
+      setMode(null);
     },
   });
 
@@ -57,24 +60,37 @@ export default function CoursesPage() {
               ))}
             </select>
           )}
-          <button onClick={() => requireAuth(() => setShowForm((s) => !s))} className="btn btn-primary">
+          <button onClick={() => requireAuth(() => setMode("chooser"))} className="btn btn-primary">
             <Plus size={13} strokeWidth={2} />
-            {showForm ? "Cancel" : "New course"}
+            New course
           </button>
         </div>
       </div>
 
-      {showForm && (
-        <CourseForm
-          submitLabel="Create course"
-          onSubmit={(req) => create.mutateAsync(req)}
-          onCancel={() => setShowForm(false)}
-          onImported={() => {
-            qc.invalidateQueries({ queryKey: ["courses"] });
-            qc.invalidateQueries({ queryKey: ["dashboard"] });
-            setShowForm(false);
-          }}
+      {mode === "chooser" && (
+        <NewCourseChooser
+          onClose={() => setMode(null)}
+          onManual={() => setMode("manual")}
+          onAutomatic={() => navigate("/courses/new/auto")}
         />
+      )}
+
+      {mode === "manual" && (
+        <Modal onClose={() => setMode(null)} title="New course" size="xl" variant="sheet" padded={false}>
+          <div className="p-5 pt-0">
+            <CourseForm
+              bare
+              submitLabel="Create course"
+              onSubmit={(req) => create.mutateAsync(req)}
+              onCancel={() => setMode(null)}
+              onImported={() => {
+                qc.invalidateQueries({ queryKey: ["courses"] });
+                qc.invalidateQueries({ queryKey: ["dashboard"] });
+                setMode(null);
+              }}
+            />
+          </div>
+        </Modal>
       )}
 
       {isLoading ? (
@@ -126,7 +142,7 @@ export default function CoursesPage() {
           <p className="text-sm text-fg-3">
             {semesterFilter ? "No courses in this semester." : "No courses yet."}
           </p>
-          <button onClick={() => requireAuth(() => setShowForm(true))} className="btn btn-soft mt-3">
+          <button onClick={() => requireAuth(() => setMode("chooser"))} className="btn btn-soft mt-3">
             <Plus size={13} />
             Add your first course
           </button>

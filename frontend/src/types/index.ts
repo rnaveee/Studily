@@ -128,6 +128,24 @@ export interface CourseRequest {
   meetingBlocks: MeetingBlock[];
 }
 
+export interface DraftItem {
+  type: ItemType;
+  title: string;
+  dueAt: string;
+  weight?: number | null;
+  location?: string | null;
+}
+
+export interface CourseDraft {
+  name?: string | null;
+  code?: string | null;
+  professor?: string | null;
+  location?: string | null;
+  meetingBlocks: MeetingBlock[];
+  items: DraftItem[];
+  warnings: string[];
+}
+
 export interface AcademicItem {
   seriesId?: string | null;
   recurrenceRule?: string | null;

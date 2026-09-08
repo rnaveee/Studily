@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 33,
+    date: "2026-09-08",
+    title: "Build a course from your outline",
+    description:
+      "Adding a course now asks how you want to do it. Manual is the form you already know. Automatic (beta) lets you drop in your course outline as a PDF, a screenshot of the course page, or just pasted text, and it fills the form in for you \u2014 course name, code, instructor, room, weekly class times, and the assignments and exams from the schedule with their due dates and weights. It works out class times from a table of dates when the outline never spells the pattern out. Nothing saves until you have read it over: every field stays editable, you tick which deadlines to keep, and anything the reader was unsure about is flagged at the top. It gets things wrong sometimes, so give it a look before you hit save.",
+  },
+  {
     version: 32,
     date: "2026-09-06",
     title: "Choose who sees your schedule, and share it as an image",
