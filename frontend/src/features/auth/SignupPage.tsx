@@ -36,7 +36,7 @@ export default function SignupPage() {
 
   if (created) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-bg px-4">
+      <div className="flex min-h-screen items-center justify-center px-4">
         <div className="w-full max-w-[360px] animate-in">
           <div className="mb-8 text-center">
             <img src="/studily-3a.svg" alt="" className="mx-auto mb-2 h-14 w-14" />
@@ -64,7 +64,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-bg px-4 py-8">
+    <div className="flex min-h-screen items-center justify-center px-4 py-8">
       <div className="w-full max-w-[360px] animate-in">
         <div className="mb-8 text-center">
           <img src="/studily-3a.svg" alt="" className="mx-auto mb-2 h-14 w-14" />

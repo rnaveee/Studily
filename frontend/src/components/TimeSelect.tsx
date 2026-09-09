@@ -141,8 +141,7 @@ export default function TimeSelect({
         <ul
           ref={listRef}
           role="listbox"
-          className="absolute z-30 mt-1 max-h-52 w-full overflow-y-auto rounded-lg py-1 shadow-xl"
-          style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
+          className="glass absolute z-30 mt-1 max-h-52 w-full overflow-y-auto py-1"
         >
           {options.map((opt, i) => (
             <li key={opt}>

@@ -2,13 +2,13 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --bg:         #f3f3f7;
+  --bg:         #eef0f7;
   --surface:    #ffffff;
-  --surface-hi: #ebebf0;
-  --line:       #e0e0ea;
+  --surface-hi: #e7e9f2;
+  --line:       #dcdfec;
   --fg:         #0e0e1a;
-  --fg-2:       #5e5e7a;
-  --fg-3:       #9898b5;
+  --fg-2:       #56566f;
+  --fg-3:       #8a8aa6;
   --accent:     #5548c8;
   --accent-2:   #4438b0;
   --accent-fg:  #ffffff;
@@ -20,17 +20,34 @@
   --shadow-sm:  0 1px 2px rgb(14 14 26 / 0.04), 0 1px 3px rgb(14 14 26 / 0.06);
   --shadow-md:  0 2px 4px rgb(14 14 26 / 0.04), 0 6px 16px -4px rgb(14 14 26 / 0.10);
   --shadow-lg:  0 4px 8px rgb(14 14 26 / 0.05), 0 18px 40px -12px rgb(14 14 26 / 0.16);
-  --edge-hi:    rgb(255 255 255 / 0);
+  --edge-hi:    rgb(255 255 255 / 0.9);
+
+  --radius-sm:  8px;
+  --radius:     12px;
+  --radius-lg:  16px;
+  --radius-xl:  20px;
+
+  --glass-bg:   rgb(255 255 255 / 0.72);
+  --glass-brd:  rgb(255 255 255 / 0.85);
+  --glass-blur: 20px;
+  --scrim:      rgb(28 30 48 / 0.34);
+
+  --neu-hi:     rgb(255 255 255 / 0.95);
+  --neu-lo:     rgb(88 92 130 / 0.16);
+  --neu-lo-2:   rgb(88 92 130 / 0.10);
+  --card-grad:  linear-gradient(160deg, rgb(255 255 255 / 0.7) 0%, rgb(255 255 255 / 0) 46%);
+  --ambient-1:  10%;
+  --ambient-2:  8%;
 }
 
 .dark {
-  --bg:         #0c0c10;
-  --surface:    #16161e;
-  --surface-hi: #202028;
-  --line:       #2a2a38;
-  --fg:         #e4e4f0;
-  --fg-2:       #8484a0;
-  --fg-3:       #50506a;
+  --bg:         #0a0e1a;
+  --surface:    #141a2e;
+  --surface-hi: #1e2540;
+  --line:       #2a3352;
+  --fg:         #e6e8f5;
+  --fg-2:       #949ec2;
+  --fg-3:       #6672a0;
   --accent:     #7968dc;
   --accent-2:   #8b7de8;
   --accent-fg:  #ffffff;
@@ -38,10 +55,21 @@
   --green:      #42a870;
   --orange:     #e0913c;
   --yellow:     #d6ab3d;
-  --shadow-sm:  0 1px 2px rgb(0 0 0 / 0.30);
-  --shadow-md:  0 2px 6px rgb(0 0 0 / 0.36), 0 10px 24px -8px rgb(0 0 0 / 0.42);
-  --shadow-lg:  0 4px 10px rgb(0 0 0 / 0.40), 0 24px 56px -16px rgb(0 0 0 / 0.55);
-  --edge-hi:    rgb(255 255 255 / 0.06);
+  --shadow-sm:  0 1px 2px rgb(0 0 0 / 0.34);
+  --shadow-md:  0 2px 6px rgb(0 0 0 / 0.40), 0 10px 24px -8px rgb(3 6 16 / 0.50);
+  --shadow-lg:  0 4px 10px rgb(0 0 0 / 0.44), 0 24px 56px -16px rgb(3 6 16 / 0.62);
+  --edge-hi:    rgb(255 255 255 / 0.07);
+
+  --glass-bg:   rgb(20 26 46 / 0.72);
+  --glass-brd:  rgb(255 255 255 / 0.09);
+  --scrim:      rgb(4 7 16 / 0.62);
+
+  --neu-hi:     rgb(255 255 255 / 0.055);
+  --neu-lo:     rgb(0 0 0 / 0.45);
+  --neu-lo-2:   rgb(0 0 0 / 0.30);
+  --card-grad:  linear-gradient(160deg, rgb(255 255 255 / 0.045) 0%, rgb(255 255 255 / 0) 46%);
+  --ambient-1:  20%;
+  --ambient-2:  16%;
 }
 
 @theme inline {
@@ -71,16 +99,29 @@ html, body {
   overscroll-behavior: none;
 }
 
-html { background: var(--surface); }
+html { background: var(--bg); }
 
 body {
-  background: var(--surface);
+  background: var(--bg);
   color: var(--fg);
   font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(62% 52% at 10% -4%,
+      color-mix(in srgb, var(--accent) var(--ambient-1), transparent) 0%, transparent 70%),
+    radial-gradient(58% 48% at 96% 104%,
+      color-mix(in srgb, var(--accent-2) var(--ambient-2), transparent) 0%, transparent 72%);
 }
 
 button:not(:disabled),
@@ -127,10 +168,11 @@ summary,
   width: 100%;
   background: var(--surface-hi);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 7px 11px;
   font-size: 13px;
   color: var(--fg);
+  box-shadow: inset 2px 2px 5px var(--neu-lo), inset -1px -1px 2px var(--neu-hi);
   transition: border-color 0.15s, box-shadow 0.15s;
   outline: none;
   appearance: none;
@@ -141,7 +183,8 @@ summary,
 .input::placeholder { color: var(--fg-3); }
 .input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 2px 2px 5px var(--neu-lo), inset -1px -1px 2px var(--neu-hi),
+              0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 .input:disabled { opacity: 0.45; cursor: not-allowed; }
 select.input { cursor: pointer; }
@@ -153,32 +196,46 @@ textarea.input { resize: vertical; }
   justify-content: center;
   gap: 6px;
   padding: 6px 13px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.13s, color 0.13s, border-color 0.13s, opacity 0.13s, transform 0.1s;
+  transition: background 0.13s, color 0.13s, border-color 0.13s, opacity 0.13s,
+              box-shadow 0.13s ease, transform 0.13s ease;
   border: 1px solid transparent;
   white-space: nowrap;
   line-height: 1.4;
   text-decoration: none;
 }
-.btn:active:not(:disabled) { transform: scale(0.975); }
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: inset 2px 2px 5px var(--neu-lo), inset -1px -1px 2px var(--neu-hi);
+}
 .btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 
 .btn-primary {
   background: var(--accent);
   color: var(--accent-fg);
   border-color: var(--accent);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgb(255 255 255 / 0.16);
 }
-.btn-primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.btn-primary:hover {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgb(255 255 255 / 0.2);
+}
 
 .btn-ghost {
-  background: transparent;
+  background: var(--surface);
   color: var(--fg-2);
   border-color: var(--line);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 var(--edge-hi);
 }
-.btn-ghost:hover { background: var(--surface-hi); color: var(--fg); }
+.btn-ghost:hover {
+  background: var(--surface-hi);
+  color: var(--fg);
+  box-shadow: var(--shadow-md), inset 0 1px 0 var(--edge-hi);
+}
 
 .btn-soft {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
@@ -195,9 +252,25 @@ textarea.input { resize: vertical; }
 .btn-danger:hover { background: color-mix(in srgb, var(--red) 8%, transparent); }
 
 .card {
-  background: var(--surface);
+  background-image: var(--card-grad);
+  background-color: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 var(--edge-hi);
+}
+
+.card-raised {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md), inset 0 1px 0 var(--edge-hi);
+}
+
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-brd);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 var(--edge-hi);
+  backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
 }
 
 .badge {
@@ -222,6 +295,18 @@ textarea.input { resize: vertical; }
 .badge-green {
   background: color-mix(in srgb, var(--green) 10%, transparent);
   color: var(--green);
+}
+.badge-red {
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+  color: var(--red);
+}
+.badge-orange {
+  background: color-mix(in srgb, var(--orange) 12%, transparent);
+  color: var(--orange);
+}
+.badge-yellow {
+  background: color-mix(in srgb, var(--yellow) 14%, transparent);
+  color: var(--yellow);
 }
 
 .field-label {
@@ -283,14 +368,15 @@ textarea.input { resize: vertical; }
 }
 
 .frame {
-  background: var(--surface);
+  background-image: var(--card-grad);
+  background-color: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md), inset 0 1px 0 var(--edge-hi);
   transition: box-shadow 0.25s ease, transform 0.25s ease;
 }
 .frame-lg {
-  border-radius: 14px;
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-lg), inset 0 1px 0 var(--edge-hi);
 }
 .frame-hover:hover {
@@ -400,7 +486,7 @@ textarea.input { resize: vertical; }
 .overlay-in  { animation: fade-in  0.16s ease-out both; }
 .overlay-out { animation: fade-out 0.14s ease-in  both; }
 
-.panel-in  { animation: scale-in  0.19s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.panel-in  { animation: scale-in  0.22s cubic-bezier(0.34, 1.32, 0.64, 1) both; }
 .panel-out { animation: scale-out 0.14s ease-in both; }
 
 .page-in { animation: page-in 0.24s cubic-bezier(0.22, 0.61, 0.36, 1) backwards; }
@@ -431,10 +517,10 @@ textarea.input { resize: vertical; }
 }
 .toast-out { animation: toast-out 0.17s ease-in both; }
 
-.modal-in  { animation: sheet-up   0.22s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+.modal-in  { animation: sheet-up   0.26s cubic-bezier(0.34, 1.32, 0.64, 1) both; }
 .modal-out { animation: sheet-down 0.16s ease-in both; }
 @media (min-width: 640px) {
-  .modal-in  { animation: scale-in  0.19s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+  .modal-in  { animation: scale-in  0.22s cubic-bezier(0.34, 1.32, 0.64, 1) both; }
   .modal-out { animation: scale-out 0.14s ease-in both; }
 }
 
@@ -458,12 +544,23 @@ textarea.input { resize: vertical; }
   animation: shimmer-sweep 1.4s ease-in-out infinite;
 }
 
-.press { transition: transform 0.12s ease, background 0.13s ease, opacity 0.13s ease; }
-.press:active { transform: scale(0.985); }
+.press {
+  transition: transform 0.13s ease, background 0.13s ease, opacity 0.13s ease,
+              box-shadow 0.13s ease;
+}
+.press:active { transform: translateY(1px); }
 
-.card-lift { transition: box-shadow 0.2s ease, transform 0.2s ease; }
-.card-lift:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
-.card-lift:active { transform: translateY(0) scale(0.99); }
+.card-lift {
+  transition: box-shadow 0.22s cubic-bezier(0.22, 0.61, 0.36, 1),
+              transform 0.22s cubic-bezier(0.22, 0.61, 0.36, 1),
+              border-color 0.22s ease;
+}
+.card-lift:hover {
+  box-shadow: var(--shadow-md), inset 0 1px 0 var(--edge-hi);
+  border-color: color-mix(in srgb, var(--accent) 26%, var(--line));
+  transform: translateY(-2px);
+}
+.card-lift:active { transform: translateY(0); box-shadow: var(--shadow-sm); }
 
 .nav-ind { transition: transform 0.28s cubic-bezier(0.22, 0.61, 0.36, 1), width 0.28s cubic-bezier(0.22, 0.61, 0.36, 1); }
 

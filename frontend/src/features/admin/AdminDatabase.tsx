@@ -305,7 +305,7 @@ function RowEditor({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade"
-      style={{ background: "rgba(0,0,0,0.4)" }}
+      style={{ background: "var(--scrim)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
     >
       <div className="card max-h-[85vh] w-full max-w-lg overflow-y-auto p-5 animate-in">
         <h2 className="text-[15px] font-semibold text-fg">

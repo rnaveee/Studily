@@ -4,5 +4,5 @@
   const dark = stored === "dark" || (!stored && prefersDark);
   if (dark) document.documentElement.classList.add("dark");
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", dark ? "#16161e" : "#ffffff");
+  if (meta) meta.setAttribute("content", dark ? "#0a0e1a" : "#eef0f7");
 })();

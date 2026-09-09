@@ -463,11 +463,14 @@ export default function CourseForm({
                                 type="button"
                                 onClick={() => toggleDay(row, d)}
                                 aria-pressed={on}
-                                className="h-7 min-w-[28px] rounded-md px-1.5 text-[12px] font-medium transition-colors"
+                                className="h-7 min-w-[28px] rounded-md px-1.5 text-[12px] font-medium transition-all duration-150"
                                 style={{
                                   background: on ? "var(--accent)" : "var(--surface)",
                                   color: on ? "var(--accent-fg)" : "var(--fg-3)",
                                   border: `1px solid ${on ? "var(--accent)" : "var(--line)"}`,
+                                  boxShadow: on
+                                    ? "inset 0 2px 4px rgb(0 0 0 / 0.28)"
+                                    : "var(--shadow-sm), inset 0 1px 0 var(--edge-hi)",
                                 }}
                               >
                                 {DAY_LABEL[d]}

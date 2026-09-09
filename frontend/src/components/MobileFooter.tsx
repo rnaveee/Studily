@@ -28,8 +28,11 @@ export default function MobileFooter({
     <footer
       className="md:hidden shrink-0"
       style={{
-        background: "var(--surface)",
-        borderTop: "1px solid var(--line)",
+        background: "var(--glass-bg)",
+        backdropFilter: "blur(var(--glass-blur)) saturate(1.6)",
+        WebkitBackdropFilter: "blur(var(--glass-blur)) saturate(1.6)",
+        borderTop: "1px solid var(--glass-brd)",
+        boxShadow: "0 -1px 0 var(--edge-hi) inset",
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
       }}
     >

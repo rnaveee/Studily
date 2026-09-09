@@ -421,7 +421,7 @@ export default function ConversationPage() {
           </button>
           {openMenu === "header" && (
             <div
-              className="card absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden py-1 shadow-xl animate-slide"
+              className="glass absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden py-1 animate-slide"
               onClick={(e) => e.stopPropagation()}
             >
               <button
@@ -811,7 +811,7 @@ function MessageBubble({
           {menuOpen && (
             <div
               ref={menuRef}
-              className={`card absolute top-1/2 z-50 w-40 -translate-y-1/2 overflow-hidden py-1 shadow-xl animate-fade ${
+              className={`glass absolute top-1/2 z-50 w-40 -translate-y-1/2 overflow-hidden py-1 animate-in ${
                 menuSide === "left" ? "right-full mr-1" : "left-full ml-1"
               }`}
               onClick={(e) => e.stopPropagation()}

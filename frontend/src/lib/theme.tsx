@@ -17,7 +17,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("studily.theme", dark ? "dark" : "light");
     document
       .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", dark ? "#16161e" : "#ffffff");
+      ?.setAttribute("content", dark ? "#0a0e1a" : "#eef0f7");
   }, [dark]);
 
   return (

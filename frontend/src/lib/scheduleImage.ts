@@ -3,16 +3,50 @@ import { coursesToDays, toMin } from "../components/WeekGrid";
 import { MEETING_KIND_LABEL } from "../types";
 import type { Course } from "../types";
 
-const DARK = {
-  bg: "#0c0c10",
-  surface: "#16161e",
-  surfaceHi: "#202028",
-  line: "#2a2a38",
-  fg: "#e4e4f0",
-  fg2: "#8484a0",
-  fg3: "#50506a",
+const DARK_FALLBACK = {
+  bg: "#0a0e1a",
+  surface: "#141a2e",
+  surfaceHi: "#1e2540",
+  line: "#2a3352",
+  fg: "#e6e8f5",
+  fg2: "#949ec2",
+  fg3: "#6672a0",
   accent: "#7968dc",
 };
+
+type Palette = typeof DARK_FALLBACK;
+
+const TOKENS: Record<keyof Palette, string> = {
+  bg: "--bg",
+  surface: "--surface",
+  surfaceHi: "--surface-hi",
+  line: "--line",
+  fg: "--fg",
+  fg2: "--fg-2",
+  fg3: "--fg-3",
+  accent: "--accent",
+};
+
+function darkPalette(): Palette {
+  if (typeof document === "undefined") return DARK_FALLBACK;
+  const probe = document.createElement("div");
+  probe.className = "dark";
+  probe.style.display = "none";
+  document.body.appendChild(probe);
+  try {
+    const computed = getComputedStyle(probe);
+    const out = { ...DARK_FALLBACK };
+    for (const key of Object.keys(TOKENS) as (keyof Palette)[]) {
+      const value = computed.getPropertyValue(TOKENS[key]).trim();
+      if (value) out[key] = value;
+    }
+    return out;
+  } catch {
+    return DARK_FALLBACK;
+  } finally {
+    probe.remove();
+  }
+}
 
 const SANS = '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif';
 const MONO = '"SF Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace';
@@ -74,6 +108,7 @@ export function hasMeetings(courses: Course[]): boolean {
 }
 
 export async function renderScheduleCard(opts: ScheduleCardOptions): Promise<Blob> {
+  const DARK = darkPalette();
   const days = coursesToDays(opts.courses);
   const all = days.flatMap((d) =>
     d.meetings.map((m) => ({ start: toMin(m.startTime), end: toMin(m.endTime) })),

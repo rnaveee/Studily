@@ -70,11 +70,16 @@ export default function Modal({
         className={`fixed inset-x-0 top-0 z-[90] flex overflow-y-auto overscroll-contain ${
           sheet ? "" : "p-4"
         } ${closing ? "overlay-out" : "overlay-in"}`}
-        style={{ background: "rgba(0,0,0,0.45)", height: "var(--app-height, 100%)" }}
+        style={{
+          background: "var(--scrim)",
+          backdropFilter: "blur(3px)",
+          WebkitBackdropFilter: "blur(3px)",
+          height: "var(--app-height, 100%)",
+        }}
       >
         <div
-          className={`card flex w-full ${WIDTH[size]} flex-col shadow-xl ${panelAnim} ${
-            sheet ? "mt-auto rounded-b-none sm:m-auto sm:rounded-b-xl" : "m-auto"
+          className={`glass flex w-full ${WIDTH[size]} flex-col ${panelAnim} ${
+            sheet ? "mt-auto rounded-b-none sm:m-auto sm:rounded-b-2xl" : "m-auto"
           }`}
           style={
             sheet ? { paddingBottom: "env(safe-area-inset-bottom, 0px)" } : undefined
