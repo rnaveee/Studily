@@ -23,8 +23,8 @@ import java.util.List;
 public class CourseParseController {
 
     private static final long PARSE_WINDOW_MS = 24 * 60 * 60_000L;
-    private static final int PARSE_LIMIT = 20;
-    private static final int PARSE_LIMIT_PER_IP = 40;
+    private static final int PARSE_LIMIT = 8;
+    private static final int PARSE_LIMIT_PER_IP = 20;
 
     private final SlidingWindowRateLimiter parseLimiter =
             new SlidingWindowRateLimiter(PARSE_LIMIT, PARSE_WINDOW_MS);
