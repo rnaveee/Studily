@@ -469,9 +469,7 @@ export default function CourseForm({
                                   background: on ? "var(--accent)" : "var(--surface)",
                                   color: on ? "var(--accent-fg)" : "var(--fg-3)",
                                   border: `1px solid ${on ? "var(--accent)" : "var(--line)"}`,
-                                  boxShadow: on
-                                    ? "inset 0 2px 4px rgb(0 0 0 / 0.28)"
-                                    : "var(--shadow-sm), inset 0 1px 0 var(--edge-hi)",
+                                  boxShadow: on ? "var(--btn-press)" : "var(--btn-shadow)",
                                 }}
                               >
                                 {DAY_LABEL[d]}

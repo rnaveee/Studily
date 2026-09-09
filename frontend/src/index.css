@@ -31,6 +31,7 @@
   --glass-brd:  rgb(255 255 255 / 0.85);
   --glass-blur: 20px;
   --scrim:      rgb(28 30 48 / 0.34);
+  --scrim-blur: 3px;
 
   --neu-hi:     rgb(255 255 255 / 0.95);
   --neu-lo:     rgb(88 92 130 / 0.16);
@@ -38,6 +39,14 @@
   --card-grad:  linear-gradient(160deg, rgb(255 255 255 / 0.7) 0%, rgb(255 255 255 / 0) 46%);
   --ambient-1:  10%;
   --ambient-2:  8%;
+
+  --input-inset:  inset 0 1px 2px var(--neu-lo-2);
+  --control-inset: inset 0 1px 3px var(--neu-lo);
+  --card-shadow:  var(--shadow-sm), inset 0 1px 0 var(--edge-hi);
+  --btn-shadow:   var(--shadow-sm), inset 0 1px 0 var(--edge-hi);
+  --btn-shadow-hi: var(--shadow-md), inset 0 1px 0 var(--edge-hi);
+  --btn-press:    inset 0 2px 4px var(--neu-lo);
+  --knob-shadow:  0 1px 3px var(--neu-lo), inset 0 1px 0 var(--edge-hi);
 }
 
 .dark {
@@ -63,13 +72,88 @@
   --glass-bg:   rgb(20 26 46 / 0.72);
   --glass-brd:  rgb(255 255 255 / 0.09);
   --scrim:      rgb(4 7 16 / 0.62);
+  --scrim-blur: 3px;
 
   --neu-hi:     rgb(255 255 255 / 0.055);
   --neu-lo:     rgb(0 0 0 / 0.45);
-  --neu-lo-2:   rgb(0 0 0 / 0.30);
+  --neu-lo-2:   rgb(0 0 0 / 0.22);
   --card-grad:  linear-gradient(160deg, rgb(255 255 255 / 0.045) 0%, rgb(255 255 255 / 0) 46%);
   --ambient-1:  20%;
   --ambient-2:  16%;
+
+  --input-inset:  inset 0 1px 2px var(--neu-lo-2);
+  --control-inset: inset 0 1px 3px var(--neu-lo);
+  --knob-shadow:  0 1px 3px rgb(0 0 0 / 0.4), inset 0 1px 0 var(--edge-hi);
+}
+
+/* Classic UI: the pre-restyle look, restored by neutralising the new tokens. */
+.classic {
+  --bg:         #f3f3f7;
+  --surface:    #ffffff;
+  --surface-hi: #ebebf0;
+  --line:       #e0e0ea;
+  --fg-2:       #5e5e7a;
+  --fg-3:       #9898b5;
+  --edge-hi:    rgb(255 255 255 / 0);
+}
+
+.classic.dark {
+  --bg:         #0c0c10;
+  --surface:    #16161e;
+  --surface-hi: #202028;
+  --line:       #2a2a38;
+  --fg:         #e4e4f0;
+  --fg-2:       #8484a0;
+  --fg-3:       #50506a;
+  --edge-hi:    rgb(255 255 255 / 0.06);
+}
+
+.classic {
+  --radius-sm:  8px;
+  --radius:     12px;
+  --radius-lg:  12px;
+  --radius-xl:  14px;
+
+  --card-grad:     none;
+  --card-shadow:   none;
+  --btn-shadow:    none;
+  --btn-shadow-hi: none;
+  --btn-press:     none;
+  --input-inset:   none;
+  --control-inset: none;
+  --knob-shadow:   0 1px 2px rgb(0 0 0 / 0.2);
+
+  --glass-blur: 0px;
+  --glass-bg:   var(--surface);
+  --glass-brd:  var(--line);
+  --scrim-blur: 0px;
+  --scrim:      rgb(0 0 0 / 0.45);
+
+  --ambient-1: 0%;
+  --ambient-2: 0%;
+}
+
+.classic body::before { display: none; }
+
+.classic .glass { box-shadow: var(--shadow-lg); }
+
+.classic .btn:active:not(:disabled) { transform: scale(0.975); }
+.classic .press:active { transform: scale(0.985); }
+.classic .card-lift:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--line);
+  transform: translateY(-1px);
+}
+.classic .card-lift:active { transform: translateY(0) scale(0.99); }
+
+.classic .frame     { border-radius: 12px; }
+.classic .frame-lg  { border-radius: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .classic .btn:active:not(:disabled),
+  .classic .press:active,
+  .classic .card-lift:hover,
+  .classic .card-lift:active { transform: none; }
 }
 
 @theme inline {
@@ -172,7 +256,7 @@ summary,
   padding: 7px 11px;
   font-size: 13px;
   color: var(--fg);
-  box-shadow: inset 2px 2px 5px var(--neu-lo), inset -1px -1px 2px var(--neu-hi);
+  box-shadow: var(--input-inset);
   transition: border-color 0.15s, box-shadow 0.15s;
   outline: none;
   appearance: none;
@@ -183,7 +267,7 @@ summary,
 .input::placeholder { color: var(--fg-3); }
 .input:focus {
   border-color: var(--accent);
-  box-shadow: inset 2px 2px 5px var(--neu-lo), inset -1px -1px 2px var(--neu-hi),
+  box-shadow: var(--input-inset),
               0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 .input:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -209,7 +293,7 @@ textarea.input { resize: vertical; }
 }
 .btn:active:not(:disabled) {
   transform: translateY(1px);
-  box-shadow: inset 2px 2px 5px var(--neu-lo), inset -1px -1px 2px var(--neu-hi);
+  box-shadow: var(--btn-press);
 }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 
@@ -217,24 +301,24 @@ textarea.input { resize: vertical; }
   background: var(--accent);
   color: var(--accent-fg);
   border-color: var(--accent);
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgb(255 255 255 / 0.16);
+  box-shadow: var(--btn-shadow);
 }
 .btn-primary:hover {
   background: var(--accent-2);
   border-color: var(--accent-2);
-  box-shadow: var(--shadow-md), inset 0 1px 0 rgb(255 255 255 / 0.2);
+  box-shadow: var(--btn-shadow-hi);
 }
 
 .btn-ghost {
   background: var(--surface);
   color: var(--fg-2);
   border-color: var(--line);
-  box-shadow: var(--shadow-sm), inset 0 1px 0 var(--edge-hi);
+  box-shadow: var(--btn-shadow);
 }
 .btn-ghost:hover {
   background: var(--surface-hi);
   color: var(--fg);
-  box-shadow: var(--shadow-md), inset 0 1px 0 var(--edge-hi);
+  box-shadow: var(--btn-shadow-hi);
 }
 
 .btn-soft {
@@ -256,7 +340,7 @@ textarea.input { resize: vertical; }
   background-color: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-sm), inset 0 1px 0 var(--edge-hi);
+  box-shadow: var(--card-shadow);
 }
 
 .card-raised {

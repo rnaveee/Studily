@@ -72,8 +72,8 @@ export default function Modal({
         } ${closing ? "overlay-out" : "overlay-in"}`}
         style={{
           background: "var(--scrim)",
-          backdropFilter: "blur(3px)",
-          WebkitBackdropFilter: "blur(3px)",
+          backdropFilter: "blur(var(--scrim-blur))",
+          WebkitBackdropFilter: "blur(var(--scrim-blur))",
           height: "var(--app-height, 100%)",
         }}
       >

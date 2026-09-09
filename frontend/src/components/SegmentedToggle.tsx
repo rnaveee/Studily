@@ -22,7 +22,7 @@ export default function SegmentedToggle<T extends string>({
       } ${className}`}
       style={{
         gridTemplateColumns: `repeat(${options.length}, 1fr)`,
-        boxShadow: "inset 2px 2px 5px var(--neu-lo), inset -1px -1px 2px var(--neu-hi)",
+        boxShadow: "var(--control-inset)",
       }}
     >
       <span
@@ -33,7 +33,7 @@ export default function SegmentedToggle<T extends string>({
           width: `calc((100% - 8px) / ${options.length})`,
           transform: `translateX(${index * 100}%)`,
           border: "1px solid var(--line)",
-          boxShadow: "var(--shadow-sm), inset 0 1px 0 var(--edge-hi)",
+          boxShadow: "var(--btn-shadow)",
           transitionTimingFunction: "cubic-bezier(0.34, 1.32, 0.64, 1)",
         }}
       />
