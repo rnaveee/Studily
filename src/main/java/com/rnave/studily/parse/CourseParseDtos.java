@@ -2,6 +2,7 @@ package com.rnave.studily.parse;
 
 import com.rnave.studily.academic.ItemType;
 import com.rnave.studily.course.CourseDtos.MeetingBlockDto;
+import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
@@ -16,6 +17,7 @@ public class CourseParseDtos {
     }
 
     public record CourseDraftDto(
+            Long parseId,
             String name,
             String code,
             String professor,
@@ -26,5 +28,11 @@ public class CourseParseDtos {
     }
 
     public record ParseAvailabilityDto(boolean enabled) {
+    }
+
+    public record ParseAccuracyDto(Long successRate, long sampleSize) {
+    }
+
+    public record ParseFeedbackRequest(@NotNull Long parseId, @NotNull ParseRating rating) {
     }
 }

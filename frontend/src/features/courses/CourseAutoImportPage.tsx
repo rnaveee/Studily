@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { FileText, Image as ImageIcon, Sparkles, Upload, X } from "lucide-react";
 import BackButton from "../../components/BackButton";
 import CourseDraftReview from "./CourseDraftReview";
+import ParseFeedbackPrompt from "./ParseFeedbackPrompt";
 import { api } from "../../lib/api";
 import { formatBytes } from "../../lib/format";
 import { staggerDelay } from "../../lib/motion";
@@ -25,6 +26,7 @@ export default function CourseAutoImportPage() {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<CourseDraft | null>(null);
+  const [rating, setRating] = useState<{ parseId: number; courseId: number } | null>(null);
 
   const { data: semesters } = useQuery({
     queryKey: ["semesters"],
@@ -67,7 +69,16 @@ export default function CourseAutoImportPage() {
   function saved(course: Course) {
     qc.invalidateQueries({ queryKey: ["courses"] });
     qc.invalidateQueries({ queryKey: ["dashboard"] });
+    if (draft?.parseId != null) {
+      setRating({ parseId: draft.parseId, courseId: course.id });
+      return;
+    }
     navigate(`/courses/${course.id}`);
+  }
+
+  function ratingDone() {
+    qc.invalidateQueries({ queryKey: ["course-parse-accuracy"] });
+    navigate(`/courses/${rating!.courseId}`);
   }
 
   const hasInput = files.length > 0 || text.trim().length > 0;
@@ -87,6 +98,7 @@ export default function CourseAutoImportPage() {
             onCancel={() => setDraft(null)}
           />
         </div>
+        {rating && <ParseFeedbackPrompt parseId={rating.parseId} onDone={ratingDone} />}
       </div>
     );
   }

@@ -67,20 +67,20 @@ public class CourseParseService {
         Semester semester = semesterId == null ? null : semesterService.requireOwned(semesterId);
         ZoneId zone = zoneOf(timeZone);
         ParseOutcome outcome = parser.parse(input, context(semester, zone));
-        record(outcome);
-        return normalize(outcome.draft());
+        return normalize(record(outcome), outcome.draft());
     }
 
-    private void record(ParseOutcome outcome) {
+    private Long record(ParseOutcome outcome) {
         try {
             CourseParseUsage usage = new CourseParseUsage();
             usage.setUser(currentUser.entity());
             usage.setModel(outcome.model());
             usage.setInputTokens(outcome.inputTokens());
             usage.setOutputTokens(outcome.outputTokens());
-            usageRepository.save(usage);
+            return usageRepository.save(usage).getId();
         } catch (RuntimeException e) {
             log.warn("Could not record course parse usage: {}", e.getMessage());
+            return null;
         }
     }
 
@@ -102,12 +102,13 @@ public class CourseParseService {
         return sb.toString();
     }
 
-    private CourseDraftDto normalize(CourseDraft draft) {
+    private CourseDraftDto normalize(Long parseId, CourseDraft draft) {
         List<String> warnings = new ArrayList<>(clean(draft.warnings(), MAX_WARNINGS));
         List<MeetingBlockDto> blocks = blocks(draft, warnings);
         List<DraftItemDto> items = items(draft, warnings);
 
         return new CourseDraftDto(
+                parseId,
                 trim(draft.name(), MAX_NAME),
                 trim(draft.code(), MAX_NAME),
                 trim(draft.professor(), MAX_NAME),

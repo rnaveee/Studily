@@ -5,14 +5,20 @@ import com.rnave.studily.config.GlobalRateLimitFilter;
 import com.rnave.studily.config.SlidingWindowRateLimiter;
 import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.parse.CourseParseDtos.CourseDraftDto;
+import com.rnave.studily.parse.CourseParseDtos.ParseAccuracyDto;
 import com.rnave.studily.parse.CourseParseDtos.ParseAvailabilityDto;
+import com.rnave.studily.parse.CourseParseDtos.ParseFeedbackRequest;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -32,16 +38,31 @@ public class CourseParseController {
             new SlidingWindowRateLimiter(PARSE_LIMIT_PER_IP, PARSE_WINDOW_MS);
 
     private final CourseParseService courseParseService;
+    private final CourseParseFeedbackService feedbackService;
     private final CurrentUser currentUser;
 
-    public CourseParseController(CourseParseService courseParseService, CurrentUser currentUser) {
+    public CourseParseController(CourseParseService courseParseService,
+                                 CourseParseFeedbackService feedbackService,
+                                 CurrentUser currentUser) {
         this.courseParseService = courseParseService;
+        this.feedbackService = feedbackService;
         this.currentUser = currentUser;
     }
 
     @GetMapping("/enabled")
     public ParseAvailabilityDto enabled() {
         return new ParseAvailabilityDto(courseParseService.enabled());
+    }
+
+    @GetMapping("/accuracy")
+    public ParseAccuracyDto accuracy() {
+        return feedbackService.accuracy();
+    }
+
+    @PostMapping("/feedback")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void feedback(@Valid @RequestBody ParseFeedbackRequest request) {
+        feedbackService.rate(request.parseId(), request.rating());
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

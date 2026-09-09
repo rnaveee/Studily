@@ -136,7 +136,15 @@ export interface DraftItem {
   location?: string | null;
 }
 
+export type ParseRating = "ACCURATE" | "MINOR_FIXES" | "INACCURATE";
+
+export interface ParseAccuracy {
+  successRate: number | null;
+  sampleSize: number;
+}
+
 export interface CourseDraft {
+  parseId?: number | null;
   name?: string | null;
   code?: string | null;
   professor?: string | null;

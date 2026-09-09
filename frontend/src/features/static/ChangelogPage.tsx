@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 36,
+    date: "2026-09-09",
+    title: "Tell us how the outline reader did",
+    description:
+      "After you save a course that was filled in automatically, Studily now asks one question: did it get everything right, was it close but needing a few fixes, or did it get it wrong? It is three taps and you can skip it. What comes back gets pooled and shown on the Automatic card when you add a course, so before you hand it your outline you can see how often it has actually worked for other students rather than taking our word for it. The number only appears once enough people have answered for it to mean anything.",
+  },
+  {
     version: 35,
     date: "2026-09-09",
     title: "Notifications that arrive when they should",

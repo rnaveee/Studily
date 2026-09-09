@@ -3,6 +3,7 @@ import { PencilLine, Sparkles } from "lucide-react";
 import Modal from "../../components/Modal";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
+import type { ParseAccuracy } from "../../types";
 
 interface Props {
   onManual: () => void;
@@ -20,6 +21,13 @@ export default function NewCourseChooser({ onManual, onAutomatic, onClose }: Pro
 
   const autoEnabled = availability?.enabled ?? false;
   const verified = user?.emailVerified ?? false;
+
+  const { data: accuracy } = useQuery({
+    queryKey: ["course-parse-accuracy"],
+    queryFn: () => api.get<ParseAccuracy>("/courses/parse/accuracy"),
+    enabled: autoEnabled,
+    staleTime: 10 * 60_000,
+  });
 
   return (
     <Modal onClose={onClose} title="Add a course" size="lg" variant="sheet">
@@ -50,6 +58,11 @@ export default function NewCourseChooser({ onManual, onAutomatic, onClose }: Pro
                 ? "You check everything before it saves."
                 : "Verify your email to unlock this."}
             </p>
+            {accuracy?.successRate != null && (
+              <p className="mt-2 text-[11px] font-medium text-accent">
+                Studily users report that this feature works {accuracy.successRate}% of the time.
+              </p>
+            )}
           </button>
         )}
 
