@@ -61,3 +61,7 @@ desktop.ini
 
 # Personal learning / internal docs (not shipped in the repo)
 learning/
+
+# Local sample syllabi used for testing the course parser.
+# Contains a real instructor photo and bio, so it stays out of the repo.
+example/
