@@ -3,7 +3,6 @@ package com.rnave.studily.parse;
 import com.rnave.studily.academic.ItemType;
 import com.rnave.studily.course.CourseDtos.MeetingBlockDto;
 
-import java.time.Instant;
 import java.util.List;
 
 public class CourseParseDtos {
@@ -11,7 +10,7 @@ public class CourseParseDtos {
     public record DraftItemDto(
             ItemType type,
             String title,
-            Instant dueAt,
+            String dueAt,
             Double weight,
             String location) {
     }

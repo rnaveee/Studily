@@ -49,22 +49,33 @@ public class ClaudeCourseParser {
             as weekly class times; office hours in particular are not lectures. Emit one entry per \
             weekday, so a class meeting Tuesday and Thursday produces two entries.
 
-            3. Dates. Documents often print dates without a year, such as "14-OCT". Resolve them \
+            Many outlines give the days but never the clock time. When that happens, still report \
+            the weekday and leave startTime and endTime null, and add a warning saying the time \
+            was not stated. Never invent a time, and never borrow one from office hours.
+
+            3. Lab and tutorial sections are often listed as date ranges, such as "14 to 18-SEP", \
+            because each student attends one section within that window. That is not a weekly \
+            pattern you can report, so omit it and add a warning saying lab times vary by section.
+
+            4. Dates. Documents often print dates without a year, such as "14-OCT". Resolve them \
             against the semester date range you are given. If a date cannot be placed inside that \
             range, leave dueAt null and add a warning.
 
-            4. Weights. Take these from the grading scheme. When a single grading row covers a \
+            5. Weights. Take these from the grading scheme. When a single grading row covers a \
             group of items, such as "Quizzes, Assignments and Labs 15%", that 15% belongs to the \
             whole group. Do not copy it onto each item and do not divide it up: leave those items' \
             weight null and add a warning naming the group and its total.
 
-            5. Items. Include graded assignments, quizzes, projects and exams that have a \
-            deadline or a scheduled date. Do not include lecture topics, readings, holidays, or \
-            weeks marked as having no class.
+            6. Items. Include graded assignments, quizzes, projects, lab deliverables and exams \
+            that have a deadline or a scheduled date. Work through the whole schedule table row by \
+            row, including its Due column, and then check your list against the grading scheme: \
+            if the scheme names an exam or project you have not listed, find its date in the \
+            schedule and add it. Do not include lecture topics, readings, holidays, or weeks \
+            marked as having no class.
 
-            6. The professor is the instructor of record, never a teaching assistant.
+            7. The professor is the instructor of record, never a teaching assistant.
 
-            7. If the document is not a course outline, or carries too little to work with, return \
+            8. If the document is not a course outline, or carries too little to work with, return \
             nulls and empty lists with a warning saying so. A nearly empty result is correct when \
             the source is thin; a fabricated one never is.
 

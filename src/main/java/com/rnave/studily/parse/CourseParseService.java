@@ -35,6 +35,8 @@ public class CourseParseService {
     private static final int MAX_BLOCKS = 20;
     private static final int MAX_WARNINGS = 10;
     private static final int MAX_NAME = 255;
+    private static final LocalTime PLACEHOLDER_START = LocalTime.of(9, 0);
+    private static final LocalTime PLACEHOLDER_END = LocalTime.of(10, 0);
 
     private final DocumentExtractor extractor;
     private final ClaudeCourseParser parser;
@@ -66,7 +68,7 @@ public class CourseParseService {
         ZoneId zone = zoneOf(timeZone);
         ParseOutcome outcome = parser.parse(input, context(semester, zone));
         record(outcome);
-        return normalize(outcome.draft(), zone);
+        return normalize(outcome.draft());
     }
 
     private void record(ParseOutcome outcome) {
@@ -100,10 +102,10 @@ public class CourseParseService {
         return sb.toString();
     }
 
-    private CourseDraftDto normalize(CourseDraft draft, ZoneId zone) {
+    private CourseDraftDto normalize(CourseDraft draft) {
         List<String> warnings = new ArrayList<>(clean(draft.warnings(), MAX_WARNINGS));
         List<MeetingBlockDto> blocks = blocks(draft, warnings);
-        List<DraftItemDto> items = items(draft, zone, warnings);
+        List<DraftItemDto> items = items(draft, warnings);
 
         return new CourseDraftDto(
                 trim(draft.name(), MAX_NAME),
@@ -122,15 +124,25 @@ public class CourseParseService {
         List<MeetingBlockDto> out = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
         int dropped = 0;
+        boolean needTimes = false;
 
         for (CourseDraft.DraftBlock block : draft.meetingBlocks()) {
             if (block == null || out.size() >= MAX_BLOCKS) {
                 continue;
             }
             DayOfWeek day = parseEnum(DayOfWeek.class, block.day());
+            if (day == null) {
+                dropped++;
+                continue;
+            }
             LocalTime start = parseTime(block.startTime());
             LocalTime end = parseTime(block.endTime());
-            if (day == null || start == null || end == null || !end.isAfter(start)) {
+            boolean timeUnknown = start == null || end == null;
+            if (timeUnknown) {
+                start = PLACEHOLDER_START;
+                end = PLACEHOLDER_END;
+                needTimes = true;
+            } else if (!end.isAfter(start)) {
                 dropped++;
                 continue;
             }
@@ -144,6 +156,10 @@ public class CourseParseService {
             out.add(new MeetingBlockDto(null, day, kind, start, end, trim(block.location(), MAX_NAME)));
         }
 
+        if (needTimes && warnings.size() < MAX_WARNINGS) {
+            warnings.add("The outline never says what time this class runs, so the times below are "
+                    + "a placeholder. Set them before saving.");
+        }
         if (dropped > 0 && warnings.size() < MAX_WARNINGS) {
             warnings.add("Skipped " + dropped + " class time" + (dropped == 1 ? "" : "s")
                     + " that could not be read. Add them by hand if they are missing.");
@@ -151,7 +167,7 @@ public class CourseParseService {
         return List.copyOf(out);
     }
 
-    private List<DraftItemDto> items(CourseDraft draft, ZoneId zone, List<String> warnings) {
+    private List<DraftItemDto> items(CourseDraft draft, List<String> warnings) {
         if (draft.items() == null) {
             return List.of();
         }
@@ -175,7 +191,7 @@ public class CourseParseService {
             out.add(new DraftItemDto(
                     type,
                     title,
-                    due.atZone(zone).toInstant(),
+                    due.toString(),
                     weight(item.weight()),
                     trim(item.location(), MAX_NAME)));
         }

@@ -13,8 +13,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -101,13 +99,23 @@ class CourseParseServiceTest {
     }
 
     @Test
-    void parse_dropsBlocksWithUnreadableDayOrTime() {
+    void parse_dropsBlocksWhoseDayCannotBeRead() {
         CourseDraftDto dto = run(draftWithBlocks(
-                new DraftBlock("Tuesday", "LECTURE", "12:30", "14:20", null),
-                new DraftBlock("TUE", "LECTURE", "12.30pm", "14:20", null)));
+                new DraftBlock("Tuesday", "LECTURE", "12:30", "14:20", null)));
 
         assertThat(dto.meetingBlocks()).isEmpty();
-        assertThat(dto.warnings()).anyMatch(w -> w.contains("Skipped 2 class times"));
+        assertThat(dto.warnings()).anyMatch(w -> w.contains("Skipped 1 class time"));
+    }
+
+    @Test
+    void parse_keepsTheInferredDayWhenTheOutlineNeverStatesATime() {
+        CourseDraftDto dto = run(draftWithBlocks(
+                new DraftBlock("WED", "LECTURE", null, null, "B9200")));
+
+        assertThat(dto.meetingBlocks()).hasSize(1);
+        assertThat(dto.meetingBlocks().get(0).dayOfWeek()).isEqualTo(DayOfWeek.WED);
+        assertThat(dto.meetingBlocks().get(0).location()).isEqualTo("B9200");
+        assertThat(dto.warnings()).anyMatch(w -> w.contains("never says what time"));
     }
 
     @Test
@@ -127,8 +135,7 @@ class CourseParseServiceTest {
         assertThat(dto.items()).hasSize(1);
         assertThat(dto.items().get(0).type()).isEqualTo(ItemType.EXAM);
         assertThat(dto.items().get(0).weight()).isEqualTo(25.0);
-        assertThat(dto.items().get(0).dueAt())
-                .isEqualTo(ZonedDateTime.of(2026, 10, 14, 23, 59, 0, 0, ZoneId.of(ZONE)).toInstant());
+        assertThat(dto.items().get(0).dueAt()).isEqualTo("2026-10-14T23:59");
     }
 
     @Test
@@ -136,8 +143,7 @@ class CourseParseServiceTest {
         CourseDraftDto dto = run(draftWithItems(
                 new DraftItem("ASSIGNMENT", "Assignment 1", "2026-09-16", null, null)));
 
-        assertThat(dto.items().get(0).dueAt())
-                .isEqualTo(ZonedDateTime.of(2026, 9, 16, 23, 59, 0, 0, ZoneId.of(ZONE)).toInstant());
+        assertThat(dto.items().get(0).dueAt()).isEqualTo("2026-09-16T23:59");
     }
 
     @Test

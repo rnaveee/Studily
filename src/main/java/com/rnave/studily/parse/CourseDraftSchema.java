@@ -47,10 +47,12 @@ final class CourseDraftSchema {
         properties.put("kind", enumOf(
                 List.of("LECTURE", "LAB", "TUTORIAL"),
                 "What kind of meeting this is."));
-        properties.put("startTime", Map.of("type", "string",
-                "description", "Start time in 24-hour HH:mm format, for example '12:30'."));
-        properties.put("endTime", Map.of("type", "string",
-                "description", "End time in 24-hour HH:mm format, for example '14:20'."));
+        properties.put("startTime", nullable("string",
+                "Start time in 24-hour HH:mm format, for example '12:30'. Null when the document "
+                        + "never states what time this class runs."));
+        properties.put("endTime", nullable("string",
+                "End time in 24-hour HH:mm format, for example '14:20'. Null when the document "
+                        + "never states what time this class runs."));
         properties.put("location", nullable("string",
                 "Room for this meeting, for example 'B 9201'."));
         return object(properties);
@@ -64,7 +66,8 @@ final class CourseDraftSchema {
                 "description", "Title as printed, for example 'Exam 1 - Drawing' or 'Assignment 3'."));
         properties.put("dueAt", nullable("string",
                 "Due date and time as 'yyyy-MM-ddTHH:mm', for example '2026-10-14T23:59'. "
-                        + "Use 23:59 when only a date is given. Null when no date can be determined."));
+                        + "Use 23:59 when only a date is given, and the last day when a range is "
+                        + "given. Null when no date can be determined."));
         properties.put("weight", nullable("number",
                 "Percentage of the final grade, for example 25 for 25%. Null when the outline does not "
                         + "give this item its own percentage."));

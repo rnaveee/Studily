@@ -3,7 +3,6 @@ import { useMutation } from "@tanstack/react-query";
 import { AlertTriangle, Sparkles, X } from "lucide-react";
 import CourseForm from "./CourseForm";
 import DateTimeSelect from "../../components/DateTimeSelect";
-import { toLocalInput } from "../../lib/format";
 import { api } from "../../lib/api";
 import type {
   AcademicItem,
@@ -36,7 +35,7 @@ function toRows(items: DraftItem[]): ReviewRow[] {
     include: true,
     type: item.type,
     title: item.title,
-    dueLocal: toLocalInput(item.dueAt),
+    dueLocal: item.dueAt,
     weight: item.weight == null ? "" : String(item.weight),
   }));
 }
