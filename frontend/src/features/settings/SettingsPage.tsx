@@ -45,7 +45,7 @@ const SCHEDULE_VISIBILITY_HINT: Record<ScheduleVisibility, string> = {
 };
 
 export default function SettingsPage() {
-  const { dark, toggle } = useTheme();
+  const { dark, toggle, classic, setClassic } = useTheme();
   const qc = useQueryClient();
   const [subscribed, setSubscribed] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
@@ -177,13 +177,22 @@ export default function SettingsPage() {
         Preferences
       </h2>
 
-      <div className="card mt-3">
+      <div className="card mt-3 divide-y divide-line">
         <div className="flex items-center justify-between gap-4 p-4">
           <div>
             <div className="text-[14px] font-medium text-fg">Dark mode</div>
             <div className="mt-0.5 text-[12px] text-fg-3">Switch between light and dark themes</div>
           </div>
           <Toggle checked={dark} onChange={() => toggle()} />
+        </div>
+        <div className="flex items-center justify-between gap-4 p-4">
+          <div>
+            <div className="text-[14px] font-medium text-fg">Classic look</div>
+            <div className="mt-0.5 text-[12px] text-fg-3">
+              Go back to the older design
+            </div>
+          </div>
+          <Toggle checked={classic} onChange={(v) => setClassic(v)} />
         </div>
       </div>
 

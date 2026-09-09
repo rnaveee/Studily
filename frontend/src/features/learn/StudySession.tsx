@@ -109,7 +109,8 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
               key={g}
               onClick={() => grade(g)}
               disabled={grading}
-              className="card flex flex-col items-center gap-0.5 px-2 py-2.5 transition-colors hover:bg-surface-hi disabled:opacity-50"
+              className="card press flex flex-col items-center gap-0.5 px-2 py-2.5 transition-all hover:bg-surface-hi disabled:opacity-50"
+              style={{ boxShadow: "var(--btn-shadow)" }}
             >
               <span className="text-[13px] font-semibold" style={{ color: c }}>
                 {label}

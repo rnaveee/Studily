@@ -17,6 +17,7 @@ import {
 import { formatDateTime, hhmm } from "../../lib/format";
 import { addMinutes, toMinutes } from "../../lib/time";
 import { api } from "../../lib/api";
+import { COURSE_COLORS } from "../../lib/courseColors";
 import TimeSelect from "../../components/TimeSelect";
 
 interface Props {
@@ -30,7 +31,7 @@ interface Props {
   bare?: boolean;
 }
 
-const COLORS = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#7968dc", "#0ea5e9"];
+const COLORS = COURSE_COLORS;
 
 function tokenSet(s: string): Set<string> {
   return new Set(s.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
@@ -463,11 +464,12 @@ export default function CourseForm({
                                 type="button"
                                 onClick={() => toggleDay(row, d)}
                                 aria-pressed={on}
-                                className="h-7 min-w-[28px] rounded-md px-1.5 text-[12px] font-medium transition-colors"
+                                className="h-7 min-w-[28px] rounded-md px-1.5 text-[12px] font-medium transition-all duration-150"
                                 style={{
                                   background: on ? "var(--accent)" : "var(--surface)",
                                   color: on ? "var(--accent-fg)" : "var(--fg-3)",
                                   border: `1px solid ${on ? "var(--accent)" : "var(--line)"}`,
+                                  boxShadow: on ? "var(--btn-press)" : "var(--btn-shadow)",
                                 }}
                               >
                                 {DAY_LABEL[d]}

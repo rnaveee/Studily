@@ -1,11 +1,12 @@
   import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Eye, MailWarning, Megaphone, Smartphone, Timer, X } from "lucide-react";
+import { Eye, MailWarning, Megaphone, Smartphone, Sparkles, Timer, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { formatMs, pomodoroColor, usePomodoro } from "../lib/pomodoro";
 
 const BETA_KEY = "studily.banner.beta";
 const INSTALL_KEY = "studily.banner.install";
+const MAKEOVER_KEY = "studily.banner.makeover";
 
 function isStandalone() {
   return (
@@ -22,6 +23,9 @@ export default function Banners() {
   const [installDismissed, setInstallDismissed] = useState(
     () => localStorage.getItem(INSTALL_KEY) === "1" || isStandalone(),
   );
+  const [makeoverDismissed, setMakeoverDismissed] = useState(
+    () => localStorage.getItem(MAKEOVER_KEY) === "1",
+  );
 
   function dismiss(key: string, set: (v: boolean) => void) {
     localStorage.setItem(key, "1");
@@ -31,7 +35,16 @@ export default function Banners() {
   const unverified = !!user && !user.emailVerified;
   const pomo = usePomodoro();
 
-  if (betaDismissed && installDismissed && !unverified && !pomo.running && !guest) return null;
+  if (
+    betaDismissed &&
+    installDismissed &&
+    makeoverDismissed &&
+    !unverified &&
+    !pomo.running &&
+    !guest
+  ) {
+    return null;
+  }
 
   return (
     <div className="shrink-0">
@@ -59,6 +72,19 @@ export default function Banners() {
           Your account is unverified! Some features are unavailable.{" "}
           <Link to="/settings" className="font-medium underline underline-offset-2">
             Verify now
+          </Link>
+          .
+        </Banner>
+      )}
+      {!makeoverDismissed && (
+        <Banner
+          icon={<Sparkles size={13} className="shrink-0" />}
+          onDismiss={() => dismiss(MAKEOVER_KEY, setMakeoverDismissed)}
+          wrap
+        >
+          Notice anything? Studily got a makeover! Don't like it?{" "}
+          <Link to="/settings" className="font-medium underline underline-offset-2">
+            Revert back in settings
           </Link>
           .
         </Banner>

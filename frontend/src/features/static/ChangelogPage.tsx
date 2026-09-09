@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 34,
+    date: "2026-09-08",
+    title: "A softer, deeper look",
+    description:
+      "Studily has been rebuilt on a new surface style. The dark theme moves to a deeper navy with a faint glow behind everything, cards pick up a soft edge of light along their top, and panels that float above the page \u2014 menus, dialogs, the bar along the bottom on your phone \u2014 are now frosted, so what's underneath shows through. Things you press feel like it: buttons sit slightly raised and sink when tapped, text fields are gently recessed, and switches press in when you turn them on. If you preferred how it looked before, Settings \u203a Preferences \u203a Classic look puts the old flat design back, and it still follows your light and dark setting.",
+  },
+  {
     version: 33,
     date: "2026-09-08",
     title: "Build a course from your outline",

@@ -3,18 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Plus, Trash2, X } from "lucide-react";
 import { api } from "../lib/api";
 import { useConfirm } from "../lib/confirm";
+import { COURSE_COLORS } from "../lib/courseColors";
 import type { EventCategory, EventCategoryRequest } from "../types";
 
-export const CATEGORY_COLORS = [
-  "#3b82f6",
-  "#ef4444",
-  "#10b981",
-  "#f59e0b",
-  "#8b5cf6",
-  "#ec4899",
-  "#7968dc",
-  "#0ea5e9",
-];
+export const CATEGORY_COLORS = COURSE_COLORS;
 
 const EVENT_ENDPOINT = "/calendar/categories";
 const EVENT_QUERY_KEY = "event-categories";
@@ -199,7 +191,7 @@ export default function CategorySelect({
         {open && (
           <div
             role="listbox"
-            className="card absolute left-0 right-0 z-10 mt-1 max-h-56 overflow-y-auto p-1 shadow-xl animate-in"
+            className="glass absolute left-0 right-0 z-10 mt-1 max-h-56 overflow-y-auto p-1 animate-in"
           >
             <button
               type="button"

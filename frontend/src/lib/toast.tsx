@@ -68,7 +68,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           return (
             <div
               key={t.id}
-              className={`card flex min-w-[260px] max-w-sm items-start gap-3 px-4 py-3 shadow-lg ${
+              className={`glass flex min-w-[260px] max-w-sm items-start gap-3 px-4 py-3 ${
                 t.leaving ? "toast-out" : "animate-in"
               }`}
             >

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { readableOn } from "../lib/courseColors";
 import { hhmm } from "../lib/format";
 import { DAYS, MEETING_KIND_LABEL } from "../types";
 import type { Course, DayOfWeek, ScheduledMeeting } from "../types";
@@ -203,6 +204,7 @@ export default function WeekGrid({
 
               const style = {
                 backgroundColor: m.color ?? "var(--accent)",
+                color: readableOn(m.color),
                 top,
                 height,
                 paddingTop: 2,
@@ -213,7 +215,7 @@ export default function WeekGrid({
                 <Link
                   key={`m-${i}`}
                   to={href}
-                  className="absolute inset-x-0.5 overflow-hidden rounded px-1 text-[10px] text-white transition-opacity hover:opacity-80"
+                  className="absolute inset-x-0.5 overflow-hidden rounded px-1 text-[10px] transition-opacity hover:opacity-80"
                   style={style}
                   title={title}
                 >
@@ -222,7 +224,7 @@ export default function WeekGrid({
               ) : (
                 <div
                   key={`m-${i}`}
-                  className="absolute inset-x-0.5 overflow-hidden rounded px-1 text-[10px] text-white"
+                  className="absolute inset-x-0.5 overflow-hidden rounded px-1 text-[10px]"
                   style={style}
                   title={title}
                 >

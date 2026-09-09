@@ -206,7 +206,7 @@ function UserDrawer({ id, onClose }: { id: number; onClose: () => void }) {
   const detail = detailQ.data;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end animate-fade" style={{ background: "rgba(0,0,0,0.4)" }}>
+    <div className="fixed inset-0 z-50 flex justify-end animate-fade" style={{ background: "var(--scrim)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}>
       <div
         className="h-full w-full max-w-md overflow-y-auto p-5 animate-slide"
         style={{ background: "var(--surface)", borderLeft: "1px solid var(--line)" }}

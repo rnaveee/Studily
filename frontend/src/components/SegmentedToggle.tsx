@@ -20,16 +20,21 @@ export default function SegmentedToggle<T extends string>({
       className={`relative grid rounded-lg bg-surface-hi p-1 ${
         disabled ? "pointer-events-none opacity-50" : ""
       } ${className}`}
-      style={{ gridTemplateColumns: `repeat(${options.length}, 1fr)` }}
+      style={{
+        gridTemplateColumns: `repeat(${options.length}, 1fr)`,
+        boxShadow: "var(--control-inset)",
+      }}
     >
       <span
         aria-hidden
-        className="absolute top-1 bottom-1 rounded-md bg-surface shadow-sm transition-transform duration-200 ease-out"
+        className="absolute top-1 bottom-1 rounded-md bg-surface transition-transform duration-200"
         style={{
           left: 4,
           width: `calc((100% - 8px) / ${options.length})`,
           transform: `translateX(${index * 100}%)`,
           border: "1px solid var(--line)",
+          boxShadow: "var(--btn-shadow)",
+          transitionTimingFunction: "cubic-bezier(0.34, 1.32, 0.64, 1)",
         }}
       />
       {options.map((o) => (

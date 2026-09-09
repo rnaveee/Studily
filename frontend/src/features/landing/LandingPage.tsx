@@ -76,7 +76,7 @@ export default function LandingPage() {
 
   return (
     <div
-      className="h-full overflow-y-auto bg-bg"
+      className="h-full overflow-y-auto"
       onScroll={(e) => setScrolled(e.currentTarget.scrollTop > 8)}
     >
       <header
