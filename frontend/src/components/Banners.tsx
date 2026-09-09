@@ -1,12 +1,15 @@
   import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Eye, MailWarning, Megaphone, Smartphone, Sparkles, Timer, X } from "lucide-react";
+import { Eye, FileText, MailWarning, Megaphone, Smartphone, Sparkles, Timer, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
+import { api } from "../lib/api";
 import { formatMs, pomodoroColor, usePomodoro } from "../lib/pomodoro";
 
 const BETA_KEY = "studily.banner.beta";
 const INSTALL_KEY = "studily.banner.install";
 const MAKEOVER_KEY = "studily.banner.makeover";
+const PARSER_KEY = "studily.banner.parser";
 
 function isStandalone() {
   return (
@@ -26,6 +29,17 @@ export default function Banners() {
   const [makeoverDismissed, setMakeoverDismissed] = useState(
     () => localStorage.getItem(MAKEOVER_KEY) === "1",
   );
+  const [parserDismissed, setParserDismissed] = useState(
+    () => localStorage.getItem(PARSER_KEY) === "1",
+  );
+
+  const { data: parseAvailability } = useQuery({
+    queryKey: ["course-parse-enabled"],
+    queryFn: () => api.get<{ enabled: boolean }>("/courses/parse/enabled"),
+    staleTime: 5 * 60_000,
+    enabled: !!user && !parserDismissed,
+  });
+  const showParser = !parserDismissed && !!user && (parseAvailability?.enabled ?? false);
 
   function dismiss(key: string, set: (v: boolean) => void) {
     localStorage.setItem(key, "1");
@@ -39,6 +53,7 @@ export default function Banners() {
     betaDismissed &&
     installDismissed &&
     makeoverDismissed &&
+    !showParser &&
     !unverified &&
     !pomo.running &&
     !guest
@@ -74,6 +89,21 @@ export default function Banners() {
             Verify now
           </Link>
           .
+        </Banner>
+      )}
+      {showParser && (
+        <Banner
+          icon={<FileText size={13} className="shrink-0" />}
+          color="var(--orange)"
+          onDismiss={() => dismiss(PARSER_KEY, setParserDismissed)}
+          wrap
+        >
+          New: build a course straight from your outline.{" "}
+          <Link to="/courses" className="font-medium underline underline-offset-2">
+            Upload a syllabus
+          </Link>{" "}
+          and we'll fill in the times and deadlines. It's in beta and won't always get it right, so
+          check everything before you save.
         </Banner>
       )}
       {!makeoverDismissed && (
