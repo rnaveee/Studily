@@ -27,8 +27,8 @@
   --radius-lg:  16px;
   --radius-xl:  20px;
 
-  --glass-bg:   rgb(255 255 255 / 0.72);
-  --glass-brd:  rgb(255 255 255 / 0.85);
+  --glass-bg:   rgb(255 255 255 / 0.76);
+  --glass-brd:  rgb(180 187 214 / 0.55);
   --glass-blur: 20px;
   --scrim:      rgb(28 30 48 / 0.34);
   --scrim-blur: 3px;
@@ -36,7 +36,7 @@
   --neu-hi:     rgb(255 255 255 / 0.95);
   --neu-lo:     rgb(88 92 130 / 0.16);
   --neu-lo-2:   rgb(88 92 130 / 0.10);
-  --card-grad:  linear-gradient(160deg, rgb(255 255 255 / 0.7) 0%, rgb(255 255 255 / 0) 46%);
+  --card-grad:  linear-gradient(168deg, rgb(255 255 255 / 0.9) 0%, rgb(233 236 247 / 0.55) 100%);
   --ambient-1:  10%;
   --ambient-2:  8%;
 
@@ -45,18 +45,19 @@
   --card-shadow:  var(--shadow-sm), inset 0 1px 0 var(--edge-hi);
   --btn-shadow:   var(--shadow-sm), inset 0 1px 0 var(--edge-hi);
   --btn-shadow-hi: var(--shadow-md), inset 0 1px 0 var(--edge-hi);
+  --glass-shadow: var(--shadow-lg), inset 0 1px 0 rgb(255 255 255 / 0.95);
   --btn-press:    inset 0 2px 4px var(--neu-lo);
   --knob-shadow:  0 1px 3px var(--neu-lo), inset 0 1px 0 var(--edge-hi);
 }
 
 .dark {
-  --bg:         #0a0e1a;
-  --surface:    #141a2e;
-  --surface-hi: #1e2540;
-  --line:       #2a3352;
-  --fg:         #e6e8f5;
-  --fg-2:       #949ec2;
-  --fg-3:       #6672a0;
+  --bg:         #08090e;
+  --surface:    #131420;
+  --surface-hi: #1c1d2a;
+  --line:       #272939;
+  --fg:         #e4e4f0;
+  --fg-2:       #8c8ea6;
+  --fg-3:       #5b5d74;
   --accent:     #7968dc;
   --accent-2:   #8b7de8;
   --accent-fg:  #ffffff;
@@ -69,21 +70,22 @@
   --shadow-lg:  0 4px 10px rgb(0 0 0 / 0.44), 0 24px 56px -16px rgb(3 6 16 / 0.62);
   --edge-hi:    rgb(255 255 255 / 0.07);
 
-  --glass-bg:   rgb(20 26 46 / 0.72);
+  --glass-bg:   rgb(19 20 32 / 0.74);
   --glass-brd:  rgb(255 255 255 / 0.09);
-  --scrim:      rgb(4 7 16 / 0.62);
+  --scrim:      rgb(3 4 8 / 0.64);
   --scrim-blur: 3px;
 
   --neu-hi:     rgb(255 255 255 / 0.055);
   --neu-lo:     rgb(0 0 0 / 0.45);
   --neu-lo-2:   rgb(0 0 0 / 0.22);
   --card-grad:  linear-gradient(160deg, rgb(255 255 255 / 0.045) 0%, rgb(255 255 255 / 0) 46%);
-  --ambient-1:  20%;
-  --ambient-2:  16%;
+  --ambient-1:  13%;
+  --ambient-2:  10%;
 
   --input-inset:  inset 0 1px 2px var(--neu-lo-2);
   --control-inset: inset 0 1px 3px var(--neu-lo);
   --knob-shadow:  0 1px 3px rgb(0 0 0 / 0.4), inset 0 1px 0 var(--edge-hi);
+  --glass-shadow: var(--shadow-lg), inset 0 1px 0 var(--edge-hi);
 }
 
 /* Classic UI: the pre-restyle look, restored by neutralising the new tokens. */
@@ -128,14 +130,13 @@
   --glass-brd:  var(--line);
   --scrim-blur: 0px;
   --scrim:      rgb(0 0 0 / 0.45);
+  --glass-shadow: var(--shadow-lg);
 
   --ambient-1: 0%;
   --ambient-2: 0%;
 }
 
 .classic body::before { display: none; }
-
-.classic .glass { box-shadow: var(--shadow-lg); }
 
 .classic .btn:active:not(:disabled) { transform: scale(0.975); }
 .classic .press:active { transform: scale(0.985); }
@@ -352,7 +353,7 @@ textarea.input { resize: vertical; }
   background: var(--glass-bg);
   border: 1px solid var(--glass-brd);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg), inset 0 1px 0 var(--edge-hi);
+  box-shadow: var(--glass-shadow);
   backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
 }

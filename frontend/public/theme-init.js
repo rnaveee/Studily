@@ -9,7 +9,7 @@
   if (meta) {
     const color = classic
       ? (dark ? "#16161e" : "#ffffff")
-      : (dark ? "#0a0e1a" : "#eef0f7");
+      : (dark ? "#08090e" : "#eef0f7");
     meta.setAttribute("content", color);
   }
 })();

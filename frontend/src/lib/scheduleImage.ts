@@ -4,13 +4,13 @@ import { MEETING_KIND_LABEL } from "../types";
 import type { Course } from "../types";
 
 const DARK_FALLBACK = {
-  bg: "#0a0e1a",
-  surface: "#141a2e",
-  surfaceHi: "#1e2540",
-  line: "#2a3352",
-  fg: "#e6e8f5",
-  fg2: "#949ec2",
-  fg3: "#6672a0",
+  bg: "#08090e",
+  surface: "#131420",
+  surfaceHi: "#1c1d2a",
+  line: "#272939",
+  fg: "#e4e4f0",
+  fg2: "#8c8ea6",
+  fg3: "#5b5d74",
   accent: "#7968dc",
 };
 

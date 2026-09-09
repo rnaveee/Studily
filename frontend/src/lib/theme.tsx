@@ -15,7 +15,7 @@ const Ctx = createContext<ThemeCtx>({
 });
 
 const THEME_COLOR = {
-  modern: { dark: "#0a0e1a", light: "#eef0f7" },
+  modern: { dark: "#08090e", light: "#eef0f7" },
   classic: { dark: "#16161e", light: "#ffffff" },
 };
 
