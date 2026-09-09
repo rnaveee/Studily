@@ -11,6 +11,8 @@ import com.rnave.studily.course.DayOfWeek;
 import com.rnave.studily.course.MeetingBlock;
 import com.rnave.studily.course.MeetingBlockRepository;
 import com.rnave.studily.user.User;
+import com.rnave.studily.user.UserRepository;
+import com.rnave.studily.user.UserTimeZones;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +27,7 @@ import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -38,6 +41,7 @@ class ReminderSchedulerTest {
     private AcademicItemRepository itemRepository;
     private NotificationPrefsService prefsService;
     private NotificationDispatcher dispatcher;
+    private UserRepository userRepository;
     private ReminderScheduler scheduler;
 
     private User user;
@@ -50,8 +54,11 @@ class ReminderSchedulerTest {
         itemRepository = mock(AcademicItemRepository.class);
         prefsService = mock(NotificationPrefsService.class);
         dispatcher = mock(NotificationDispatcher.class);
+        userRepository = mock(UserRepository.class);
+        when(userRepository.findDistinctTimezones()).thenReturn(List.of());
         scheduler = new ReminderScheduler(meetingBlockRepository, calendarEventRepository,
-                itemRepository, prefsService, dispatcher, ZONE.getId());
+                itemRepository, prefsService, dispatcher,
+                new UserTimeZones(userRepository, ZONE.getId()));
 
         user = new User();
         user.setId(1L);
@@ -75,8 +82,8 @@ class ReminderSchedulerTest {
     }
 
     @Test
-    void classReminderDispatchesForBlockStartingInAnHour() {
-        ZonedDateTime now = ZonedDateTime.of(2026, 7, 13, 9, 30, 0, 0, ZONE);
+    void classReminderDispatchesFifteenMinutesBeforeStart() {
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 13, 10, 15, 0, 0, ZONE);
         fixClockAt(now);
 
         MeetingBlock block = new MeetingBlock();
@@ -85,19 +92,69 @@ class ReminderSchedulerTest {
         block.setDayOfWeek(DayOfWeek.MON);
         block.setStartTime(LocalTime.of(10, 30));
         when(meetingBlockRepository.findStartingBetween(
-                eq(DayOfWeek.MON), eq(LocalTime.of(10, 30)), eq(LocalTime.of(10, 36)), any()))
+                eq(DayOfWeek.MON), eq(LocalTime.of(10, 30)), eq(LocalTime.of(10, 32)), any()))
                 .thenReturn(List.of(block));
 
         scheduler.classReminders();
 
         verify(dispatcher).dispatch(eq(user), eq(NotificationType.CLASS_REMINDER), eq(5L),
-                eq("CLASS:5:2026-07-13"), eq("Class in 1 hour"),
+                eq("CLASS:5:2026-07-13"), eq("Class in 15 minutes"),
                 contains("CMPT 300"), eq("/dashboard"));
     }
 
     @Test
+    void classReminderUsesTheOwnersTimeZoneNotTheServerDefault() {
+        user.setTimezone("America/Edmonton");
+        when(userRepository.findDistinctTimezones()).thenReturn(List.of("America/Edmonton"));
+        scheduler = new ReminderScheduler(meetingBlockRepository, calendarEventRepository,
+                itemRepository, prefsService, dispatcher,
+                new UserTimeZones(userRepository, ZONE.getId()));
+
+        MeetingBlock block = new MeetingBlock();
+        block.setId(5L);
+        block.setCourse(course);
+        block.setDayOfWeek(DayOfWeek.MON);
+        block.setStartTime(LocalTime.of(10, 30));
+        when(meetingBlockRepository.findStartingBetween(
+                eq(DayOfWeek.MON), eq(LocalTime.of(10, 30)), eq(LocalTime.of(10, 32)), any()))
+                .thenReturn(List.of(block));
+
+        fixClockAt(ZonedDateTime.of(2026, 7, 13, 10, 15, 0, 0, ZONE));
+        scheduler.classReminders();
+        verify(dispatcher, never()).dispatch(any(), any(), any(), any(), any(), any(), any());
+
+        fixClockAt(ZonedDateTime.of(2026, 7, 13, 12, 15, 0, 0, ZONE));
+        scheduler.classReminders();
+        verify(dispatcher).dispatch(eq(user), eq(NotificationType.CLASS_REMINDER), eq(5L),
+                eq("CLASS:5:2026-07-13"), eq("Class in 15 minutes"),
+                contains("CMPT 300"), eq("/dashboard"));
+    }
+
+    @Test
+    void classReminderIgnoresBlocksBelongingToAnotherZone() {
+        when(userRepository.findDistinctTimezones()).thenReturn(List.of("America/Edmonton"));
+        scheduler = new ReminderScheduler(meetingBlockRepository, calendarEventRepository,
+                itemRepository, prefsService, dispatcher,
+                new UserTimeZones(userRepository, ZONE.getId()));
+        fixClockAt(ZonedDateTime.of(2026, 7, 13, 10, 15, 0, 0, ZONE));
+
+        MeetingBlock block = new MeetingBlock();
+        block.setId(5L);
+        block.setCourse(course);
+        block.setDayOfWeek(DayOfWeek.MON);
+        block.setStartTime(LocalTime.of(10, 30));
+        when(meetingBlockRepository.findStartingBetween(any(), any(), any(), any()))
+                .thenReturn(List.of(block));
+
+        scheduler.classReminders();
+
+        verify(dispatcher, times(1)).dispatch(eq(user), eq(NotificationType.CLASS_REMINDER), eq(5L),
+                any(), any(), any(), any());
+    }
+
+    @Test
     void classReminderSkipsWhenPrefOff() {
-        ZonedDateTime now = ZonedDateTime.of(2026, 7, 13, 9, 30, 0, 0, ZONE);
+        ZonedDateTime now = ZonedDateTime.of(2026, 7, 13, 10, 15, 0, 0, ZONE);
         fixClockAt(now);
 
         NotificationPrefs prefs = defaultPrefs();

@@ -25,6 +25,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findBySchoolNotNullAndSchoolKeyIsNull();
 
+    @Query("select distinct u.timezone from User u where u.timezone is not null")
+    List<String> findDistinctTimezones();
+
     @Query("""
             select distinct u from Course c join c.user u
             where c.codeKey = :codeKey and u.schoolKey = :schoolKey and u.id <> :userId

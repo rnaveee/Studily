@@ -168,6 +168,13 @@ function handleIncoming(message: Message) {
   messageListeners.forEach((fn) => fn(message));
 }
 
+function sendPresence() {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  socket.send(
+    JSON.stringify({ type: "presence", foreground: document.visibilityState === "visible" }),
+  );
+}
+
 function startHeartbeat() {
   lastActivity = Date.now();
   window.clearInterval(heartbeatTimer);
@@ -198,6 +205,7 @@ function open() {
   socket.onopen = () => {
     attempts = 0;
     startHeartbeat();
+    sendPresence();
     notifyState(true);
     queryClient.invalidateQueries({ queryKey: ["conversations"] });
   };
@@ -242,7 +250,13 @@ function reconnectNowIfDown() {
 
 window.addEventListener("online", reconnectNowIfDown);
 document.addEventListener("visibilitychange", () => {
+  sendPresence();
   if (document.visibilityState === "visible") reconnectNowIfDown();
+});
+window.addEventListener("pagehide", () => {
+  if (socket?.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ type: "presence", foreground: false }));
+  }
 });
 
 export const ws = {

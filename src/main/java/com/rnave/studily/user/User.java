@@ -58,6 +58,9 @@ public class User {
     @Column(nullable = false)
     private boolean readReceipts = true;
 
+    @Column(length = 64)
+    private String timezone;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ScheduleVisibility scheduleVisibility = ScheduleVisibility.FRIENDS;

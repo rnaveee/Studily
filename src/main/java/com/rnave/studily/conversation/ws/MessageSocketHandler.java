@@ -50,25 +50,28 @@ public class MessageSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
-        registry.remove(userId(session), session);
+        registry.remove(userId(session), session.getId());
     }
 
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) {
         Long userId = userId(session);
+        registry.heardFrom(userId, session.getId());
         JsonNode frame;
         try {
             frame = objectMapper.readTree(message.getPayload());
         } catch (Exception e) {
-            registry.sendToSession(userId, session, WsEvents.ErrorEvent.of("Malformed frame"));
+            registry.sendToSession(userId, session.getId(), WsEvents.ErrorEvent.of("Malformed frame"));
             return;
         }
         String type = frame.path("type").asText("");
         switch (type) {
-            case "ping" -> registry.sendToSession(userId, session, WsEvents.Pong.INSTANCE);
+            case "ping" -> registry.sendToSession(userId, session.getId(), WsEvents.Pong.INSTANCE);
+            case "presence" -> registry.setForeground(
+                    userId, session.getId(), frame.path("foreground").asBoolean(true));
             case "send" -> handleSend(userId, session, frame);
             case "markRead" -> handleMarkRead(userId, session, frame);
-            default -> registry.sendToSession(userId, session,
+            default -> registry.sendToSession(userId, session.getId(),
                     WsEvents.ErrorEvent.of("Unknown frame type: " + type));
         }
     }
@@ -77,16 +80,16 @@ public class MessageSocketHandler extends TextWebSocketHandler {
         long conversationId = frame.path("conversationId").asLong(0);
         String body = frame.path("body").asText("").trim();
         if (conversationId <= 0 || body.isEmpty()) {
-            registry.sendToSession(userId, session, WsEvents.ErrorEvent.of("Message can't be empty"));
+            registry.sendToSession(userId, session.getId(), WsEvents.ErrorEvent.of("Message can't be empty"));
             return;
         }
         if (body.length() > MAX_BODY_LENGTH) {
-            registry.sendToSession(userId, session,
+            registry.sendToSession(userId, session.getId(),
                     WsEvents.ErrorEvent.of("Message is too long (max " + MAX_BODY_LENGTH + " characters)"));
             return;
         }
         if (!sendLimiter.tryConsume("user:" + userId)) {
-            registry.sendToSession(userId, session,
+            registry.sendToSession(userId, session.getId(),
                     WsEvents.ErrorEvent.of("Too many messages, please slow down."));
             return;
         }
@@ -108,10 +111,10 @@ public class MessageSocketHandler extends TextWebSocketHandler {
         try {
             action.run();
         } catch (NotFoundException | ForbiddenException | BadRequestException ex) {
-            registry.sendToSession(userId, session, WsEvents.ErrorEvent.of(ex.getMessage()));
+            registry.sendToSession(userId, session.getId(), WsEvents.ErrorEvent.of(ex.getMessage()));
         } catch (Exception ex) {
             log.error("WebSocket frame handling failed for user {}", userId, ex);
-            registry.sendToSession(userId, session, WsEvents.ErrorEvent.of("Something went wrong"));
+            registry.sendToSession(userId, session.getId(), WsEvents.ErrorEvent.of("Something went wrong"));
         } finally {
             SecurityContextHolder.clearContext();
         }

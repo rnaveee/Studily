@@ -350,7 +350,7 @@ public class ConversationService {
                 for (Long memberId : memberIds) {
                     wsSessionRegistry.sendToUser(memberId, WsEvents.MessageEvent.of(dto));
                     if (!memberId.equals(senderId)
-                            && !wsSessionRegistry.hasSessions(memberId)
+                            && !wsSessionRegistry.isWatching(memberId)
                             && notificationPrefsService.prefsFor(memberId).isMessages()) {
                         webPushSender.sendToUser(memberId, PushPayload.of(pushTitle, pushBody, pushUrl), MESSAGE_PUSH_TTL_SECONDS);
                     }

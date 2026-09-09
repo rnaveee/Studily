@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 35,
+    date: "2026-09-09",
+    title: "Notifications that arrive when they should",
+    description:
+      "Class reminders used to be timed against one fixed time zone, so if you were not on Eastern time they landed hours early — a reminder saying your class was in an hour when it was really in three. Studily now keeps track of the time zone your device is in and times every reminder against that. Class reminders have also moved closer in: instead of an hour ahead, you get one fifteen minutes before the class starts, which is about when it is useful. Message notifications were being held back whenever your phone still had a chat connection open in the background, which on a locked phone could mean waiting an hour to hear about a message. Studily now tells the difference between the app being open in front of you and the app merely being connected, so a message you are not there to see pushes straight through.",
+  },
+  {
     version: 34,
     date: "2026-09-08",
     title: "A softer, deeper look",

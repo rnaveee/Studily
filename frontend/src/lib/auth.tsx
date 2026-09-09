@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { api, ApiError, getToken, setToken, isGuestMode, setGuestMode } from "./api";
 import { queryClient } from "./queryClient";
 import { syncPush } from "./push";
+import { syncTimeZone } from "./timezone";
 import { ws } from "./ws";
 import type { AuthResponse, User } from "../types";
 
@@ -40,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user && !pushSynced.current) {
       pushSynced.current = true;
       syncPush().catch(() => {});
+      syncTimeZone().catch(() => {});
     }
   }, [user]);
 
