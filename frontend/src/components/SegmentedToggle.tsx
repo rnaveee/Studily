@@ -17,7 +17,7 @@ export default function SegmentedToggle<T extends string>({
 
   return (
     <div
-      className={`relative grid rounded-lg bg-surface-hi p-1 ${
+      className={`relative isolate grid rounded-lg bg-surface-hi p-1 ${
         disabled ? "pointer-events-none opacity-50" : ""
       } ${className}`}
       style={{

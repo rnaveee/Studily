@@ -191,7 +191,7 @@ export default function CategorySelect({
         {open && (
           <div
             role="listbox"
-            className="glass absolute left-0 right-0 z-10 mt-1 max-h-56 overflow-y-auto p-1 animate-in"
+            className="glass absolute left-0 right-0 z-30 mt-1 max-h-56 overflow-y-auto p-1 animate-in"
           >
             <button
               type="button"
