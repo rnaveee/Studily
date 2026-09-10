@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 37,
+    date: "2026-09-10",
+    title: "Feed a course more documents as the semester goes",
+    description:
+      "Course outlines are rarely the whole story \u2014 the lab schedule shows up in week two, the syllabus gets revised, a handout lands with the project dates on it. Every course page now has Add from a document: drop the new file in and Studily reads it against the course you already have. It shows you what it found with anything already on the course ticked off and labelled, so you are only ever choosing between things that are actually new. Class times it has not seen and changes to the room, code or instructor are offered separately, and nothing is touched unless you tick it. The reader has also been taught to stop losing lab work: deliverables listed in an outline's Due column \u2014 Lab 1, Lab 2, Project \u2014 now come through as items dated from their own row, and anything it found but could not put a date on is handed to you with a blank date to fill in rather than quietly dropped.",
+  },
+  {
     version: 36,
     date: "2026-09-09",
     title: "Tell us how the outline reader did",

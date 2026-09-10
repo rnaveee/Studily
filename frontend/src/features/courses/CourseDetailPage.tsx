@@ -32,6 +32,7 @@ import {
 import Avatar from "../../components/Avatar";
 import { SkeletonBlock, SkeletonList } from "../../components/Skeleton";
 import BackButton from "../../components/BackButton";
+import CourseDocumentImport from "./CourseDocumentImport";
 import CourseForm from "./CourseForm";
 import ItemForm from "../../components/ItemForm";
 
@@ -188,6 +189,11 @@ export default function CourseDetailPage() {
 
       <GradeCard items={itemsQ.data ?? []} />
       <ItemsSection courseId={courseId} items={itemsQ.data ?? []} onChange={invalidateAll} />
+      <CourseDocumentImport
+        course={course}
+        items={itemsQ.data ?? []}
+        onChange={invalidateAll}
+      />
       <ClassmatesSection courseId={courseId} />
       <NotesSection courseId={courseId} notes={notesQ.data ?? []} />
     </div>

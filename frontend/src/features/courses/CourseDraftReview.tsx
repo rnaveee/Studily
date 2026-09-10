@@ -1,43 +1,17 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { AlertTriangle, Sparkles, X } from "lucide-react";
+import { AlertTriangle, Sparkles } from "lucide-react";
 import CourseForm from "./CourseForm";
-import DateTimeSelect from "../../components/DateTimeSelect";
+import DraftItemRows, { postRows, saveable, toRows, type ReviewRow } from "./draftItems";
 import { api } from "../../lib/api";
-import type {
-  AcademicItem,
-  Course,
-  CourseDraft,
-  CourseRequest,
-  DraftItem,
-  ItemType,
-} from "../../types";
+import { toast } from "../../lib/toast";
+import type { Course, CourseDraft, CourseRequest } from "../../types";
 
 interface Props {
   draft: CourseDraft;
   semesterId: number | null;
   onSaved: (course: Course) => void;
   onCancel: () => void;
-}
-
-interface ReviewRow {
-  id: string;
-  include: boolean;
-  type: ItemType;
-  title: string;
-  dueLocal: string;
-  weight: string;
-}
-
-function toRows(items: DraftItem[]): ReviewRow[] {
-  return items.map((item, index) => ({
-    id: `draft-${index}`,
-    include: true,
-    type: item.type,
-    title: item.title,
-    dueLocal: item.dueAt,
-    weight: item.weight == null ? "" : String(item.weight),
-  }));
 }
 
 export default function CourseDraftReview({ draft, semesterId, onSaved, onCancel }: Props) {
@@ -55,20 +29,17 @@ export default function CourseDraftReview({ draft, semesterId, onSaved, onCancel
   const save = useMutation({
     mutationFn: async (req: CourseRequest) => {
       const course = await api.post<Course>("/courses", req);
-      const chosen = rows.filter((r) => r.include && r.title.trim() && r.dueLocal);
-      await Promise.allSettled(
-        chosen.map((row) =>
-          api.post<AcademicItem>(`/courses/${course.id}/items`, {
-            type: row.type,
-            title: row.title.trim(),
-            dueAt: new Date(row.dueLocal).toISOString(),
-            weight: row.weight.trim() ? Number(row.weight) : undefined,
-          }),
-        ),
-      );
-      return course;
+      const { failed } = await postRows(course.id, saveable(rows));
+      return { course, failed };
     },
-    onSuccess: onSaved,
+    onSuccess: ({ course, failed }) => {
+      if (failed > 0) {
+        toast.error(
+          `The course was created, but ${failed} item${failed > 1 ? "s" : ""} could not be saved. Add them from the course page.`,
+        );
+      }
+      onSaved(course);
+    },
   });
 
   function patch(id: string, next: Partial<ReviewRow>) {
@@ -79,7 +50,7 @@ export default function CourseDraftReview({ draft, semesterId, onSaved, onCancel
     setRows((list) => list.filter((row) => row.id !== id));
   }
 
-  const included = rows.filter((r) => r.include).length;
+  const included = saveable(rows).length;
 
   return (
     <div className="space-y-4">
@@ -124,71 +95,12 @@ export default function CourseDraftReview({ draft, semesterId, onSaved, onCancel
               </span>
             </div>
 
-            {rows.length === 0 ? (
-              <p className="text-[12px] text-fg-3">
-                None found. You can add them from the course page afterwards.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {rows.map((row) => (
-                  <div
-                    key={row.id}
-                    className="space-y-2 rounded-lg p-2.5"
-                    style={{ background: "var(--surface-hi)", opacity: row.include ? 1 : 0.55 }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={row.include}
-                        onChange={(e) => patch(row.id, { include: e.target.checked })}
-                        aria-label={`Include ${row.title}`}
-                        className="h-4 w-4 shrink-0 accent-[var(--accent)]"
-                      />
-                      <input
-                        className="input min-w-0 flex-1"
-                        value={row.title}
-                        onChange={(e) => patch(row.id, { title: e.target.value })}
-                        placeholder="Title"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => remove(row.id)}
-                        aria-label={`Remove ${row.title}`}
-                        className="shrink-0 rounded p-1 text-fg-3 transition-colors hover:text-red"
-                      >
-                        <X size={13} />
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <select
-                        className="input w-auto"
-                        value={row.type}
-                        onChange={(e) => patch(row.id, { type: e.target.value as ItemType })}
-                      >
-                        <option value="ASSIGNMENT">Assignment</option>
-                        <option value="EXAM">Exam</option>
-                      </select>
-                      <DateTimeSelect
-                        value={row.dueLocal}
-                        onChange={(v) => patch(row.id, { dueLocal: v })}
-                        className="min-w-[210px] flex-1"
-                      />
-                      <div className="flex items-center gap-1">
-                        <input
-                          className="input w-[72px]"
-                          inputMode="decimal"
-                          value={row.weight}
-                          onChange={(e) => patch(row.id, { weight: e.target.value })}
-                          placeholder="—"
-                          aria-label={`Weight for ${row.title}`}
-                        />
-                        <span className="text-[12px] text-fg-3">%</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <DraftItemRows
+              rows={rows}
+              onPatch={patch}
+              onRemove={remove}
+              emptyText="None found. You can add them from the course page afterwards."
+            />
           </div>
         }
       />
