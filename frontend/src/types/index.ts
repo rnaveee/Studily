@@ -131,7 +131,7 @@ export interface CourseRequest {
 export interface DraftItem {
   type: ItemType;
   title: string;
-  dueAt: string;
+  dueAt: string | null;
   weight?: number | null;
   location?: string | null;
 }

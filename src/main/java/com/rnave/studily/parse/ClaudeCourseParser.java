@@ -55,27 +55,40 @@ public class ClaudeCourseParser {
 
             3. Lab and tutorial sections are often listed as date ranges, such as "14 to 18-SEP", \
             because each student attends one section within that window. That is not a weekly \
-            pattern you can report, so omit it and add a warning saying lab times vary by section.
+            pattern you can report, so keep it out of meetingBlocks and add a warning saying lab \
+            times vary by section. This rule is about class times only. Leaving a lab section out \
+            of meetingBlocks never means leaving lab work out of items: a lab report, a lab \
+            deliverable or anything else with a date still belongs in items under rule 7.
 
-            4. Dates. Documents often print dates without a year, such as "14-OCT". Resolve them \
+            4. Schedule tables. Outlines often carry a Due column, or one headed Deliverable or \
+            Hand-in, beside the week and date columns. Every entry in that column is an item, and \
+            its deadline is the date on its own row, not the week the work was handed out. When \
+            that row gives a range, use the last day of the range. A row reading \
+            "Lab 2 | 15 to 19-SEP" in a semester running through 2026 therefore produces an item \
+            titled "Lab 2" due "2026-09-19T23:59". Entries in these columns are terse, such as \
+            "Lab 1" or "Project"; keep the title exactly as printed rather than expanding it.
+
+            5. Dates. Documents often print dates without a year, such as "14-OCT". Resolve them \
             against the semester date range you are given. If a date cannot be placed inside that \
-            range, leave dueAt null and add a warning.
+            range, leave dueAt null and add a warning. Report the item either way; never drop one \
+            just because its date would not resolve.
 
-            5. Weights. Take these from the grading scheme. When a single grading row covers a \
+            6. Weights. Take these from the grading scheme. When a single grading row covers a \
             group of items, such as "Quizzes, Assignments and Labs 15%", that 15% belongs to the \
             whole group. Do not copy it onto each item and do not divide it up: leave those items' \
             weight null and add a warning naming the group and its total.
 
-            6. Items. Include graded assignments, quizzes, projects, lab deliverables and exams \
-            that have a deadline or a scheduled date. Work through the whole schedule table row by \
-            row, including its Due column, and then check your list against the grading scheme: \
-            if the scheme names an exam or project you have not listed, find its date in the \
-            schedule and add it. Do not include lecture topics, readings, holidays, or weeks \
-            marked as having no class.
+            7. Items. Include lab reports and lab deliverables, graded assignments, quizzes, \
+            projects and exams that have a deadline or a scheduled date. Work through the whole \
+            schedule table row by row, including its Due column, and then check your list against \
+            the grading scheme: if the scheme names an exam, a project or a group of labs you have \
+            not listed, find its dates in the schedule and add them. Do not include lecture topics, \
+            readings, holidays, weeks marked as having no class, or a lab session whose row has \
+            nothing due.
 
-            7. The professor is the instructor of record, never a teaching assistant.
+            8. The professor is the instructor of record, never a teaching assistant.
 
-            8. If the document is not a course outline, or carries too little to work with, return \
+            9. If the document is not a course outline, or carries too little to work with, return \
             nulls and empty lists with a warning saying so. A nearly empty result is correct when \
             the source is thin; a fabricated one never is.
 

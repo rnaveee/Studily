@@ -173,17 +173,19 @@ public class CourseParseService {
             return List.of();
         }
         List<DraftItemDto> out = new ArrayList<>();
-        int dropped = 0;
+        int undated = 0;
 
         for (CourseDraft.DraftItem item : draft.items()) {
             if (item == null || out.size() >= MAX_ITEMS) {
                 continue;
             }
             String title = trim(item.title(), MAX_NAME);
-            LocalDateTime due = parseDateTime(item.dueAt());
-            if (title == null || due == null) {
-                dropped++;
+            if (title == null) {
                 continue;
+            }
+            LocalDateTime due = parseDateTime(item.dueAt());
+            if (due == null) {
+                undated++;
             }
             ItemType type = parseEnum(ItemType.class, item.type());
             if (type == null) {
@@ -192,14 +194,15 @@ public class CourseParseService {
             out.add(new DraftItemDto(
                     type,
                     title,
-                    due.toString(),
+                    due == null ? null : due.toString(),
                     weight(item.weight()),
                     trim(item.location(), MAX_NAME)));
         }
 
-        if (dropped > 0 && warnings.size() < MAX_WARNINGS) {
-            warnings.add("Skipped " + dropped + " item" + (dropped == 1 ? "" : "s")
-                    + " with no usable due date. Check the outline for anything missing.");
+        if (undated > 0 && warnings.size() < MAX_WARNINGS) {
+            warnings.add(undated + " item" + (undated == 1 ? "" : "s")
+                    + " came back without a due date. Fill the date in to save "
+                    + (undated == 1 ? "it" : "them") + ".");
         }
         return List.copyOf(out);
     }

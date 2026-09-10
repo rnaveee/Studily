@@ -147,16 +147,38 @@ class CourseParseServiceTest {
     }
 
     @Test
-    void parse_dropsItemsWithNoUsableDateOrTitle() {
+    void parse_keepsUndatedItemsSoTheStudentCanFillTheDateIn() {
         CourseDraftDto dto = run(draftWithItems(
                 new DraftItem("EXAM", "Exam 3", null, null, null),
                 new DraftItem("EXAM", "Exam 2", "sometime in November", null, null),
+                new DraftItem("ASSIGNMENT", "Assignment 5", "2026-11-18T23:59", null, null)));
+
+        assertThat(dto.items()).hasSize(3);
+        assertThat(dto.items().get(0).dueAt()).isNull();
+        assertThat(dto.items().get(1).dueAt()).isNull();
+        assertThat(dto.items().get(2).dueAt()).isEqualTo("2026-11-18T23:59");
+        assertThat(dto.warnings()).anyMatch(w -> w.contains("2 items came back without a due date"));
+    }
+
+    @Test
+    void parse_dropsItemsWithNoUsableTitle() {
+        CourseDraftDto dto = run(draftWithItems(
                 new DraftItem("ASSIGNMENT", "  ", "2026-10-14T23:59", null, null),
                 new DraftItem("ASSIGNMENT", "Assignment 5", "2026-11-18T23:59", null, null)));
 
         assertThat(dto.items()).hasSize(1);
         assertThat(dto.items().get(0).title()).isEqualTo("Assignment 5");
-        assertThat(dto.warnings()).anyMatch(w -> w.contains("Skipped 3 items"));
+    }
+
+    @Test
+    void parse_keepsALabDeliverableDatedFromTheEndOfItsRange() {
+        CourseDraftDto dto = run(draftWithItems(
+                new DraftItem("ASSIGNMENT", "Lab 2", "2026-09-19T23:59", null, null)));
+
+        assertThat(dto.items()).hasSize(1);
+        assertThat(dto.items().get(0).type()).isEqualTo(ItemType.ASSIGNMENT);
+        assertThat(dto.items().get(0).title()).isEqualTo("Lab 2");
+        assertThat(dto.items().get(0).dueAt()).isEqualTo("2026-09-19T23:59");
     }
 
     @Test

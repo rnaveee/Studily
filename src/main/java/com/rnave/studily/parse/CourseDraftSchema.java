@@ -33,7 +33,9 @@ final class CourseDraftSchema {
         properties.put("meetingBlocks", array(block(),
                 "Recurring weekly class times, one entry per weekday. Empty when the document establishes no weekly pattern."));
         properties.put("items", array(item(),
-                "Graded assignments, quizzes, projects and exams that have a date. Empty when none are stated."));
+                "Everything the student has to hand in or sit, with a date: lab reports and other lab "
+                        + "deliverables, assignments, quizzes, projects and exams. Every entry in a "
+                        + "schedule table's Due column belongs here. Empty when none are stated."));
         properties.put("warnings", array(Map.of("type", "string"),
                 "Short notes about anything ambiguous, guessed or left out, written for the student to read."));
         return object(properties);
@@ -61,13 +63,14 @@ final class CourseDraftSchema {
     private static Map<String, Object> item() {
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("type", enumOf(List.of("EXAM", "ASSIGNMENT"),
-                "Quizzes, labs and projects all count as ASSIGNMENT."));
+                "Labs, lab reports, quizzes and projects all count as ASSIGNMENT."));
         properties.put("title", Map.of("type", "string",
-                "description", "Title as printed, for example 'Exam 1 - Drawing' or 'Assignment 3'."));
+                "description", "Title as printed, for example 'Exam 1 - Drawing', 'Assignment 3' or 'Lab 2'."));
         properties.put("dueAt", nullable("string",
-                "Due date and time as 'yyyy-MM-ddTHH:mm', for example '2026-10-14T23:59'. "
-                        + "Use 23:59 when only a date is given, and the last day when a range is "
-                        + "given. Null when no date can be determined."));
+                "Due date and time as 'yyyy-MM-ddTHH:mm', for example '2026-10-14T23:59'. When the "
+                        + "date is a range, such as '15 to 19-SEP', use the last day of that range. "
+                        + "Use 23:59 when only a date is given. Null when no date can be determined, "
+                        + "but still report the item."));
         properties.put("weight", nullable("number",
                 "Percentage of the final grade, for example 25 for 25%. Null when the outline does not "
                         + "give this item its own percentage."));
