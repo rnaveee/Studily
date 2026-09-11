@@ -5,9 +5,7 @@ import { renderScheduleCard } from "../lib/scheduleImage";
 import { canCopyImages, copyImage, downloadImage, slugFilename } from "../lib/shareImage";
 import { toast } from "../lib/toast";
 import type { Course } from "../types";
-
-const isTouch =
-  typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;
+import { isTouch } from "../lib/isTouch";
 
 const OVERLAY_BTN: React.CSSProperties = {
   color: "#ffffff",

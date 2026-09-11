@@ -21,6 +21,8 @@ import { queryClient } from "../../lib/queryClient";
 import { toast } from "../../lib/toast";
 import { useDeferredClose } from "../../lib/motion";
 import { useDoubleTap } from "../../lib/useDoubleTap";
+import { useLongPress, longPressJustFired } from "../../lib/useLongPress";
+import { isTouch } from "../../lib/isTouch";
 import {
   appendMessageToCache,
   applyEditToCache,
@@ -278,7 +280,10 @@ export default function ConversationPage() {
 
   useEffect(() => {
     if (openMenu === null) return;
-    const close = () => setOpenMenu(null);
+    const close = () => {
+      if (longPressJustFired()) return;
+      setOpenMenu(null);
+    };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpenMenu(null);
     };
@@ -685,6 +690,9 @@ function MessageBubble({
   onDelete: () => void;
 }) {
   const tap = useDoubleTap(onLike);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const canHold = mine && isTouch;
+  const hold = useLongPress(canHold ? () => setSheetOpen(true) : null);
   const [menuSide, setMenuSide] = useState<"left" | "right">("left");
   const dotsRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -749,10 +757,12 @@ function MessageBubble({
       <div className="relative">
         <div
           {...tap}
+          {...hold}
+          style={{ ...tap.style, ...hold.style }}
           className={message.likeCount > 0 ? "pb-1.5" : undefined}
           role="button"
           tabIndex={-1}
-          aria-label="Double tap to like"
+          aria-label={canHold ? "Double tap to like, hold for options" : "Double tap to like"}
         >
           {message.attachment ? (
             <AttachmentBubble message={message} mine={mine} />
@@ -792,7 +802,7 @@ function MessageBubble({
         )}
       </div>
 
-      {mine && (
+      {mine && !isTouch && (
         <div className="relative shrink-0">
           <button
             type="button"
@@ -844,6 +854,62 @@ function MessageBubble({
           )}
         </div>
       )}
+
+      {sheetOpen && (
+        <MessageActionsSheet
+          message={message}
+          onClose={() => setSheetOpen(false)}
+          onStartEdit={onStartEdit}
+          onDelete={onDelete}
+        />
+      )}
     </div>
+  );
+}
+
+function MessageActionsSheet({
+  message,
+  onClose,
+  onStartEdit,
+  onDelete,
+}: {
+  message: Message;
+  onClose: () => void;
+  onStartEdit: () => void;
+  onDelete: () => void;
+}) {
+  const closeRef = useRef<(() => void) | null>(null);
+  const dismiss = () => (closeRef.current ?? onClose)();
+  const preview = message.attachment ? "Message" : message.body.trim().slice(0, 60) || "Message";
+
+  return (
+    <Modal onClose={onClose} closeRef={closeRef} title={preview} variant="sheet" padded={false}>
+      <div className="flex flex-col py-1">
+        {!message.attachment && (
+          <button
+            type="button"
+            onClick={() => {
+              dismiss();
+              onStartEdit();
+            }}
+            className="flex w-full items-center gap-3 px-5 py-3.5 text-left text-[14px] text-fg transition-colors hover:bg-surface-hi"
+          >
+            <Pencil size={15} />
+            Edit message
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            dismiss();
+            onDelete();
+          }}
+          className="flex w-full items-center gap-3 px-5 py-3.5 text-left text-[14px] text-red transition-colors hover:bg-surface-hi"
+        >
+          <Trash2 size={15} />
+          Delete message
+        </button>
+      </div>
+    </Modal>
   );
 }
