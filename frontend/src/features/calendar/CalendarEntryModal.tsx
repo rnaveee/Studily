@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Pencil, Repeat, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
 import { formatDateTime, toLocalInput } from "../../lib/format";
 import { useConfirm } from "../../lib/confirm";
@@ -17,6 +17,8 @@ import type {
 import CategorySelect from "../../components/CategorySelect";
 import DateTimeSelect from "../../components/DateTimeSelect";
 import Modal from "../../components/Modal";
+import ScopeChoice from "./ScopeChoice";
+import { invalidateItemQueries } from "../../lib/invalidateItems";
 
 export default function CalendarEntryModal({
   item,
@@ -43,10 +45,7 @@ export default function CalendarEntryModal({
   const seriesLabel = describeRule(item?.recurrenceRule ?? event?.recurrenceRule);
 
   function invalidate() {
-    qc.invalidateQueries({ queryKey: ["calendar"] });
-    qc.invalidateQueries({ queryKey: ["calendar-events"] });
-    qc.invalidateQueries({ queryKey: ["semesters"] });
-    qc.invalidateQueries({ queryKey: ["dashboard"] });
+    invalidateItemQueries(qc, item?.courseId);
   }
 
   const saveItem = useMutation({
@@ -309,45 +308,5 @@ export default function CalendarEntryModal({
           </form>
         )}
     </Modal>
-  );
-}
-
-function ScopeChoice({
-  label,
-  scope,
-  onChange,
-}: {
-  label: string | null;
-  scope: SeriesScope;
-  onChange: (scope: SeriesScope) => void;
-}) {
-  return (
-    <div
-      className="rounded-lg px-3 py-2.5"
-      style={{ background: "color-mix(in srgb, var(--accent) 8%, transparent)" }}
-    >
-      <div className="flex items-center gap-1.5 text-[12px] font-medium text-accent">
-        <Repeat size={12} strokeWidth={2} />
-        {label ?? "Part of a repeating series"}
-      </div>
-      <div className="mt-2 flex flex-col gap-1 text-[13px] text-fg-2">
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            checked={scope === "OCCURRENCE"}
-            onChange={() => onChange("OCCURRENCE")}
-          />
-          This occurrence only
-        </label>
-        <label className="flex items-center gap-2">
-          <input
-            type="radio"
-            checked={scope === "SERIES"}
-            onChange={() => onChange("SERIES")}
-          />
-          All occurrences
-        </label>
-      </div>
-    </div>
   );
 }

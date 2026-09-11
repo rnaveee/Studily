@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { X, BookOpen, CalendarDays, Brain, User, ArrowRight } from "lucide-react";
+import { X, BookOpen, CalendarDays, Brain, User, ArrowRight, Pencil } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth, useRequireAuth } from "../../lib/auth";
 import { countdown, dueUrgency, formatDateTime, hhmm } from "../../lib/format";
@@ -18,6 +18,7 @@ import {
   type WeekView,
 } from "../../types";
 import ItemForm from "../../components/ItemForm";
+import ItemModal from "../courses/ItemModal";
 import WeekGrid, { toMin } from "../../components/WeekGrid";
 import { SkeletonBlock } from "../../components/Skeleton";
 import TodoQuickView from "../todos/TodoQuickView";
@@ -174,6 +175,7 @@ export default function DashboardPage() {
   const firstName = user?.name?.split(" ")[0] ?? user?.username ?? "";
   const [semesterId, setSemesterId] = useState<number | null>(null);
   const [addingDay, setAddingDay] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<AcademicItem | null>(null);
 
   const { data: semesters } = useQuery({
     queryKey: ["semesters"],
@@ -464,6 +466,13 @@ export default function DashboardPage() {
                         <span className="ml-2 text-fg-3">· {entry.item!.courseName}</span>
                       </div>
                       <span className="shrink-0 whitespace-nowrap text-fg-3 tabular-nums">{formatDateTime(entry.dueAt)}</span>
+                      <button
+                        onClick={() => setEditingItem(entry.item!)}
+                        className="shrink-0 rounded p-1 text-fg-3 transition-colors hover:text-fg"
+                        aria-label="Edit item"
+                      >
+                        <Pencil size={12} />
+                      </button>
                     </li>
                   ),
                 )}
@@ -525,6 +534,14 @@ export default function DashboardPage() {
             </div>
           </div>
         </>
+      )}
+
+      {editingItem && (
+        <ItemModal
+          item={editingItem}
+          courses={courseList}
+          onClose={() => setEditingItem(null)}
+        />
       )}
     </div>
   );

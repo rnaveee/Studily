@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Edit2, Plus, Trash2, X } from "lucide-react";
+import { Edit2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
@@ -20,6 +20,8 @@ import {
 } from "../../types";
 import { courseLocations, formatDate, formatDateTime, hhmm } from "../../lib/format";
 import { staggerDelay } from "../../lib/motion";
+import { invalidateItemQueries } from "../../lib/invalidateItems";
+import ItemModal from "./ItemModal";
 import {
   courseGrade,
   formatPercent,
@@ -347,12 +349,27 @@ function ItemsSection({
   onChange: () => void;
 }) {
   const qc = useQueryClient();
+  const confirm = useConfirm();
   const [show, setShow] = useState(false);
+  const [editing, setEditing] = useState<AcademicItem | null>(null);
 
   const refresh = () => {
-    qc.invalidateQueries({ queryKey: ["course", courseId, "items"] });
+    invalidateItemQueries(qc, courseId);
     onChange();
   };
+
+  async function confirmDelete(it: AcademicItem) {
+    const series = it.seriesId != null;
+    const ok = await confirm({
+      title: "Delete item?",
+      message: series
+        ? `"${it.title}" will be removed. Other occurrences in the series are kept.`
+        : `"${it.title}" will be removed.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (ok) remove.mutate(it.id);
+  }
 
   const create = useMutation({
     mutationFn: (req: AcademicItemRequest) =>
@@ -398,10 +415,19 @@ function ItemsSection({
               key={it.id}
               item={it}
               onUpdate={(req) => update.mutateAsync({ itemId: it.id, req })}
-              onDelete={() => remove.mutate(it.id)}
+              onEdit={() => setEditing(it)}
+              onDelete={() => confirmDelete(it)}
             />
           ))}
         </ul>
+      )}
+
+      {editing && (
+        <ItemModal
+          item={editing}
+          courseId={courseId}
+          onClose={() => setEditing(null)}
+        />
       )}
     </section>
   );
@@ -410,10 +436,12 @@ function ItemsSection({
 function ItemRow({
   item,
   onUpdate,
+  onEdit,
   onDelete,
 }: {
   item: AcademicItem;
   onUpdate: (req: AcademicItemRequest) => Promise<unknown>;
+  onEdit: () => void;
   onDelete: () => void;
 }) {
   const [scoring, setScoring] = useState(false);
@@ -477,6 +505,14 @@ function ItemRow({
             <option key={s} value={s}>{STATUS_LABEL[s]}</option>
           ))}
         </select>
+
+        <button
+          onClick={onEdit}
+          className="shrink-0 rounded p-1 text-fg-3 transition-colors hover:text-fg"
+          aria-label="Edit item"
+        >
+          <Pencil size={12} />
+        </button>
 
         <button
           onClick={onDelete}

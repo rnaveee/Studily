@@ -1,33 +1,49 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import type { AcademicItemRequest, ItemType, Recurrence } from "../types";
+import type { AcademicItemRequest, ItemStatus, ItemType, Recurrence } from "../types";
 import RepeatPicker from "../features/calendar/RepeatPicker";
 import DateTimeSelect from "./DateTimeSelect";
+import { toLocalInput } from "../lib/format";
+
+const STATUSES: ItemStatus[] = ["TODO", "IN_PROGRESS", "DONE"];
+const STATUS_LABEL: Record<ItemStatus, string> = {
+  TODO: "To do",
+  IN_PROGRESS: "In progress",
+  DONE: "Done",
+};
 
 interface Props {
   submitLabel?: string;
+  initial?: AcademicItemRequest;
   initialDate?: string;
   courseId?: number;
   courses?: { id: number; name: string }[];
+  bare?: boolean;
   onSubmit: (courseId: number, req: AcademicItemRequest) => Promise<unknown>;
   onCancel?: () => void;
 }
 
 export default function ItemForm({
   submitLabel = "Add",
+  initial,
   initialDate,
   courseId: lockedCourseId,
   courses = [],
+  bare = false,
   onSubmit,
   onCancel,
 }: Props) {
-  const [type, setType] = useState<ItemType>("ASSIGNMENT");
-  const [title, setTitle] = useState("");
+  const isEdit = initial != null;
+  const [type, setType] = useState<ItemType>(initial?.type ?? "ASSIGNMENT");
+  const [title, setTitle] = useState(initial?.title ?? "");
   const [dueLocal, setDueLocal] = useState(() => {
+    if (initial?.dueAt) return toLocalInput(initial.dueAt);
     if (!initialDate) return "";
     return initialDate.length === 10 ? `${initialDate}T23:59` : initialDate.slice(0, 16);
   });
-  const [weight, setWeight] = useState("");
+  const [weight, setWeight] = useState(initial?.weight != null ? String(initial.weight) : "");
+  const [location, setLocation] = useState(initial?.location ?? "");
+  const [status, setStatus] = useState<ItemStatus>(initial?.status ?? "TODO");
   const [selectedCourseId, setSelectedCourseId] = useState<number | "">(
     lockedCourseId ?? (courses[0]?.id ?? "")
   );
@@ -47,12 +63,18 @@ export default function ItemForm({
         type,
         title: title.trim(),
         dueAt: new Date(dueLocal).toISOString(),
+        location: location.trim() || null,
         weight: weight ? Number(weight) : undefined,
-        status: "TODO",
-        recurrence: repeat,
+        score: initial?.score ?? null,
+        maxScore: initial?.maxScore ?? null,
+        status,
+        recurrence: isEdit ? null : repeat,
       });
-      setTitle("");
-      setWeight("");
+      if (!isEdit) {
+        setTitle("");
+        setWeight("");
+        setLocation("");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed");
     } finally {
@@ -61,7 +83,7 @@ export default function ItemForm({
   }
 
   return (
-    <form onSubmit={submit} className="card p-4 space-y-3 animate-slide">
+    <form onSubmit={submit} className={bare ? "space-y-3" : "card p-4 space-y-3 animate-slide"}>
       {!lockedCourseId && courses.length > 0 && (
         <div>
           <label className="field-label">Course</label>
@@ -118,14 +140,40 @@ export default function ItemForm({
         </div>
       </div>
 
-      <RepeatPicker startLocal={dueLocal} weight={weight} onChange={setRepeat} />
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <label className="field-label">Location</label>
+          <input
+            className="input"
+            placeholder="e.g. Room 204"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+          />
+        </div>
+        {isEdit && (
+          <div className="w-36">
+            <label className="field-label">Status</label>
+            <select
+              className="input"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as ItemStatus)}
+            >
+              {STATUSES.map((v) => (
+                <option key={v} value={v}>{STATUS_LABEL[v]}</option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {!isEdit && <RepeatPicker startLocal={dueLocal} weight={weight} onChange={setRepeat} />}
 
       {error && <p className="text-xs text-red animate-fade">{error}</p>}
 
       <div className="flex items-center gap-2 pt-1">
         <button type="submit" disabled={busy} className="btn btn-primary">
-          <Plus size={13} strokeWidth={2} />
-          {busy ? "Adding…" : submitLabel}
+          {!isEdit && <Plus size={13} strokeWidth={2} />}
+          {busy ? (isEdit ? "Saving…" : "Adding…") : submitLabel}
         </button>
         {onCancel && (
           <button type="button" onClick={onCancel} className="btn btn-ghost">

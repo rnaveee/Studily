@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 38,
+    date: "2026-09-11",
+    title: "Fix an exam or assignment you got wrong",
+    description:
+      "Until now an exam or assignment was fixed the moment you added it \u2014 a typo in the title or the wrong due date meant deleting it and starting again, and deleting happened the instant you tapped the cross, with nothing asked. Every item now has an edit button on the course page and in Due this week: change the title, swap an assignment to an exam, move the date, set a room, adjust the weight or mark where it has got to. Items that repeat ask whether you mean just that one or the whole series, and an edit made in one place shows up everywhere else straight away instead of the calendar staying out of date. Deleting now asks first. In chat, the three dots that used to sit on every message you sent are gone on phones \u2014 hold a message instead and the options come up from the bottom of the screen.",
+  },
+  {
     version: 37,
     date: "2026-09-10",
     title: "Feed a course more documents as the semester goes",
