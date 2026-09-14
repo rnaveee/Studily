@@ -11,11 +11,13 @@ import type {
   AcademicItemRequest,
   CalendarEvent,
   CalendarEventRequest,
-  ItemType,
   SeriesScope,
 } from "../../types";
 import CategorySelect from "../../components/CategorySelect";
 import DateTimeSelect from "../../components/DateTimeSelect";
+import GradeCategorySelect from "../../components/GradeCategorySelect";
+import { useGradeCategories } from "../courses/weights";
+import { inferItemType } from "../../lib/itemType";
 import Modal from "../../components/Modal";
 import ScopeChoice from "./ScopeChoice";
 import { invalidateItemQueries } from "../../lib/invalidateItems";
@@ -33,7 +35,9 @@ export default function CalendarEntryModal({
   const confirm = useConfirm();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(item?.title ?? event?.title ?? "");
-  const [kind, setKind] = useState<ItemType>(item?.type ?? "ASSIGNMENT");
+  const [weightId, setWeightId] = useState<number | null>(item?.gradeCategoryId ?? null);
+  const { data: weightOptions } = useGradeCategories(item?.courseId);
+  const selectedWeight = (weightOptions ?? []).find((c) => c.id === weightId) ?? null;
   const [when, setWhen] = useState(() => toLocalInput(item?.dueAt ?? event?.startAt ?? new Date().toISOString()));
   const [weight, setWeight] = useState(item?.weight != null ? String(item.weight) : "");
   const [place, setPlace] = useState(event?.place ?? "");
@@ -132,11 +136,12 @@ export default function CalendarEntryModal({
       return;
     }
     saveItem.mutate({
-      type: kind,
+      type: selectedWeight?.kind ?? inferItemType(title),
       title: title.trim(),
       dueAt: new Date(when).toISOString(),
       location: item!.location ?? null,
-      weight: weight ? Number(weight) : undefined,
+      weight: weightId != null ? undefined : weight ? Number(weight) : undefined,
+      gradeCategoryId: weightId,
       score: item!.score,
       maxScore: item!.maxScore,
       status: item!.status,
@@ -203,7 +208,19 @@ export default function CalendarEntryModal({
                   <span className="truncate font-medium text-fg">{item.location}</span>
                 </div>
               )}
-              {item?.weight != null && (
+              {item?.gradeCategoryName && (
+                <div className="flex justify-between gap-3">
+                  <span className="text-fg-3">Weight</span>
+                  <span className="flex min-w-0 items-center gap-1.5 font-medium text-fg">
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ background: item.gradeCategoryColor ?? "var(--accent)" }}
+                    />
+                    <span className="truncate">{item.gradeCategoryName}</span>
+                  </span>
+                </div>
+              )}
+              {item?.gradeCategoryName == null && item?.weight != null && (
                 <div className="flex justify-between gap-3">
                   <span className="text-fg-3">Weight</span>
                   <span className="font-medium text-fg">{item.weight}%</span>
@@ -246,26 +263,27 @@ export default function CalendarEntryModal({
             }}
           >
             {item && (
-              <div className="flex items-start gap-2">
-                <div className="min-w-0 flex-1">
-                  <label className="field-label">Type</label>
-                  <select className="input" value={kind} onChange={(e) => setKind(e.target.value as ItemType)}>
-                    <option value="ASSIGNMENT">Assignment</option>
-                    <option value="EXAM">Exam</option>
-                  </select>
-                </div>
-                <div className="w-[5.5rem] shrink-0">
-                  <label className="field-label">Weight %</label>
-                  <input
-                    className="input !px-2"
-                    type="number"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    min={0}
-                    max={100}
-                  />
-                </div>
-              </div>
+              <>
+                <GradeCategorySelect
+                  courseId={item.courseId}
+                  value={weightId}
+                  onChange={(next) => setWeightId(next?.id ?? null)}
+                />
+
+                {weightId == null && (
+                  <div>
+                    <label className="field-label">Weight %</label>
+                    <input
+                      className="input"
+                      type="number"
+                      value={weight}
+                      onChange={(e) => setWeight(e.target.value)}
+                      min={0}
+                      max={100}
+                    />
+                  </div>
+                )}
+              </>
             )}
 
             <div>

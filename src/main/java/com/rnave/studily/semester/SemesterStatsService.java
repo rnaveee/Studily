@@ -2,6 +2,8 @@ package com.rnave.studily.semester;
 
 import com.rnave.studily.academic.AcademicItem;
 import com.rnave.studily.academic.AcademicItemRepository;
+import com.rnave.studily.academic.GradeCategory;
+import com.rnave.studily.academic.GradeCategoryRepository;
 import com.rnave.studily.academic.Grades;
 import com.rnave.studily.academic.ItemStatus;
 import com.rnave.studily.config.CurrentUser;
@@ -24,13 +26,16 @@ public class SemesterStatsService {
     private final SemesterRepository semesterRepository;
     private final CourseRepository courseRepository;
     private final AcademicItemRepository itemRepository;
+    private final GradeCategoryRepository categoryRepository;
     private final CurrentUser currentUser;
 
     public SemesterStatsService(SemesterRepository semesterRepository, CourseRepository courseRepository,
-                                AcademicItemRepository itemRepository, CurrentUser currentUser) {
+                                AcademicItemRepository itemRepository,
+                                GradeCategoryRepository categoryRepository, CurrentUser currentUser) {
         this.semesterRepository = semesterRepository;
         this.courseRepository = courseRepository;
         this.itemRepository = itemRepository;
+        this.categoryRepository = categoryRepository;
         this.currentUser = currentUser;
     }
 
@@ -44,6 +49,12 @@ public class SemesterStatsService {
             itemsByCourse.computeIfAbsent(item.getCourse().getId(), k -> new ArrayList<>()).add(item);
         }
 
+        Map<Long, List<GradeCategory>> categoriesByCourse = new HashMap<>();
+        for (GradeCategory category : categoryRepository.findByCourseUserId(userId)) {
+            categoriesByCourse.computeIfAbsent(category.getCourse().getId(), k -> new ArrayList<>())
+                    .add(category);
+        }
+
         Map<Long, List<Course>> coursesBySemester = new HashMap<>();
         for (Course course : courses) {
             if (course.getSemester() != null) {
@@ -54,12 +65,13 @@ public class SemesterStatsService {
         Instant now = Instant.now();
         return semesterRepository.findByUserIdOrderByYearDescTermAsc(userId).stream()
                 .map(s -> statsFor(s.getId(), coursesBySemester.getOrDefault(s.getId(), List.of()),
-                        itemsByCourse, now))
+                        itemsByCourse, categoriesByCourse, now))
                 .toList();
     }
 
     private SemesterStatsDto statsFor(Long semesterId, List<Course> courses,
-                                      Map<Long, List<AcademicItem>> itemsByCourse, Instant now) {
+                                      Map<Long, List<AcademicItem>> itemsByCourse,
+                                      Map<Long, List<GradeCategory>> categoriesByCourse, Instant now) {
         List<CourseGradeDto> grades = new ArrayList<>();
         double gradeSum = 0;
         int gradedCourses = 0;
@@ -71,7 +83,8 @@ public class SemesterStatsService {
 
         for (Course course : courses) {
             List<AcademicItem> items = itemsByCourse.getOrDefault(course.getId(), List.of());
-            Grades.CourseGrade grade = Grades.of(items);
+            Grades.CourseGrade grade = Grades.of(items,
+                    categoriesByCourse.getOrDefault(course.getId(), List.of()));
 
             grades.add(new CourseGradeDto(
                     course.getId(), course.getName(), course.getCode(), course.getColor(),

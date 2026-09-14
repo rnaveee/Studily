@@ -29,9 +29,13 @@ public class AcademicItemDtos {
             ItemStatus status,
             UUID seriesId,
             String recurrenceRule,
-            boolean canvasSynced) {
+            boolean canvasSynced,
+            Long gradeCategoryId,
+            String gradeCategoryName,
+            String gradeCategoryColor) {
 
         public static AcademicItemDto from(AcademicItem i) {
+            GradeCategory category = i.getGradeCategory();
             return new AcademicItemDto(
                     i.getId(),
                     i.getCourse().getId(),
@@ -47,7 +51,10 @@ public class AcademicItemDtos {
                     i.getStatus(),
                     i.getSeriesId(),
                     i.getRecurrenceRule(),
-                    i.getExternalUid() != null);
+                    i.getExternalUid() != null,
+                    category == null ? null : category.getId(),
+                    category == null ? null : category.getName(),
+                    category == null ? null : category.getColor());
         }
     }
 
@@ -60,6 +67,7 @@ public class AcademicItemDtos {
             @PositiveOrZero @Max(1_000_000) Double score,
             @Positive @Max(1_000_000) Double maxScore,
             ItemStatus status,
+            Long gradeCategoryId,
             @Valid RecurrenceDto recurrence) {
     }
 }

@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 39,
+    date: "2026-09-14",
+    title: "Weights that match your grading scheme",
+    description:
+      "Course outlines hand you a grading scheme \u2014 Quizzes, Assignments and Labs 15%, Exam 1 25%, Project 10% \u2014 where one row covers a whole pile of work. Until now you had to do that arithmetic yourself and type a weight onto every single assignment. Every course page now has a Weights section holding those rows exactly as your outline prints them, each with a percentage and a colour. Put ten assignments under a row worth 15% and each one quietly counts for 1.5% of your final grade; add an eleventh and they all resplit on their own. A running total tells you when the scheme adds up to 100% and when it does not. The Assignment/Exam dropdown on an item has become one \u201cCounts as\u201d list holding Assignment and Exam plus every category you make \u2014 colour-coded down the item list and across the calendar. A category does not need a percentage: leave it blank and it is just a label like \u201cLab Assignment\u201d or \u201cGroup work\u201d, and those items keep whatever weight you give them individually. and the reader fills the whole thing in for you: hand it an outline and it comes back with the grading rows and every item already filed under the right one, for you to check before anything saves. Items you have already weighted yourself keep working exactly as they did. The course reader also takes pasted text now, so a grading scheme you copied off the course page is enough on its own \u2014 no file needed.",
+  },
+  {
     version: 38,
     date: "2026-09-11",
     title: "Fix an exam or assignment you got wrong",

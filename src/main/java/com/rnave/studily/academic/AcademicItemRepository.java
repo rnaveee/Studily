@@ -38,4 +38,6 @@ public interface AcademicItemRepository extends JpaRepository<AcademicItem, Long
             Long userId, Long semesterId, ItemType type, Instant after);
 
     List<AcademicItem> findByCourseUserIdAndSeriesId(Long userId, UUID seriesId);
+
+    List<AcademicItem> findByGradeCategoryId(Long gradeCategoryId);
 }

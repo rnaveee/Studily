@@ -32,12 +32,28 @@ final class CourseDraftSchema {
                 "Default room for the course, for example 'B9200'."));
         properties.put("meetingBlocks", array(block(),
                 "Recurring weekly class times, one entry per weekday. Empty when the document establishes no weekly pattern."));
+        properties.put("gradeCategories", array(category(),
+                "One entry per row of the grading scheme, such as 'Quizzes, Assignments and Labs 15%' "
+                        + "or 'Exam 1 25%'. Empty when the document states no grading scheme."));
         properties.put("items", array(item(),
                 "Everything the student has to hand in or sit, with a date: lab reports and other lab "
                         + "deliverables, assignments, quizzes, projects and exams. Every entry in a "
                         + "schedule table's Due column belongs here. Empty when none are stated."));
         properties.put("warnings", array(Map.of("type", "string"),
                 "Short notes about anything ambiguous, guessed or left out, written for the student to read."));
+        return object(properties);
+    }
+
+    private static Map<String, Object> category() {
+        Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("name", Map.of("type", "string",
+                "description", "The row's label exactly as printed, for example "
+                        + "'Quizzes, Assignments and Labs', 'Exam 1' or 'Project'."));
+        properties.put("kind", enumOf(List.of("EXAM", "ASSIGNMENT"),
+                "EXAM for a midterm, a final or any other sit-down test. ASSIGNMENT for everything "
+                        + "else, including labs, quizzes, projects and homework."));
+        properties.put("weight", Map.of("type", "number",
+                "description", "Percentage of the final grade this row is worth, for example 15 for 15%."));
         return object(properties);
     }
 
@@ -71,9 +87,12 @@ final class CourseDraftSchema {
                         + "date is a range, such as '15 to 19-SEP', use the last day of that range. "
                         + "Use 23:59 when only a date is given. Null when no date can be determined, "
                         + "but still report the item."));
+        properties.put("category", nullable("string",
+                "The name of the gradeCategories row this item is graded under, spelled exactly as it "
+                        + "appears there. Null when no row covers it."));
         properties.put("weight", nullable("number",
-                "Percentage of the final grade, for example 25 for 25%. Null when the outline does not "
-                        + "give this item its own percentage."));
+                "Percentage of the final grade, for example 25 for 25%. Null whenever category is set, "
+                        + "and null when the outline gives this item no percentage of its own."));
         properties.put("location", nullable("string",
                 "Room, when the document gives one for this item."));
         return object(properties);

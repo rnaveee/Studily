@@ -3,6 +3,7 @@ package com.rnave.studily.canvas;
 import com.rnave.studily.academic.AcademicItem;
 import com.rnave.studily.academic.AcademicItemRepository;
 import com.rnave.studily.academic.ItemType;
+import com.rnave.studily.academic.ItemTypes;
 import com.rnave.studily.calendar.CalendarEvent;
 import com.rnave.studily.calendar.CalendarEventRepository;
 import com.rnave.studily.canvas.CanvasDtos.FeedRequest;
@@ -44,9 +45,6 @@ public class CanvasFeedService {
     };
 
     private static final Pattern CODE_SUFFIX = Pattern.compile("^(.*?)\\s*\\[([^\\]]{1,120})\\]\\s*$");
-    private static final Pattern EXAM_TITLE =
-            Pattern.compile("\\b(exam|midterm|final|test)\\b", Pattern.CASE_INSENSITIVE);
-
     private final CourseRepository courseRepository;
     private final AcademicItemRepository itemRepository;
     private final CalendarEventRepository eventRepository;
@@ -223,7 +221,7 @@ public class CanvasFeedService {
         if (ref.kind() == CanvasRef.Kind.QUIZ) {
             return ItemType.EXAM;
         }
-        return EXAM_TITLE.matcher(title).find() ? ItemType.EXAM : ItemType.ASSIGNMENT;
+        return ItemTypes.fromName(title);
     }
 
     private String courseCode(String title) {

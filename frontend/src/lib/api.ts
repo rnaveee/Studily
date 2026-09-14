@@ -5,7 +5,10 @@ import {
   demoItems,
   demoNotes,
   demoStats,
+  demoTodoCategories,
+  demoTodos,
   demoWeek,
+  demoWeights,
 } from "./demo";
 
 const TOKEN_KEY = "studily.token";
@@ -42,8 +45,6 @@ export function setGuestMode(on: boolean) {
 const GUEST_EMPTY_LISTS = new Set([
   "/calendar/events",
   "/calendar/categories",
-  "/todos",
-  "/todo-categories",
   "/courses/matches",
   "/friends",
   "/friends/incoming",
@@ -65,6 +66,8 @@ function guestStub(path: string): unknown {
   if (p === "/dashboard/week") return demoWeek();
   if (p === "/calendar") return demoItems();
   if (p === "/flashcard-sets") return demoFlashcardSets();
+  if (p === "/todos") return demoTodos();
+  if (p === "/todo-categories") return demoTodoCategories();
   if (p === "/push/public-key") return { publicKey: null };
   if (p === "/settings/privacy") return { readReceipts: true, scheduleVisibility: "FRIENDS" };
   if (p === "/settings/notifications")
@@ -76,6 +79,7 @@ function guestStub(path: string): unknown {
     switch (course[2]) {
       case undefined:      return demoCourses().find((c) => c.id === id) ?? null;
       case "/items":       return demoItems().filter((it) => it.courseId === id);
+      case "/weights":     return demoWeights(id);
       case "/notes":       return demoNotes(id);
       case "/classmates":  return [];
     }

@@ -16,13 +16,12 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
-import java.util.UUID;
 
 @Entity
-@Table(name = "academic_items")
+@Table(name = "grade_categories")
 @Getter
 @Setter
-public class AcademicItem {
+public class GradeCategory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -32,35 +31,21 @@ public class AcademicItem {
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "grade_category_id")
-    private GradeCategory gradeCategory;
+    @Column(nullable = false)
+    private String name;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ItemType type;
+    private ItemType kind;
 
-    @Column(nullable = false)
-    private String title;
-
-    @Column(nullable = false)
-    private Instant dueAt;
-
-    private String location;
     private Double weight;
-    private Double score;
-    private Double maxScore;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ItemStatus status = ItemStatus.TODO;
+    private String color;
 
-    @Column(name = "external_uid")
-    private String externalUid;
+    @Column(nullable = false)
+    private int position;
 
-    @Column(name = "series_id")
-    private UUID seriesId;
-
-    @Column(name = "recurrence_rule")
-    private String recurrenceRule;
+    @Column(nullable = false, updatable = false)
+    private Instant createdAt = Instant.now();
 }

@@ -4,7 +4,20 @@ import { AlertTriangle, Sparkles } from "lucide-react";
 import Modal from "../../components/Modal";
 import ParseDropzone from "./ParseDropzone";
 import ParseFeedbackPrompt from "./ParseFeedbackPrompt";
-import DraftItemRows, { postRows, saveable, toRows, type ReviewRow } from "./draftItems";
+import DraftItemRows, {
+  postRows,
+  saveable,
+  toRows,
+  withCategories,
+  type ReviewRow,
+} from "./draftItems";
+import DraftCategoryRows, {
+  chosen,
+  postCategories,
+  toCategoryRows,
+  type CategoryRow,
+} from "./draftCategories";
+import { useGradeCategories } from "./weights";
 import {
   detailChanges,
   isDuplicateItem,
@@ -36,6 +49,7 @@ export default function CourseDocumentImport({ course, items, onChange }: Props)
   const qc = useQueryClient();
 
   const [files, setFiles] = useState<File[]>([]);
+  const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<CourseDraft | null>(null);
   const [ratingId, setRatingId] = useState<number | null>(null);
@@ -50,6 +64,7 @@ export default function CourseDocumentImport({ course, items, onChange }: Props)
     mutationFn: () => {
       const form = new FormData();
       files.forEach((file) => form.append("files", file));
+      if (text.trim()) form.append("text", text.trim());
       if (course.semesterId != null) form.append("semesterId", String(course.semesterId));
       form.append("timeZone", Intl.DateTimeFormat().resolvedOptions().timeZone);
       return api.post<CourseDraft>("/courses/parse", form);
@@ -66,6 +81,7 @@ export default function CourseDocumentImport({ course, items, onChange }: Props)
   function done(parseId: number | null | undefined) {
     setDraft(null);
     setFiles([]);
+    setText("");
     onChange();
     if (parseId != null) setRatingId(parseId);
   }
@@ -73,12 +89,12 @@ export default function CourseDocumentImport({ course, items, onChange }: Props)
   return (
     <section className="card p-5">
       <div className="mb-1 flex items-center gap-2">
-        <h2 className="text-[15px] font-semibold text-fg">Add from a document</h2>
+        <h2 className="text-[15px] font-semibold text-fg">Add from an outline</h2>
         <span className="badge badge-accent text-[10px]">Beta</span>
       </div>
       <p className="mb-3 text-[12px] text-fg-2">
-        Got a lab schedule or an updated syllabus? Upload it and we add what is new to this course.
-        You check everything before it saves.
+        Got a lab schedule, an updated syllabus or a grading scheme? Upload it or paste it in and
+        we add what is new to this course. You check everything before it saves.
       </p>
 
       {!verified ? (
@@ -86,6 +102,16 @@ export default function CourseDocumentImport({ course, items, onChange }: Props)
       ) : (
         <>
           <ParseDropzone files={files} onChange={setFiles} onError={setError} compact />
+
+          <div className="mt-3">
+            <label className="field-label">Or paste the course details</label>
+            <textarea
+              className="input min-h-[110px]"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Paste anything from the course page — the grading scheme, deadlines, lab dates."
+            />
+          </div>
 
           {error && <p className="mt-3 text-xs text-red animate-fade">{error}</p>}
           {parse.isError && (
@@ -97,11 +123,11 @@ export default function CourseDocumentImport({ course, items, onChange }: Props)
           <button
             type="button"
             onClick={() => parse.mutate()}
-            disabled={files.length === 0 || parse.isPending}
+            disabled={(files.length === 0 && !text.trim()) || parse.isPending}
             className="btn btn-primary mt-3"
           >
             <Sparkles size={13} />
-            {parse.isPending ? "Reading your document…" : "Read this document"}
+            {parse.isPending ? "Reading this…" : "Read this"}
           </button>
         </>
       )}
@@ -139,15 +165,22 @@ interface MergeProps {
 
 function MergeReview({ draft, course, items, onClose, onSaved }: MergeProps) {
   const qc = useQueryClient();
+  const { data: existingCategories } = useGradeCategories(course.id);
   const [rows, setRows] = useState<ReviewRow[]>(() =>
     toRows(draft.items, (item) => isDuplicateItem(item, items)),
   );
+  const [catRows, setCatRows] = useState<CategoryRow[] | null>(null);
+
+  const categoryRows =
+    catRows ?? toCategoryRows(draft.gradeCategories ?? [], draft.items, existingCategories ?? []);
+  const applied = withCategories(rows, categoryRows);
   const [blocks] = useState<MeetingBlock[]>(() => newBlocks(draft.meetingBlocks, course));
   const [changes] = useState<DetailChange[]>(() => detailChanges(draft, course));
   const [blocksOn, setBlocksOn] = useState<boolean[]>(() => blocks.map(() => true));
   const [detailsOn, setDetailsOn] = useState<DetailField[]>([]);
 
-  const chosenItems = saveable(rows);
+  const chosenItems = saveable(applied);
+  const chosenCategories = chosen(categoryRows).filter((c) => !c.duplicate);
   const chosenBlocks = blocks.filter((_, i) => blocksOn[i]);
 
   const save = useMutation({
@@ -168,16 +201,24 @@ function MergeReview({ draft, course, items, onClose, onSaved }: MergeProps) {
         };
         await api.put<Course>(`/courses/${course.id}`, req);
       }
-      return postRows(course.id, chosenItems);
+      const categoryIds = await postCategories(
+        course.id,
+        chosen(categoryRows),
+        existingCategories ?? [],
+      );
+      return postRows(course.id, chosenItems, categoryIds);
     },
     onSuccess: ({ saved, failed }) => {
       qc.invalidateQueries({ queryKey: ["course", course.id] });
+      qc.invalidateQueries({ queryKey: ["course", course.id, "weights"] });
       if (failed > 0) {
         toast.error(
           `Added ${saved} of ${saved + failed} items. Add the rest from this page by hand.`,
         );
       } else {
-        toast.success(`Added ${summary(saved, chosenBlocks.length, detailsOn.length)}`);
+        toast.success(
+          `Added ${summary(saved, chosenBlocks.length, chosenCategories.length, detailsOn.length)}`,
+        );
       }
       onSaved();
     },
@@ -186,7 +227,10 @@ function MergeReview({ draft, course, items, onClose, onSaved }: MergeProps) {
   });
 
   const nothingToDo =
-    chosenItems.length === 0 && chosenBlocks.length === 0 && detailsOn.length === 0;
+    chosenItems.length === 0 &&
+    chosenBlocks.length === 0 &&
+    chosenCategories.length === 0 &&
+    detailsOn.length === 0;
 
   return (
     <Modal onClose={onClose} title="What we found" size="xl" variant="sheet">
@@ -218,6 +262,13 @@ function MergeReview({ draft, course, items, onClose, onSaved }: MergeProps) {
         </ul>
       )}
 
+      <DraftCategoryRows
+        rows={categoryRows}
+        onPatch={(name, next) =>
+          setCatRows(categoryRows.map((row) => (row.name === name ? { ...row, ...next } : row)))
+        }
+      />
+
       <div>
         <div className="mb-2 flex items-center justify-between">
           <label className="field-label mb-0">Assignments and exams</label>
@@ -226,7 +277,7 @@ function MergeReview({ draft, course, items, onClose, onSaved }: MergeProps) {
           </span>
         </div>
         <DraftItemRows
-          rows={rows}
+          rows={applied}
           onPatch={(id, next) =>
             setRows((list) => list.map((row) => (row.id === id ? { ...row, ...next } : row)))
           }
@@ -308,7 +359,12 @@ function MergeReview({ draft, course, items, onClose, onSaved }: MergeProps) {
             ? "Saving…"
             : nothingToDo
               ? "Nothing selected"
-              : `Add ${summary(chosenItems.length, chosenBlocks.length, detailsOn.length)}`}
+              : `Add ${summary(
+                  chosenItems.length,
+                  chosenBlocks.length,
+                  chosenCategories.length,
+                  detailsOn.length,
+                )}`}
         </button>
         <button type="button" onClick={onClose} className="btn btn-ghost">
           Cancel
@@ -318,9 +374,10 @@ function MergeReview({ draft, course, items, onClose, onSaved }: MergeProps) {
   );
 }
 
-function summary(items: number, blocks: number, details: number): string {
+function summary(items: number, blocks: number, weights: number, details: number): string {
   const parts: string[] = [];
   if (items > 0) parts.push(`${items} item${items > 1 ? "s" : ""}`);
+  if (weights > 0) parts.push(`${weights} weight${weights > 1 ? "s" : ""}`);
   if (blocks > 0) parts.push(`${blocks} class time${blocks > 1 ? "s" : ""}`);
   if (details > 0) parts.push(`${details} detail${details > 1 ? "s" : ""}`);
   if (parts.length === 0) return "nothing";

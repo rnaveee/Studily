@@ -14,6 +14,7 @@ import {
   type AcademicItemRequest,
   type Course,
   type CourseRequest,
+  type GradeCategory,
   type ItemStatus,
   type Note,
   type PublicUser,
@@ -24,6 +25,7 @@ import { invalidateItemQueries } from "../../lib/invalidateItems";
 import ItemModal from "./ItemModal";
 import {
   courseGrade,
+  effectiveWeights,
   formatPercent,
   formatScore,
   gradeColor,
@@ -37,6 +39,8 @@ import BackButton from "../../components/BackButton";
 import CourseDocumentImport from "./CourseDocumentImport";
 import CourseForm from "./CourseForm";
 import ItemForm from "../../components/ItemForm";
+import WeightsSection from "./WeightsSection";
+import { useGradeCategories, trimPercent } from "./weights";
 
 const STATUSES: ItemStatus[] = ["TODO", "IN_PROGRESS", "DONE"];
 const STATUS_LABEL: Record<ItemStatus, string> = {
@@ -65,6 +69,7 @@ export default function CourseDetailPage() {
     queryKey: ["course", courseId, "notes"],
     queryFn: () => api.get<Note[]>(`/courses/${courseId}/notes`),
   });
+  const weightsQ = useGradeCategories(courseId);
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["course", courseId] });
@@ -189,8 +194,19 @@ export default function CourseDetailPage() {
         </div>
       )}
 
-      <GradeCard items={itemsQ.data ?? []} />
-      <ItemsSection courseId={courseId} items={itemsQ.data ?? []} onChange={invalidateAll} />
+      <GradeCard items={itemsQ.data ?? []} categories={weightsQ.data ?? []} />
+      <WeightsSection
+        courseId={courseId}
+        categories={weightsQ.data ?? []}
+        items={itemsQ.data ?? []}
+        onChange={invalidateAll}
+      />
+      <ItemsSection
+        courseId={courseId}
+        items={itemsQ.data ?? []}
+        categories={weightsQ.data ?? []}
+        onChange={invalidateAll}
+      />
       <CourseDocumentImport
         course={course}
         items={itemsQ.data ?? []}
@@ -202,9 +218,15 @@ export default function CourseDetailPage() {
   );
 }
 
-function GradeCard({ items }: { items: AcademicItem[] }) {
+function GradeCard({
+  items,
+  categories,
+}: {
+  items: AcademicItem[];
+  categories: GradeCategory[];
+}) {
   const [target, setTarget] = useState("80");
-  const summary = courseGrade(items);
+  const summary = courseGrade(items, categories);
 
   if (items.length === 0) return null;
 
@@ -289,7 +311,7 @@ function GradeCard({ items }: { items: AcademicItem[] }) {
 
       {summary.gradedWeight === 0 && (
         <p className="mt-2 text-[12px] text-fg-3">
-          Add a weight to each item for a weighted grade and projections.
+          Fill in the Weights section for a weighted grade and projections.
         </p>
       )}
     </div>
@@ -342,10 +364,12 @@ function ClassmatesSection({ courseId }: { courseId: number }) {
 function ItemsSection({
   courseId,
   items,
+  categories,
   onChange,
 }: {
   courseId: number;
   items: AcademicItem[];
+  categories: GradeCategory[];
   onChange: () => void;
 }) {
   const qc = useQueryClient();
@@ -386,6 +410,8 @@ function ItemsSection({
     onSuccess: refresh,
   });
 
+  const effective = effectiveWeights(items, categories);
+
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
@@ -414,6 +440,7 @@ function ItemsSection({
             <ItemRow
               key={it.id}
               item={it}
+              effectiveWeight={effective.get(it.id) ?? null}
               onUpdate={(req) => update.mutateAsync({ itemId: it.id, req })}
               onEdit={() => setEditing(it)}
               onDelete={() => confirmDelete(it)}
@@ -435,11 +462,13 @@ function ItemsSection({
 
 function ItemRow({
   item,
+  effectiveWeight,
   onUpdate,
   onEdit,
   onDelete,
 }: {
   item: AcademicItem;
+  effectiveWeight: number | null;
   onUpdate: (req: AcademicItemRequest) => Promise<unknown>;
   onEdit: () => void;
   onDelete: () => void;
@@ -456,6 +485,7 @@ function ItemRow({
     score: item.score,
     maxScore: item.maxScore,
     status: item.status,
+    gradeCategoryId: item.gradeCategoryId ?? null,
     ...changes,
   });
 
@@ -464,12 +494,17 @@ function ItemRow({
       <div className="flex items-center gap-2">
         <span
           className="h-2 w-2 shrink-0 rounded-full"
-          style={{ backgroundColor: item.type === "EXAM" ? "var(--red)" : "var(--green)" }}
+          style={{
+            backgroundColor:
+              item.gradeCategoryColor ??
+              (item.type === "EXAM" ? "var(--red)" : "var(--green)"),
+          }}
         />
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium text-fg">{item.title}</div>
           <div className="truncate text-[11px] text-fg-3">
-            {item.weight != null && `worth ${item.weight}% · `}
+            {effectiveWeight != null && `worth ${trimPercent(effectiveWeight)}% · `}
+            {item.gradeCategoryName && `${item.gradeCategoryName} · `}
             {formatDateTime(item.dueAt)}
             {item.canvasSynced && (
               <span title="Title and due date are kept in sync with Canvas"> · from Canvas</span>

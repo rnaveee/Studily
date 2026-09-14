@@ -2,6 +2,7 @@ package com.rnave.studily.academic;
 
 import com.rnave.studily.academic.AcademicItemDtos.AcademicItemDto;
 import com.rnave.studily.academic.AcademicItemDtos.AcademicItemRequest;
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.course.Course;
@@ -19,13 +20,16 @@ import java.util.List;
 public class AcademicItemService {
 
     private final AcademicItemRepository itemRepository;
+    private final GradeCategoryRepository categoryRepository;
     private final CourseService courseService;
     private final RecurrenceService recurrenceService;
     private final CurrentUser currentUser;
 
-    public AcademicItemService(AcademicItemRepository itemRepository, CourseService courseService,
+    public AcademicItemService(AcademicItemRepository itemRepository,
+                               GradeCategoryRepository categoryRepository, CourseService courseService,
                                RecurrenceService recurrenceService, CurrentUser currentUser) {
         this.itemRepository = itemRepository;
+        this.categoryRepository = categoryRepository;
         this.courseService = courseService;
         this.recurrenceService = recurrenceService;
         this.currentUser = currentUser;
@@ -97,20 +101,31 @@ public class AcademicItemService {
     }
 
     private void applyShared(AcademicItem item, AcademicItemRequest req) {
-        item.setType(req.type());
+        GradeCategory category = resolveCategory(item, req.gradeCategoryId());
+        item.setGradeCategory(category);
+        item.setType(category == null ? req.type() : category.getKind());
         item.setTitle(req.title().trim());
         item.setLocation(req.location() == null || req.location().isBlank() ? null : req.location().trim());
-        item.setWeight(req.weight());
+        item.setWeight(category != null && category.getWeight() != null ? null : req.weight());
     }
 
     private void apply(AcademicItem item, AcademicItemRequest req) {
-        item.setType(req.type());
-        item.setTitle(req.title().trim());
+        applyShared(item, req);
         item.setDueAt(req.dueAt());
-        item.setLocation(req.location() == null || req.location().isBlank() ? null : req.location().trim());
-        item.setWeight(req.weight());
         item.setScore(req.score());
         item.setMaxScore(req.score() == null ? null : req.maxScore() == null ? 100d : req.maxScore());
         item.setStatus(req.status() == null ? ItemStatus.TODO : req.status());
+    }
+
+    private GradeCategory resolveCategory(AcademicItem item, Long categoryId) {
+        if (categoryId == null) {
+            return null;
+        }
+        GradeCategory category = categoryRepository.findByIdAndCourseUserId(categoryId, currentUser.id())
+                .orElseThrow(() -> new NotFoundException("Weight not found"));
+        if (!category.getCourse().getId().equals(item.getCourse().getId())) {
+            throw new BadRequestException("That weight belongs to a different course.");
+        }
+        return category;
     }
 }

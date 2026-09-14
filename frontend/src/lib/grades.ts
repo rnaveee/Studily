@@ -1,4 +1,4 @@
-import type { AcademicItem } from "../types";
+import type { AcademicItem, GradeCategory } from "../types";
 
 export interface Scored {
   score?: number | null;
@@ -19,7 +19,47 @@ export function itemPercent(item: Scored): number | null {
   return (item.score / item.maxScore) * 100;
 }
 
-export function courseGrade(items: AcademicItem[]): CourseGradeSummary {
+export function countsByCategory(items: AcademicItem[]): Map<number, number> {
+  const counts = new Map<number, number>();
+  for (const item of items) {
+    const id = item.gradeCategoryId;
+    if (id != null) counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export function effectiveWeights(
+  items: AcademicItem[],
+  categories: GradeCategory[],
+): Map<number, number | null> {
+  const counts = countsByCategory(items);
+  const byId = new Map(categories.map((c) => [c.id, c]));
+  const out = new Map<number, number | null>();
+
+  for (const item of items) {
+    const category = item.gradeCategoryId == null ? undefined : byId.get(item.gradeCategoryId);
+    if (category == null || category.weight == null) {
+      out.set(item.id, item.weight ?? null);
+      continue;
+    }
+    const members = counts.get(category.id) ?? 0;
+    out.set(item.id, members <= 0 ? null : category.weight / members);
+  }
+  return out;
+}
+
+export function carriesItsOwnWeight(item: AcademicItem, categories: GradeCategory[]): boolean {
+  if (item.gradeCategoryId == null) return true;
+  const category = categories.find((c) => c.id === item.gradeCategoryId);
+  return category == null || category.weight == null;
+}
+
+export function courseGrade(
+  items: AcademicItem[],
+  categories: GradeCategory[] = [],
+): CourseGradeSummary {
+  const effective = effectiveWeights(items, categories);
+
   let weightedSum = 0;
   let gradedWeight = 0;
   let totalWeight = 0;
@@ -27,9 +67,11 @@ export function courseGrade(items: AcademicItem[]): CourseGradeSummary {
   let maxPoints = 0;
   let gradedCount = 0;
 
+  for (const category of categories) totalWeight += category.weight ?? 0;
+
   for (const item of items) {
-    const weight = item.weight ?? 0;
-    totalWeight += weight;
+    const weight = effective.get(item.id) ?? 0;
+    if (carriesItsOwnWeight(item, categories)) totalWeight += weight;
 
     const percent = itemPercent(item);
     if (percent == null) continue;

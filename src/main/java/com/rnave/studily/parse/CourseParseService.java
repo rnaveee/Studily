@@ -7,6 +7,7 @@ import com.rnave.studily.course.CourseDtos.MeetingBlockDto;
 import com.rnave.studily.course.DayOfWeek;
 import com.rnave.studily.course.MeetingKind;
 import com.rnave.studily.parse.CourseParseDtos.CourseDraftDto;
+import com.rnave.studily.parse.CourseParseDtos.DraftCategoryDto;
 import com.rnave.studily.parse.CourseParseDtos.DraftItemDto;
 import com.rnave.studily.parse.ClaudeCourseParser.ParseOutcome;
 import com.rnave.studily.semester.Semester;
@@ -23,7 +24,9 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -32,6 +35,8 @@ public class CourseParseService {
     private static final Logger log = LoggerFactory.getLogger(CourseParseService.class);
 
     private static final int MAX_ITEMS = 60;
+    private static final int MAX_CATEGORIES = 20;
+    private static final int MAX_CATEGORY_NAME = 60;
     private static final int MAX_BLOCKS = 20;
     private static final int MAX_WARNINGS = 10;
     private static final int MAX_NAME = 255;
@@ -105,7 +110,8 @@ public class CourseParseService {
     private CourseDraftDto normalize(Long parseId, CourseDraft draft) {
         List<String> warnings = new ArrayList<>(clean(draft.warnings(), MAX_WARNINGS));
         List<MeetingBlockDto> blocks = blocks(draft, warnings);
-        List<DraftItemDto> items = items(draft, warnings);
+        Map<String, DraftCategoryDto> categories = categories(draft, warnings);
+        List<DraftItemDto> items = items(draft, categories, warnings);
 
         return new CourseDraftDto(
                 parseId,
@@ -114,8 +120,46 @@ public class CourseParseService {
                 trim(draft.professor(), MAX_NAME),
                 trim(draft.location(), MAX_NAME),
                 blocks,
+                List.copyOf(categories.values()),
                 items,
                 List.copyOf(warnings));
+    }
+
+    private Map<String, DraftCategoryDto> categories(CourseDraft draft, List<String> warnings) {
+        Map<String, DraftCategoryDto> out = new LinkedHashMap<>();
+        if (draft.gradeCategories() == null) {
+            return out;
+        }
+
+        for (CourseDraft.DraftCategory category : draft.gradeCategories()) {
+            if (category == null || out.size() >= MAX_CATEGORIES) {
+                continue;
+            }
+            String name = trim(category.name(), MAX_CATEGORY_NAME);
+            Double weight = category.weight();
+            if (name == null || weight == null || weight < 0 || weight > 100) {
+                continue;
+            }
+            ItemType kind = parseEnum(ItemType.class, category.kind());
+            if (kind == null) {
+                kind = ItemType.ASSIGNMENT;
+            }
+            out.putIfAbsent(name.toLowerCase(Locale.ROOT), new DraftCategoryDto(name, kind, weight));
+        }
+
+        double total = out.values().stream().mapToDouble(DraftCategoryDto::weight).sum();
+        if (!out.isEmpty() && Math.abs(total - 100) > 0.01 && warnings.size() < MAX_WARNINGS) {
+            warnings.add("The grading scheme adds up to " + trimNumber(total)
+                    + "%, not 100%. Check the weights before you save.");
+        }
+        return out;
+    }
+
+    private static String trimNumber(double value) {
+        double rounded = Math.round(value * 100) / 100d;
+        return rounded == Math.rint(rounded)
+                ? String.valueOf((long) rounded)
+                : String.valueOf(rounded);
     }
 
     private List<MeetingBlockDto> blocks(CourseDraft draft, List<String> warnings) {
@@ -168,7 +212,8 @@ public class CourseParseService {
         return List.copyOf(out);
     }
 
-    private List<DraftItemDto> items(CourseDraft draft, List<String> warnings) {
+    private List<DraftItemDto> items(CourseDraft draft, Map<String, DraftCategoryDto> categories,
+                                     List<String> warnings) {
         if (draft.items() == null) {
             return List.of();
         }
@@ -191,12 +236,21 @@ public class CourseParseService {
             if (type == null) {
                 type = ItemType.ASSIGNMENT;
             }
+
+            String categoryKey = trim(item.category(), MAX_CATEGORY_NAME);
+            DraftCategoryDto category = categoryKey == null
+                    ? null : categories.get(categoryKey.toLowerCase(Locale.ROOT));
+            if (category != null) {
+                type = category.kind();
+            }
+
             out.add(new DraftItemDto(
                     type,
                     title,
                     due == null ? null : due.toString(),
-                    weight(item.weight()),
-                    trim(item.location(), MAX_NAME)));
+                    category == null ? weight(item.weight()) : null,
+                    trim(item.location(), MAX_NAME),
+                    category == null ? null : category.name()));
         }
 
         if (undated > 0 && warnings.size() < MAX_WARNINGS) {

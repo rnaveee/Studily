@@ -65,18 +65,27 @@ public class ClaudeCourseParser {
             its deadline is the date on its own row, not the week the work was handed out. When \
             that row gives a range, use the last day of the range. A row reading \
             "Lab 2 | 15 to 19-SEP" in a semester running through 2026 therefore produces an item \
-            titled "Lab 2" due "2026-09-19T23:59". Entries in these columns are terse, such as \
-            "Lab 1" or "Project"; keep the title exactly as printed rather than expanding it.
+            titled "Lab 2" due "2026-09-19T23:59", with its category set to whichever grading \
+            row covers the labs. Entries in these columns are terse, such as "Lab 1" or \
+            "Project"; keep the title exactly as printed rather than expanding it.
 
             5. Dates. Documents often print dates without a year, such as "14-OCT". Resolve them \
             against the semester date range you are given. If a date cannot be placed inside that \
             range, leave dueAt null and add a warning. Report the item either way; never drop one \
             just because its date would not resolve.
 
-            6. Weights. Take these from the grading scheme. When a single grading row covers a \
-            group of items, such as "Quizzes, Assignments and Labs 15%", that 15% belongs to the \
-            whole group. Do not copy it onto each item and do not divide it up: leave those items' \
-            weight null and add a warning naming the group and its total.
+            6. Weights. Report one gradeCategories entry per row of the grading scheme, with the \
+            name exactly as printed and its percentage. "Quizzes, Assignments and Labs 15%" is one \
+            entry named "Quizzes, Assignments and Labs" worth 15; "Exam 1 25%" is another named \
+            "Exam 1" worth 25. A row stays one entry even when it covers many separate pieces of \
+            work: never divide it up and never copy its percentage onto the items.
+
+            Then set each item's category to the name of the row it is graded under, spelled \
+            exactly as you spelled it in gradeCategories. Leave category null when no row covers \
+            the item. Set an item's own weight only when its row covers that single item and \
+            nothing else. A row's kind is EXAM when it is a midterm, a final or any other \
+            sit-down test, and ASSIGNMENT otherwise. If the percentages do not add up to 100, \
+            report them as printed and add a warning saying what they total.
 
             7. Items. Include lab reports and lab deliverables, graded assignments, quizzes, \
             projects and exams that have a deadline or a scheduled date. Work through the whole \

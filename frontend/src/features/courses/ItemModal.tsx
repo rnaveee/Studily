@@ -44,6 +44,7 @@ export default function ItemModal({
     score: item.score ?? null,
     maxScore: item.maxScore ?? null,
     status: item.status,
+    gradeCategoryId: item.gradeCategoryId ?? null,
   };
 
   return (

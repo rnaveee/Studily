@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import DateTimeSelect from "../../components/DateTimeSelect";
 import { api } from "../../lib/api";
+import { key, type CategoryRow } from "./draftCategories";
 import type { AcademicItem, DraftItem, ItemType } from "../../types";
 
 export interface ReviewRow {
@@ -10,6 +11,9 @@ export interface ReviewRow {
   title: string;
   dueLocal: string;
   weight: string;
+  sourceCategory: string | null;
+  category: string | null;
+  categoryColor?: string | null;
   duplicate: boolean;
 }
 
@@ -26,6 +30,9 @@ export function toRows(
       title: item.title,
       dueLocal: item.dueAt ?? "",
       weight: item.weight == null ? "" : String(item.weight),
+      sourceCategory: item.category ?? null,
+      category: null,
+      categoryColor: null,
       duplicate,
     };
   });
@@ -35,16 +42,32 @@ export function saveable(rows: ReviewRow[]): ReviewRow[] {
   return rows.filter((r) => r.include && r.title.trim() && r.dueLocal);
 }
 
-export async function postRows(courseId: number, rows: ReviewRow[]) {
+export function withCategories(rows: ReviewRow[], categories: CategoryRow[]): ReviewRow[] {
+  const on = new Map(categories.filter((c) => c.include).map((c) => [key(c.name), c]));
+  return rows.map((row) => {
+    const match = row.sourceCategory == null ? undefined : on.get(key(row.sourceCategory));
+    return match
+      ? { ...row, category: match.name, categoryColor: match.color, type: match.kind }
+      : { ...row, category: null, categoryColor: null };
+  });
+}
+
+export async function postRows(
+  courseId: number,
+  rows: ReviewRow[],
+  categoryIds: Map<string, number> = new Map(),
+) {
   const results = await Promise.allSettled(
-    rows.map((row) =>
-      api.post<AcademicItem>(`/courses/${courseId}/items`, {
+    rows.map((row) => {
+      const categoryId = row.category == null ? undefined : categoryIds.get(key(row.category));
+      return api.post<AcademicItem>(`/courses/${courseId}/items`, {
         type: row.type,
         title: row.title.trim(),
         dueAt: new Date(row.dueLocal).toISOString(),
-        weight: row.weight.trim() ? Number(row.weight) : undefined,
-      }),
-    ),
+        weight: categoryId != null || !row.weight.trim() ? undefined : Number(row.weight),
+        gradeCategoryId: categoryId ?? null,
+      });
+    }),
   );
   const failed = results.filter((r) => r.status === "rejected").length;
   return { saved: rows.length - failed, failed };
@@ -98,30 +121,42 @@ export default function DraftItemRows({ rows, onPatch, onRemove, emptyText }: Pr
             </button>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <select
-              className="input w-auto"
-              value={row.type}
-              onChange={(e) => onPatch(row.id, { type: e.target.value as ItemType })}
-            >
-              <option value="ASSIGNMENT">Assignment</option>
-              <option value="EXAM">Exam</option>
-            </select>
+            {row.category ? (
+              <span className="flex min-w-0 shrink-0 items-center gap-1.5 text-[12px] text-fg-2">
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ background: row.categoryColor ?? "var(--accent)" }}
+                />
+                <span className="truncate">{row.category}</span>
+              </span>
+            ) : (
+              <select
+                className="input w-auto"
+                value={row.type}
+                onChange={(e) => onPatch(row.id, { type: e.target.value as ItemType })}
+              >
+                <option value="ASSIGNMENT">Assignment</option>
+                <option value="EXAM">Exam</option>
+              </select>
+            )}
             <DateTimeSelect
               value={row.dueLocal}
               onChange={(v) => onPatch(row.id, { dueLocal: v, include: v ? true : row.include })}
               className="min-w-[210px] flex-1"
             />
-            <div className="flex items-center gap-1">
-              <input
-                className="input w-[72px]"
-                inputMode="decimal"
-                value={row.weight}
-                onChange={(e) => onPatch(row.id, { weight: e.target.value })}
-                placeholder="—"
-                aria-label={`Weight for ${row.title}`}
-              />
-              <span className="text-[12px] text-fg-3">%</span>
-            </div>
+            {!row.category && (
+              <div className="flex items-center gap-1">
+                <input
+                  className="input w-[72px]"
+                  inputMode="decimal"
+                  value={row.weight}
+                  onChange={(e) => onPatch(row.id, { weight: e.target.value })}
+                  placeholder="—"
+                  aria-label={`Weight for ${row.title}`}
+                />
+                <span className="text-[12px] text-fg-3">%</span>
+              </div>
+            )}
           </div>
           {!row.dueLocal && (
             <p className="text-[11px] text-yellow">

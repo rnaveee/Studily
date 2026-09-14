@@ -1,8 +1,12 @@
 import { DAYS } from "../types";
+import { courseGrade } from "./grades";
 import type {
   AcademicItem,
   Course,
   CourseGrade,
+  GradeCategory,
+  Todo,
+  TodoCategory,
   DayColumn,
   FlashcardSet,
   Note,
@@ -103,32 +107,46 @@ export function demoCourses(): Course[] {
   ];
 }
 
+export function demoWeights(courseId: number): GradeCategory[] {
+  if (courseId !== 1) return [];
+  return [
+    { id: 1, courseId: 1, name: "Problem Sets", kind: "ASSIGNMENT", weight: 30, color: "#3b82f6", position: 0 },
+    { id: 2, courseId: 1, name: "Midterm 1", kind: "EXAM", weight: 25, color: "#ef4444", position: 1 },
+    { id: 3, courseId: 1, name: "Final Exam", kind: "EXAM", weight: 45, color: "#f59e0b", position: 2 },
+  ];
+}
+
 export function demoItems(): AcademicItem[] {
   return [
     {
       id: 1, courseId: 1, courseName: "Calculus I", courseColor: "#7968dc",
       type: "ASSIGNMENT", title: "Problem Set 1: Limits", dueAt: at(-16, "23:59:00"),
-      weight: 10, score: 18, maxScore: 20, status: "DONE",
+      score: 18, maxScore: 20, status: "DONE",
+      gradeCategoryId: 1, gradeCategoryName: "Problem Sets", gradeCategoryColor: "#3b82f6",
     },
     {
       id: 2, courseId: 1, courseName: "Calculus I", courseColor: "#7968dc",
       type: "EXAM", title: "Midterm 1", dueAt: at(-9, "09:30:00"), location: "Hall 210",
-      weight: 25, score: 41, maxScore: 50, status: "DONE",
+      score: 41, maxScore: 50, status: "DONE",
+      gradeCategoryId: 2, gradeCategoryName: "Midterm 1", gradeCategoryColor: "#ef4444",
     },
     {
       id: 3, courseId: 1, courseName: "Calculus I", courseColor: "#7968dc",
       type: "ASSIGNMENT", title: "Problem Set 2: Derivatives", dueAt: at(-4, "23:59:00"),
-      weight: 10, score: 17, maxScore: 20, status: "DONE",
+      score: 17, maxScore: 20, status: "DONE",
+      gradeCategoryId: 1, gradeCategoryName: "Problem Sets", gradeCategoryColor: "#3b82f6",
     },
     {
       id: 4, courseId: 1, courseName: "Calculus I", courseColor: "#7968dc",
       type: "ASSIGNMENT", title: "Problem Set 3: Chain Rule", dueAt: at(2, "23:59:00"),
-      weight: 10, status: "IN_PROGRESS",
+      status: "IN_PROGRESS",
+      gradeCategoryId: 1, gradeCategoryName: "Problem Sets", gradeCategoryColor: "#3b82f6",
     },
     {
       id: 5, courseId: 1, courseName: "Calculus I", courseColor: "#7968dc",
       type: "EXAM", title: "Final Exam", dueAt: at(34, "15:30:00"), location: "Gym C",
-      weight: 45, status: "TODO",
+      status: "TODO",
+      gradeCategoryId: 3, gradeCategoryName: "Final Exam", gradeCategoryColor: "#f59e0b",
     },
     {
       id: 6, courseId: 2, courseName: "Introduction to Psychology", courseColor: "#3b82f6",
@@ -159,6 +177,121 @@ export function demoItems(): AcademicItem[] {
       id: 11, courseId: 4, courseName: "Academic Writing", courseColor: "#f59e0b",
       type: "ASSIGNMENT", title: "Essay 2: First Draft", dueAt: at(6, "23:59:00"),
       weight: 5, status: "TODO",
+    },
+  ];
+}
+
+export function demoTodoCategories(): TodoCategory[] {
+  return [
+    { id: 1, name: "School", color: "#3b82f6" },
+    { id: 2, name: "Applications", color: "#8b5cf6" },
+    { id: 3, name: "Life", color: "#10b981" },
+  ];
+}
+
+export function demoTodos(): Todo[] {
+  const school = { categoryId: 1, categoryName: "School", categoryColor: "#3b82f6" };
+  const apps = { categoryId: 2, categoryName: "Applications", categoryColor: "#8b5cf6" };
+  const life = { categoryId: 3, categoryName: "Life", categoryColor: "#10b981" };
+
+  return [
+    {
+      id: 1,
+      title: "Finish Problem Set 3: Chain Rule",
+      notes: "Questions 7 and 8 are the ones that showed up on last year's midterm.",
+      priority: "HIGH",
+      dueAt: at(1, "23:59:00"),
+      completed: false,
+      ...school,
+      checklist: [
+        { id: 1, text: "Re-read the worked examples", done: true },
+        { id: 2, text: "Questions 1-6", done: true },
+        { id: 3, text: "Questions 7-8", done: false },
+        { id: 4, text: "Check answers against the solutions", done: false },
+      ],
+      createdAt: at(-5, "10:15:00"),
+    },
+    {
+      id: 2,
+      title: "Email Dr. Alvarez about the midterm regrade",
+      notes: "Question 4b - the marks add up to 9, not 10.",
+      priority: "HIGH",
+      dueAt: at(-1, "17:00:00"),
+      completed: false,
+      ...school,
+      checklist: [],
+      createdAt: at(-3, "09:00:00"),
+    },
+    {
+      id: 3,
+      title: "Book a study room for the group project",
+      notes: null,
+      priority: "MEDIUM",
+      dueAt: at(2, "12:00:00"),
+      completed: false,
+      ...school,
+      checklist: [],
+      createdAt: at(-2, "14:30:00"),
+    },
+    {
+      id: 4,
+      title: "Summer internship applications",
+      notes: "Most postings close at the end of the month.",
+      priority: "MEDIUM",
+      dueAt: at(9, "23:59:00"),
+      completed: false,
+      ...apps,
+      checklist: [
+        { id: 5, text: "Update resume", done: true },
+        { id: 6, text: "Ask Dr. Alvarez for a reference", done: false },
+        { id: 7, text: "Write the cover letter", done: false },
+      ],
+      createdAt: at(-8, "20:10:00"),
+    },
+    {
+      id: 5,
+      title: "Make flashcards for the Psych midterm",
+      notes: null,
+      priority: "MEDIUM",
+      dueAt: at(4, "18:00:00"),
+      completed: false,
+      ...school,
+      checklist: [],
+      createdAt: at(-1, "21:45:00"),
+    },
+    {
+      id: 6,
+      title: "Renew the library loan on the lab manual",
+      notes: null,
+      priority: "LOW",
+      dueAt: at(6, "09:00:00"),
+      completed: false,
+      ...life,
+      checklist: [],
+      createdAt: at(-4, "11:20:00"),
+    },
+    {
+      id: 7,
+      title: "Sort out a ride home for reading week",
+      notes: null,
+      priority: "LOW",
+      dueAt: null,
+      completed: false,
+      ...life,
+      checklist: [],
+      createdAt: at(-6, "19:00:00"),
+    },
+    {
+      id: 8,
+      title: "Hand in the osmosis lab report",
+      notes: null,
+      priority: "HIGH",
+      dueAt: at(-8, "23:59:00"),
+      completed: true,
+      completedAt: at(-8, "22:40:00"),
+      ...school,
+      checklist: [],
+      createdAt: at(-12, "16:00:00"),
     },
   ];
 }
@@ -210,7 +343,13 @@ export function demoWeek(): WeekView {
     semester: DEMO_SEMESTER,
     days,
     dueThisWeek: inWeek.sort((a, b) => a.dueAt.localeCompare(b.dueAt)),
-    todosDueThisWeek: [],
+    todosDueThisWeek: demoTodos()
+      .filter((t) => {
+        if (t.completed || !t.dueAt) return false;
+        const d = t.dueAt.slice(0, 10);
+        return d >= weekStart && d <= weekEnd;
+      })
+      .sort((a, b) => a.dueAt!.localeCompare(b.dueAt!)),
     nextExam,
   };
 }
@@ -219,23 +358,16 @@ export function demoCourseGrades(): CourseGrade[] {
   const items = demoItems();
   return demoCourses().map((c) => {
     const mine = items.filter((it) => it.courseId === c.id);
-    const scored = mine.filter(
-      (it) => it.score != null && it.maxScore != null && it.maxScore > 0 && it.weight != null,
-    );
-    const gradedWeight = scored.reduce((sum, it) => sum + (it.weight ?? 0), 0);
-    const earned = scored.reduce(
-      (sum, it) => sum + (it.weight ?? 0) * (it.score! / it.maxScore!),
-      0,
-    );
+    const summary = courseGrade(mine, demoWeights(c.id));
     return {
       courseId: c.id,
       name: c.name,
       code: c.code,
       color: c.color,
-      grade: gradedWeight > 0 ? (earned / gradedWeight) * 100 : null,
-      gradedWeight,
-      totalWeight: mine.reduce((sum, it) => sum + (it.weight ?? 0), 0),
-      gradedCount: scored.length,
+      grade: summary.percent,
+      gradedWeight: summary.gradedWeight,
+      totalWeight: summary.totalWeight,
+      gradedCount: summary.gradedCount,
       itemCount: mine.length,
     };
   });

@@ -2,7 +2,19 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { AlertTriangle, Sparkles } from "lucide-react";
 import CourseForm from "./CourseForm";
-import DraftItemRows, { postRows, saveable, toRows, type ReviewRow } from "./draftItems";
+import DraftItemRows, {
+  postRows,
+  saveable,
+  toRows,
+  withCategories,
+  type ReviewRow,
+} from "./draftItems";
+import DraftCategoryRows, {
+  chosen,
+  postCategories,
+  toCategoryRows,
+  type CategoryRow,
+} from "./draftCategories";
 import { api } from "../../lib/api";
 import { toast } from "../../lib/toast";
 import type { Course, CourseDraft, CourseRequest } from "../../types";
@@ -16,6 +28,11 @@ interface Props {
 
 export default function CourseDraftReview({ draft, semesterId, onSaved, onCancel }: Props) {
   const [rows, setRows] = useState<ReviewRow[]>(() => toRows(draft.items));
+  const [catRows, setCatRows] = useState<CategoryRow[]>(() =>
+    toCategoryRows(draft.gradeCategories ?? [], draft.items),
+  );
+
+  const applied = withCategories(rows, catRows);
 
   const initial: CourseRequest = {
     name: draft.name ?? "",
@@ -29,7 +46,8 @@ export default function CourseDraftReview({ draft, semesterId, onSaved, onCancel
   const save = useMutation({
     mutationFn: async (req: CourseRequest) => {
       const course = await api.post<Course>("/courses", req);
-      const { failed } = await postRows(course.id, saveable(rows));
+      const categoryIds = await postCategories(course.id, chosen(catRows));
+      const { failed } = await postRows(course.id, saveable(applied), categoryIds);
       return { course, failed };
     },
     onSuccess: ({ course, failed }) => {
@@ -50,7 +68,7 @@ export default function CourseDraftReview({ draft, semesterId, onSaved, onCancel
     setRows((list) => list.filter((row) => row.id !== id));
   }
 
-  const included = saveable(rows).length;
+  const included = saveable(applied).length;
 
   return (
     <div className="space-y-4">
@@ -87,20 +105,31 @@ export default function CourseDraftReview({ draft, semesterId, onSaved, onCancel
         onCancel={onCancel}
         onImported={onSaved}
         extra={
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label className="field-label mb-0">Assignments and exams</label>
-              <span className="text-[11px] text-fg-3">
-                {included} of {rows.length} selected
-              </span>
-            </div>
-
-            <DraftItemRows
-              rows={rows}
-              onPatch={patch}
-              onRemove={remove}
-              emptyText="None found. You can add them from the course page afterwards."
+          <div className="space-y-4">
+            <DraftCategoryRows
+              rows={catRows}
+              onPatch={(name, next) =>
+                setCatRows((list) =>
+                  list.map((row) => (row.name === name ? { ...row, ...next } : row)),
+                )
+              }
             />
+
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <label className="field-label mb-0">Assignments and exams</label>
+                <span className="text-[11px] text-fg-3">
+                  {included} of {rows.length} selected
+                </span>
+              </div>
+
+              <DraftItemRows
+                rows={applied}
+                onPatch={patch}
+                onRemove={remove}
+                emptyText="None found. You can add them from the course page afterwards."
+              />
+            </div>
           </div>
         }
       />

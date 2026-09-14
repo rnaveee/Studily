@@ -8,6 +8,7 @@ public record CourseDraft(
         String professor,
         String location,
         List<DraftBlock> meetingBlocks,
+        List<DraftCategory> gradeCategories,
         List<DraftItem> items,
         List<String> warnings) {
 
@@ -24,6 +25,13 @@ public record CourseDraft(
             String title,
             String dueAt,
             Double weight,
-            String location) {
+            String location,
+            String category) {
+    }
+
+    public record DraftCategory(
+            String name,
+            String kind,
+            Double weight) {
     }
 }

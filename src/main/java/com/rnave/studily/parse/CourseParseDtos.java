@@ -13,7 +13,14 @@ public class CourseParseDtos {
             String title,
             String dueAt,
             Double weight,
-            String location) {
+            String location,
+            String category) {
+    }
+
+    public record DraftCategoryDto(
+            String name,
+            ItemType kind,
+            Double weight) {
     }
 
     public record CourseDraftDto(
@@ -23,6 +30,7 @@ public class CourseParseDtos {
             String professor,
             String location,
             List<MeetingBlockDto> meetingBlocks,
+            List<DraftCategoryDto> gradeCategories,
             List<DraftItemDto> items,
             List<String> warnings) {
     }

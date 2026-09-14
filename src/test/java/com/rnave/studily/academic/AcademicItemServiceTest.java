@@ -2,6 +2,7 @@ package com.rnave.studily.academic;
 
 import com.rnave.studily.academic.AcademicItemDtos.AcademicItemDto;
 import com.rnave.studily.academic.AcademicItemDtos.AcademicItemRequest;
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.course.Course;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.when;
 class AcademicItemServiceTest {
 
     private AcademicItemRepository itemRepository;
+    private GradeCategoryRepository categoryRepository;
     private CourseService courseService;
     private CurrentUser currentUser;
     private RecurrenceService recurrenceService;
@@ -36,10 +38,12 @@ class AcademicItemServiceTest {
     @BeforeEach
     void setUp() {
         itemRepository = mock(AcademicItemRepository.class);
+        categoryRepository = mock(GradeCategoryRepository.class);
         courseService = mock(CourseService.class);
         currentUser = mock(CurrentUser.class);
         recurrenceService = new RecurrenceService("America/Toronto");
-        itemService = new AcademicItemService(itemRepository, courseService, recurrenceService, currentUser);
+        itemService = new AcademicItemService(itemRepository, categoryRepository, courseService,
+                recurrenceService, currentUser);
 
         course = new Course();
         course.setId(5L);
@@ -70,7 +74,8 @@ class AcademicItemServiceTest {
         when(itemRepository.save(any(AcademicItem.class))).thenAnswer(inv -> inv.getArgument(0));
 
         AcademicItemRequest req = new AcademicItemRequest(
-                ItemType.ASSIGNMENT, "Homework 1", Instant.parse("2026-08-01T00:00:00Z"), null, 10.0, null, null, null, null);
+                ItemType.ASSIGNMENT, "Homework 1", Instant.parse("2026-08-01T00:00:00Z"), null, 10.0, null, null,
+                null, null, null);
 
         AcademicItemDto dto = itemService.create(5L, req);
 
@@ -85,11 +90,56 @@ class AcademicItemServiceTest {
         when(itemRepository.save(any(AcademicItem.class))).thenAnswer(inv -> inv.getArgument(0));
 
         AcademicItemRequest req = new AcademicItemRequest(
-                ItemType.EXAM, "Midterm", Instant.now(), "   ", null, null, null, ItemStatus.TODO, null);
+                ItemType.EXAM, "Midterm", Instant.now(), "   ", null, null, null, ItemStatus.TODO, null, null);
 
         AcademicItemDto dto = itemService.create(5L, req);
 
         assertThat(dto.location()).isNull();
+    }
+
+    @Test
+    void create_takesTheItemTypeFromItsWeightCategory() {
+        GradeCategory category = new GradeCategory();
+        category.setId(7L);
+        category.setCourse(course);
+        category.setName("Midterm");
+        category.setKind(ItemType.EXAM);
+        category.setWeight(25.0);
+        category.setColor("#ef4444");
+
+        when(courseService.requireOwned(5L)).thenReturn(course);
+        when(currentUser.id()).thenReturn(1L);
+        when(categoryRepository.findByIdAndCourseUserId(7L, 1L)).thenReturn(Optional.of(category));
+        when(itemRepository.save(any(AcademicItem.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AcademicItemDto dto = itemService.create(5L, new AcademicItemRequest(
+                ItemType.ASSIGNMENT, "Midterm 1", Instant.now(), null, 99.0, null, null, null, 7L, null));
+
+        assertThat(dto.type()).isEqualTo(ItemType.EXAM);
+        assertThat(dto.gradeCategoryId()).isEqualTo(7L);
+        assertThat(dto.gradeCategoryName()).isEqualTo("Midterm");
+        assertThat(dto.weight()).isNull();
+    }
+
+    @Test
+    void create_rejectsAWeightCategoryFromAnotherCourse() {
+        Course other = new Course();
+        other.setId(6L);
+
+        GradeCategory category = new GradeCategory();
+        category.setId(7L);
+        category.setCourse(other);
+        category.setName("Midterm");
+        category.setKind(ItemType.EXAM);
+        category.setWeight(25.0);
+
+        when(courseService.requireOwned(5L)).thenReturn(course);
+        when(currentUser.id()).thenReturn(1L);
+        when(categoryRepository.findByIdAndCourseUserId(7L, 1L)).thenReturn(Optional.of(category));
+
+        assertThatThrownBy(() -> itemService.create(5L, new AcademicItemRequest(
+                ItemType.EXAM, "Midterm 1", Instant.now(), null, null, null, null, null, 7L, null)))
+                .isInstanceOf(BadRequestException.class);
     }
 
     @Test
@@ -98,7 +148,7 @@ class AcademicItemServiceTest {
         when(itemRepository.findByIdAndCourseUserId(99L, 1L)).thenReturn(Optional.empty());
 
         AcademicItemRequest req = new AcademicItemRequest(
-                ItemType.ASSIGNMENT, "Title", Instant.now(), null, null, null, null, null, null);
+                ItemType.ASSIGNMENT, "Title", Instant.now(), null, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> itemService.update(99L, SeriesScope.OCCURRENCE, req)).isInstanceOf(NotFoundException.class);
     }

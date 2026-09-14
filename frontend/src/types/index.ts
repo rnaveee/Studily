@@ -134,6 +134,29 @@ export interface DraftItem {
   dueAt: string | null;
   weight?: number | null;
   location?: string | null;
+  category?: string | null;
+}
+
+export interface DraftCategory {
+  name: string;
+  kind: ItemType;
+  weight: number;
+}
+
+export interface GradeCategory {
+  id: number;
+  courseId: number;
+  name: string;
+  kind: ItemType;
+  weight: number | null;
+  color: string;
+  position: number;
+}
+
+export interface GradeCategoryRequest {
+  name: string;
+  weight?: number | null;
+  position?: number | null;
 }
 
 export type ParseRating = "ACCURATE" | "MINOR_FIXES" | "INACCURATE";
@@ -150,6 +173,7 @@ export interface CourseDraft {
   professor?: string | null;
   location?: string | null;
   meetingBlocks: MeetingBlock[];
+  gradeCategories: DraftCategory[];
   items: DraftItem[];
   warnings: string[];
 }
@@ -170,6 +194,9 @@ export interface AcademicItem {
   maxScore?: number | null;
   status: ItemStatus;
   canvasSynced?: boolean;
+  gradeCategoryId?: number | null;
+  gradeCategoryName?: string | null;
+  gradeCategoryColor?: string | null;
 }
 
 export interface AcademicItemRequest {
@@ -181,6 +208,7 @@ export interface AcademicItemRequest {
   score?: number | null;
   maxScore?: number | null;
   status: ItemStatus;
+  gradeCategoryId?: number | null;
   recurrence?: Recurrence | null;
 }
 

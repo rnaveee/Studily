@@ -1,8 +1,16 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import type { AcademicItemRequest, ItemStatus, ItemType, Recurrence } from "../types";
+import type {
+  AcademicItemRequest,
+  GradeCategory,
+  ItemStatus,
+  Recurrence,
+} from "../types";
 import RepeatPicker from "../features/calendar/RepeatPicker";
 import DateTimeSelect from "./DateTimeSelect";
+import GradeCategorySelect from "./GradeCategorySelect";
+import { trimPercent, useGradeCategories } from "../features/courses/weights";
+import { inferItemType } from "../lib/itemType";
 import { toLocalInput } from "../lib/format";
 
 const STATUSES: ItemStatus[] = ["TODO", "IN_PROGRESS", "DONE"];
@@ -34,7 +42,7 @@ export default function ItemForm({
   onCancel,
 }: Props) {
   const isEdit = initial != null;
-  const [type, setType] = useState<ItemType>(initial?.type ?? "ASSIGNMENT");
+  const [categoryId, setCategoryId] = useState<number | null>(initial?.gradeCategoryId ?? null);
   const [title, setTitle] = useState(initial?.title ?? "");
   const [dueLocal, setDueLocal] = useState(() => {
     if (initial?.dueAt) return toLocalInput(initial.dueAt);
@@ -48,6 +56,10 @@ export default function ItemForm({
     lockedCourseId ?? (courses[0]?.id ?? "")
   );
   const [repeat, setRepeat] = useState<Recurrence | null>(null);
+  const activeCourseId = lockedCourseId ?? (selectedCourseId === "" ? null : selectedCourseId);
+  const { data: categories } = useGradeCategories(activeCourseId);
+  const category: GradeCategory | null =
+    (categories ?? []).find((c) => c.id === categoryId) ?? null;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,11 +72,12 @@ export default function ItemForm({
     setError(null);
     try {
       await onSubmit(cid, {
-        type,
+        type: category?.kind ?? inferItemType(title),
         title: title.trim(),
         dueAt: new Date(dueLocal).toISOString(),
         location: location.trim() || null,
-        weight: weight ? Number(weight) : undefined,
+        weight: categoryId != null ? undefined : weight ? Number(weight) : undefined,
+        gradeCategoryId: categoryId,
         score: initial?.score ?? null,
         maxScore: initial?.maxScore ?? null,
         status,
@@ -101,15 +114,15 @@ export default function ItemForm({
         </div>
       )}
 
-      <div className="flex gap-2">
-        <div className="w-36">
-          <label className="field-label">Type</label>
-          <select className="input" value={type} onChange={(e) => setType(e.target.value as ItemType)}>
-            <option value="ASSIGNMENT">Assignment</option>
-            <option value="EXAM">Exam</option>
-          </select>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="sm:w-48">
+          <GradeCategorySelect
+            courseId={activeCourseId}
+            value={categoryId}
+            onChange={(next) => setCategoryId(next?.id ?? null)}
+          />
         </div>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <label className="field-label">Title</label>
           <input
             className="input"
@@ -123,22 +136,31 @@ export default function ItemForm({
       </div>
 
       <div className="flex gap-2">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <label className="field-label">Due date & time</label>
           <DateTimeSelect value={dueLocal} onChange={setDueLocal} required />
         </div>
-        <div className="w-24">
-          <label className="field-label">Weight %</label>
-          <input
-            className="input"
-            type="number"
-            value={weight}
-            onChange={(e) => setWeight(e.target.value)}
-            min={0}
-            max={100}
-          />
-        </div>
+        {categoryId == null && (
+          <div className="w-24">
+            <label className="field-label">Weight %</label>
+            <input
+              className="input"
+              type="number"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              min={0}
+              max={100}
+            />
+          </div>
+        )}
       </div>
+
+      {category?.weight != null && (
+        <p className="text-[11px] text-fg-3">
+          Graded under {category.name}, worth {trimPercent(category.weight)}% of the course split
+          evenly across everything in it.
+        </p>
+      )}
 
       <div className="flex gap-2">
         <div className="flex-1">
@@ -166,7 +188,13 @@ export default function ItemForm({
         )}
       </div>
 
-      {!isEdit && <RepeatPicker startLocal={dueLocal} weight={weight} onChange={setRepeat} />}
+      {!isEdit && (
+        <RepeatPicker
+          startLocal={dueLocal}
+          weight={categoryId == null ? weight : ""}
+          onChange={setRepeat}
+        />
+      )}
 
       {error && <p className="text-xs text-red animate-fade">{error}</p>}
 
