@@ -1,12 +1,13 @@
 import { api } from "../../lib/api";
 import { COURSE_COLORS } from "../../lib/courseColors";
+import { inferItemType } from "../../lib/itemType";
 import { trimPercent } from "./weights";
-import type { DraftCategory, DraftItem, GradeCategory } from "../../types";
+import type { DraftCategory, DraftItem, GradeCategory, ItemType } from "../../types";
 
 export interface CategoryRow {
   name: string;
-  kind: DraftCategory["kind"];
-  weight: number;
+  kind: ItemType;
+  weight: number | null;
   color: string;
   include: boolean;
   duplicate: boolean;
@@ -23,13 +24,22 @@ export function toCategoryRows(
   existing: GradeCategory[] = [],
 ): CategoryRow[] {
   const taken = new Set(existing.map((c) => key(c.name)));
-  return categories.map((category, index) => {
+  const usedColors = existing.map((c) => c.color);
+
+  return categories.map((category) => {
     const duplicate = taken.has(key(category.name));
+    const color =
+      COURSE_COLORS.find((c) => !usedColors.includes(c)) ??
+      COURSE_COLORS[usedColors.length % COURSE_COLORS.length];
+    if (!duplicate) usedColors.push(color);
+
     return {
       name: category.name,
-      kind: category.kind,
+      kind: inferItemType(category.name),
       weight: category.weight,
-      color: COURSE_COLORS[index % COURSE_COLORS.length],
+      color: duplicate
+        ? (existing.find((c) => key(c.name) === key(category.name))?.color ?? color)
+        : color,
       include: !duplicate,
       duplicate,
       itemCount: items.filter((i) => i.category != null && key(i.category) === key(category.name))
@@ -73,7 +83,7 @@ interface Props {
 export default function DraftCategoryRows({ rows, onPatch }: Props) {
   if (rows.length === 0) return null;
 
-  const total = chosen(rows).reduce((sum, r) => sum + r.weight, 0);
+  const total = chosen(rows).reduce((sum, r) => sum + (r.weight ?? 0), 0);
   const balanced = Math.abs(total - 100) <= 0.1;
 
   return (
@@ -108,7 +118,13 @@ export default function DraftCategoryRows({ rows, onPatch }: Props) {
               <span className="badge badge-muted shrink-0 text-[10px]">Already added</span>
             )}
 
-            <span className="shrink-0 font-mono tabular-nums">{trimPercent(row.weight)}%</span>
+            <span className="shrink-0 font-mono tabular-nums">
+              {row.weight == null ? (
+                <span className="font-sans text-[11px] text-fg-3">Label</span>
+              ) : (
+                `${trimPercent(row.weight)}%`
+              )}
+            </span>
 
             <span className="basis-full pl-6 text-[11px] text-fg-3 sm:basis-auto">
               {row.itemCount === 0

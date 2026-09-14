@@ -49,11 +49,9 @@ final class CourseDraftSchema {
         properties.put("name", Map.of("type", "string",
                 "description", "The row's label exactly as printed, for example "
                         + "'Quizzes, Assignments and Labs', 'Exam 1' or 'Project'."));
-        properties.put("kind", enumOf(List.of("EXAM", "ASSIGNMENT"),
-                "EXAM for a midterm, a final or any other sit-down test. ASSIGNMENT for everything "
-                        + "else, including labs, quizzes, projects and homework."));
-        properties.put("weight", Map.of("type", "number",
-                "description", "Percentage of the final grade this row is worth, for example 15 for 15%."));
+        properties.put("weight", nullable("number",
+                "Percentage of the final grade this row is worth, for example 15 for 15%. Null when "
+                        + "the row states no percentage."));
         return object(properties);
     }
 

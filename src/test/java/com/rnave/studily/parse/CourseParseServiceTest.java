@@ -238,11 +238,11 @@ class CourseParseServiceTest {
         CourseDraftDto dto = run(new CourseDraft(
                 "Circuits", null, null, null, List.of(),
                 List.of(
-                        new DraftCategory("Quizzes, Assignments and Labs", "ASSIGNMENT", 15.0),
-                        new DraftCategory("Exam 1", "EXAM", 25.0),
-                        new DraftCategory("Exam 2", "EXAM", 25.0),
-                        new DraftCategory("Exam 3", "EXAM", 25.0),
-                        new DraftCategory("Project", "ASSIGNMENT", 10.0)),
+                        new DraftCategory("Quizzes, Assignments and Labs", 15.0),
+                        new DraftCategory("Exam 1", 25.0),
+                        new DraftCategory("Exam 2", 25.0),
+                        new DraftCategory("Exam 3", 25.0),
+                        new DraftCategory("Project", 10.0)),
                 List.of(
                         new DraftItem("ASSIGNMENT", "Lab 1", "2026-09-19T23:59", null, null,
                                 "quizzes, assignments and labs"),
@@ -264,7 +264,7 @@ class CourseParseServiceTest {
     void parse_clearsAnItemWeightOnceItBelongsToACategory() {
         CourseDraftDto dto = run(new CourseDraft(
                 "Circuits", null, null, null, List.of(),
-                List.of(new DraftCategory("Assignments", "ASSIGNMENT", 100.0)),
+                List.of(new DraftCategory("Assignments", 100.0)),
                 List.of(new DraftItem("ASSIGNMENT", "Assignment 1", "2026-09-16T23:59", 12.0, null,
                         "Assignments")),
                 List.of()));
@@ -276,7 +276,7 @@ class CourseParseServiceTest {
     void parse_leavesAnUnmatchedCategoryNameOffTheItem() {
         CourseDraftDto dto = run(new CourseDraft(
                 "Circuits", null, null, null, List.of(),
-                List.of(new DraftCategory("Assignments", "ASSIGNMENT", 100.0)),
+                List.of(new DraftCategory("Assignments", 100.0)),
                 List.of(new DraftItem("EXAM", "Final", "2026-12-10T23:59", 40.0, null, "Final Exam")),
                 List.of()));
 
@@ -286,20 +286,25 @@ class CourseParseServiceTest {
     }
 
     @Test
-    void parse_dropsUnusableCategoriesAndDeduplicatesByName() {
+    void parse_keepsUnweightedRowsAsLabelsAndDeduplicatesByName() {
         CourseDraftDto dto = run(new CourseDraft(
                 "Circuits", null, null, null, List.of(),
                 Arrays.asList(
-                        new DraftCategory("Assignments", "ASSIGNMENT", 100.0),
-                        new DraftCategory("assignments", "EXAM", 20.0),
-                        new DraftCategory("  ", "ASSIGNMENT", 10.0),
-                        new DraftCategory("Bonus", "ASSIGNMENT", null),
-                        new DraftCategory("Impossible", "ASSIGNMENT", 140.0),
+                        new DraftCategory("Assignments", 100.0),
+                        new DraftCategory("assignments", 20.0),
+                        new DraftCategory("  ", 10.0),
+                        new DraftCategory("Bonus", null),
+                        new DraftCategory("Impossible", 140.0),
                         (DraftCategory) null),
                 List.of(), List.of()));
 
-        assertThat(dto.gradeCategories()).hasSize(1);
-        assertThat(dto.gradeCategories().get(0).kind()).isEqualTo(ItemType.ASSIGNMENT);
+        assertThat(dto.gradeCategories()).hasSize(3);
+        assertThat(dto.gradeCategories().get(0).name()).isEqualTo("Assignments");
+        assertThat(dto.gradeCategories().get(0).weight()).isEqualTo(100.0);
+        assertThat(dto.gradeCategories().get(1).name()).isEqualTo("Bonus");
+        assertThat(dto.gradeCategories().get(1).weight()).isNull();
+        assertThat(dto.gradeCategories().get(2).name()).isEqualTo("Impossible");
+        assertThat(dto.gradeCategories().get(2).weight()).isNull();
         assertThat(dto.warnings()).isEmpty();
     }
 
@@ -308,8 +313,8 @@ class CourseParseServiceTest {
         CourseDraftDto dto = run(new CourseDraft(
                 "Circuits", null, null, null, List.of(),
                 List.of(
-                        new DraftCategory("Assignments", "ASSIGNMENT", 15.0),
-                        new DraftCategory("Midterm", "EXAM", 30.0)),
+                        new DraftCategory("Assignments", 15.0),
+                        new DraftCategory("Midterm", 30.0)),
                 List.of(), List.of()));
 
         assertThat(dto.warnings()).containsExactly(

@@ -1,6 +1,7 @@
 package com.rnave.studily.parse;
 
 import com.rnave.studily.academic.ItemType;
+import com.rnave.studily.academic.ItemTypes;
 import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.course.CourseDtos.MeetingBlockDto;
@@ -136,19 +137,22 @@ public class CourseParseService {
                 continue;
             }
             String name = trim(category.name(), MAX_CATEGORY_NAME);
-            Double weight = category.weight();
-            if (name == null || weight == null || weight < 0 || weight > 100) {
+            if (name == null) {
                 continue;
             }
-            ItemType kind = parseEnum(ItemType.class, category.kind());
-            if (kind == null) {
-                kind = ItemType.ASSIGNMENT;
+            Double weight = category.weight();
+            if (weight != null && (weight < 0 || weight > 100)) {
+                weight = null;
             }
-            out.putIfAbsent(name.toLowerCase(Locale.ROOT), new DraftCategoryDto(name, kind, weight));
+            out.putIfAbsent(name.toLowerCase(Locale.ROOT),
+                    new DraftCategoryDto(name, ItemTypes.fromName(name), weight));
         }
 
-        double total = out.values().stream().mapToDouble(DraftCategoryDto::weight).sum();
-        if (!out.isEmpty() && Math.abs(total - 100) > 0.01 && warnings.size() < MAX_WARNINGS) {
+        double total = out.values().stream()
+                .filter(c -> c.weight() != null)
+                .mapToDouble(DraftCategoryDto::weight)
+                .sum();
+        if (total > 0 && Math.abs(total - 100) > 0.01 && warnings.size() < MAX_WARNINGS) {
             warnings.add("The grading scheme adds up to " + trimNumber(total)
                     + "%, not 100%. Check the weights before you save.");
         }

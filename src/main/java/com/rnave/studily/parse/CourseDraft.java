@@ -31,7 +31,6 @@ public record CourseDraft(
 
     public record DraftCategory(
             String name,
-            String kind,
             Double weight) {
     }
 }

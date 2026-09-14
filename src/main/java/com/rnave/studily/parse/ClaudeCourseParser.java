@@ -83,9 +83,9 @@ public class ClaudeCourseParser {
             Then set each item's category to the name of the row it is graded under, spelled \
             exactly as you spelled it in gradeCategories. Leave category null when no row covers \
             the item. Set an item's own weight only when its row covers that single item and \
-            nothing else. A row's kind is EXAM when it is a midterm, a final or any other \
-            sit-down test, and ASSIGNMENT otherwise. If the percentages do not add up to 100, \
-            report them as printed and add a warning saying what they total.
+            nothing else, and leave a row's weight null when the scheme states no percentage for \
+            it. If the percentages do not add up to 100, report them as printed and add a warning \
+            saying what they total.
 
             7. Items. Include lab reports and lab deliverables, graded assignments, quizzes, \
             projects and exams that have a deadline or a scheduled date. Work through the whole \
