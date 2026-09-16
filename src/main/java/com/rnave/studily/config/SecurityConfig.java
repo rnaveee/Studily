@@ -97,8 +97,14 @@ public class SecurityConfig {
     }
 
     private AuthenticationEntryPoint unauthorizedEntryPoint() {
-        return (request, response, authException) ->
-                response.sendError(HttpStatus.UNAUTHORIZED.value(), "Unauthorized");
+        return (request, response, authException) -> {
+            response.setStatus(HttpStatus.UNAUTHORIZED.value());
+            response.setContentType("application/json");
+            response.getWriter().write(
+                    "{\"status\":401,\"error\":\"Unauthorized\",\"code\":\""
+                            + UnauthorizedException.SESSION_EXPIRED
+                            + "\",\"message\":\"Your session has expired\"}");
+        };
     }
 
     @Bean

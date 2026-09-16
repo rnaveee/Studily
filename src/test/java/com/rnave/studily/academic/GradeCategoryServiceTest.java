@@ -72,7 +72,7 @@ class GradeCategoryServiceTest {
         when(courseService.requireOwned(5L)).thenThrow(new NotFoundException("Course not found"));
 
         assertThatThrownBy(() -> categoryService.create(5L,
-                new GradeCategoryRequest("Assignments", 15.0, null)))
+                new GradeCategoryRequest("Assignments", 15.0, null, null)))
                 .isInstanceOf(NotFoundException.class);
         verify(categoryRepository, never()).save(any());
     }
@@ -83,7 +83,7 @@ class GradeCategoryServiceTest {
         when(categoryRepository.save(any(GradeCategory.class))).thenAnswer(inv -> inv.getArgument(0));
 
         GradeCategoryDto dto = categoryService.create(5L,
-                new GradeCategoryRequest("  Assignments  ", 15.0, null));
+                new GradeCategoryRequest("  Assignments  ", 15.0, null, null));
 
         assertThat(dto.name()).isEqualTo("Assignments");
         assertThat(dto.color()).isEqualTo("#3b82f6");
@@ -93,12 +93,51 @@ class GradeCategoryServiceTest {
     }
 
     @Test
+    void create_keepsAChosenColourInsteadOfTheAutomaticOne() {
+        when(courseService.requireOwned(5L)).thenReturn(course);
+        when(categoryRepository.save(any(GradeCategory.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        GradeCategoryDto dto = categoryService.create(5L,
+                new GradeCategoryRequest("Assignments", 15.0, null, "#ec4899"));
+
+        assertThat(dto.color()).isEqualTo("#ec4899");
+    }
+
+    @Test
+    void update_changesTheColourWhenOneIsGiven() {
+        GradeCategory category = existing(7L, "Assignments", ItemType.ASSIGNMENT, 15.0);
+        when(currentUser.id()).thenReturn(1L);
+        when(categoryRepository.findByIdAndCourseUserId(7L, 1L)).thenReturn(Optional.of(category));
+        when(categoryRepository.save(any(GradeCategory.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(itemRepository.findByGradeCategoryId(7L)).thenReturn(List.of());
+
+        GradeCategoryDto dto = categoryService.update(7L,
+                new GradeCategoryRequest("Assignments", 15.0, null, "#0ea5e9"));
+
+        assertThat(dto.color()).isEqualTo("#0ea5e9");
+    }
+
+    @Test
+    void update_leavesTheColourAloneWhenNoneIsGiven() {
+        GradeCategory category = existing(7L, "Assignments", ItemType.ASSIGNMENT, 15.0);
+        when(currentUser.id()).thenReturn(1L);
+        when(categoryRepository.findByIdAndCourseUserId(7L, 1L)).thenReturn(Optional.of(category));
+        when(categoryRepository.save(any(GradeCategory.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(itemRepository.findByGradeCategoryId(7L)).thenReturn(List.of());
+
+        GradeCategoryDto dto = categoryService.update(7L,
+                new GradeCategoryRequest("Assignments", 20.0, null, null));
+
+        assertThat(dto.color()).isEqualTo("#3b82f6");
+    }
+
+    @Test
     void create_rejectsADuplicateNameOnTheSameCourse() {
         when(courseService.requireOwned(5L)).thenReturn(course);
         when(categoryRepository.existsByCourseIdAndNameIgnoreCase(5L, "Assignments")).thenReturn(true);
 
         assertThatThrownBy(() -> categoryService.create(5L,
-                new GradeCategoryRequest("Assignments", 15.0, null)))
+                new GradeCategoryRequest("Assignments", 15.0, null, null)))
                 .isInstanceOf(ConflictException.class);
     }
 
@@ -111,7 +150,7 @@ class GradeCategoryServiceTest {
         when(categoryRepository.save(any(GradeCategory.class))).thenAnswer(inv -> inv.getArgument(0));
         when(itemRepository.findByGradeCategoryId(7L)).thenReturn(List.of(item));
 
-        categoryService.update(7L, new GradeCategoryRequest("Midterm", 25.0, null));
+        categoryService.update(7L, new GradeCategoryRequest("Midterm", 25.0, null, null));
 
         assertThat(item.getType()).isEqualTo(ItemType.EXAM);
         verify(itemRepository).save(item);

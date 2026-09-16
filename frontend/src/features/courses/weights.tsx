@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
+import ColorSwatches from "../../components/ColorSwatches";
 import type { GradeCategory, GradeCategoryRequest } from "../../types";
 
 export function weightsKey(courseId: number) {
@@ -44,6 +45,7 @@ export function WeightForm({
   const [weight, setWeight] = useState(
     initial?.weight != null ? trimPercent(initial.weight) : "",
   );
+  const [color, setColor] = useState<string | null>(initial?.color ?? null);
   const [localError, setLocalError] = useState<string | null>(null);
 
   function submit(e: React.FormEvent) {
@@ -60,7 +62,12 @@ export function WeightForm({
       return;
     }
     setLocalError(null);
-    onSubmit({ name: trimmed, weight: blank ? null : value, position: initial?.position ?? null });
+    onSubmit({
+      name: trimmed,
+      weight: blank ? null : value,
+      position: initial?.position ?? null,
+      color,
+    });
   }
 
   return (
@@ -95,6 +102,11 @@ export function WeightForm({
             step="any"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="field-label mb-2">Color</label>
+        <ColorSwatches value={color} onChange={setColor} allowAuto={!initial} autoLabel="Pick for me" />
       </div>
 
       <p className="text-[11px] text-fg-3">

@@ -157,6 +157,7 @@ export interface GradeCategoryRequest {
   name: string;
   weight?: number | null;
   position?: number | null;
+  color?: string | null;
 }
 
 export type ParseRating = "ACCURATE" | "MINOR_FIXES" | "INACCURATE";

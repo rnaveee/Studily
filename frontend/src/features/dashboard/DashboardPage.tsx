@@ -5,6 +5,7 @@ import { X, BookOpen, CalendarDays, Brain, User, ArrowRight, Pencil } from "luci
 import { api } from "../../lib/api";
 import { useAuth, useRequireAuth } from "../../lib/auth";
 import { countdown, dueUrgency, formatDateTime, hhmm } from "../../lib/format";
+import { itemColor } from "../../lib/itemType";
 import { staggerDelay } from "../../lib/motion";
 import {
   DAYS,
@@ -402,10 +403,8 @@ export default function DashboardPage() {
                             to={`/courses/${it.courseId}`}
                             className="block truncate rounded-sm border-l-2 px-1 py-0.5 text-[9px] leading-tight transition-opacity hover:opacity-75"
                             style={{
-                              borderColor: it.type === "EXAM" ? "var(--red)" : "var(--green)",
-                              background: it.type === "EXAM"
-                                ? "color-mix(in srgb, var(--red) 10%, transparent)"
-                                : "color-mix(in srgb, var(--green) 10%, transparent)",
+                              borderColor: itemColor(it),
+                              background: `color-mix(in srgb, ${itemColor(it)} 10%, transparent)`,
                               color: "var(--fg-2)",
                             }}
                             title={`${it.title} · ${it.courseName} · due ${formatDateTime(it.dueAt)}`}

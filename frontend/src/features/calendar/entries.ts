@@ -1,3 +1,4 @@
+import { itemColor } from "../../lib/itemType";
 import type { AcademicItem, CalendarEvent } from "../../types";
 
 export interface Entry {
@@ -14,7 +15,7 @@ export interface Entry {
 }
 
 export function itemEntry(it: AcademicItem): Entry {
-  const accent = it.type === "EXAM" ? "var(--red)" : "var(--green)";
+  const accent = itemColor(it);
   return {
     key: `item-${it.id}`,
     title: it.title,

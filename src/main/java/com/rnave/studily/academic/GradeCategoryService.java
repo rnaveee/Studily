@@ -93,5 +93,8 @@ public class GradeCategoryService {
         category.setKind(ItemTypes.fromName(name));
         category.setWeight(req.weight());
         category.setPosition(req.position() == null ? 0 : req.position());
+        if (req.color() != null) {
+            category.setColor(req.color());
+        }
     }
 }

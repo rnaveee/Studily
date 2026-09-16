@@ -3,9 +3,9 @@ package com.rnave.studily.friend;
 import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
+import com.rnave.studily.config.ForbiddenException;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.config.PageResponse;
-import com.rnave.studily.config.UnauthorizedException;
 import com.rnave.studily.friend.FriendDtos.FriendRequestDto;
 import com.rnave.studily.friend.FriendDtos.PublicUserDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipDto;
@@ -146,7 +146,7 @@ public class FriendService {
         Long me = currentUser.id();
         FriendRequest req = requireParticipant(requestId, me);
         if (!req.getAddressee().getId().equals(me)) {
-            throw new UnauthorizedException("Only the recipient can accept this request");
+            throw new ForbiddenException("Only the recipient can accept this request");
         }
         if (req.getStatus() != FriendRequestStatus.PENDING) {
             throw new ConflictException("Request is no longer pending");
@@ -166,7 +166,7 @@ public class FriendService {
         FriendRequest req = friendRequestRepository.findById(requestId)
                 .orElseThrow(() -> new NotFoundException("Friend request not found"));
         if (!req.getRequester().getId().equals(me) && !req.getAddressee().getId().equals(me)) {
-            throw new UnauthorizedException("Not part of this friend request");
+            throw new ForbiddenException("Not part of this friend request");
         }
         return req;
     }

@@ -31,7 +31,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<Map<String, Object>> handleUnauthorized(UnauthorizedException ex) {
-        return body(HttpStatus.UNAUTHORIZED, ex.getMessage());
+        return body(HttpStatus.UNAUTHORIZED, ex.getMessage(), ex.getCode());
     }
 
     @ExceptionHandler(ForbiddenException.class)
@@ -69,11 +69,18 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<Map<String, Object>> body(HttpStatus status, String message) {
+        return body(status, message, null);
+    }
+
+    private ResponseEntity<Map<String, Object>> body(HttpStatus status, String message, String code) {
         Map<String, Object> map = new HashMap<>();
         map.put("timestamp", Instant.now().toString());
         map.put("status", status.value());
         map.put("error", status.getReasonPhrase());
         map.put("message", message);
+        if (code != null) {
+            map.put("code", code);
+        }
         return ResponseEntity.status(status).body(map);
     }
 }

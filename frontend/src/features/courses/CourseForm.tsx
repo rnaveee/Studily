@@ -389,7 +389,7 @@ export default function CourseForm({
                       <li key={i} className="flex items-center gap-1.5 text-[11px] text-fg-2">
                         <span
                           className="h-1.5 w-1.5 shrink-0 rounded-full"
-                          style={{ backgroundColor: it.type === "EXAM" ? "var(--red)" : "var(--green)" }}
+                          style={{ backgroundColor: "var(--fg-3)" }}
                         />
                         <span className="min-w-0 truncate">{it.title}</span>
                         <span className="ml-auto shrink-0 whitespace-nowrap text-fg-3">

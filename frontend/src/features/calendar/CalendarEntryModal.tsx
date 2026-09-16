@@ -17,7 +17,7 @@ import CategorySelect from "../../components/CategorySelect";
 import DateTimeSelect from "../../components/DateTimeSelect";
 import GradeCategorySelect from "../../components/GradeCategorySelect";
 import { useGradeCategories } from "../courses/weights";
-import { inferItemType } from "../../lib/itemType";
+import { inferItemType, itemColor } from "../../lib/itemType";
 import Modal from "../../components/Modal";
 import ScopeChoice from "./ScopeChoice";
 import { invalidateItemQueries } from "../../lib/invalidateItems";
@@ -94,9 +94,9 @@ export default function CalendarEntryModal({
     || deleteEvent.isPending || deleteItem.isPending;
   const color = event
     ? (event.categoryColor ?? "var(--accent)")
-    : item?.type === "EXAM"
-      ? "var(--red)"
-      : "var(--green)";
+    : item
+      ? itemColor(item)
+      : "var(--accent)";
   const badge = event
     ? (event.categoryName ?? "Event")
     : item?.type === "EXAM"

@@ -66,6 +66,7 @@ export async function postCategories(
         name: row.name,
         weight: row.weight,
         position: index,
+        color: row.color,
       });
       byName.set(key(saved.name), saved.id);
     } catch {

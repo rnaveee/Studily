@@ -24,6 +24,20 @@ export function setToken(token: string | null) {
   else localStorage.removeItem(TOKEN_KEY);
 }
 
+export function tokenExpiresAt(): number | null {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    const exp = JSON.parse(json)?.exp;
+    return typeof exp === "number" ? exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 export function getAdminToken(): string | null {
   return sessionStorage.getItem(ADMIN_TOKEN_KEY);
 }
@@ -145,7 +159,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
       throw new ApiError(res.status, message, code);
     }
 
-    if (res.status === 401 && getToken()) {
+    if (res.status === 401 && code === "SESSION_EXPIRED" && getToken()) {
       setToken(null);
       setAdminToken(null);
       setGuestMode(false);

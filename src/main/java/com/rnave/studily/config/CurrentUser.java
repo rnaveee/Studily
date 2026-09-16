@@ -26,7 +26,8 @@ public class CurrentUser {
 
     public User entity() {
         return userRepository.findById(id())
-                .orElseThrow(() -> new UnauthorizedException("Authenticated user no longer exists"));
+                .orElseThrow(() -> new UnauthorizedException(
+                        "Authenticated user no longer exists", UnauthorizedException.SESSION_EXPIRED));
     }
 
     public Optional<User> maybe() {

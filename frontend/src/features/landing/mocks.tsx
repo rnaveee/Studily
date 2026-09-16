@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Bell, CalendarDays, FileText, MessagesSquare } from "lucide-react";
 import { demoCourseGrades, demoCourses, demoFlashcardSets, demoItems, demoWeek } from "../../lib/demo";
 import { hhmm } from "../../lib/format";
+import { itemColor } from "../../lib/itemType";
 import { prefersReducedMotion } from "../../lib/motion";
 import { revealClass, useReveal } from "../../lib/useReveal";
 import { MEETING_KIND_LABEL, type DayOfWeek } from "../../types";
@@ -211,7 +212,7 @@ export function MockDueList() {
             >
               <span
                 className="h-8 w-[3px] shrink-0 rounded-full"
-                style={{ background: it.type === "EXAM" ? "var(--red)" : "var(--green)" }}
+                style={{ background: itemColor(it) }}
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[12px] font-medium text-fg">{it.title}</p>

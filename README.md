@@ -110,7 +110,7 @@ handshake at `/ws` authenticates via the same JWT.
 | `PORT` | `8080` | Server port (Railway injects this) |
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | `localhost` / `5432` / `studily` / `postgres` / `postgres` | Postgres connection |
 | `JWT_SECRET` | dev placeholder | HS256 key — **must be ≥64 chars in prod**, app refuses to boot otherwise |
-| `JWT_EXPIRATION_MS` | `86400000` | Token lifetime |
+| `JWT_EXPIRATION_MS` | `2592000000` | Token lifetime (30 days; refreshed on app open) |
 | `CORS_ORIGINS` | `http://localhost:5173` | Allowed dev origin(s); prod is same-origin |
 | `APP_TIMEZONE` | `America/Toronto` | Timezone for reminder scheduling |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | unset (push disabled) | Web Push keypair (`npx web-push generate-vapid-keys`) |

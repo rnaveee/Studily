@@ -4,7 +4,7 @@ import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
-import com.rnave.studily.config.UnauthorizedException;
+import com.rnave.studily.config.ForbiddenException;
 import com.rnave.studily.friend.FriendDtos.FriendRequestDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipStatus;
@@ -148,7 +148,7 @@ class FriendServiceTest {
         when(friendRequestRepository.findById(10L)).thenReturn(Optional.of(req));
 
         assertThatThrownBy(() -> friendService.accept(10L))
-                .isInstanceOf(UnauthorizedException.class);
+                .isInstanceOf(ForbiddenException.class);
     }
 
     @Test
@@ -177,7 +177,7 @@ class FriendServiceTest {
         when(friendRequestRepository.findById(10L)).thenReturn(Optional.of(req));
 
         assertThatThrownBy(() -> friendService.remove(10L))
-                .isInstanceOf(UnauthorizedException.class);
+                .isInstanceOf(ForbiddenException.class);
         verify(friendRequestRepository, never()).delete(any());
     }
 

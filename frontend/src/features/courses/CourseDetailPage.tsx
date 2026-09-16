@@ -20,6 +20,7 @@ import {
   type PublicUser,
 } from "../../types";
 import { courseLocations, formatDate, formatDateTime, hhmm } from "../../lib/format";
+import { itemColor } from "../../lib/itemType";
 import { staggerDelay } from "../../lib/motion";
 import { invalidateItemQueries } from "../../lib/invalidateItems";
 import ItemModal from "./ItemModal";
@@ -494,11 +495,7 @@ function ItemRow({
       <div className="flex items-center gap-2">
         <span
           className="h-2 w-2 shrink-0 rounded-full"
-          style={{
-            backgroundColor:
-              item.gradeCategoryColor ??
-              (item.type === "EXAM" ? "var(--red)" : "var(--green)"),
-          }}
+          style={{ backgroundColor: itemColor(item) }}
         />
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium text-fg">{item.title}</div>

@@ -56,6 +56,15 @@ public class AccountController {
         this.adminGuard = adminGuard;
     }
 
+    @PostMapping("/token")
+    @Transactional(readOnly = true)
+    public AuthResponse refreshToken() {
+        User user = currentUser.entity();
+        return new AuthResponse(
+                jwtService.generateToken(user.getId(), user.getTokenVersion()),
+                UserDto.from(user, adminGuard.isAdmin(user)));
+    }
+
     @PostMapping("/verification-email")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Transactional

@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 40,
+    date: "2026-09-16",
+    title: "Pick your own weight colours, and stay signed in",
+    description:
+      "Every weight on a course still gets a colour picked for it, so you never have to think about it \u2014 but now you can change it. Editing a weight shows the palette with its current colour marked, and there is a custom swatch at the end if you want a shade that is not on offer. Creating one keeps a Pick for me chip selected by default, so nothing changes unless you want it to. Colours chosen while the outline reader is showing you a grading scheme are now the colours you actually get, instead of being reshuffled on save. Alongside that, exams have stopped being red and assignments green. That colouring fought with your own choices \u2014 make a weight red and your screen had red meaning two different things at once \u2014 so an item now simply takes the colour of the weight it counts towards, falling back to its course colour. Which one is an exam is still written on it. Separately, signing in should stick now. Sessions used to quietly expire after a day, so opening Studily on Monday after a weekend away meant signing in again; they now last a month and quietly renew whenever you open the app, so an ordinary week of use never ends at the login screen. Opening Studily with no signal, or while the server is still waking up, used to look exactly like being signed out \u2014 it now says it cannot reach us and offers a Retry, keeping you signed in. And typing your current password wrongly when changing it, or fumbling a code, no longer throws you out of the app entirely.",
+  },
+  {
     version: 39,
     date: "2026-09-14",
     title: "Weights that match your grading scheme",
