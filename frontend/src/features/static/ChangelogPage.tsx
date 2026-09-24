@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 41,
+    date: "2026-09-23",
+    title: "Ten automatic imports a month, and chat that behaves",
+    description:
+      "Automatic course creation now comes with ten imports a month, which covers a full course load with room for the extra lab schedules and updated syllabi that turn up mid-term. An import is one go at reading your documents, so an outline and a separate course calendar uploaded together count once. The import screens show how many you have left, and they reset on the 1st. If a classmate has already imported the exact same outline, you get the result instantly and it does not count against yours at all. Files that clearly are not a course outline are turned away straight off, with nothing used up. In chat, a long link or an unbroken string no longer stretches the conversation off the side of the screen — it wraps inside its bubble. Pasting a screenshot, dropping an image or picking a file no longer sends it the moment you let go: it waits above the message box with a preview so you can add a note, remove it, or change your mind before you hit send. And copying cells out of Excel, Word or Google Docs pastes the text you copied instead of quietly sending a picture of it.",
+  },
+  {
     version: 40,
     date: "2026-09-16",
     title: "Pick your own weight colours, and stay signed in",

@@ -10,7 +10,18 @@ public record CourseDraft(
         List<DraftBlock> meetingBlocks,
         List<DraftCategory> gradeCategories,
         List<DraftItem> items,
-        List<String> warnings) {
+        List<String> warnings,
+        Boolean isCourseOutline) {
+
+    public CourseDraft(String name, String code, String professor, String location,
+                       List<DraftBlock> meetingBlocks, List<DraftCategory> gradeCategories,
+                       List<DraftItem> items, List<String> warnings) {
+        this(name, code, professor, location, meetingBlocks, gradeCategories, items, warnings, true);
+    }
+
+    public boolean notAnOutline() {
+        return Boolean.FALSE.equals(isCourseOutline);
+    }
 
     public record DraftBlock(
             String day,

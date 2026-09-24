@@ -8,6 +8,12 @@ import ParseDropzone from "./ParseDropzone";
 import ParseFeedbackPrompt from "./ParseFeedbackPrompt";
 import { api } from "../../lib/api";
 import { staggerDelay } from "../../lib/motion";
+import {
+  PARSE_AVAILABILITY_KEY,
+  parseBlocked,
+  parseQuotaText,
+  useParseAvailability,
+} from "./parseAvailability";
 import type { Course, CourseDraft, Semester } from "../../types";
 
 export default function CourseAutoImportPage() {
@@ -36,7 +42,11 @@ export default function CourseAutoImportPage() {
       return api.post<CourseDraft>("/courses/parse", form);
     },
     onSuccess: setDraft,
+    onSettled: () => qc.invalidateQueries({ queryKey: PARSE_AVAILABILITY_KEY }),
   });
+  const { data: availability } = useParseAvailability();
+  const blocked = parseBlocked(availability);
+  const quota = parseQuotaText(availability);
 
   function saved(course: Course) {
     qc.invalidateQueries({ queryKey: ["courses"] });
@@ -131,7 +141,7 @@ export default function CourseAutoImportPage() {
           <button
             type="button"
             onClick={() => parse.mutate()}
-            disabled={!hasInput || parse.isPending}
+            disabled={!hasInput || parse.isPending || blocked}
             className="btn btn-primary"
           >
             <Sparkles size={13} />
@@ -141,6 +151,9 @@ export default function CourseAutoImportPage() {
             Cancel
           </button>
         </div>
+        {quota && (
+          <p className={`text-[11px] ${blocked ? "text-red" : "text-fg-3"}`}>{quota}</p>
+        )}
 
         {parse.isPending && (
           <p className="text-[11px] text-fg-3 animate-fade">

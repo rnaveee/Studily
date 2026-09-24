@@ -22,6 +22,10 @@ final class CourseDraftSchema {
 
     private static Map<String, Object> root() {
         Map<String, Object> properties = new LinkedHashMap<>();
+        properties.put("isCourseOutline", Map.of("type", "boolean",
+                "description", "True when the document is a course outline, syllabus, course schedule "
+                        + "or course web page. False for anything else, in which case every other field "
+                        + "is null or empty apart from one warning."));
         properties.put("name", nullable("string",
                 "Course title without the code, for example 'Electric Circuits I'."));
         properties.put("code", nullable("string",

@@ -28,6 +28,7 @@ public class ClaudeCourseParser {
 
     private static final Logger log = LoggerFactory.getLogger(ClaudeCourseParser.class);
 
+    static final int PROMPT_VERSION = 2;
     private static final long MAX_TOKENS = 16_000;
     private static final String UNREADABLE =
             "Could not read that document. Try again, or add the course manually.";
@@ -97,9 +98,12 @@ public class ClaudeCourseParser {
 
             8. The professor is the instructor of record, never a teaching assistant.
 
-            9. If the document is not a course outline, or carries too little to work with, return \
-            nulls and empty lists with a warning saying so. A nearly empty result is correct when \
-            the source is thin; a fabricated one never is.
+            9. Decide isCourseOutline first. If the document is not about a university course at \
+            all, such as a biography, a meme, a receipt or unrelated text, set it to false and \
+            stop: return nulls, empty lists and a single short warning, and do not describe the \
+            document. If it is a course document but carries too little to work with, set it to \
+            true and return nulls and empty lists with a warning saying so. A nearly empty result \
+            is correct when the source is thin; a fabricated one never is.
 
             Keep warnings short, specific and addressed to the student.
             """;

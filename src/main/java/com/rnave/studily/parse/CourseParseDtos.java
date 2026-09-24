@@ -35,7 +35,7 @@ public class CourseParseDtos {
             List<String> warnings) {
     }
 
-    public record ParseAvailabilityDto(boolean enabled) {
+    public record ParseAvailabilityDto(boolean enabled, int monthlyLimit, int remaining, boolean paused) {
     }
 
     public record ParseAccuracyDto(Long successRate, long sampleSize) {

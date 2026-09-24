@@ -4,6 +4,7 @@ import Modal from "../../components/Modal";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import type { ParseAccuracy } from "../../types";
+import { parseBlocked, parseQuotaText, useParseAvailability } from "./parseAvailability";
 
 interface Props {
   onManual: () => void;
@@ -13,14 +14,13 @@ interface Props {
 
 export default function NewCourseChooser({ onManual, onAutomatic, onClose }: Props) {
   const { user } = useAuth();
-  const { data: availability } = useQuery({
-    queryKey: ["course-parse-enabled"],
-    queryFn: () => api.get<{ enabled: boolean }>("/courses/parse/enabled"),
-    staleTime: 5 * 60_000,
-  });
+  const { data: availability } = useParseAvailability();
 
   const autoEnabled = availability?.enabled ?? false;
   const verified = user?.emailVerified ?? false;
+  const blocked = parseBlocked(availability);
+  const usable = verified && !blocked;
+  const quota = parseQuotaText(availability);
 
   const { data: accuracy } = useQuery({
     queryKey: ["course-parse-accuracy"],
@@ -36,9 +36,9 @@ export default function NewCourseChooser({ onManual, onAutomatic, onClose }: Pro
           <button
             type="button"
             onClick={onAutomatic}
-            disabled={!verified}
-            className={verified ? "card card-lift p-4 text-left" : "card p-4 text-left"}
-            style={verified ? undefined : { opacity: 0.6, cursor: "not-allowed" }}
+            disabled={!usable}
+            className={usable ? "card card-lift p-4 text-left" : "card p-4 text-left"}
+            style={usable ? undefined : { opacity: 0.6, cursor: "not-allowed" }}
           >
             <div className="flex items-center gap-2">
               <span
@@ -58,6 +58,9 @@ export default function NewCourseChooser({ onManual, onAutomatic, onClose }: Pro
                 ? "You check everything before it saves."
                 : "Verify your email to unlock this."}
             </p>
+            {verified && quota && (
+              <p className={`mt-1 text-[11px] ${blocked ? "text-red" : "text-fg-3"}`}>{quota}</p>
+            )}
             {accuracy?.successRate != null && (
               <p className="mt-2 text-[11px] font-medium text-accent">
                 Studily users report that this feature works {accuracy.successRate}% of the time.

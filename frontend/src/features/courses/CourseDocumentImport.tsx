@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Sparkles } from "lucide-react";
 import Modal from "../../components/Modal";
 import ParseDropzone from "./ParseDropzone";
@@ -18,6 +18,12 @@ import DraftCategoryRows, {
   type CategoryRow,
 } from "./draftCategories";
 import { useGradeCategories } from "./weights";
+import {
+  PARSE_AVAILABILITY_KEY,
+  parseBlocked,
+  parseQuotaText,
+  useParseAvailability,
+} from "./parseAvailability";
 import {
   detailChanges,
   isDuplicateItem,
@@ -54,11 +60,9 @@ export default function CourseDocumentImport({ course, items, onChange }: Props)
   const [draft, setDraft] = useState<CourseDraft | null>(null);
   const [ratingId, setRatingId] = useState<number | null>(null);
 
-  const { data: availability } = useQuery({
-    queryKey: ["course-parse-enabled"],
-    queryFn: () => api.get<{ enabled: boolean }>("/courses/parse/enabled"),
-    staleTime: 5 * 60_000,
-  });
+  const { data: availability } = useParseAvailability();
+  const blocked = parseBlocked(availability);
+  const quota = parseQuotaText(availability);
 
   const parse = useMutation({
     mutationFn: () => {
@@ -70,6 +74,7 @@ export default function CourseDocumentImport({ course, items, onChange }: Props)
       return api.post<CourseDraft>("/courses/parse", form);
     },
     onSuccess: setDraft,
+    onSettled: () => qc.invalidateQueries({ queryKey: PARSE_AVAILABILITY_KEY }),
   });
 
   if (!(availability?.enabled ?? false)) {
@@ -123,12 +128,15 @@ export default function CourseDocumentImport({ course, items, onChange }: Props)
           <button
             type="button"
             onClick={() => parse.mutate()}
-            disabled={(files.length === 0 && !text.trim()) || parse.isPending}
+            disabled={(files.length === 0 && !text.trim()) || parse.isPending || blocked}
             className="btn btn-primary mt-3"
           >
             <Sparkles size={13} />
             {parse.isPending ? "Reading this…" : "Read this"}
           </button>
+          {quota && (
+            <p className={`mt-2 text-[11px] ${blocked ? "text-red" : "text-fg-3"}`}>{quota}</p>
+          )}
         </>
       )}
 

@@ -51,7 +51,7 @@ public class CourseParseController {
 
     @GetMapping("/enabled")
     public ParseAvailabilityDto enabled() {
-        return new ParseAvailabilityDto(courseParseService.enabled());
+        return courseParseService.availability();
     }
 
     @GetMapping("/accuracy")

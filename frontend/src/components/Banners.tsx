@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Eye, FileText, MailWarning, Megaphone, Smartphone, Sparkles, Timer, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { api } from "../lib/api";
+import type { ParseAvailability } from "../types";
 import { formatMs, pomodoroColor, usePomodoro } from "../lib/pomodoro";
 
 const BETA_KEY = "studily.banner.beta";
@@ -35,7 +36,7 @@ export default function Banners() {
 
   const { data: parseAvailability } = useQuery({
     queryKey: ["course-parse-enabled"],
-    queryFn: () => api.get<{ enabled: boolean }>("/courses/parse/enabled"),
+    queryFn: () => api.get<ParseAvailability>("/courses/parse/enabled"),
     staleTime: 5 * 60_000,
     enabled: !!user && !parserDismissed,
   });

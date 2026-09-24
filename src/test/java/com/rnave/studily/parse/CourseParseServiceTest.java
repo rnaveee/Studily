@@ -3,7 +3,9 @@ package com.rnave.studily.parse;
 import com.rnave.studily.academic.ItemType;
 import com.rnave.studily.course.DayOfWeek;
 import com.rnave.studily.course.MeetingKind;
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
+import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.parse.ClaudeCourseParser.ParseOutcome;
 import com.rnave.studily.parse.CourseDraft.DraftBlock;
 import com.rnave.studily.parse.CourseDraft.DraftCategory;
@@ -17,19 +19,32 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class CourseParseServiceTest {
 
     private static final String ZONE = "America/Vancouver";
 
+    private static final String OUTLINE_TEXT =
+            "ENSC 204 Course Outline. Grading: Exam 1 25%. Lectures Tuesdays, 9-SEP.";
+
     private DocumentExtractor extractor;
     private ClaudeCourseParser parser;
+    private CourseParseUsageRepository usageRepository;
+    private CourseParseLimits limits;
+    private CourseParseCache cache;
     private CourseParseService service;
 
     @BeforeEach
@@ -37,19 +52,22 @@ class CourseParseServiceTest {
         extractor = mock(DocumentExtractor.class);
         parser = mock(ClaudeCourseParser.class);
         SemesterService semesterService = mock(SemesterService.class);
-        CourseParseUsageRepository usageRepository = mock(CourseParseUsageRepository.class);
+        usageRepository = mock(CourseParseUsageRepository.class);
         CurrentUser currentUser = mock(CurrentUser.class);
+        limits = mock(CourseParseLimits.class);
+        cache = mock(CourseParseCache.class);
         service = new CourseParseService(
-                extractor, parser, semesterService, usageRepository, currentUser);
+                extractor, parser, semesterService, usageRepository, currentUser, limits, cache);
 
         when(extractor.extract(any(), any()))
-                .thenReturn(new ExtractedInput("outline text", List.of()));
+                .thenReturn(new ExtractedInput(OUTLINE_TEXT, List.of()));
+        when(cache.lookup(anyString())).thenReturn(Optional.empty());
     }
 
     private CourseDraftDto run(CourseDraft draft) {
         when(parser.parse(any(), anyString()))
                 .thenReturn(new ParseOutcome(draft, "claude-sonnet-5", 2400, 900));
-        return service.parse(List.of(), "outline text", null, ZONE);
+        return service.parse(List.of(), "x", null, ZONE);
     }
 
     @Test
@@ -319,6 +337,73 @@ class CourseParseServiceTest {
 
         assertThat(dto.warnings()).containsExactly(
                 "The grading scheme adds up to 45%, not 100%. Check the weights before you save.");
+    }
+
+    @Test
+    void parse_rejectsTextWithNoOutlineSignalsBeforeCallingTheModel() {
+        when(extractor.extract(any(), any()))
+                .thenReturn(new ExtractedInput("Lorem ipsum dolor sit amet, consectetur adipiscing elit.", List.of()));
+
+        assertThatThrownBy(() -> service.parse(List.of(), "x", null, ZONE))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage(CourseParseService.NOT_AN_OUTLINE);
+        verifyNoInteractions(parser, limits, usageRepository);
+    }
+
+    @Test
+    void parse_skipsTheTextCheckForImages() {
+        when(extractor.extract(any(), any())).thenReturn(new ExtractedInput("",
+                List.of(new ExtractedInput.ExtractedImage("image/png", new byte[]{1, 2, 3}))));
+
+        CourseDraftDto dto = run(new CourseDraft(
+                "Circuits", null, null, null, List.of(), List.of(), List.of(), List.of()));
+
+        assertThat(dto.name()).isEqualTo("Circuits");
+    }
+
+    @Test
+    void parse_cacheHitSkipsQuotaModelAndUsage() {
+        when(cache.lookup(anyString())).thenReturn(Optional.of(new CourseDraft(
+                "Circuits", "ENSC 220", null, null, List.of(), List.of(), List.of(), List.of())));
+
+        CourseDraftDto dto = service.parse(List.of(), "x", null, ZONE);
+
+        assertThat(dto.code()).isEqualTo("ENSC 220");
+        assertThat(dto.parseId()).isNull();
+        verifyNoInteractions(parser, limits, usageRepository);
+    }
+
+    @Test
+    void parse_missStoresTheModelResult() {
+        CourseDraft draft = new CourseDraft(
+                "Circuits", null, null, null, List.of(), List.of(), List.of(), List.of());
+        run(draft);
+
+        verify(limits).check();
+        verify(cache).store(anyString(), eq(draft), eq("claude-sonnet-5"));
+    }
+
+    @Test
+    void parse_overQuotaNeverCallsTheModel() {
+        doThrow(new TooManyRequestsException("limit")).when(limits).check();
+
+        assertThatThrownBy(() -> service.parse(List.of(), "x", null, ZONE))
+                .isInstanceOf(TooManyRequestsException.class);
+        verify(parser, never()).parse(any(), anyString());
+        verify(cache, never()).store(anyString(), any(), anyString());
+    }
+
+    @Test
+    void parse_notAnOutlineReturnsAnEmptyDraftWhateverTheModelSaid() {
+        CourseDraftDto dto = run(new CourseDraft(
+                "Dr. Someone's biography", "BIO 100", "Dr. Someone", null, List.of(), List.of(),
+                List.of(new DraftItem("EXAM", "Life", "2026-10-01T23:59", 10.0, null, null)),
+                List.of("This is a biography."), false));
+
+        assertThat(dto.name()).isNull();
+        assertThat(dto.code()).isNull();
+        assertThat(dto.items()).isEmpty();
+        assertThat(dto.warnings()).containsExactly(CourseParseService.NOT_AN_OUTLINE);
     }
 
     private CourseDraft draftWithBlocks(DraftBlock... blocks) {

@@ -10,6 +10,7 @@ import com.rnave.studily.course.MeetingKind;
 import com.rnave.studily.parse.CourseParseDtos.CourseDraftDto;
 import com.rnave.studily.parse.CourseParseDtos.DraftCategoryDto;
 import com.rnave.studily.parse.CourseParseDtos.DraftItemDto;
+import com.rnave.studily.parse.CourseParseDtos.ParseAvailabilityDto;
 import com.rnave.studily.parse.ClaudeCourseParser.ParseOutcome;
 import com.rnave.studily.semester.Semester;
 import com.rnave.studily.semester.SemesterService;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -43,25 +45,39 @@ public class CourseParseService {
     private static final int MAX_NAME = 255;
     private static final LocalTime PLACEHOLDER_START = LocalTime.of(9, 0);
     private static final LocalTime PLACEHOLDER_END = LocalTime.of(10, 0);
+    static final String NOT_AN_OUTLINE =
+            "This doesn't look like a course outline, so nothing was filled in. Try the course's syllabus or add it manually.";
 
     private final DocumentExtractor extractor;
     private final ClaudeCourseParser parser;
     private final SemesterService semesterService;
     private final CourseParseUsageRepository usageRepository;
     private final CurrentUser currentUser;
+    private final CourseParseLimits limits;
+    private final CourseParseCache cache;
 
     public CourseParseService(DocumentExtractor extractor, ClaudeCourseParser parser,
                               SemesterService semesterService,
-                              CourseParseUsageRepository usageRepository, CurrentUser currentUser) {
+                              CourseParseUsageRepository usageRepository, CurrentUser currentUser,
+                              CourseParseLimits limits, CourseParseCache cache) {
         this.extractor = extractor;
         this.parser = parser;
         this.semesterService = semesterService;
         this.usageRepository = usageRepository;
         this.currentUser = currentUser;
+        this.limits = limits;
+        this.cache = cache;
     }
 
     public boolean enabled() {
         return parser.enabled();
+    }
+
+    public ParseAvailabilityDto availability() {
+        if (!parser.enabled()) {
+            return new ParseAvailabilityDto(false, limits.monthlyLimit(), 0, false);
+        }
+        return new ParseAvailabilityDto(true, limits.monthlyLimit(), limits.remaining(), limits.paused());
     }
 
     public CourseDraftDto parse(List<MultipartFile> files, String text, Long semesterId, String timeZone) {
@@ -70,10 +86,31 @@ public class CourseParseService {
             throw new BadRequestException("Add a file or paste some text first.");
         }
 
+        if (input.images().isEmpty() && !OutlineSignals.looksLikeOutline(input.text())) {
+            throw new BadRequestException(NOT_AN_OUTLINE);
+        }
+
         Semester semester = semesterId == null ? null : semesterService.requireOwned(semesterId);
         ZoneId zone = zoneOf(timeZone);
+        String cacheKey = CourseParseCache.key(input, semester, zone);
+        Optional<CourseDraft> cached = cache.lookup(cacheKey);
+        if (cached.isPresent()) {
+            return present(null, cached.get());
+        }
+
+        limits.check();
         ParseOutcome outcome = parser.parse(input, context(semester, zone));
-        return normalize(record(outcome), outcome.draft());
+        Long parseId = record(outcome);
+        cache.store(cacheKey, outcome.draft(), outcome.model());
+        return present(parseId, outcome.draft());
+    }
+
+    private CourseDraftDto present(Long parseId, CourseDraft draft) {
+        if (!draft.notAnOutline()) {
+            return normalize(parseId, draft);
+        }
+        return normalize(parseId, new CourseDraft(null, null, null, null,
+                List.of(), List.of(), List.of(), List.of(NOT_AN_OUTLINE), false));
     }
 
     private Long record(ParseOutcome outcome) {

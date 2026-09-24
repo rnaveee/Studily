@@ -162,6 +162,13 @@ export interface GradeCategoryRequest {
 
 export type ParseRating = "ACCURATE" | "MINOR_FIXES" | "INACCURATE";
 
+export interface ParseAvailability {
+  enabled: boolean;
+  monthlyLimit: number;
+  remaining: number;
+  paused: boolean;
+}
+
 export interface ParseAccuracy {
   successRate: number | null;
   sampleSize: number;
