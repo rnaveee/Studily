@@ -3,6 +3,7 @@ import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   Check,
+  FileText,
   Heart,
   ImagePlus,
   MoreHorizontal,
@@ -15,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
+import { formatBytes } from "../../lib/format";
 import { useAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
 import { queryClient } from "../../lib/queryClient";
@@ -44,6 +46,9 @@ const INITIAL_PAGE_SIZE = 10;
 const OLDER_PAGE_SIZE = 30;
 const MAX_JUMBO_EMOJI = 3;
 const MENU_GAP = 8;
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+
+type Staged = { id: string; file: File; url: string | null };
 
 const EMOJI_ONLY =
   /^(?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Regional_Indicator}|[\u200D\uFE0F]|\s)+$/u;
@@ -221,17 +226,71 @@ export default function ConversationPage() {
     },
   });
 
-  function handleSend(e: React.FormEvent) {
-    e.preventDefault();
-    const body = draft.trim();
-    if (!body || send.isPending) return;
-    setDraft("");
-    if (!ws.sendChat(convId, body)) send.mutate(body);
-  }
-
   const imageInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [staged, setStaged] = useState<Staged[]>([]);
+  const stagedRef = useRef(staged);
+  stagedRef.current = staged;
+
+  useEffect(() => {
+    return () => {
+      for (const s of stagedRef.current) if (s.url) URL.revokeObjectURL(s.url);
+    };
+  }, []);
+
+  function stageFiles(list: FileList | File[] | null) {
+    const files = [...(list ?? [])];
+    if (imageInputRef.current) imageInputRef.current.value = "";
+    if (docInputRef.current) docInputRef.current.value = "";
+    if (files.length === 0) return;
+    const fitting = files.filter((f) => f.size <= MAX_ATTACHMENT_BYTES);
+    if (fitting.length < files.length) {
+      toast.error(`Files must be ${formatBytes(MAX_ATTACHMENT_BYTES)} or smaller.`);
+    }
+    if (fitting.length === 0) return;
+    setStaged((current) => [
+      ...current,
+      ...fitting.map((file) => ({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        file,
+        url: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
+      })),
+    ]);
+  }
+
+  function unstage(id: string) {
+    setStaged((current) => {
+      const item = current.find((s) => s.id === id);
+      if (item?.url) URL.revokeObjectURL(item.url);
+      return current.filter((s) => s.id !== id);
+    });
+  }
+
+  function clearStaged() {
+    setStaged((current) => {
+      for (const s of current) if (s.url) URL.revokeObjectURL(s.url);
+      return [];
+    });
+  }
+
+  async function handleSend(e: React.FormEvent) {
+    e.preventDefault();
+    const body = draft.trim();
+    if ((!body && staged.length === 0) || send.isPending || uploading) return;
+    const items = staged;
+    setDraft("");
+    setStaged([]);
+    if (items.length > 0) {
+      const failed = await uploadStaged(items);
+      if (failed.length > 0) {
+        setStaged((current) => [...failed, ...current]);
+        if (body) setDraft((current) => (current ? current : body));
+        return;
+      }
+    }
+    if (body && !ws.sendChat(convId, body)) send.mutate(body);
+  }
 
   const [dragging, setDragging] = useState(false);
 
@@ -245,8 +304,9 @@ export default function ConversationPage() {
   function handlePaste(e: React.ClipboardEvent) {
     const images = imagesFrom(e.clipboardData);
     if (images.length === 0) return;
+    if (e.clipboardData.getData("text/plain").trim()) return;
     e.preventDefault();
-    uploadFiles(images);
+    stageFiles(images);
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -254,27 +314,28 @@ export default function ConversationPage() {
     const images = imagesFrom(e.dataTransfer);
     if (images.length === 0) return;
     e.preventDefault();
-    uploadFiles(images);
+    stageFiles(images);
   }
 
-  async function uploadFiles(list: FileList | File[] | null) {
-    const files = [...(list ?? [])];
-    if (files.length === 0 || uploading) return;
+  async function uploadStaged(items: Staged[]): Promise<Staged[]> {
     setUploading(true);
+    let sent = 0;
     try {
-      for (const file of files) {
+      for (const item of items) {
         const fd = new FormData();
-        fd.append("file", file);
+        fd.append("file", item.file);
         const m = await api.post<Message>(`/conversations/${convId}/attachments`, fd);
         appendMessageToCache(m);
+        if (item.url) URL.revokeObjectURL(item.url);
+        sent++;
       }
-      invalidateConversationLists();
+      return [];
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Upload failed. Please try again.");
+      return items.slice(sent);
     } finally {
+      if (sent > 0) invalidateConversationLists();
       setUploading(false);
-      if (imageInputRef.current) imageInputRef.current.value = "";
-      if (docInputRef.current) docInputRef.current.value = "";
     }
   }
 
@@ -366,7 +427,7 @@ export default function ConversationPage() {
             background: "color-mix(in srgb, var(--accent) 8%, transparent)",
           }}
         >
-          Drop to send
+          Drop to attach
         </div>
       )}
       <header
@@ -445,7 +506,7 @@ export default function ConversationPage() {
 
       <div
         ref={scrollRef}
-        className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto overscroll-contain px-4 py-3 md:px-6"
+        className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto overflow-x-hidden overscroll-contain px-4 py-3 md:px-6"
       >
         {messages.isLoading ? (
           <div className="my-auto flex items-center justify-center gap-2 py-8 text-sm text-fg-3">
@@ -540,66 +601,108 @@ export default function ConversationPage() {
 
       <form
         onSubmit={handleSend}
-        className="flex shrink-0 items-center gap-2 bg-surface px-3 pt-3 md:bg-surface-hi md:px-6"
+        className="flex shrink-0 flex-col gap-2 bg-surface px-3 pt-3 md:bg-surface-hi md:px-6"
         style={{
           borderTop: "1px solid var(--line)",
           paddingBottom: "var(--composer-pb, calc(env(safe-area-inset-bottom, 0px) + 12px))",
         }}
       >
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(e) => uploadFiles(e.target.files)}
-        />
-        <input
-          ref={docInputRef}
-          type="file"
-          accept={DOC_ACCEPT}
-          className="hidden"
-          onChange={(e) => uploadFiles(e.target.files)}
-        />
-        <button
-          type="button"
-          onClick={() => imageInputRef.current?.click()}
-          disabled={uploading}
-          className="shrink-0 rounded-lg p-2 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg disabled:opacity-50"
-          aria-label="Send a photo"
-        >
-          {uploading ? (
-            <span className="inline-block h-[15px] w-[15px] animate-spin rounded-full border-2 border-line border-t-accent" />
-          ) : (
-            <ImagePlus size={15} />
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={() => docInputRef.current?.click()}
-          disabled={uploading}
-          className="shrink-0 rounded-lg p-2 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg disabled:opacity-50"
-          aria-label="Send a document"
-        >
-          <Paperclip size={15} />
-        </button>
-        <input
-          className="input"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onPaste={handlePaste}
-          placeholder="Type a message…"
-          enterKeyHint="send"
-        />
-        <button
-          type="submit"
-          disabled={!draft.trim() || send.isPending}
-          onPointerDown={(e) => e.preventDefault()}
-          className="btn btn-primary shrink-0"
-          aria-label="Send message"
-        >
-          <Send size={13} />
-        </button>
+        {staged.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-1 pr-2 pt-1.5 animate-fade">
+            {staged.map((s) => (
+              <div key={s.id} className="relative shrink-0">
+                {s.url ? (
+                  <img
+                    src={s.url}
+                    alt={s.file.name}
+                    className="block h-16 w-16 rounded-xl object-cover"
+                    style={{ border: "1px solid var(--line)" }}
+                  />
+                ) : (
+                  <div
+                    className="flex h-16 max-w-[200px] items-center gap-2 rounded-xl px-3"
+                    style={{ background: "var(--surface-hi)", border: "1px solid var(--line)" }}
+                  >
+                    <FileText size={15} className="shrink-0 text-accent" />
+                    <span className="min-w-0">
+                      <span className="block truncate text-[12px] font-medium text-fg">{s.file.name}</span>
+                      <span className="block text-[11px] text-fg-3">{formatBytes(s.file.size)}</span>
+                    </span>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => unstage(s.id)}
+                  disabled={uploading}
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full text-fg transition-colors hover:text-red disabled:opacity-50"
+                  style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
+                  aria-label={`Remove ${s.file.name}`}
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => stageFiles(e.target.files)}
+          />
+          <input
+            ref={docInputRef}
+            type="file"
+            accept={DOC_ACCEPT}
+            className="hidden"
+            onChange={(e) => stageFiles(e.target.files)}
+          />
+          <button
+            type="button"
+            onClick={() => imageInputRef.current?.click()}
+            disabled={uploading}
+            className="shrink-0 rounded-lg p-2 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg disabled:opacity-50"
+            aria-label="Send a photo"
+          >
+            {uploading ? (
+              <span className="inline-block h-[15px] w-[15px] animate-spin rounded-full border-2 border-line border-t-accent" />
+            ) : (
+              <ImagePlus size={15} />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => docInputRef.current?.click()}
+            disabled={uploading}
+            className="shrink-0 rounded-lg p-2 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg disabled:opacity-50"
+            aria-label="Send a document"
+          >
+            <Paperclip size={15} />
+          </button>
+          <input
+            className="input"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onPaste={handlePaste}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && staged.length > 0) clearStaged();
+            }}
+            placeholder="Type a message…"
+            enterKeyHint="send"
+          />
+          <button
+            type="submit"
+            disabled={(!draft.trim() && staged.length === 0) || send.isPending || uploading}
+            onPointerDown={(e) => e.preventDefault()}
+            className="btn btn-primary shrink-0"
+            aria-label="Send message"
+          >
+            <Send size={13} />
+          </button>
+        </div>
       </form>
 
       {showMembers && conv && (
@@ -753,8 +856,8 @@ function MessageBubble({
   ) : null;
 
   return (
-    <div className={`group/msg flex items-center gap-0.5 ${mine ? "flex-row-reverse" : ""}`}>
-      <div className="relative">
+    <div className={`group/msg flex min-w-0 items-center gap-0.5 ${mine ? "flex-row-reverse" : ""}`}>
+      <div className="relative min-w-0">
         <div
           {...tap}
           {...hold}
@@ -768,7 +871,7 @@ function MessageBubble({
             <AttachmentBubble message={message} mine={mine} />
           ) : jumbo ? (
             <div
-              className="select-none py-0.5 leading-none"
+              className="min-w-0 select-none py-0.5 leading-none"
               style={{ fontSize: jumbo, lineHeight: 1.15 }}
             >
               {message.body}
@@ -776,7 +879,7 @@ function MessageBubble({
             </div>
           ) : (
             <div
-              className={`select-none rounded-2xl px-3.5 py-2 text-[13px] ${mine ? "text-accent-fg" : "text-fg"}`}
+              className={`select-none whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[13px] [overflow-wrap:anywhere] ${mine ? "text-accent-fg" : "text-fg"}`}
               style={{ background: mine ? "var(--accent)" : "var(--surface-hi)" }}
             >
               {message.body}

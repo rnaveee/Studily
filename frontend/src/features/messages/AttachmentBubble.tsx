@@ -45,7 +45,7 @@ function ImageBubble({ message }: { message: Message }) {
   return (
     <div
       className="overflow-hidden rounded-2xl"
-      style={{ background: "var(--surface-hi)", width: "min(280px, 70vw)" }}
+      style={{ background: "var(--surface-hi)", width: "min(280px, 70vw)", maxWidth: "100%" }}
     >
       {url ? (
         <>
