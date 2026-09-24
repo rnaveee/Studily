@@ -18,17 +18,22 @@ public class CourseParseLimits {
     private final UserTimeZones timeZones;
     private final int monthlyLimit;
     private final double dailyBudgetUsd;
+    private final Instant quotaResetAt;
 
     public CourseParseLimits(CourseParseUsageRepository usageRepository,
                              CurrentUser currentUser,
                              UserTimeZones timeZones,
                              @Value("${app.parse.monthly-limit}") int monthlyLimit,
-                             @Value("${app.parse.daily-budget-usd}") double dailyBudgetUsd) {
+                             @Value("${app.parse.daily-budget-usd}") double dailyBudgetUsd,
+                             @Value("${app.parse.quota-reset-at:}") String quotaResetAt) {
         this.usageRepository = usageRepository;
         this.currentUser = currentUser;
         this.timeZones = timeZones;
         this.monthlyLimit = monthlyLimit;
         this.dailyBudgetUsd = dailyBudgetUsd;
+        this.quotaResetAt = quotaResetAt == null || quotaResetAt.isBlank()
+                ? Instant.EPOCH
+                : Instant.parse(quotaResetAt.strip());
     }
 
     public int monthlyLimit() {
@@ -37,8 +42,9 @@ public class CourseParseLimits {
 
     public int remaining() {
         ZoneId zone = timeZones.zoneFor(currentUser.entity());
-        long used = usageRepository.countByUserIdAndCreatedAtGreaterThanEqual(
-                currentUser.id(), monthStart(ZonedDateTime.now(zone)));
+        Instant monthStart = monthStart(ZonedDateTime.now(zone));
+        Instant since = quotaResetAt.isAfter(monthStart) ? quotaResetAt : monthStart;
+        long used = usageRepository.countByUserIdAndCreatedAtGreaterThanEqual(currentUser.id(), since);
         return (int) Math.max(0, monthlyLimit - used);
     }
 

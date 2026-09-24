@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -35,7 +36,24 @@ class CourseParseLimitsTest {
         when(zones.zoneFor(any())).thenReturn(ZoneId.of("America/Vancouver"));
         when(zones.fallback()).thenReturn(ZoneId.of("America/Toronto"));
         when(usage.spendSince(any())).thenReturn(List.of());
-        limits = new CourseParseLimits(usage, currentUser, zones, 10, 5.0);
+        limits = new CourseParseLimits(usage, currentUser, zones, 10, 5.0, "");
+    }
+
+    @Test
+    void quotaResetAt_countsOnlyImportsAfterTheResetPoint() {
+        CurrentUser currentUser = mock(CurrentUser.class);
+        when(currentUser.id()).thenReturn(7L);
+        when(currentUser.entity()).thenReturn(new User());
+        UserTimeZones zones = mock(UserTimeZones.class);
+        when(zones.zoneFor(any())).thenReturn(ZoneId.of("UTC"));
+        Instant resetAt = Instant.now().minusSeconds(60);
+        when(usage.countByUserIdAndCreatedAtGreaterThanEqual(7L, resetAt)).thenReturn(0L);
+        when(usage.countByUserIdAndCreatedAtGreaterThanEqual(eq(7L), argThat(
+                since -> !since.equals(resetAt)))).thenReturn(10L);
+
+        CourseParseLimits reset = new CourseParseLimits(usage, currentUser, zones, 10, 5.0, resetAt.toString());
+
+        assertThat(reset.remaining()).isEqualTo(10);
     }
 
     @Test
