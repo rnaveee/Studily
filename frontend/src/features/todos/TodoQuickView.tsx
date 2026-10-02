@@ -5,17 +5,10 @@ import { api } from "../../lib/api";
 import { useRequireAuth } from "../../lib/auth";
 import { dueUrgency, formatDateTime } from "../../lib/format";
 import type { Todo } from "../../types";
-import { priorityLabel, priorityTone } from "./priority";
+import { pillStyle, priorityLabel, priorityTone, urgencyStyle } from "./priority";
 import { Spinner } from "../../components/Skeleton";
 
 const LIMIT = 5;
-
-function pillStyle(color: string): React.CSSProperties {
-  return {
-    background: `color-mix(in srgb, ${color} 12%, transparent)`,
-    color,
-  };
-}
 
 export default function TodoQuickView() {
   const qc = useQueryClient();
@@ -69,8 +62,17 @@ export default function TodoQuickView() {
         <ul className="divide-y divide-line border-t border-line">
           {top.map((todo) => {
             const urgency = dueUrgency(todo.dueAt);
+            const tone = urgency ? urgencyStyle(urgency.level) : null;
             return (
-              <li key={todo.id} className="flex items-start gap-3 px-4 py-2.5 text-[13px]">
+              <li
+                key={todo.id}
+                className="flex items-start gap-3 px-4 py-2.5 text-[13px]"
+                style={
+                  tone
+                    ? { boxShadow: `inset 3px 0 0 ${tone.stripe}`, background: tone.wash }
+                    : undefined
+                }
+              >
                 <button
                   onClick={() =>
                     requireAuth(() => complete.mutate({ id: todo.id, completed: true }))
@@ -103,12 +105,15 @@ export default function TodoQuickView() {
                   </div>
                 </div>
 
-                <span
-                  className="shrink-0 whitespace-nowrap text-[12px] tabular-nums"
-                  style={{ color: urgency?.color ?? "var(--fg-3)" }}
-                >
-                  {urgency ? urgency.label : todo.dueAt ? formatDateTime(todo.dueAt) : "No due date"}
-                </span>
+                {urgency && tone ? (
+                  <span className="badge shrink-0 tabular-nums" style={tone.pill}>
+                    {urgency.label}
+                  </span>
+                ) : (
+                  <span className="shrink-0 whitespace-nowrap text-[12px] tabular-nums text-fg-3">
+                    {todo.dueAt ? formatDateTime(todo.dueAt) : "No due date"}
+                  </span>
+                )}
               </li>
             );
           })}

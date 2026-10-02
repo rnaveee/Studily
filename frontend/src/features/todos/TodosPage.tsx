@@ -10,7 +10,7 @@ import { dueUrgency, formatDateTime } from "../../lib/format";
 import { staggerDelay } from "../../lib/motion";
 import type { Todo } from "../../types";
 import TodoModal from "./TodoModal";
-import { priorityLabel, priorityTone } from "./priority";
+import { pillStyle, priorityLabel, priorityTone, urgencyStyle } from "./priority";
 
 export default function TodosPage() {
   const qc = useQueryClient();
@@ -104,9 +104,10 @@ export default function TodosPage() {
       {todos.isLoading ? (
         <SkeletonList rows={4} className="stagger-item" style={staggerDelay(1)} />
       ) : todos.data && todos.data.length > 0 ? (
-        <ul className="card divide-y divide-line">
+        <ul className="card divide-y divide-line overflow-hidden">
           {todos.data.map((todo, index) => {
             const urgency = todo.completed ? null : dueUrgency(todo.dueAt);
+            const tone = urgency ? urgencyStyle(urgency.level) : null;
             const isOpen = expanded.has(todo.id);
             const hasDetail = !!todo.notes || todo.checklist.length > 0;
             const doneCount = todo.checklist.filter((c) => c.done).length;
@@ -117,7 +118,14 @@ export default function TodosPage() {
                 className="stagger-item"
                 style={staggerDelay(index + 1, 45)}
               >
-                <div className={`px-4 py-3 transition-opacity ${todo.completed ? "opacity-60" : ""}`}>
+                <div
+                  className={`px-4 py-3 transition-opacity ${todo.completed ? "opacity-60" : ""}`}
+                  style={
+                    tone
+                      ? { boxShadow: `inset 3px 0 0 ${tone.stripe}`, background: tone.wash }
+                      : undefined
+                  }
+                >
                 <div className="flex items-start gap-3">
                   <button
                     onClick={() =>
@@ -157,8 +165,8 @@ export default function TodosPage() {
 
                     <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-fg-3">
                       {todo.dueAt ? (
-                        urgency ? (
-                          <span className="font-medium" style={{ color: urgency.color }}>
+                        urgency && tone ? (
+                          <span className="badge" style={tone.pill}>
                             {urgency.label}
                           </span>
                         ) : (
@@ -258,11 +266,4 @@ export default function TodosPage() {
       )}
     </div>
   );
-}
-
-function pillStyle(color: string): React.CSSProperties {
-  return {
-    background: `color-mix(in srgb, ${color} 12%, transparent)`,
-    color,
-  };
 }

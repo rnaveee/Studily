@@ -16,6 +16,10 @@
   --green:      #2d9060;
   --orange:     #b9701f;
   --yellow:     #a37d12;
+  --red-vivid:    #e5383b;
+  --orange-vivid: #ea6c0a;
+  --amber-vivid:  #e0a100;
+  --blue-vivid:   #2f74e8;
   --sidebar-w:  220px;
   --shadow-sm:  0 1px 2px rgb(14 14 26 / 0.04), 0 1px 3px rgb(14 14 26 / 0.06);
   --shadow-md:  0 2px 4px rgb(14 14 26 / 0.04), 0 6px 16px -4px rgb(14 14 26 / 0.10);
@@ -65,6 +69,10 @@
   --green:      #42a870;
   --orange:     #e0913c;
   --yellow:     #d6ab3d;
+  --red-vivid:    #ff5555;
+  --orange-vivid: #ff8a2b;
+  --amber-vivid:  #f7c143;
+  --blue-vivid:   #5c9cff;
   --shadow-sm:  0 1px 2px rgb(0 0 0 / 0.34);
   --shadow-md:  0 2px 6px rgb(0 0 0 / 0.40), 0 10px 24px -8px rgb(3 6 16 / 0.50);
   --shadow-lg:  0 4px 10px rgb(0 0 0 / 0.44), 0 24px 56px -16px rgb(3 6 16 / 0.62);
@@ -355,6 +363,38 @@ textarea.input { resize: vertical; }
   box-shadow: var(--glass-shadow);
   backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
+}
+
+.pomo-ring {
+  transition: stroke-dashoffset 0.35s linear, stroke 0.4s ease;
+}
+
+.pomo-breathe {
+  animation: pomo-breathe 4s ease-in-out infinite;
+}
+
+@keyframes pomo-breathe {
+  0%, 100% { opacity: 0.7; transform: scale(0.96); }
+  50%      { opacity: 1;   transform: scale(1.04); }
+}
+
+.calc-shake {
+  animation: calc-shake 0.32s ease-in-out;
+}
+
+@keyframes calc-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-5px); }
+  40%      { transform: translateX(5px); }
+  60%      { transform: translateX(-3px); }
+  80%      { transform: translateX(3px); }
+}
+
+.popover {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glass-shadow);
 }
 
 .badge {
@@ -681,6 +721,9 @@ textarea.input { resize: vertical; }
   .press { transition: none; }
   .press:active { transform: none; }
   .card-lift { transition: none; }
+  .pomo-ring { transition: none; }
+  .pomo-breathe { animation: none; }
+  .calc-shake { animation: none; }
   .card-lift:hover,
   .card-lift:active { transform: none; }
   .btn:active:not(:disabled) { transform: none; }

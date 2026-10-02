@@ -141,7 +141,7 @@ export default function TimeSelect({
         <ul
           ref={listRef}
           role="listbox"
-          className="glass absolute z-30 mt-1 max-h-52 w-full overflow-y-auto py-1"
+          className="popover absolute z-30 mt-1 max-h-52 w-full overflow-y-auto py-1"
         >
           {options.map((opt, i) => (
             <li key={opt}>

@@ -70,20 +70,29 @@ export function toLocalInput(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function dueUrgency(iso: string | null | undefined): { label: string; color: string } | null {
+export type UrgencyLevel = "overdue" | "today" | "soon" | "week";
+
+export function dueUrgency(
+  iso: string | null | undefined,
+): { label: string; color: string; level: UrgencyLevel } | null {
   if (!iso) return null;
 
   const ms = new Date(iso).getTime() - Date.now();
-  if (ms <= 0) return { label: "Overdue", color: "var(--red)" };
+  if (ms <= 0) return { label: "Overdue", color: "var(--red)", level: "overdue" };
 
   const hours = Math.floor(ms / 3600000);
   if (hours < 24) {
-    return { label: hours < 1 ? "Due within the hour" : plural(hours, "hour"), color: "var(--red)" };
+    return {
+      label: hours < 1 ? "Due within the hour" : plural(hours, "hour"),
+      color: "var(--red)",
+      level: "today",
+    };
   }
 
   const days = Math.floor(hours / 24);
-  if (days <= 2) return { label: plural(days, "day"), color: "var(--orange)" };
-  if (days <= 3) return { label: plural(days, "day"), color: "var(--yellow)" };
+  if (days <= 2) return { label: plural(days, "day"), color: "var(--orange)", level: "soon" };
+  if (days <= 3) return { label: plural(days, "day"), color: "var(--yellow)", level: "soon" };
+  if (days <= 7) return { label: plural(days, "day"), color: "var(--fg-3)", level: "week" };
   return null;
 }
 

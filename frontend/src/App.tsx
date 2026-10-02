@@ -39,6 +39,7 @@ import SettingsPage from "./features/settings/SettingsPage";
 import TodosPage from "./features/todos/TodosPage";
 
 const PeriodicTablePage = lazy(() => import("./features/learn/PeriodicTablePage"));
+const CalculatorPage = lazy(() => import("./features/learn/CalculatorPage"));
 const AdminPage = lazy(() => import("./features/admin/AdminPage"));
 
 export default function App() {
@@ -75,6 +76,14 @@ export default function App() {
           element={
             <Suspense fallback={null}>
               <PeriodicTablePage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/learn/calculator"
+          element={
+            <Suspense fallback={null}>
+              <CalculatorPage />
             </Suspense>
           }
         />

@@ -134,7 +134,6 @@ export default function Layout() {
             <img src="/studily-3a.svg" alt="" className="h-8 w-8" />
             <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
           </Link>
-          <div className="text-[10px] text-fg-3">by Ryan Nave</div>
         </div>
 
         <nav ref={sideNavRef} className="relative flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
@@ -243,10 +242,7 @@ export default function Layout() {
         >
           <Link to="/onboarding" className="flex items-center" onClick={handleDebugTap}>
             <img src="/studily-3a.svg" alt="" className="h-8 w-8" />
-            <div>
-              <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
-              <div className="text-[9px] leading-tight text-fg-3">by Ryan Nave</div>
-            </div>
+            <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
           </Link>
 
           <div className="flex items-center gap-0.5">

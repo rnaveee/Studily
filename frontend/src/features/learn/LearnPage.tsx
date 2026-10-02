@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Atom, Calculator, Layers, LineChart, ListChecks, PersonStanding, Sparkles, Timer } from "lucide-react";
+import { Atom, Calculator, Layers, ListChecks, Sparkles, Timer } from "lucide-react";
 import { formatMs, pomodoroColor, usePomodoro } from "../../lib/pomodoro";
 
 const TOOLS = [
@@ -42,22 +42,8 @@ const TOOLS = [
     to: "/learn/calculator",
     icon: Calculator,
     title: "Calculator",
-    description: "Basic and scientific calculator, always at hand.",
-    disabled: true,
-  },
-  {
-    to: "/learn/graphing",
-    icon: LineChart,
-    title: "Graphing",
-    description: "Type an equation and see it graphed instantly.",
-    disabled: true,
-  },
-  {
-    to: "/learn/body-diagram",
-    icon: PersonStanding,
-    title: "Body Diagram",
-    description: "Interactive anatomy diagrams by body system.",
-    disabled: true,
+    description: "Scientific calculator with fractions, units and history.",
+    disabled: false,
   },
 ];
 

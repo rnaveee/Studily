@@ -25,6 +25,7 @@ import { useDeferredClose } from "../../lib/motion";
 import { useDoubleTap } from "../../lib/useDoubleTap";
 import { useLongPress, longPressJustFired } from "../../lib/useLongPress";
 import { isTouch } from "../../lib/isTouch";
+import { firstLink, LinkPreview, Linkified } from "./linkify";
 import {
   appendMessageToCache,
   applyEditToCache,
@@ -487,7 +488,7 @@ export default function ConversationPage() {
           </button>
           {openMenu === "header" && (
             <div
-              className="glass absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden py-1 animate-slide"
+              className="popover absolute right-0 top-full z-50 mt-1 w-44 overflow-hidden py-1 animate-slide"
               onClick={(e) => e.stopPropagation()}
             >
               <button
@@ -802,6 +803,7 @@ function MessageBubble({
   const [editDraft, setEditDraft] = useState(message.body);
   const liked = message.likedByMe;
   const jumbo = message.attachment ? null : jumboSize(message.body);
+  const link = useMemo(() => (message.attachment ? null : firstLink(message.body)), [message.attachment, message.body]);
 
   useEffect(() => {
     if (editing) setEditDraft(message.body);
@@ -862,7 +864,9 @@ function MessageBubble({
           {...tap}
           {...hold}
           style={{ ...tap.style, ...hold.style }}
-          className={message.likeCount > 0 ? "pb-1.5" : undefined}
+          className={`flex min-w-0 flex-col ${mine ? "items-end" : "items-start"} ${
+            message.likeCount > 0 ? "pb-1.5" : ""
+          }`}
           role="button"
           tabIndex={-1}
           aria-label={canHold ? "Double tap to like, hold for options" : "Double tap to like"}
@@ -882,10 +886,11 @@ function MessageBubble({
               className={`select-none whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[13px] [overflow-wrap:anywhere] ${mine ? "text-accent-fg" : "text-fg"}`}
               style={{ background: mine ? "var(--accent)" : "var(--surface-hi)" }}
             >
-              {message.body}
+              <Linkified body={message.body} mine={mine} />
               {edited}
             </div>
           )}
+          {!message.attachment && link && <LinkPreview url={link} mine={mine} />}
         </div>
 
         {message.likeCount > 0 && (
@@ -924,7 +929,7 @@ function MessageBubble({
           {menuOpen && (
             <div
               ref={menuRef}
-              className={`glass absolute top-1/2 z-50 w-40 -translate-y-1/2 overflow-hidden py-1 animate-in ${
+              className={`popover absolute top-1/2 z-50 w-40 -translate-y-1/2 overflow-hidden py-1 animate-in ${
                 menuSide === "left" ? "right-full mr-1" : "left-full ml-1"
               }`}
               onClick={(e) => e.stopPropagation()}
