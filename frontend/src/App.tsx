@@ -33,6 +33,7 @@ import ConversationPage from "./features/messages/ConversationPage";
 import LearnPage from "./features/learn/LearnPage";
 import FlashcardsPage from "./features/learn/FlashcardsPage";
 import FlashcardSetPage from "./features/learn/FlashcardSetPage";
+import SharedSetPage from "./features/learn/SharedSetPage";
 import AiChatPage from "./features/learn/AiChatPage";
 import PomodoroPage from "./features/learn/PomodoroPage";
 import SettingsPage from "./features/settings/SettingsPage";
@@ -108,6 +109,7 @@ export default function App() {
       </Route>
       <Route element={<Layout />}>
         <Route path="/about"   element={<AboutPage />} />
+        <Route path="/sets/:id" element={<SharedSetPage />} />
         <Route path="/terms"   element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/support" element={<SupportPage />} />

@@ -16,6 +16,7 @@ import { toast } from "../../lib/toast";
 import BackButton from "../../components/BackButton";
 import CanvasImportForm from "../canvas/CanvasImportForm";
 import type { OnboardingStatus, Semester, SemesterTerm } from "../../types";
+import { peekNext, takeNext } from "../../lib/next";
 
 export function currentTerm(date = new Date()): { term: SemesterTerm; year: number } {
   const month = date.getMonth();
@@ -72,6 +73,7 @@ export default function OnboardingPage() {
 
   if (!user) return <Navigate to="/" replace />;
 
+  const resume = peekNext();
   const firstName = user.name?.split(" ")[0] || user.username;
   const semesterLabel = semestersQ.data?.[0]
     ? semestersQ.data[0].label
@@ -207,8 +209,16 @@ export default function OnboardingPage() {
       {statusQ.isLoading && <p className="text-center text-[13px] text-fg-3">Loading…</p>}
 
       <p className="text-center">
-        <Link to="/dashboard" className="text-[12px] text-fg-3 transition-colors hover:text-fg">
-          {status?.complete ? "Go to my dashboard" : "Skip for now, take me to my dashboard"}
+        <Link
+          to={resume ?? "/dashboard"}
+          onClick={() => takeNext()}
+          className="text-[12px] text-fg-3 transition-colors hover:text-fg"
+        >
+          {resume
+            ? "Skip for now, take me back to where I was"
+            : status?.complete
+              ? "Go to my dashboard"
+              : "Skip for now, take me to my dashboard"}
         </Link>
       </p>
     </div>

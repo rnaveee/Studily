@@ -84,6 +84,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/users/*/avatar").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/push/rotate").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/support").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(eh -> eh.authenticationEntryPoint(unauthorizedEntryPoint()))

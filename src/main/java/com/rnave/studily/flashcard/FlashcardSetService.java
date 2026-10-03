@@ -7,6 +7,9 @@ import com.rnave.studily.course.CourseService;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardDto;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetDto;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetRequest;
+import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetSummaryDto;
+import com.rnave.studily.flashcard.FlashcardDtos.SharedFlashcardSetDto;
+import com.rnave.studily.user.User;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +19,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class FlashcardSetService {
@@ -57,8 +61,57 @@ public class FlashcardSetService {
     public FlashcardSetDto create(FlashcardSetRequest req) {
         FlashcardSet set = new FlashcardSet();
         set.setUser(currentUser.entity());
+        set.setVisibility(req.visibility() != null ? req.visibility() : FlashcardSetVisibility.PRIVATE);
         apply(set, req);
         return FlashcardSetDto.from(flashcardSetRepository.save(set));
+    }
+
+    @Transactional
+    public FlashcardSetDto setVisibility(Long id, FlashcardSetVisibility visibility) {
+        FlashcardSet set = requireOwned(id);
+        set.setVisibility(visibility);
+        return FlashcardSetDto.from(set);
+    }
+
+    @Transactional(readOnly = true)
+    public SharedFlashcardSetDto shared(Long id) {
+        Long viewerId = currentUser.maybe().map(User::getId).orElse(null);
+        FlashcardSet set = requireViewable(id, viewerId);
+        return SharedFlashcardSetDto.from(set, set.getUser().getId().equals(viewerId));
+    }
+
+    @Transactional(readOnly = true)
+    public List<FlashcardSetSummaryDto> publicSetsOf(Long userId) {
+        return flashcardSetRepository
+                .findByUserIdAndVisibilityOrderByCreatedAtDesc(userId, FlashcardSetVisibility.PUBLIC)
+                .stream().map(FlashcardSetSummaryDto::from).toList();
+    }
+
+    @Transactional
+    public FlashcardSetDto copy(Long id) {
+        FlashcardSet source = requireViewable(id, currentUser.id());
+        FlashcardSet copy = new FlashcardSet();
+        copy.setUser(currentUser.entity());
+        copy.setTitle(source.getTitle());
+        copy.setDescription(source.getDescription());
+        copy.setVisibility(FlashcardSetVisibility.PRIVATE);
+        for (Flashcard c : source.getCards()) {
+            Flashcard card = new Flashcard();
+            card.setSet(copy);
+            card.setFront(c.getFront());
+            card.setBack(c.getBack());
+            card.setPosition(c.getPosition());
+            copy.getCards().add(card);
+        }
+        return FlashcardSetDto.from(flashcardSetRepository.save(copy));
+    }
+
+    private FlashcardSet requireViewable(Long id, Long viewerId) {
+        Optional<FlashcardSet> found = flashcardSetRepository.findById(id);
+        return found
+                .filter(s -> s.getVisibility() == FlashcardSetVisibility.PUBLIC
+                        || s.getUser().getId().equals(viewerId))
+                .orElseThrow(() -> new NotFoundException("Flashcard set not found"));
     }
 
     @Transactional

@@ -17,8 +17,12 @@ export function nextIntervalDays(card: Flashcard, grade: ReviewGrade): number {
 }
 
 export function intervalLabel(days: number): string {
-  if (days <= 0) return "now";
-  if (days < 30) return `${days}d`;
-  if (days < 365) return `${Math.round(days / 30)}mo`;
-  return `${(days / 365).toFixed(1)}y`;
+  if (days <= 0) return "again now";
+  if (days === 1) return "tomorrow";
+  if (days < 30) return `in ${days} days`;
+  if (days < 365) {
+    const months = Math.round(days / 30);
+    return months === 1 ? "in 1 month" : `in ${months} months`;
+  }
+  return `in ${(days / 365).toFixed(1)} years`;
 }

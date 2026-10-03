@@ -6,11 +6,11 @@ import { toast } from "../../lib/toast";
 import { intervalLabel, isDue, nextIntervalDays } from "./sm2";
 import type { Flashcard, ReviewGrade } from "../../types";
 
-const GRADES: { grade: ReviewGrade; label: string; color: string }[] = [
-  { grade: "AGAIN", label: "Again", color: "var(--red)" },
-  { grade: "HARD",  label: "Hard",  color: "#c78a2d" },
-  { grade: "GOOD",  label: "Good",  color: "var(--accent)" },
-  { grade: "EASY",  label: "Easy",  color: "var(--green)" },
+const GRADES: { grade: ReviewGrade; label: string; explain: string; color: string }[] = [
+  { grade: "AGAIN", label: "Again", explain: "Didn't know it",               color: "var(--red)" },
+  { grade: "HARD",  label: "Hard",  explain: "Got it, but it was a struggle", color: "#c78a2d" },
+  { grade: "GOOD",  label: "Good",  explain: "Got it after a moment",         color: "var(--accent)" },
+  { grade: "EASY",  label: "Easy",  explain: "Knew it instantly",             color: "var(--green)" },
 ];
 
 interface Props {
@@ -85,8 +85,8 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
       </div>
 
       <p className="text-[12px] text-fg-3">
-        Rate how well you knew each card. Easy cards come back later, tough ones
-        sooner, so you spend time where it counts.
+        After you flip a card, pick how well you knew it. Cards you miss come back
+        soon, and ones you know come back later.
       </p>
 
       <button
@@ -103,19 +103,20 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
       </button>
 
       {flipped ? (
-        <div className="grid grid-cols-4 gap-2">
-          {GRADES.map(({ grade: g, label, color: c }) => (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {GRADES.map(({ grade: g, label, explain, color: c }) => (
             <button
               key={g}
               onClick={() => grade(g)}
               disabled={grading}
-              className="card press flex flex-col items-center gap-0.5 px-2 py-2.5 transition-all hover:bg-surface-hi disabled:opacity-50"
+              className="card press flex flex-col items-center gap-0.5 px-2 py-2.5 text-center transition-all hover:bg-surface-hi disabled:opacity-50"
               style={{ boxShadow: "var(--btn-shadow)" }}
             >
               <span className="text-[13px] font-semibold" style={{ color: c }}>
                 {label}
               </span>
-              <span className="text-[11px] text-fg-3">
+              <span className="text-[11px] leading-snug text-fg-3">{explain}</span>
+              <span className="text-[10px] text-fg-3 opacity-80">
                 {intervalLabel(nextIntervalDays(card, g))}
               </span>
             </button>

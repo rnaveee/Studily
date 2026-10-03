@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 import { ApiError } from "../../lib/api";
+import { takeNext } from "../../lib/next";
 
 export default function LoginPage() {
   const { user, login, continueAsGuest } = useAuth();
@@ -22,7 +23,7 @@ export default function LoginPage() {
     setBusy(true);
     try {
       await login(email, password);
-      navigate("/dashboard");
+      navigate(takeNext() ?? "/dashboard");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Login failed");
     } finally {
@@ -96,7 +97,7 @@ export default function LoginPage() {
           type="button"
           onClick={() => {
             continueAsGuest();
-            navigate("/dashboard");
+            navigate(takeNext() ?? "/dashboard");
           }}
           className="mx-auto mt-3 block text-center text-[12px] text-fg-3 transition-colors hover:text-fg"
         >

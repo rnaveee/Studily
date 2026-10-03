@@ -126,7 +126,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     if (adminToken) headers["X-Admin-Token"] = adminToken;
   }
 
-  if (!token && isGuestMode() && !path.startsWith("/auth") && path !== "/support") {
+  if (!token && isGuestMode() && !path.startsWith("/auth") && path !== "/support" && !path.startsWith("/public/")) {
     if (method === "GET") {
       const stub = guestStub(path);
       if (stub !== undefined) return stub as T;

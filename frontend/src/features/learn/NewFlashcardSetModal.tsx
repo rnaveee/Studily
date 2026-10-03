@@ -2,14 +2,16 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
+import SegmentedToggle from "../../components/SegmentedToggle";
 import { api } from "../../lib/api";
 import { toast } from "../../lib/toast";
-import type { Course, FlashcardSet, FlashcardSetRequest, Semester } from "../../types";
+import type { Course, FlashcardSet, FlashcardSetRequest, FlashcardSetVisibility, Semester } from "../../types";
 
 export default function NewFlashcardSetModal({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [courseId, setCourseId] = useState<number | "">("");
+  const [visibility, setVisibility] = useState<FlashcardSetVisibility>("PRIVATE");
   const navigate = useNavigate();
   const qc = useQueryClient();
 
@@ -46,6 +48,7 @@ export default function NewFlashcardSetModal({ onClose }: { onClose: () => void 
       description: description.trim() || null,
       courseId: courseId === "" ? null : courseId,
       cards: [],
+      visibility,
     });
   }
 
@@ -102,6 +105,24 @@ export default function NewFlashcardSetModal({ onClose }: { onClose: () => void 
                 : "No current semester set up yet."}
             </p>
           )}
+        </div>
+
+        <div>
+          <label className="field-label">Who can see it</label>
+          <SegmentedToggle
+            className="w-full"
+            options={[
+              { value: "PRIVATE", label: "Private" },
+              { value: "PUBLIC", label: "Public" },
+            ]}
+            value={visibility}
+            onChange={setVisibility}
+          />
+          <p className="mt-2 text-[12px] text-fg-3">
+            {visibility === "PUBLIC"
+              ? "Anyone with the link can study it, and it shows on your profile."
+              : "Only you can see it. You can share it later."}
+          </p>
         </div>
 
         <div className="flex justify-end gap-2">

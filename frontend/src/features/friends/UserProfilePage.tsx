@@ -8,6 +8,7 @@ import BackButton from "../../components/BackButton";
 import ScheduleCard from "../../components/ScheduleCard";
 import type { Conversation, ProfileSchedule, Relationship } from "../../types";
 import { Spinner } from "../../components/Skeleton";
+import PublicSetsSection from "../learn/PublicSetsSection";
 
 export default function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>();
@@ -164,6 +165,8 @@ export default function UserProfilePage() {
             </div>
           )
         )}
+
+        <PublicSetsSection userId={id} title={`${data.user.name || data.user.username}'s flashcard sets`} />
         </>
       )}
     </div>

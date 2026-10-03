@@ -4,7 +4,11 @@ import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.course.CourseService;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardDto;
+import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetDto;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetRequest;
+import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetSummaryDto;
+import com.rnave.studily.flashcard.FlashcardDtos.SharedFlashcardSetDto;
+import com.rnave.studily.user.User;
 import com.rnave.studily.flashcard.Sm2.Grade;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,6 +21,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -32,7 +37,39 @@ class FlashcardSetServiceTest {
         currentUser = mock(CurrentUser.class);
         service = new FlashcardSetService(flashcardSetRepository, currentUser, mock(CourseService.class));
         when(currentUser.id()).thenReturn(1L);
+        when(currentUser.maybe()).thenReturn(Optional.of(user(1L)));
+        when(currentUser.entity()).thenReturn(user(1L));
         when(flashcardSetRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    }
+
+    private static User user(long id) {
+        User u = new User();
+        u.setId(id);
+        u.setUsername("user" + id);
+        u.setName("User " + id);
+        return u;
+    }
+
+    private FlashcardSet setOwnedBy(long setId, long ownerId, FlashcardSetVisibility visibility) {
+        FlashcardSet set = new FlashcardSet();
+        set.setId(setId);
+        set.setUser(user(ownerId));
+        set.setTitle("Cells");
+        set.setDescription("Organelles");
+        set.setVisibility(visibility);
+        Flashcard card = new Flashcard();
+        card.setId(500L);
+        card.setSet(set);
+        card.setFront("Mitochondria");
+        card.setBack("Powerhouse");
+        card.setPosition(0);
+        card.setRepetitions(6);
+        card.setEaseFactor(2.9);
+        card.setIntervalDays(40);
+        card.setDueAt(Instant.now().plus(40, ChronoUnit.DAYS));
+        set.getCards().add(card);
+        when(flashcardSetRepository.findById(setId)).thenReturn(Optional.of(set));
+        return set;
     }
 
     private FlashcardSet ownedSetWithCard(long setId, long cardId) {
@@ -104,7 +141,7 @@ class FlashcardSetServiceTest {
 
         service.update(10L, new FlashcardSetRequest("Title", null, null, List.of(
                 new FlashcardDto(100L, "edited front", "edited back", null, null, null, null),
-                new FlashcardDto(null, "brand new", "card", null, null, null, null))));
+                new FlashcardDto(null, "brand new", "card", null, null, null, null)), null));
 
         assertThat(set.getCards()).hasSize(2);
         Flashcard kept = set.getCards().get(0);
@@ -125,10 +162,123 @@ class FlashcardSetServiceTest {
         FlashcardSet set = ownedSetWithCard(10L, 100L);
 
         service.update(10L, new FlashcardSetRequest("Title", null, null, List.of(
-                new FlashcardDto(31337L, "front", "back", null, null, null, null))));
+                new FlashcardDto(31337L, "front", "back", null, null, null, null)), null));
 
         assertThat(set.getCards()).hasSize(1);
         assertThat(set.getCards().get(0).getId()).isNull();
         assertThat(set.getCards().get(0).getRepetitions()).isZero();
+    }
+
+    @Test
+    void sharedReturnsPublicSetToStranger() {
+        setOwnedBy(20L, 2L, FlashcardSetVisibility.PUBLIC);
+
+        SharedFlashcardSetDto dto = service.shared(20L);
+
+        assertThat(dto.viewerIsOwner()).isFalse();
+        assertThat(dto.owner().username()).isEqualTo("user2");
+        assertThat(dto.cardCount()).isEqualTo(1);
+        assertThat(dto.cards().get(0).front()).isEqualTo("Mitochondria");
+    }
+
+    @Test
+    void sharedReturnsPublicSetToAnonymousVisitor() {
+        when(currentUser.maybe()).thenReturn(Optional.empty());
+        setOwnedBy(20L, 2L, FlashcardSetVisibility.PUBLIC);
+
+        SharedFlashcardSetDto dto = service.shared(20L);
+
+        assertThat(dto.viewerIsOwner()).isFalse();
+        assertThat(dto.title()).isEqualTo("Cells");
+    }
+
+    @Test
+    void sharedHidesPrivateSetFromStranger() {
+        setOwnedBy(20L, 2L, FlashcardSetVisibility.PRIVATE);
+
+        assertThatThrownBy(() -> service.shared(20L)).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void sharedHidesPrivateSetFromAnonymousVisitor() {
+        when(currentUser.maybe()).thenReturn(Optional.empty());
+        setOwnedBy(20L, 2L, FlashcardSetVisibility.PRIVATE);
+
+        assertThatThrownBy(() -> service.shared(20L)).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void sharedShowsPrivateSetToItsOwner() {
+        setOwnedBy(20L, 1L, FlashcardSetVisibility.PRIVATE);
+
+        assertThat(service.shared(20L).viewerIsOwner()).isTrue();
+    }
+
+    @Test
+    void copyOfPublicSetIsPrivateWithFreshReviewState() {
+        FlashcardSet source = setOwnedBy(20L, 2L, FlashcardSetVisibility.PUBLIC);
+
+        FlashcardSetDto dto = service.copy(20L);
+
+        assertThat(dto.visibility()).isEqualTo(FlashcardSetVisibility.PRIVATE);
+        assertThat(dto.courseId()).isNull();
+        assertThat(dto.title()).isEqualTo("Cells");
+        assertThat(dto.description()).isEqualTo("Organelles");
+        assertThat(dto.cards()).hasSize(1);
+        FlashcardDto card = dto.cards().get(0);
+        assertThat(card.front()).isEqualTo("Mitochondria");
+        assertThat(card.back()).isEqualTo("Powerhouse");
+        assertThat(card.repetitions()).isZero();
+        assertThat(card.easeFactor()).isEqualTo(2.5);
+        assertThat(card.intervalDays()).isZero();
+        assertThat(card.dueAt()).isBeforeOrEqualTo(Instant.now());
+
+        Flashcard original = source.getCards().get(0);
+        assertThat(original.getRepetitions()).isEqualTo(6);
+        assertThat(original.getIntervalDays()).isEqualTo(40);
+    }
+
+    @Test
+    void copyRejectsSomeoneElsesPrivateSet() {
+        setOwnedBy(20L, 2L, FlashcardSetVisibility.PRIVATE);
+
+        assertThatThrownBy(() -> service.copy(20L)).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void setVisibilityRejectsSetTheCallerDoesNotOwn() {
+        when(flashcardSetRepository.findByIdAndUserId(77L, 1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.setVisibility(77L, FlashcardSetVisibility.PUBLIC))
+                .isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void setVisibilityUpdatesOwnedSet() {
+        FlashcardSet set = ownedSetWithCard(10L, 100L);
+
+        FlashcardSetDto dto = service.setVisibility(10L, FlashcardSetVisibility.PUBLIC);
+
+        assertThat(set.getVisibility()).isEqualTo(FlashcardSetVisibility.PUBLIC);
+        assertThat(dto.visibility()).isEqualTo(FlashcardSetVisibility.PUBLIC);
+    }
+
+    @Test
+    void createDefaultsToPrivate() {
+        FlashcardSetDto dto = service.create(new FlashcardSetRequest("Title", null, null, List.of(), null));
+
+        assertThat(dto.visibility()).isEqualTo(FlashcardSetVisibility.PRIVATE);
+    }
+
+    @Test
+    void publicSetsOfOnlyQueriesPublicSets() {
+        FlashcardSet publicSet = setOwnedBy(20L, 2L, FlashcardSetVisibility.PUBLIC);
+        when(flashcardSetRepository.findByUserIdAndVisibilityOrderByCreatedAtDesc(eq(2L), eq(FlashcardSetVisibility.PUBLIC)))
+                .thenReturn(List.of(publicSet));
+
+        List<FlashcardSetSummaryDto> sets = service.publicSetsOf(2L);
+
+        assertThat(sets).extracting(FlashcardSetSummaryDto::id).containsExactly(20L);
+        assertThat(sets.get(0).cardCount()).isEqualTo(1);
     }
 }

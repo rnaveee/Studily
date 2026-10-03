@@ -7,6 +7,7 @@ import Avatar from "../../components/Avatar";
 import ScheduleCard from "../../components/ScheduleCard";
 import ScheduleExportButtons from "../../components/ScheduleExportButtons";
 import { hasMeetings } from "../../lib/scheduleImage";
+import PublicSetsSection from "../learn/PublicSetsSection";
 import type { ProfileSchedule } from "../../types";
 
 export default function ProfilePage() {
@@ -120,6 +121,12 @@ export default function ProfilePage() {
           </p>
         </div>
       )}
+
+      <PublicSetsSection
+        userId={user.id}
+        title="Your public flashcard sets"
+        emptyHint="Make a set public from its Share button and it will show here."
+      />
     </div>
   );
 }

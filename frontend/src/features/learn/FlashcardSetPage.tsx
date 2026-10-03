@@ -1,12 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
-import { ChevronLeft, ChevronRight, GraduationCap, Plus, Shuffle, X } from "lucide-react";
-import { api } from "../../lib/api";
+import { Link, Navigate, useParams } from "react-router-dom";
+import { Globe, Plus, Share2 } from "lucide-react";
+import { api, ApiError } from "../../lib/api";
+import { useAuth, useRequireAuth } from "../../lib/auth";
 import BackButton from "../../components/BackButton";
 import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
 import StudySession from "./StudySession";
+import FlashcardViewer from "./FlashcardViewer";
+import LearnMode from "./LearnMode";
+import MemoryGame from "./MemoryGame";
+import SpeedMatch from "./SpeedMatch";
+import ShareSetModal from "./ShareSetModal";
+import SetModePicker, { useStudyMode } from "./SetModePicker";
 import type { Course, FlashcardSet, FlashcardSetRequest } from "../../types";
 import { SkeletonList } from "../../components/Skeleton";
 
@@ -15,13 +22,13 @@ export default function FlashcardSetPage() {
   const setId = Number(id);
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const { user } = useAuth();
+  const requireAuth = useRequireAuth();
+  const [mode, setMode] = useStudyMode();
 
-  const [index, setIndex] = useState(0);
-  const [flipped, setFlipped] = useState(false);
   const [front, setFront] = useState("");
   const [back, setBack] = useState("");
-  const [order, setOrder] = useState<number[]>([]);
-  const [studying, setStudying] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const set = useQuery({
     queryKey: ["flashcards", "sets", setId],
@@ -34,13 +41,6 @@ export default function FlashcardSetPage() {
     queryKey: ["courses", null],
     queryFn: () => api.get<Course[]>("/courses"),
   });
-
-  useEffect(() => {
-    if (!set.data) return;
-    setOrder(set.data.cards.map((_, i) => i));
-    setIndex(0);
-    setFlipped(false);
-  }, [set.data?.id, set.data?.cards.length]);
 
   const update = useMutation({
     mutationFn: (req: FlashcardSetRequest) => api.put<FlashcardSet>(`/flashcard-sets/${setId}`, req),
@@ -55,6 +55,9 @@ export default function FlashcardSetPage() {
   }
 
   if (!set.data) {
+    if (user && set.error instanceof ApiError && set.error.status === 404) {
+      return <Navigate to={`/sets/${setId}`} replace />;
+    }
     return (
       <div className="card p-10 text-center">
         <p className="text-sm text-fg-3">This flashcard set doesn't exist.</p>
@@ -69,28 +72,7 @@ export default function FlashcardSetPage() {
   const course = courses.data?.find((c) => c.id === data.courseId);
   const color = course?.color ?? "var(--accent)";
   const count = data.cards.length;
-  const safeIndex = count === 0 ? 0 : Math.min(index, count - 1);
-  const cardIndex = order[safeIndex] ?? safeIndex;
-  const card = data.cards[cardIndex];
-
-  function go(delta: number) {
-    if (count === 0) return;
-    setIndex((safeIndex + delta + count) % count);
-    setFlipped(false);
-  }
-
-  function shuffle() {
-    if (count < 2) return;
-    const shuffled = order.slice();
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    setOrder(shuffled);
-    setIndex(0);
-    setFlipped(false);
-    toast.success("Cards shuffled");
-  }
+  const viewerKey = user ? String(user.id) : "guest";
 
   function addCard(e: React.FormEvent) {
     e.preventDefault();
@@ -119,7 +101,6 @@ export default function FlashcardSetPage() {
       courseId: data.courseId,
       cards: data.cards.filter((_, i) => i !== actualIndex),
     });
-    setFlipped(false);
   }
 
   return (
@@ -128,109 +109,94 @@ export default function FlashcardSetPage() {
         <BackButton fallback="/learn/flashcards" />
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold text-fg">{data.title}</h1>
-          <p className="mt-1 text-[13px] text-fg-3">
-            {count} {count === 1 ? "card" : "cards"}
-            {data.description && ` · ${data.description}`}
+          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[13px] text-fg-3">
+            <span>
+              {count} {count === 1 ? "card" : "cards"}
+              {data.description && ` · ${data.description}`}
+            </span>
+            {data.visibility === "PUBLIC" && (
+              <span className="inline-flex items-center gap-1">
+                · <Globe size={11} /> Public
+              </span>
+            )}
           </p>
         </div>
         <button
-          onClick={shuffle}
-          disabled={count < 2}
+          onClick={() => requireAuth(() => setSharing(true))}
           className="btn btn-ghost shrink-0"
-          aria-label="Shuffle cards"
         >
-          <Shuffle size={13} />
-          Shuffle
-        </button>
-        <button
-          onClick={() => setStudying(true)}
-          disabled={count === 0 || studying}
-          className="btn btn-primary shrink-0"
-        >
-          <GraduationCap size={13} />
-          Study{data.dueCount > 0 ? ` (${data.dueCount})` : ""}
+          <Share2 size={13} />
+          Share
         </button>
       </div>
 
-      {studying ? (
-        <StudySession
+      <SetModePicker mode={mode} onChange={setMode} color={color} dueCount={data.dueCount} />
+
+      {mode === "flashcards" && (
+        <>
+          <FlashcardViewer cards={data.cards} color={color} onDelete={deleteCard} />
+          <form onSubmit={addCard} className="card space-y-3 p-4">
+            <h2 className="text-[12px] font-semibold uppercase tracking-wide text-fg-3">Add a card</h2>
+            <div>
+              <label className="field-label">Front</label>
+              <input
+                className="input"
+                value={front}
+                onChange={(e) => setFront(e.target.value)}
+                placeholder="Question or term"
+              />
+            </div>
+            <div>
+              <label className="field-label">Back</label>
+              <input
+                className="input"
+                value={back}
+                onChange={(e) => setBack(e.target.value)}
+                placeholder="Answer or definition"
+              />
+            </div>
+            <div className="flex justify-end">
+              <button type="submit" disabled={!front.trim() || !back.trim()} className="btn btn-primary">
+                <Plus size={13} />
+                Add card
+              </button>
+            </div>
+          </form>
+        </>
+      )}
+
+      {mode === "study" &&
+        (count === 0 ? (
+          <div className="card p-10 text-center">
+            <p className="text-sm text-fg-3">Add some cards first, then come back to study them.</p>
+          </div>
+        ) : (
+          <StudySession
+            setId={data.id}
+            cards={data.cards}
+            color={color}
+            onExit={() => setMode("flashcards")}
+          />
+        ))}
+
+      {mode === "learn" && (
+        <LearnMode
+          key={data.id}
           setId={data.id}
           cards={data.cards}
           color={color}
-          onExit={() => setStudying(false)}
+          viewerKey={viewerKey}
+          onSwitchMode={setMode}
         />
-      ) : card ? (
-        <div className="space-y-3">
-          <button
-            onClick={() => setFlipped((f) => !f)}
-            className="card flex min-h-48 w-full items-center justify-center p-8 text-center transition-colors hover:bg-surface-hi"
-            style={{ borderLeft: `4px solid ${color}` }}
-          >
-            <div>
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-fg-3">
-                {flipped ? "Back" : "Front"} · tap to flip
-              </div>
-              <div className="text-lg text-fg">{flipped ? card.back : card.front}</div>
-            </div>
-          </button>
-          <div className="flex items-center justify-between">
-            <button onClick={() => go(-1)} className="btn btn-ghost" aria-label="Previous card">
-              <ChevronLeft size={13} />
-              Prev
-            </button>
-            <div className="flex items-center gap-3">
-              <span className="text-[12px] text-fg-3 tabular-nums">
-                {safeIndex + 1} / {count}
-              </span>
-              <button
-                onClick={() => deleteCard(cardIndex)}
-                className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
-                aria-label="Delete card"
-              >
-                <X size={14} />
-              </button>
-            </div>
-            <button onClick={() => go(1)} className="btn btn-ghost" aria-label="Next card">
-              Next
-              <ChevronRight size={13} />
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="card p-10 text-center">
-          <p className="text-sm text-fg-3">This set is empty. Add your first card below.</p>
-        </div>
       )}
 
-      {!studying && (
-      <form onSubmit={addCard} className="card space-y-3 p-4">
-        <h2 className="text-[12px] font-semibold uppercase tracking-wide text-fg-3">Add a card</h2>
-        <div>
-          <label className="field-label">Front</label>
-          <input
-            className="input"
-            value={front}
-            onChange={(e) => setFront(e.target.value)}
-            placeholder="Question or term"
-          />
-        </div>
-        <div>
-          <label className="field-label">Back</label>
-          <input
-            className="input"
-            value={back}
-            onChange={(e) => setBack(e.target.value)}
-            placeholder="Answer or definition"
-          />
-        </div>
-        <div className="flex justify-end">
-          <button type="submit" disabled={!front.trim() || !back.trim()} className="btn btn-primary">
-            <Plus size={13} />
-            Add card
-          </button>
-        </div>
-      </form>
+      {mode === "memory" && <MemoryGame key={data.id} cards={data.cards} color={color} />}
+
+      {mode === "match" && (
+        <SpeedMatch key={data.id} setId={data.id} cards={data.cards} color={color} viewerKey={viewerKey} />
       )}
+
+      {sharing && <ShareSetModal set={data} onClose={() => setSharing(false)} />}
     </div>
   );
 }

@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 42,
+    date: "2026-10-02",
+    title: "Flashcards you'll actually want to open",
+    description:
+      "Every flashcard set now has five ways to study it. Flashcards is the flip-through you already know. Study is the spaced repetition review, and its buttons now say what they mean: Again for a card you didn't know, Hard for one you got with a struggle, Good for one you got after a moment, and Easy for one you knew instantly, each with when you'll see that card next. Learn walks you through the set with questions that get harder as you go: multiple choice and true or false while a card is new, then typing the answer from memory once it's familiar, with a check-in after every round showing how many cards you've mastered. It forgives small typos, lets you overrule it when you were right, and remembers where you left off on that device. Memory lays the cards face down so you can flip two at a time and match each term with its definition, and Match puts them all face up against the clock, with a second added for every wrong pair and your best time saved. Sets can be shared now too. Make a set public from its Share button and copy the link: anyone who opens it sees it marked as a shared set with who made it, and can study it in every mode except Study without even having an account. Save a copy to put it in your own sets, where you can edit it and track your progress. Public sets also show on your profile, so classmates can find them there.",
+  },
+  {
     version: 41,
     date: "2026-09-23",
     title: "Ten automatic imports a month, and chat that behaves",

@@ -4,6 +4,7 @@ import com.rnave.studily.flashcard.FlashcardDtos.FlashcardDto;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetDto;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetRequest;
 import com.rnave.studily.flashcard.FlashcardDtos.ReviewRequest;
+import com.rnave.studily.flashcard.FlashcardDtos.VisibilityRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -48,6 +49,17 @@ public class FlashcardSetController {
     @PutMapping("/{id}")
     public FlashcardSetDto update(@PathVariable Long id, @Valid @RequestBody FlashcardSetRequest req) {
         return flashcardSetService.update(id, req);
+    }
+
+    @PutMapping("/{id}/visibility")
+    public FlashcardSetDto setVisibility(@PathVariable Long id, @Valid @RequestBody VisibilityRequest req) {
+        return flashcardSetService.setVisibility(id, req.visibility());
+    }
+
+    @PostMapping("/{id}/copy")
+    @ResponseStatus(HttpStatus.CREATED)
+    public FlashcardSetDto copy(@PathVariable Long id) {
+        return flashcardSetService.copy(id);
     }
 
     @DeleteMapping("/{id}")

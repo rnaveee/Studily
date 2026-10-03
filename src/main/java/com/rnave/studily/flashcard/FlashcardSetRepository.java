@@ -11,5 +11,7 @@ public interface FlashcardSetRepository extends JpaRepository<FlashcardSet, Long
 
     List<FlashcardSet> findByUserIdAndCourseIdOrderByCreatedAtDesc(Long userId, Long courseId);
 
+    List<FlashcardSet> findByUserIdAndVisibilityOrderByCreatedAtDesc(Long userId, FlashcardSetVisibility visibility);
+
     Optional<FlashcardSet> findByIdAndUserId(Long id, Long userId);
 }

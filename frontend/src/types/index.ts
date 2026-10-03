@@ -396,11 +396,14 @@ export interface Flashcard {
 
 export type ReviewGrade = "AGAIN" | "HARD" | "GOOD" | "EASY";
 
+export type FlashcardSetVisibility = "PRIVATE" | "PUBLIC";
+
 export interface FlashcardSet {
   id: number;
   courseId?: number | null;
   title: string;
   description?: string | null;
+  visibility: FlashcardSetVisibility;
   createdAt: string;
   dueCount: number;
   cards: Flashcard[];
@@ -411,6 +414,39 @@ export interface FlashcardSetRequest {
   description?: string | null;
   courseId?: number | null;
   cards: Flashcard[];
+  visibility?: FlashcardSetVisibility;
+}
+
+export interface StudyCard {
+  id?: number;
+  front: string;
+  back: string;
+}
+
+export interface SetOwner {
+  id: number;
+  username: string;
+  name: string;
+  avatarUrl?: string | null;
+}
+
+export interface SharedFlashcardSet {
+  id: number;
+  title: string;
+  description?: string | null;
+  createdAt: string;
+  cardCount: number;
+  owner: SetOwner;
+  viewerIsOwner: boolean;
+  cards: StudyCard[];
+}
+
+export interface FlashcardSetSummary {
+  id: number;
+  title: string;
+  description?: string | null;
+  cardCount: number;
+  createdAt: string;
 }
 
 export type ConversationType = "DIRECT" | "GROUP";

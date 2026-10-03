@@ -426,6 +426,7 @@ export function demoFlashcardSets(): FlashcardSet[] {
       title: "BIOL 101 \u00b7 The Cell",
       description: "Organelles and what each one actually does.",
       createdAt: at(-12, "18:40:00"),
+      visibility: "PRIVATE",
       dueCount: 4,
       cards: [
         { id: 1, front: "What is the powerhouse of the cell?", back: "The mitochondria." },
@@ -441,6 +442,7 @@ export function demoFlashcardSets(): FlashcardSet[] {
       title: "PSYC 101 \u00b7 Key Terms",
       description: "Definitions I keep mixing up before the midterm.",
       createdAt: at(-6, "21:05:00"),
+      visibility: "PRIVATE",
       dueCount: 2,
       cards: [
         { id: 6, front: "Classical conditioning", back: "Learning to link a neutral cue with an automatic response, like Pavlov's dogs." },
