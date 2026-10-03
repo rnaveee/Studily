@@ -51,6 +51,14 @@ public class FlashcardSet {
     @Column(nullable = false, length = 16)
     private FlashcardSetVisibility visibility = FlashcardSetVisibility.PRIVATE;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "copied_from_set_id")
+    private FlashcardSet copiedFromSet;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "copied_from_user_id")
+    private User copiedFromUser;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 

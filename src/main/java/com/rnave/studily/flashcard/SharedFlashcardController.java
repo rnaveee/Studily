@@ -23,7 +23,7 @@ public class SharedFlashcardController {
     }
 
     @GetMapping("/api/users/{userId}/flashcard-sets")
-    public List<FlashcardSetSummaryDto> publicSets(@PathVariable Long userId) {
-        return flashcardSetService.publicSetsOf(userId);
+    public List<FlashcardSetSummaryDto> visibleSets(@PathVariable Long userId) {
+        return flashcardSetService.visibleSetsOf(userId);
     }
 }

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Globe, Layers, Plus, Trash2 } from "lucide-react";
+import { Layers, Plus, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
 import BackButton from "../../components/BackButton";
 import { useRequireAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
 import type { Course, FlashcardSet } from "../../types";
 import NewFlashcardSetModal from "./NewFlashcardSetModal";
+import { VisibilityBadge } from "./visibility";
 import { SkeletonList } from "../../components/Skeleton";
 
 export default function FlashcardsPage() {
@@ -84,12 +85,7 @@ export default function FlashcardsPage() {
                           {s.dueCount} due
                         </span>
                       )}
-                      {s.visibility === "PUBLIC" && (
-                        <span className="badge badge-muted inline-flex shrink-0 items-center gap-1">
-                          <Globe size={10} />
-                          Public
-                        </span>
-                      )}
+                      <VisibilityBadge visibility={s.visibility} />
                     </div>
                     {s.description && (
                       <div className="text-[12px] text-fg-3 truncate">{s.description}</div>

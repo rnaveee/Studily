@@ -4,11 +4,16 @@ import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.course.Course;
 import com.rnave.studily.course.CourseService;
+import com.rnave.studily.flashcard.FlashcardDtos.CopiedFromDto;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardDto;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetDto;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetRequest;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetSummaryDto;
+import com.rnave.studily.flashcard.FlashcardDtos.SetOwnerDto;
+import com.rnave.studily.flashcard.FlashcardDtos.SetPagePreview;
 import com.rnave.studily.flashcard.FlashcardDtos.SharedFlashcardSetDto;
+import com.rnave.studily.friend.FriendRequestRepository;
+import com.rnave.studily.friend.FriendRequestStatus;
 import com.rnave.studily.user.User;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -16,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,12 +33,14 @@ public class FlashcardSetService {
     private final FlashcardSetRepository flashcardSetRepository;
     private final CurrentUser currentUser;
     private final CourseService courseService;
+    private final FriendRequestRepository friendRequestRepository;
 
     public FlashcardSetService(FlashcardSetRepository flashcardSetRepository, CurrentUser currentUser,
-                               @Lazy CourseService courseService) {
+                               @Lazy CourseService courseService, FriendRequestRepository friendRequestRepository) {
         this.flashcardSetRepository = flashcardSetRepository;
         this.currentUser = currentUser;
         this.courseService = courseService;
+        this.friendRequestRepository = friendRequestRepository;
     }
 
     @Transactional(readOnly = true)
@@ -48,7 +56,7 @@ public class FlashcardSetService {
 
     @Transactional(readOnly = true)
     public FlashcardSetDto get(Long id) {
-        return FlashcardSetDto.from(requireOwned(id));
+        return ownerDto(requireOwned(id));
     }
 
     @Transactional(readOnly = true)
@@ -70,7 +78,7 @@ public class FlashcardSetService {
     public FlashcardSetDto setVisibility(Long id, FlashcardSetVisibility visibility) {
         FlashcardSet set = requireOwned(id);
         set.setVisibility(visibility);
-        return FlashcardSetDto.from(set);
+        return ownerDto(set);
     }
 
     @Transactional(readOnly = true)
@@ -81,20 +89,37 @@ public class FlashcardSetService {
     }
 
     @Transactional(readOnly = true)
-    public List<FlashcardSetSummaryDto> publicSetsOf(Long userId) {
+    public List<FlashcardSetSummaryDto> visibleSetsOf(Long userId) {
+        Long viewerId = currentUser.id();
+        EnumSet<FlashcardSetVisibility> visible = viewerId.equals(userId) || areFriends(viewerId, userId)
+                ? EnumSet.of(FlashcardSetVisibility.PUBLIC, FlashcardSetVisibility.FRIENDS)
+                : EnumSet.of(FlashcardSetVisibility.PUBLIC);
         return flashcardSetRepository
-                .findByUserIdAndVisibilityOrderByCreatedAtDesc(userId, FlashcardSetVisibility.PUBLIC)
+                .findByUserIdAndVisibilityInOrderByCreatedAtDesc(userId, visible)
                 .stream().map(FlashcardSetSummaryDto::from).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<SetPagePreview> publicPreview(Long id) {
+        return flashcardSetRepository.findById(id)
+                .filter(s -> s.getVisibility() == FlashcardSetVisibility.PUBLIC)
+                .map(s -> new SetPagePreview(s.getTitle(), s.getDescription(), s.getUser().getName(),
+                        s.getUser().getUsername(), s.getCards().size()));
     }
 
     @Transactional
     public FlashcardSetDto copy(Long id) {
-        FlashcardSet source = requireViewable(id, currentUser.id());
+        User me = currentUser.entity();
+        FlashcardSet source = requireViewable(id, me.getId());
         FlashcardSet copy = new FlashcardSet();
-        copy.setUser(currentUser.entity());
+        copy.setUser(me);
         copy.setTitle(source.getTitle());
         copy.setDescription(source.getDescription());
         copy.setVisibility(FlashcardSetVisibility.PRIVATE);
+        if (!source.getUser().getId().equals(me.getId())) {
+            copy.setCopiedFromSet(source);
+            copy.setCopiedFromUser(source.getUser());
+        }
         for (Flashcard c : source.getCards()) {
             Flashcard card = new Flashcard();
             card.setSet(copy);
@@ -103,22 +128,51 @@ public class FlashcardSetService {
             card.setPosition(c.getPosition());
             copy.getCards().add(card);
         }
-        return FlashcardSetDto.from(flashcardSetRepository.save(copy));
+        return ownerDto(flashcardSetRepository.save(copy));
     }
 
     private FlashcardSet requireViewable(Long id, Long viewerId) {
-        Optional<FlashcardSet> found = flashcardSetRepository.findById(id);
-        return found
-                .filter(s -> s.getVisibility() == FlashcardSetVisibility.PUBLIC
-                        || s.getUser().getId().equals(viewerId))
+        return flashcardSetRepository.findById(id)
+                .filter(s -> canView(s, viewerId))
                 .orElseThrow(() -> new NotFoundException("Flashcard set not found"));
+    }
+
+    private boolean canView(FlashcardSet set, Long viewerId) {
+        Long ownerId = set.getUser().getId();
+        if (ownerId.equals(viewerId)) return true;
+        return switch (set.getVisibility()) {
+            case PUBLIC -> true;
+            case FRIENDS -> viewerId != null && areFriends(viewerId, ownerId);
+            case PRIVATE -> false;
+        };
+    }
+
+    private boolean areFriends(Long a, Long b) {
+        return friendRequestRepository.findBetween(a, b)
+                .map(f -> f.getStatus() == FriendRequestStatus.ACCEPTED)
+                .orElse(false);
+    }
+
+    private FlashcardSetDto ownerDto(FlashcardSet set) {
+        return FlashcardSetDto.from(set, copiedFrom(set));
+    }
+
+    private CopiedFromDto copiedFrom(FlashcardSet set) {
+        User originalOwner = set.getCopiedFromUser();
+        if (originalOwner == null) return null;
+        FlashcardSet source = set.getCopiedFromSet();
+        boolean visible = source != null && canView(source, set.getUser().getId());
+        return new CopiedFromDto(
+                visible ? source.getId() : null,
+                visible ? source.getTitle() : null,
+                SetOwnerDto.from(originalOwner));
     }
 
     @Transactional
     public FlashcardSetDto update(Long id, FlashcardSetRequest req) {
         FlashcardSet set = requireOwned(id);
         apply(set, req);
-        return FlashcardSetDto.from(flashcardSetRepository.save(set));
+        return ownerDto(flashcardSetRepository.save(set));
     }
 
     @Transactional

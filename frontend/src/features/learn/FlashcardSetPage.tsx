@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { Globe, Plus, Share2 } from "lucide-react";
+import { Plus, Share2 } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { useAuth, useRequireAuth } from "../../lib/auth";
 import BackButton from "../../components/BackButton";
@@ -14,6 +14,7 @@ import MemoryGame from "./MemoryGame";
 import SpeedMatch from "./SpeedMatch";
 import ShareSetModal from "./ShareSetModal";
 import SetModePicker, { useStudyMode } from "./SetModePicker";
+import { VisibilityBadge } from "./visibility";
 import type { Course, FlashcardSet, FlashcardSetRequest } from "../../types";
 import { SkeletonList } from "../../components/Skeleton";
 
@@ -109,17 +110,30 @@ export default function FlashcardSetPage() {
         <BackButton fallback="/learn/flashcards" />
         <div className="min-w-0 flex-1">
           <h1 className="text-xl font-semibold text-fg">{data.title}</h1>
-          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-[13px] text-fg-3">
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-fg-3">
             <span>
               {count} {count === 1 ? "card" : "cards"}
               {data.description && ` · ${data.description}`}
             </span>
-            {data.visibility === "PUBLIC" && (
-              <span className="inline-flex items-center gap-1">
-                · <Globe size={11} /> Public
-              </span>
-            )}
+            <VisibilityBadge visibility={data.visibility} />
           </p>
+          {data.copiedFrom && (
+            <p className="mt-0.5 text-[12px] text-fg-3">
+              Copied from{" "}
+              {data.copiedFrom.setId ? (
+                <Link to={`/sets/${data.copiedFrom.setId}`} className="font-medium text-fg-2 hover:text-fg">
+                  {data.copiedFrom.title}
+                </Link>
+              ) : (
+                "a set"
+              )}{" "}
+              by{" "}
+              <Link to={`/users/${data.copiedFrom.owner.id}`} className="font-medium text-fg-2 hover:text-fg">
+                {data.copiedFrom.owner.name || data.copiedFrom.owner.username}
+              </Link>{" "}
+              (@{data.copiedFrom.owner.username})
+            </p>
+          )}
         </div>
         <button
           onClick={() => requireAuth(() => setSharing(true))}

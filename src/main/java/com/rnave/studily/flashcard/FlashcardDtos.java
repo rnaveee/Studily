@@ -35,9 +35,14 @@ public class FlashcardDtos {
             FlashcardSetVisibility visibility,
             Instant createdAt,
             long dueCount,
+            CopiedFromDto copiedFrom,
             List<FlashcardDto> cards) {
 
         public static FlashcardSetDto from(FlashcardSet s) {
+            return from(s, null);
+        }
+
+        public static FlashcardSetDto from(FlashcardSet s, CopiedFromDto copiedFrom) {
             Instant now = Instant.now();
             return new FlashcardSetDto(
                     s.getId(),
@@ -47,8 +52,12 @@ public class FlashcardDtos {
                     s.getVisibility(),
                     s.getCreatedAt(),
                     s.getCards().stream().filter(c -> !c.getDueAt().isAfter(now)).count(),
+                    copiedFrom,
                     s.getCards().stream().map(FlashcardDto::from).toList());
         }
+    }
+
+    public record CopiedFromDto(Long setId, String title, SetOwnerDto owner) {
     }
 
     public record FlashcardSetRequest(
@@ -83,6 +92,7 @@ public class FlashcardDtos {
             Long id,
             String title,
             String description,
+            FlashcardSetVisibility visibility,
             Instant createdAt,
             int cardCount,
             SetOwnerDto owner,
@@ -94,6 +104,7 @@ public class FlashcardDtos {
                     s.getId(),
                     s.getTitle(),
                     s.getDescription(),
+                    s.getVisibility(),
                     s.getCreatedAt(),
                     s.getCards().size(),
                     SetOwnerDto.from(s.getUser()),
@@ -102,11 +113,16 @@ public class FlashcardDtos {
         }
     }
 
-    public record FlashcardSetSummaryDto(Long id, String title, String description, int cardCount, Instant createdAt) {
+    public record FlashcardSetSummaryDto(Long id, String title, String description,
+                                         FlashcardSetVisibility visibility, int cardCount, Instant createdAt) {
 
         public static FlashcardSetSummaryDto from(FlashcardSet s) {
             return new FlashcardSetSummaryDto(s.getId(), s.getTitle(), s.getDescription(),
-                    s.getCards().size(), s.getCreatedAt());
+                    s.getVisibility(), s.getCards().size(), s.getCreatedAt());
         }
+    }
+
+    public record SetPagePreview(String title, String description, String ownerName, String ownerUsername,
+                                 int cardCount) {
     }
 }

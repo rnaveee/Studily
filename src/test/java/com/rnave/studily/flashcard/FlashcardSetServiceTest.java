@@ -8,6 +8,9 @@ import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetDto;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetRequest;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetSummaryDto;
 import com.rnave.studily.flashcard.FlashcardDtos.SharedFlashcardSetDto;
+import com.rnave.studily.friend.FriendRequest;
+import com.rnave.studily.friend.FriendRequestRepository;
+import com.rnave.studily.friend.FriendRequestStatus;
 import com.rnave.studily.user.User;
 import com.rnave.studily.flashcard.Sm2.Grade;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,13 +33,17 @@ class FlashcardSetServiceTest {
 
     private FlashcardSetRepository flashcardSetRepository;
     private CurrentUser currentUser;
+    private FriendRequestRepository friendRequestRepository;
     private FlashcardSetService service;
 
     @BeforeEach
     void setUp() {
         flashcardSetRepository = mock(FlashcardSetRepository.class);
         currentUser = mock(CurrentUser.class);
-        service = new FlashcardSetService(flashcardSetRepository, currentUser, mock(CourseService.class));
+        friendRequestRepository = mock(FriendRequestRepository.class);
+        service = new FlashcardSetService(flashcardSetRepository, currentUser, mock(CourseService.class),
+                friendRequestRepository);
+        when(friendRequestRepository.findBetween(any(), any())).thenReturn(Optional.empty());
         when(currentUser.id()).thenReturn(1L);
         when(currentUser.maybe()).thenReturn(Optional.of(user(1L)));
         when(currentUser.entity()).thenReturn(user(1L));
@@ -48,6 +56,15 @@ class FlashcardSetServiceTest {
         u.setUsername("user" + id);
         u.setName("User " + id);
         return u;
+    }
+
+    private void befriend(long a, long b, FriendRequestStatus status) {
+        FriendRequest request = new FriendRequest();
+        request.setRequester(user(a));
+        request.setAddressee(user(b));
+        request.setStatus(status);
+        when(friendRequestRepository.findBetween(a, b)).thenReturn(Optional.of(request));
+        when(friendRequestRepository.findBetween(b, a)).thenReturn(Optional.of(request));
     }
 
     private FlashcardSet setOwnedBy(long setId, long ownerId, FlashcardSetVisibility visibility) {
@@ -271,14 +288,140 @@ class FlashcardSetServiceTest {
     }
 
     @Test
-    void publicSetsOfOnlyQueriesPublicSets() {
+    void visibleSetsOfStrangerAreOnlyPublic() {
         FlashcardSet publicSet = setOwnedBy(20L, 2L, FlashcardSetVisibility.PUBLIC);
-        when(flashcardSetRepository.findByUserIdAndVisibilityOrderByCreatedAtDesc(eq(2L), eq(FlashcardSetVisibility.PUBLIC)))
+        when(flashcardSetRepository.findByUserIdAndVisibilityInOrderByCreatedAtDesc(
+                eq(2L), eq(EnumSet.of(FlashcardSetVisibility.PUBLIC))))
                 .thenReturn(List.of(publicSet));
 
-        List<FlashcardSetSummaryDto> sets = service.publicSetsOf(2L);
+        List<FlashcardSetSummaryDto> sets = service.visibleSetsOf(2L);
 
         assertThat(sets).extracting(FlashcardSetSummaryDto::id).containsExactly(20L);
         assertThat(sets.get(0).cardCount()).isEqualTo(1);
+    }
+
+    @Test
+    void visibleSetsOfFriendIncludeFriendsOnlySets() {
+        befriend(1L, 2L, FriendRequestStatus.ACCEPTED);
+        FlashcardSet friendsSet = setOwnedBy(21L, 2L, FlashcardSetVisibility.FRIENDS);
+        when(flashcardSetRepository.findByUserIdAndVisibilityInOrderByCreatedAtDesc(
+                eq(2L), eq(EnumSet.of(FlashcardSetVisibility.PUBLIC, FlashcardSetVisibility.FRIENDS))))
+                .thenReturn(List.of(friendsSet));
+
+        assertThat(service.visibleSetsOf(2L)).extracting(FlashcardSetSummaryDto::visibility)
+                .containsExactly(FlashcardSetVisibility.FRIENDS);
+    }
+
+    @Test
+    void visibleSetsOfPendingFriendAreOnlyPublic() {
+        befriend(1L, 2L, FriendRequestStatus.PENDING);
+
+        service.visibleSetsOf(2L);
+
+        org.mockito.Mockito.verify(flashcardSetRepository).findByUserIdAndVisibilityInOrderByCreatedAtDesc(
+                2L, EnumSet.of(FlashcardSetVisibility.PUBLIC));
+    }
+
+    @Test
+    void visibleSetsOfSelfIncludeFriendsOnlySets() {
+        service.visibleSetsOf(1L);
+
+        org.mockito.Mockito.verify(flashcardSetRepository).findByUserIdAndVisibilityInOrderByCreatedAtDesc(
+                1L, EnumSet.of(FlashcardSetVisibility.PUBLIC, FlashcardSetVisibility.FRIENDS));
+    }
+
+    @Test
+    void friendsOnlySetIsSharedWithFriends() {
+        befriend(1L, 2L, FriendRequestStatus.ACCEPTED);
+        setOwnedBy(20L, 2L, FlashcardSetVisibility.FRIENDS);
+
+        SharedFlashcardSetDto dto = service.shared(20L);
+
+        assertThat(dto.visibility()).isEqualTo(FlashcardSetVisibility.FRIENDS);
+        assertThat(dto.viewerIsOwner()).isFalse();
+    }
+
+    @Test
+    void friendsOnlySetIsHiddenFromNonFriends() {
+        befriend(1L, 2L, FriendRequestStatus.PENDING);
+        setOwnedBy(20L, 2L, FlashcardSetVisibility.FRIENDS);
+
+        assertThatThrownBy(() -> service.shared(20L)).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> service.copy(20L)).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void friendsOnlySetIsHiddenFromAnonymousVisitors() {
+        when(currentUser.maybe()).thenReturn(Optional.empty());
+        setOwnedBy(20L, 2L, FlashcardSetVisibility.FRIENDS);
+
+        assertThatThrownBy(() -> service.shared(20L)).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void friendCanCopyFriendsOnlySet() {
+        befriend(1L, 2L, FriendRequestStatus.ACCEPTED);
+        setOwnedBy(20L, 2L, FlashcardSetVisibility.FRIENDS);
+
+        assertThat(service.copy(20L).visibility()).isEqualTo(FlashcardSetVisibility.PRIVATE);
+    }
+
+    @Test
+    void copyRecordsWhereItCameFrom() {
+        FlashcardSet source = setOwnedBy(20L, 2L, FlashcardSetVisibility.PUBLIC);
+
+        FlashcardSetDto dto = service.copy(20L);
+
+        assertThat(dto.copiedFrom()).isNotNull();
+        assertThat(dto.copiedFrom().setId()).isEqualTo(20L);
+        assertThat(dto.copiedFrom().title()).isEqualTo("Cells");
+        assertThat(dto.copiedFrom().owner().username()).isEqualTo("user2");
+        assertThat(source.getUser().getId()).isEqualTo(2L);
+    }
+
+    @Test
+    void copyOfOwnSetHasNoAttribution() {
+        setOwnedBy(20L, 1L, FlashcardSetVisibility.PRIVATE);
+
+        assertThat(service.copy(20L).copiedFrom()).isNull();
+    }
+
+    @Test
+    void attributionHidesSourceThatIsNoLongerVisible() {
+        FlashcardSet source = setOwnedBy(20L, 2L, FlashcardSetVisibility.PRIVATE);
+        FlashcardSet copy = ownedSetWithCard(10L, 100L);
+        copy.setUser(user(1L));
+        copy.setCopiedFromSet(source);
+        copy.setCopiedFromUser(source.getUser());
+
+        FlashcardSetDto dto = service.get(10L);
+
+        assertThat(dto.copiedFrom().setId()).isNull();
+        assertThat(dto.copiedFrom().title()).isNull();
+        assertThat(dto.copiedFrom().owner().username()).isEqualTo("user2");
+    }
+
+    @Test
+    void attributionIsEmptyWhenOriginalOwnerIsGone() {
+        FlashcardSet copy = ownedSetWithCard(10L, 100L);
+        copy.setUser(user(1L));
+
+        assertThat(service.get(10L).copiedFrom()).isNull();
+    }
+
+    @Test
+    void publicPreviewOnlyForPublicSets() {
+        setOwnedBy(20L, 2L, FlashcardSetVisibility.PUBLIC);
+        setOwnedBy(21L, 2L, FlashcardSetVisibility.FRIENDS);
+        setOwnedBy(22L, 2L, FlashcardSetVisibility.PRIVATE);
+
+        assertThat(service.publicPreview(20L)).hasValueSatisfying(p -> {
+            assertThat(p.title()).isEqualTo("Cells");
+            assertThat(p.ownerUsername()).isEqualTo("user2");
+            assertThat(p.cardCount()).isEqualTo(1);
+        });
+        assertThat(service.publicPreview(21L)).isEmpty();
+        assertThat(service.publicPreview(22L)).isEmpty();
+        assertThat(service.publicPreview(99L)).isEmpty();
     }
 }

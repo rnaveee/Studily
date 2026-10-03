@@ -396,7 +396,7 @@ export interface Flashcard {
 
 export type ReviewGrade = "AGAIN" | "HARD" | "GOOD" | "EASY";
 
-export type FlashcardSetVisibility = "PRIVATE" | "PUBLIC";
+export type FlashcardSetVisibility = "PRIVATE" | "FRIENDS" | "PUBLIC";
 
 export interface FlashcardSet {
   id: number;
@@ -406,7 +406,14 @@ export interface FlashcardSet {
   visibility: FlashcardSetVisibility;
   createdAt: string;
   dueCount: number;
+  copiedFrom?: CopiedFrom | null;
   cards: Flashcard[];
+}
+
+export interface CopiedFrom {
+  setId?: number | null;
+  title?: string | null;
+  owner: SetOwner;
 }
 
 export interface FlashcardSetRequest {
@@ -434,6 +441,7 @@ export interface SharedFlashcardSet {
   id: number;
   title: string;
   description?: string | null;
+  visibility: FlashcardSetVisibility;
   createdAt: string;
   cardCount: number;
   owner: SetOwner;
@@ -445,6 +453,7 @@ export interface FlashcardSetSummary {
   id: number;
   title: string;
   description?: string | null;
+  visibility: FlashcardSetVisibility;
   cardCount: number;
   createdAt: string;
 }

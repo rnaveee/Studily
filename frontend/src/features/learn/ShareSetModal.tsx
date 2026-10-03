@@ -5,17 +5,8 @@ import Modal from "../../components/Modal";
 import SegmentedToggle from "../../components/SegmentedToggle";
 import { api } from "../../lib/api";
 import { toast } from "../../lib/toast";
+import { VISIBILITY_HINT, VISIBILITY_OPTIONS } from "./visibility";
 import type { FlashcardSet, FlashcardSetVisibility } from "../../types";
-
-const OPTIONS: { value: FlashcardSetVisibility; label: string }[] = [
-  { value: "PRIVATE", label: "Private" },
-  { value: "PUBLIC", label: "Public" },
-];
-
-const HINT: Record<FlashcardSetVisibility, string> = {
-  PRIVATE: "Only you can see this set.",
-  PUBLIC: "Anyone with the link can view and study it, and it's listed on your profile.",
-};
 
 export function shareUrl(setId: number): string {
   return `${window.location.origin}/sets/${setId}`;
@@ -37,10 +28,10 @@ export default function ShareSetModal({ set, onClose }: { set: FlashcardSet; onC
   });
 
   const current = visibility.isPending && visibility.variables ? visibility.variables : set.visibility;
-  const isPublic = current === "PUBLIC";
+  const shared = current !== "PRIVATE";
 
   async function copyLink() {
-    if (!isPublic) {
+    if (!shared) {
       try {
         await visibility.mutateAsync("PUBLIC");
       } catch {
@@ -64,7 +55,7 @@ export default function ShareSetModal({ set, onClose }: { set: FlashcardSet; onC
         <div>
           <h2 className="text-[15px] font-semibold text-fg">Share {set.title}</h2>
           <p className="mt-1 text-[13px] text-fg-2">
-            Classmates can study a public set and save their own copy.
+            Classmates can study a shared set and save their own copy.
           </p>
         </div>
       }
@@ -73,12 +64,12 @@ export default function ShareSetModal({ set, onClose }: { set: FlashcardSet; onC
         <label className="field-label">Who can see it</label>
         <SegmentedToggle
           className="w-full"
-          options={OPTIONS}
+          options={VISIBILITY_OPTIONS}
           value={current}
           onChange={(v) => visibility.mutate(v)}
           disabled={visibility.isPending}
         />
-        <p className="mt-2 text-[12px] text-fg-3">{HINT[current]}</p>
+        <p className="mt-2 text-[12px] text-fg-3">{VISIBILITY_HINT[current]}</p>
       </div>
 
       <div>
@@ -89,11 +80,11 @@ export default function ShareSetModal({ set, onClose }: { set: FlashcardSet; onC
             value={url}
             readOnly
             onFocus={(e) => e.currentTarget.select()}
-            style={{ opacity: isPublic ? 1 : 0.6 }}
+            style={{ opacity: shared ? 1 : 0.6 }}
           />
           <button onClick={copyLink} disabled={visibility.isPending} className="btn btn-primary shrink-0">
             {copied ? <Check size={13} /> : <Link2 size={13} />}
-            {copied ? "Copied" : isPublic ? "Copy link" : "Make public & copy"}
+            {copied ? "Copied" : shared ? "Copy link" : "Make public & copy"}
           </button>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Layers } from "lucide-react";
 import { api } from "../../lib/api";
+import { VisibilityBadge } from "./visibility";
 import type { FlashcardSetSummary } from "../../types";
 
 interface Props {
@@ -44,12 +45,13 @@ export default function PublicSetsSection({ userId, title, emptyHint }: Props) {
                 >
                   <Layers size={14} style={{ color: "var(--accent)" }} />
                 </span>
-                <span className="min-w-0">
+                <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-medium text-fg">{s.title}</span>
                   <span className="block text-[11px] text-fg-3">
                     {s.cardCount} {s.cardCount === 1 ? "card" : "cards"}
                   </span>
                 </span>
+                {s.visibility === "FRIENDS" && <VisibilityBadge visibility={s.visibility} />}
               </Link>
             </li>
           ))}

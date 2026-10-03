@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import Modal from "../../components/Modal";
 import SegmentedToggle from "../../components/SegmentedToggle";
+import { VISIBILITY_HINT, VISIBILITY_OPTIONS } from "./visibility";
 import { api } from "../../lib/api";
 import { toast } from "../../lib/toast";
 import type { Course, FlashcardSet, FlashcardSetRequest, FlashcardSetVisibility, Semester } from "../../types";
@@ -111,17 +112,12 @@ export default function NewFlashcardSetModal({ onClose }: { onClose: () => void 
           <label className="field-label">Who can see it</label>
           <SegmentedToggle
             className="w-full"
-            options={[
-              { value: "PRIVATE", label: "Private" },
-              { value: "PUBLIC", label: "Public" },
-            ]}
+            options={VISIBILITY_OPTIONS}
             value={visibility}
             onChange={setVisibility}
           />
           <p className="mt-2 text-[12px] text-fg-3">
-            {visibility === "PUBLIC"
-              ? "Anyone with the link can study it, and it shows on your profile."
-              : "Only you can see it. You can share it later."}
+            {visibility === "PRIVATE" ? "Only you can see it. You can share it later." : VISIBILITY_HINT[visibility]}
           </p>
         </div>
 

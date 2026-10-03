@@ -124,8 +124,8 @@ export default function ProfilePage() {
 
       <PublicSetsSection
         userId={user.id}
-        title="Your public flashcard sets"
-        emptyHint="Make a set public from its Share button and it will show here."
+        title="Your shared flashcard sets"
+        emptyHint="Share a set with your friends or make it public from its Share button and it will show here."
       />
     </div>
   );

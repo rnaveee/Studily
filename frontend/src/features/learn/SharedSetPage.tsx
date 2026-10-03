@@ -58,10 +58,20 @@ export default function SharedSetPage() {
     return (
       <div className="card p-10 text-center">
         <Lock className="mx-auto mb-2 text-fg-3" size={28} strokeWidth={1.5} />
-        <p className="text-sm text-fg-3">This set is private or no longer exists.</p>
-        <Link to={user ? "/learn/flashcards" : "/"} className="btn btn-soft mt-3 inline-flex">
-          {user ? "Back to your sets" : "Go to Studily"}
-        </Link>
+        <p className="text-sm text-fg-3">This set is private, shared only with friends, or no longer exists.</p>
+        {!user && !loading && (
+          <p className="mt-1 text-[12px] text-fg-3">If a friend sent it to you, log in to see it.</p>
+        )}
+        <div className="mt-3 flex justify-center gap-2">
+          {!user && !loading && (
+            <button onClick={() => goToAuth("/login")} className="btn btn-primary">
+              Log in
+            </button>
+          )}
+          <Link to={user ? "/learn/flashcards" : "/"} className="btn btn-soft inline-flex">
+            {user ? "Back to your sets" : "Go to Studily"}
+          </Link>
+        </div>
       </div>
     );
   }
@@ -77,10 +87,13 @@ export default function SharedSetPage() {
       <div className="flex items-start gap-3">
         <BackButton fallback={user ? "/learn/flashcards" : "/"} />
         <div className="min-w-0 flex-1">
-          <span className="badge badge-accent inline-flex items-center gap-1">
-            <Users size={11} />
-            Shared set
-          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="badge badge-accent inline-flex items-center gap-1">
+              <Users size={11} />
+              Shared set
+            </span>
+            {data.visibility === "FRIENDS" && <span className="badge badge-muted">Friends only</span>}
+          </div>
           <h1 className="mt-1.5 text-xl font-semibold text-fg">{data.title}</h1>
           <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[13px] text-fg-3">
             <Avatar
