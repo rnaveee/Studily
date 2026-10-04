@@ -40,7 +40,7 @@ interface Props {
 
 export default function SetModePicker({ mode, onChange, color, dueCount = 0, studyLocked = false }: Props) {
   return (
-    <div className="grid grid-cols-3 gap-2 sm:grid-cols-5" role="tablist" aria-label="Study modes">
+    <div className="flex flex-wrap justify-center gap-2" role="tablist" aria-label="Study modes">
       {MODES.map(({ mode: m, label, icon: Icon }) => {
         const active = m === mode;
         const locked = m === "study" && studyLocked;
@@ -50,7 +50,7 @@ export default function SetModePicker({ mode, onChange, color, dueCount = 0, stu
             role="tab"
             aria-selected={active}
             onClick={() => onChange(m)}
-            className="card press flex flex-col items-center gap-1 px-2 py-2.5 transition-colors hover:bg-surface-hi"
+            className="card press flex w-[calc((100%-1rem)/3)] flex-col items-center gap-1 px-2 py-2.5 transition-colors hover:bg-surface-hi sm:w-auto sm:flex-1"
             style={
               active
                 ? {

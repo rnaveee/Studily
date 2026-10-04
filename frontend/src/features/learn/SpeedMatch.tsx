@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { RotateCcw, Trophy } from "lucide-react";
-import { buildTiles, playableCards, ROUND_SIZE } from "./gameRound";
+import { RotateCcw, Trophy, Zap } from "lucide-react";
+import { buildTiles, playableCards, ROUND_SIZE, tileTextClass } from "./gameRound";
 import type { GameCard, Tile } from "./gameRound";
 import { shuffled } from "./shuffle";
 import { readJson, writeJson } from "./studyStorage";
@@ -56,6 +56,12 @@ export default function SpeedMatch({ setId, cards, color, viewerKey }: Props) {
     setNewBest(false);
   }
 
+  function start() {
+    const at = Date.now();
+    setStartedAt(at);
+    setNow(at);
+  }
+
   function finish(start: number) {
     const end = Date.now();
     setFinishedAt(end);
@@ -68,12 +74,7 @@ export default function SpeedMatch({ setId, cards, color, viewerKey }: Props) {
   }
 
   function tap(tile: Tile) {
-    if (finishedAt || gone.includes(tile.pair)) return;
-    const start = startedAt ?? Date.now();
-    if (!startedAt) {
-      setStartedAt(start);
-      setNow(start);
-    }
+    if (!startedAt || finishedAt || gone.includes(tile.pair)) return;
     if (!selected) {
       setSelected(tile.id);
       return;
@@ -91,7 +92,7 @@ export default function SpeedMatch({ setId, cards, color, viewerKey }: Props) {
     if (first.pair === tile.pair) {
       const nextGone = [...gone, tile.pair];
       setGone(nextGone);
-      if (nextGone.length === tiles.length / 2) finish(start);
+      if (nextGone.length === tiles.length / 2) finish(startedAt);
       return;
     }
     setPenalty((p) => p + 1000);
@@ -151,37 +152,57 @@ export default function SpeedMatch({ setId, cards, color, viewerKey }: Props) {
       </div>
       <p className="text-[12px] text-fg-3">
         {startedAt
-          ? "Wrong pairs add a second."
-          : "Tap a term, then its definition. The clock starts on your first tap."}
+          ? "Tap a term, then its definition. Wrong pairs add a second."
+          : "Match every term with its definition as fast as you can. The clock starts when you press Start."}
       </p>
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-        {tiles.map((t) => {
-          const isGone = gone.includes(t.pair);
-          const isSelected = selected === t.id;
-          const isWrong = wrong.includes(t.id);
-          const tone = isWrong ? "var(--red)" : isSelected ? color : null;
-          return (
-            <button
-              key={t.id}
-              onClick={() => tap(t)}
-              disabled={isGone}
-              aria-pressed={isSelected}
-              className={`card press flex h-24 flex-col overflow-hidden p-2 text-left transition-colors hover:bg-surface-hi sm:h-28 ${
-                isGone ? "match-gone" : ""
-              } ${isWrong ? "calc-shake" : ""}`}
-              style={
-                tone
-                  ? { borderColor: tone, background: `color-mix(in srgb, ${tone} 12%, var(--surface))` }
-                  : undefined
-              }
-            >
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-fg-3">
-                {t.side === "term" ? "Term" : "Definition"}
-              </span>
-              <span className="mt-1 line-clamp-4 text-[12px] leading-snug text-fg break-words">{t.text}</span>
+      <div className="relative">
+        <div
+          className="grid grid-cols-2 gap-2 sm:grid-cols-4"
+          aria-hidden={!startedAt}
+          style={
+            startedAt
+              ? undefined
+              : { filter: "blur(7px)", pointerEvents: "none", userSelect: "none" }
+          }
+        >
+          {tiles.map((t) => {
+            const isGone = gone.includes(t.pair);
+            const isSelected = selected === t.id;
+            const isWrong = wrong.includes(t.id);
+            const tone = isWrong ? "var(--red)" : isSelected ? color : null;
+            return (
+              <button
+                key={t.id}
+                onClick={() => tap(t)}
+                disabled={isGone}
+                aria-pressed={isSelected}
+                className={`card press flex min-h-20 flex-col p-2.5 text-left transition-colors hover:bg-surface-hi ${
+                  isGone ? "match-gone" : ""
+                } ${isWrong ? "calc-shake" : ""}`}
+                style={
+                  tone
+                    ? { borderColor: tone, background: `color-mix(in srgb, ${tone} 12%, var(--surface))` }
+                    : undefined
+                }
+              >
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-fg-3">
+                  {t.side === "term" ? "Term" : "Definition"}
+                </span>
+                <span className={`mt-1 leading-snug text-fg whitespace-pre-wrap break-words ${tileTextClass(t.text)}`}>
+                  {t.text}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {!startedAt && (
+          <div className="absolute inset-0 flex items-start justify-center pt-12">
+            <button onClick={start} className="btn btn-primary btn-lg">
+              <Zap size={15} />
+              Start match
             </button>
-          );
-        })}
+          </div>
+        )}
       </div>
     </div>
   );

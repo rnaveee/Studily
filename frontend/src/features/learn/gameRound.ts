@@ -57,6 +57,14 @@ export function splitBoards(deck: GameCard[]): GameCard[][] {
   return boards;
 }
 
+export function tileTextClass(text: string): string {
+  const length = text.trim().length;
+  if (length <= 40) return "text-[13px]";
+  if (length <= 90) return "text-[12px]";
+  if (length <= 160) return "text-[11px]";
+  return "text-[10.5px]";
+}
+
 export function formatClock(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
   const m = Math.floor(total / 60);

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Layers, PartyPopper, RotateCcw } from "lucide-react";
-import { buildTiles, formatClock, playableCards, splitBoards } from "./gameRound";
+import { PartyPopper, RotateCcw } from "lucide-react";
+import { buildTiles, formatClock, playableCards, splitBoards, tileTextClass } from "./gameRound";
 import type { GameCard, Tile } from "./gameRound";
 import { shuffled } from "./shuffle";
 import type { StudyCard } from "../../types";
@@ -134,7 +134,7 @@ export default function MemoryGame({ cards, color }: Props) {
       ) : (
         <>
           <p className="text-[12px] text-fg-3">Flip two cards at a time and match each term with its definition.</p>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" style={{ gridAutoRows: "1fr" }}>
             {tiles.map((t) => {
               const isMatched = matched.includes(t.pair);
               const faceUp = isMatched || open.includes(t.id);
@@ -142,7 +142,7 @@ export default function MemoryGame({ cards, color }: Props) {
                 <button
                   key={t.id}
                   onClick={() => flip(t)}
-                  className="flip-tile h-28 text-left sm:h-32"
+                  className="flip-tile min-h-24 text-left"
                   aria-label={faceUp ? t.text : "Hidden card"}
                 >
                   <div className={`flip-inner ${faceUp ? "is-flipped" : ""}`}>
@@ -153,10 +153,10 @@ export default function MemoryGame({ cards, color }: Props) {
                         borderColor: `color-mix(in srgb, ${color} 35%, transparent)`,
                       }}
                     >
-                      <Layers size={20} style={{ color }} />
+                      <img src="/studily-3a.svg" alt="" className="h-9 w-9" draggable={false} />
                     </div>
                     <div
-                      className="flip-face flip-face-back card flex flex-col overflow-hidden p-2"
+                      className="flip-face flip-face-back card flex flex-col p-2.5"
                       style={
                         isMatched
                           ? {
@@ -169,7 +169,7 @@ export default function MemoryGame({ cards, color }: Props) {
                       <span className="text-[9px] font-semibold uppercase tracking-wider text-fg-3">
                         {t.side === "term" ? "Term" : "Definition"}
                       </span>
-                      <span className="mt-1 line-clamp-4 text-[12px] leading-snug text-fg break-words">
+                      <span className={`mt-1 leading-snug text-fg whitespace-pre-wrap break-words ${tileTextClass(t.text)}`}>
                         {t.text}
                       </span>
                     </div>
