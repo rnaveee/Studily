@@ -18,6 +18,7 @@ import { useKeyboardViewport } from "../lib/keyboardDock";
 import { prefersReducedMotion } from "../lib/motion";
 import Avatar from "./Avatar";
 import Banners from "./Banners";
+import FlashcardsWhatsNew from "../features/learn/FlashcardsWhatsNew";
 import MobileFooter from "./MobileFooter";
 import ViewportDebug from "./ViewportDebug";
 import type { Conversation, FriendRequestItem } from "../types";
@@ -285,6 +286,7 @@ export default function Layout() {
         </header>
 
         <Banners />
+        <FlashcardsWhatsNew />
 
         <main className="flex-1 overflow-y-auto overscroll-contain">
           <div

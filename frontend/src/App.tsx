@@ -70,6 +70,7 @@ export default function App() {
         <Route path="/messages/:id" element={<VerifyGate><ConversationPage /></VerifyGate>} />
         <Route path="/learn" element={<LearnPage />} />
         <Route path="/learn/flashcards" element={<FlashcardsPage />} />
+        <Route path="/flashcards" element={<Navigate to="/learn/flashcards" replace />} />
         <Route path="/learn/flashcards/:id" element={<FlashcardSetPage />} />
         <Route path="/learn/ai" element={<AiChatPage />} />
         <Route
