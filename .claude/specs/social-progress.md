@@ -824,3 +824,9 @@ interface FlairDto { code: string; title: string; description: string; rarity: F
 | ui-designer | `frontend/src/**` except `ChangelogPage.tsx` |
 | release-docs | `ChangelogPage.tsx` (a new v44 entry "Profile flairs"), `learning/**` (a flairs section with review cards at the end of the F10 deck or a new short deck) |
 | test-engineer | `src/test/**` |
+
+### 13.7 Review round 1 decisions (lead, 2026-10-08)
+- **V46 is frozen.** It's applied in Ryan's dev DB with a checksum, so any schema change from now on goes in V47+.
+- **`User` gets `@DynamicUpdate`**, and **equip uses a targeted update** (`UserRepository` `@Modifying` query that sets only `equipped_flair_code`). This fixes a pre-existing lost-update risk: a full-row save of `users` could write back a stale `password_hash`, `token_version` or `avatar_image` that a concurrent password change, logout-everywhere or avatar upload had just changed.
+- **`GET /api/flairs` returns all active flairs plus any inactive flair the caller owns**, so a retired flair that's still equipped shows as equipped. Equipping an owned inactive flair stays allowed, since flairs are never revoked.
+- **Ops note for when art ships:** `Flairs` caches the `image_key` catalog for 5 minutes per instance, so a new or changed `image_key` reaches avatar rings within 5 minutes. `GET /api/flairs` reads it fresh.
