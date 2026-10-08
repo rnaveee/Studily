@@ -30,7 +30,7 @@ export default function CoinBalance() {
     <Link
       to="/profile/badges?tab=shop"
       className="inline-flex h-10 shrink-0 items-center rounded-full"
-      aria-label={`${coins} coins, open the badge shop`}
+      aria-label={`${coins} ${coins === 1 ? "coin" : "coins"}, open the badge shop`}
       title="Coins · open the badge shop"
     >
       <span

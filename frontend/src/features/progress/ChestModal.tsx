@@ -140,23 +140,24 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
       <div className="mt-6 flex w-full gap-2">
         {opened ? (
           remaining > 0 ? (
-            <button onClick={next} className="btn btn-primary btn-lg w-full">
+            <button onClick={next} className="btn btn-primary btn-lg w-full" style={{ minHeight: 44 }}>
               Next chest ({remaining} left)
             </button>
           ) : (
-            <button onClick={close} className="btn btn-primary btn-lg w-full" autoFocus>
+            <button onClick={close} className="btn btn-primary btn-lg w-full" style={{ minHeight: 44 }} autoFocus>
               Done
             </button>
           )
         ) : (
           <>
-            <button onClick={close} disabled={shaking} className="btn btn-ghost btn-lg flex-1">
+            <button onClick={close} disabled={shaking} className="btn btn-ghost btn-lg flex-1" style={{ minHeight: 44 }}>
               Later
             </button>
             <button
               onClick={() => open.mutate(chest.id)}
               disabled={shaking}
               className="btn btn-primary btn-lg flex-1"
+              style={{ minHeight: 44 }}
               autoFocus
             >
               <Gift size={15} />

@@ -75,7 +75,7 @@ export default function LevelUpModal({
 function CloseButton() {
   const close = useModalClose();
   return (
-    <button onClick={close} className="btn btn-primary btn-lg mt-6 w-full" autoFocus>
+    <button onClick={close} className="btn btn-primary btn-lg mt-6 w-full" style={{ minHeight: 44 }} autoFocus>
       Keep going
     </button>
   );

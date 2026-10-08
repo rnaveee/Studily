@@ -394,7 +394,8 @@ function BlockRow({
       </div>
       <div className="mt-1.5 flex justify-between text-[11px] tabular-nums text-fg-3">
         <span>
-          {session.blocks.filter((b) => b.status === "CONFIRMED").length} of {session.plannedBlocks} blocks done
+          {session.blocks.filter((b) => b.status === "CONFIRMED").length} of {session.plannedBlocks}{" "}
+          {session.plannedBlocks === 1 ? "block" : "blocks"} done
         </span>
         <span>{session.creditedMinutes} min credited</span>
       </div>

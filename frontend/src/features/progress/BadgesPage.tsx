@@ -390,7 +390,7 @@ function Shop({ badges, coins }: { badges: BadgeDto[]; coins: number }) {
         </span>
         <div className="min-w-0 flex-1">
           <div className="text-[20px] font-bold leading-tight tabular-nums text-fg">
-            {coins.toLocaleString()} <span className="text-[13px] font-medium text-fg-3">coins</span>
+            {coins.toLocaleString()} <span className="text-[13px] font-medium text-fg-3">{coins === 1 ? "coin" : "coins"}</span>
           </div>
           <p className="text-[12px] text-fg-3">Earn coins by levelling up and opening chests.</p>
         </div>

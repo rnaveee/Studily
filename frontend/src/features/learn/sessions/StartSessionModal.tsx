@@ -152,7 +152,7 @@ function StartForm() {
         <p className="text-[12px] tabular-nums text-fg-3">
           <span className="font-semibold text-fg-2">{formatMinutes(focus)}</span> of focus
           {breaks > 0 && <> · {formatMinutes(focus + breaks)} with breaks</>}
-          {mode === "TIMER" && <> · {focus / 30} check-ins, one every 30 min</>}
+          {mode === "TIMER" && <> · {focus / 30} {focus / 30 === 1 ? "check-in" : "check-ins"}, one every 30 min</>}
         </p>
       </section>
 
@@ -239,7 +239,7 @@ function StartForm() {
       </p>
 
       <div className="flex gap-2 pt-1">
-        <button type="button" onClick={close} className="btn btn-ghost btn-lg flex-1 sm:flex-none">
+        <button type="button" onClick={close} className="btn btn-ghost btn-lg flex-1 sm:flex-none" style={{ minHeight: 44 }}>
           Cancel
         </button>
         <button
@@ -247,6 +247,7 @@ function StartForm() {
           onClick={submit}
           disabled={start.isPending}
           className="btn btn-primary btn-lg flex-1"
+          style={{ minHeight: 44 }}
         >
           <Play size={15} fill="currentColor" strokeWidth={0} />
           {start.isPending ? "Starting…" : "Start session"}
