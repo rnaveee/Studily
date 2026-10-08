@@ -12,15 +12,21 @@ import { Skeleton } from "../../components/Skeleton";
 import BadgeArt from "./BadgeArt";
 import BadgeGrid from "./BadgeGrid";
 import { CATEGORY_COLOR, CATEGORY_LABEL, groupBadges } from "./badges";
-import { progressKeys, useBadges, useMyProgress, useProgressEnabled } from "./useProgress";
+import { FlairShop, FlairsPanel, SectionHeader, ShopSkeleton } from "./FlairsPanel";
+import { progressKeys, useBadges, useFlairs, useMyProgress, useProgressEnabled } from "./useProgress";
 import type { BadgeDto, BadgePurchaseResult, ProgressDto, Relationship } from "../../types";
 
-type Tab = "collection" | "shop";
+type Tab = "badges" | "flairs" | "shop";
 
 const TABS: { value: Tab; label: string }[] = [
-  { value: "collection", label: "Collection" },
+  { value: "badges", label: "Badges" },
+  { value: "flairs", label: "Flairs" },
   { value: "shop", label: "Shop" },
 ];
+
+function parseTab(raw: string | null): Tab {
+  return raw === "flairs" || raw === "shop" ? raw : "badges";
+}
 
 export default function BadgesPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -60,9 +66,10 @@ function GuestBadges() {
 function OwnBadges() {
   const qc = useQueryClient();
   const [params, setParams] = useSearchParams();
-  const tab: Tab = params.get("tab") === "shop" ? "shop" : "collection";
+  const tab = parseTab(params.get("tab"));
   const badges = useBadges("me");
   const progress = useMyProgress();
+  const flairs = useFlairs();
   const [picking, setPicking] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
 
@@ -70,8 +77,8 @@ function OwnBadges() {
     setParams(
       (p) => {
         const out = new URLSearchParams(p);
-        if (next === "shop") out.set("tab", "shop");
-        else out.delete("tab");
+        if (next === "badges") out.delete("tab");
+        else out.set("tab", next);
         return out;
       },
       { replace: true },
@@ -115,29 +122,52 @@ function OwnBadges() {
 
   const list = badges.data ?? [];
   const coins = progress.data?.coins;
+  const flairList = flairs.data;
+  const heading =
+    tab === "flairs"
+      ? {
+          title: "Flairs",
+          sub: flairList
+            ? `${flairList.filter((f) => f.owned).length} of ${flairList.length} collected`
+            : "Rings for your avatar",
+        }
+      : tab === "shop"
+        ? { title: "Shop", sub: "Spend coins on flairs and badges" }
+        : {
+            title: "Badges",
+            sub: progress.data
+              ? `${progress.data.badgeCount} of ${progress.data.badgeTotal} collected`
+              : "Your collection and the badge shop",
+          };
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-5 stagger-children">
       <div className="flex items-center gap-3">
         <BackButton fallback="/profile" />
         <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-semibold text-fg">Badges</h1>
-          <p className="mt-0.5 text-[13px] text-fg-3 tabular-nums">
-            {progress.data
-              ? `${progress.data.badgeCount} of ${progress.data.badgeTotal} collected`
-              : "Your collection and the badge shop"}
-          </p>
+          <h1 className="text-xl font-semibold text-fg">{heading.title}</h1>
+          <p className="mt-0.5 text-[13px] text-fg-3 tabular-nums">{heading.sub}</p>
         </div>
         {coins != null && <CoinChip coins={coins} />}
       </div>
 
-      <SegmentedToggle options={TABS} value={tab} onChange={setTab} className="w-full sm:w-72" />
+      <SegmentedToggle options={TABS} value={tab} onChange={setTab} className="w-full sm:w-96" />
 
-      {badges.isLoading ? (
+      {tab === "flairs" ? (
+        <FlairsPanel streakBest={progress.data?.streak.best ?? null} onShop={() => setTab("shop")} />
+      ) : tab === "shop" ? (
+        <Shop
+          badges={list.filter((b) => b.category === "COSMETIC")}
+          loading={badges.isLoading}
+          failed={badges.isError}
+          onRetry={() => badges.refetch()}
+          coins={coins ?? 0}
+        />
+      ) : badges.isLoading ? (
         <BadgesSkeleton />
       ) : badges.isError ? (
         <LoadError onRetry={() => badges.refetch()} />
-      ) : tab === "collection" ? (
+      ) : (
         <>
           <FeaturedBar
             badges={list}
@@ -156,8 +186,6 @@ function OwnBadges() {
             shopHint={list.some((b) => b.category === "COSMETIC" && !b.owned) ? () => setTab("shop") : undefined}
           />
         </>
-      ) : (
-        <Shop badges={list.filter((b) => b.category === "COSMETIC")} coins={coins ?? 0} />
       )}
     </div>
   );
@@ -350,7 +378,19 @@ function FeaturedBar({
   );
 }
 
-function Shop({ badges, coins }: { badges: BadgeDto[]; coins: number }) {
+function Shop({
+  badges,
+  loading,
+  failed,
+  onRetry,
+  coins,
+}: {
+  badges: BadgeDto[];
+  loading: boolean;
+  failed: boolean;
+  onRetry: () => void;
+  coins: number;
+}) {
   const qc = useQueryClient();
   const confirm = useConfirm();
 
@@ -380,7 +420,7 @@ function Shop({ badges, coins }: { badges: BadgeDto[]; coins: number }) {
   const sorted = [...badges].sort((a, b) => (a.priceCoins ?? 0) - (b.priceCoins ?? 0));
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="card flex items-center gap-3 p-4">
         <span
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
@@ -396,57 +436,70 @@ function Shop({ badges, coins }: { badges: BadgeDto[]; coins: number }) {
         </div>
       </div>
 
-      {sorted.length === 0 ? (
-        <div className="card p-10 text-center">
-          <p className="text-sm text-fg-3">The shop is empty right now. Check back soon.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-          {sorted.map((b) => {
-            const price = b.priceCoins ?? 0;
-            const short = price - coins;
-            const buying = buy.isPending && buy.variables === b.code;
-            return (
-              <div key={b.code} className="card flex items-center gap-3.5 p-4 sm:flex-col sm:items-stretch sm:text-center">
-                <span className="flex justify-center">
-                  <BadgeArt badge={b} size={64} locked={false} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[14px] font-semibold text-fg">{b.title}</div>
-                  <p className="mt-0.5 text-[12px] leading-snug text-fg-3">{b.description}</p>
-                  <div className="mt-1.5 flex items-center gap-1 text-[13px] font-semibold tabular-nums sm:justify-center" style={{ color: "var(--yellow)" }}>
-                    <Coins size={13} />
-                    {price}
-                  </div>
-                </div>
-                {b.owned ? (
-                  <span className="btn btn-ghost pointer-events-none min-h-[40px] shrink-0" style={{ color: "var(--green)" }}>
-                    <Check size={14} />
-                    Owned
+      <FlairShop coins={coins} />
+
+      <section className="space-y-2.5">
+        <SectionHeader
+          title="Badges"
+          count={loading || failed ? "" : `${sorted.filter((b) => b.owned).length}/${sorted.length}`}
+          color={CATEGORY_COLOR.COSMETIC}
+        />
+        {loading ? (
+          <ShopSkeleton />
+        ) : failed ? (
+          <LoadError onRetry={onRetry} />
+        ) : sorted.length === 0 ? (
+          <div className="card p-10 text-center">
+            <p className="text-sm text-fg-3">No badges for sale right now. Check back soon.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+            {sorted.map((b) => {
+              const price = b.priceCoins ?? 0;
+              const short = price - coins;
+              const buying = buy.isPending && buy.variables === b.code;
+              return (
+                <div key={b.code} className="card flex items-center gap-3.5 p-4 sm:flex-col sm:items-stretch sm:text-center">
+                  <span className="flex justify-center">
+                    <BadgeArt badge={b} size={64} locked={false} />
                   </span>
-                ) : (
-                  <button
-                    onClick={() => purchase(b)}
-                    disabled={short > 0 || buy.isPending || b.priceCoins == null}
-                    className="btn btn-primary min-h-[40px] shrink-0"
-                  >
-                    {short > 0 ? (
-                      <>
-                        <Lock size={13} />
-                        {short} more
-                      </>
-                    ) : buying ? (
-                      "Buying…"
-                    ) : (
-                      "Buy"
-                    )}
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[14px] font-semibold text-fg">{b.title}</div>
+                    <p className="mt-0.5 text-[12px] leading-snug text-fg-3">{b.description}</p>
+                    <div className="mt-1.5 flex items-center gap-1 text-[13px] font-semibold tabular-nums sm:justify-center" style={{ color: "var(--yellow)" }}>
+                      <Coins size={13} />
+                      {price}
+                    </div>
+                  </div>
+                  {b.owned ? (
+                    <span className="btn btn-ghost pointer-events-none min-h-[40px] shrink-0" style={{ color: "var(--green)" }}>
+                      <Check size={14} />
+                      Owned
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => purchase(b)}
+                      disabled={short > 0 || buy.isPending || b.priceCoins == null}
+                      className="btn btn-primary min-h-[40px] shrink-0"
+                    >
+                      {short > 0 ? (
+                        <>
+                          <Lock size={13} />
+                          {short} more
+                        </>
+                      ) : buying ? (
+                        "Buying…"
+                      ) : (
+                        "Buy"
+                      )}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

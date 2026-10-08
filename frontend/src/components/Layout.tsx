@@ -228,7 +228,7 @@ export default function Layout() {
 
           {user && (
             <div className="flex items-center gap-2.5 px-3 py-2.5 mt-0.5">
-              <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} size={24} className="text-[11px]" />
+              <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} flair={user.flair} size={24} className="text-[11px]" />
               <span className="truncate text-[12px] text-fg-2">@{user.username}</span>
             </div>
           )}
@@ -265,7 +265,7 @@ export default function Layout() {
                   to="/profile"
                   className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] text-fg-2 transition-colors hover:bg-surface-hi"
                 >
-                  <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} size={20} className="text-[10px]" />
+                  <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} flair={user.flair} size={20} className="text-[10px]" />
                   <span className="hidden max-w-[80px] truncate min-[420px]:inline">@{user.username}</span>
                 </NavLink>
 

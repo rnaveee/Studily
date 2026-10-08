@@ -342,7 +342,7 @@ function ClassmatesSection({ courseId }: { courseId: number }) {
               to={`/users/${u.id}`}
               className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-hi"
             >
-              <Avatar name={u.name} username={u.username} avatarUrl={u.avatarUrl} size={30} className="text-[12px]" />
+              <Avatar name={u.name} username={u.username} avatarUrl={u.avatarUrl} flair={u.flair} size={30} className="text-[12px]" />
               <div className="min-w-0 flex-1">
                 <div className="flex items-baseline gap-1.5">
                   <span className="truncate text-[13px] font-medium text-fg">{u.name}</span>

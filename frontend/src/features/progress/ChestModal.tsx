@@ -1,12 +1,16 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Coins, Gift, PackageOpen, Sparkles } from "lucide-react";
+import { Check, Coins, Gift, PackageOpen, Sparkles } from "lucide-react";
+import Avatar from "../../components/Avatar";
 import Modal, { useModalClose } from "../../components/Modal";
 import { api } from "../../lib/api";
+import { useAuth } from "../../lib/auth";
+import { flairRef, RARITY_COLOR, RARITY_LABEL } from "../../lib/flairs";
 import { applyDelta } from "../../lib/progressDelta";
 import BadgeArt from "./BadgeArt";
 import { CHEST_SOURCE_LABEL } from "./badges";
-import type { ChestDto, ChestOpenResult } from "../../types";
+import { useEquipFlair } from "./useProgress";
+import type { ChestDto, ChestOpenResult, FlairDto } from "../../types";
 
 const MIN_SHAKE_MS = 650;
 
@@ -37,7 +41,12 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
     onSuccess: (res) => {
       setOpened(res.chest);
       const lootBadge = res.chest.loot?.badge;
-      applyDelta(res.delta, qc, { toastXp: false, shownBadges: lootBadge ? [lootBadge.code] : [] });
+      const lootFlair = res.chest.loot?.flair;
+      applyDelta(res.delta, qc, {
+        toastXp: false,
+        shownBadges: lootBadge ? [lootBadge.code] : [],
+        shownFlairs: lootFlair ? [lootFlair.code] : [],
+      });
     },
     onError: () => {
       qc.invalidateQueries({ queryKey: ["chests"] });
@@ -55,6 +64,7 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
   if (!chest) return null;
 
   const loot = opened?.loot ?? null;
+  const lootFlair = loot?.flair ?? null;
   const shaking = open.isPending;
 
   return (
@@ -105,7 +115,7 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
         {CHEST_SOURCE_LABEL[chest.source]}
       </p>
       <h2 className="mt-1 text-[18px] font-semibold text-fg">
-        {opened ? "Here's what you got" : shaking ? "Opening…" : "You found a chest!"}
+        {opened ? (lootFlair ? "A rare find!" : "Here's what you got") : shaking ? "Opening…" : "You found a chest!"}
       </h2>
       {!opened && !shaking && <p className="mt-1 text-[13px] text-fg-3">Tap it to see what's inside.</p>}
 
@@ -134,6 +144,7 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
               </span>
             </li>
           )}
+          {lootFlair && <FlairLoot flair={lootFlair} />}
         </ul>
       )}
 
@@ -167,6 +178,54 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
         )}
       </div>
     </div>
+  );
+}
+
+function FlairLoot({ flair }: { flair: FlairDto }) {
+  const { user } = useAuth();
+  const equip = useEquipFlair();
+  const wearing = user?.flair?.code === flair.code;
+  const color = RARITY_COLOR[flair.rarity];
+
+  return (
+    <li
+      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left"
+      style={{ background: `color-mix(in srgb, ${color} 10%, transparent)` }}
+    >
+      <span className="flair-reveal shrink-0">
+        <Avatar
+          name={user?.name}
+          username={user?.username}
+          avatarUrl={user?.avatarUrl}
+          flair={flairRef(flair)}
+          size={56}
+          className="text-lg"
+        />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[11px] font-semibold uppercase tracking-wider" style={{ color }}>
+          {RARITY_LABEL[flair.rarity]} flair
+        </span>
+        <span className="block truncate text-[14px] font-semibold text-fg">{flair.title}</span>
+      </span>
+      <button
+        onClick={() => equip.mutate(flair.code)}
+        disabled={wearing || equip.isPending}
+        className="btn btn-soft shrink-0"
+        style={{ minHeight: 40 }}
+      >
+        {wearing ? (
+          <>
+            <Check size={14} />
+            Wearing
+          </>
+        ) : equip.isPending ? (
+          "Equipping…"
+        ) : (
+          "Equip"
+        )}
+      </button>
+    </li>
   );
 }
 

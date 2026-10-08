@@ -100,6 +100,7 @@ export default function SharedSetPage() {
               name={data.owner.name}
               username={data.owner.username}
               avatarUrl={data.owner.avatarUrl}
+              flair={data.owner.flair}
               size={18}
             />
             <span className="truncate">

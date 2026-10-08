@@ -159,6 +159,15 @@ function ProgressView({
           All badges ({badgeCount}/{badgeTotal})
           <ChevronRight size={14} />
         </Link>
+        {own && (
+          <Link
+            to="/profile/badges?tab=flairs"
+            className="inline-flex min-h-[40px] items-center gap-1 rounded-lg px-2.5 text-[13px] font-medium text-accent transition-colors hover:bg-surface-hi"
+          >
+            Change flair
+            <ChevronRight size={14} />
+          </Link>
+        )}
         {own && unopenedChests > 0 && (
           <button
             onClick={onOpenChests}

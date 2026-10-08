@@ -86,7 +86,7 @@ export default function ProfilePage() {
       <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
         <div className="min-w-0 space-y-5">
           <div className="card p-6 text-center">
-            <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} size={80} className="mx-auto mb-4 text-3xl" />
+            <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} flair={user.flair} size={80} className="mx-auto mb-4 text-3xl" />
             <h2 className="text-xl font-bold text-fg">{user.name}</h2>
             <p className="mt-0.5 text-[13px] text-fg-3">@{user.username}</p>
             <p className="mt-0.5 break-words text-[13px] text-fg-3">{user.email}</p>

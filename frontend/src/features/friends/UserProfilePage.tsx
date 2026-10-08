@@ -85,7 +85,7 @@ export default function UserProfilePage() {
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 lg:gap-5">
           <div className="min-w-0 space-y-4 lg:space-y-5">
             <div className="card p-6 text-center">
-              <Avatar name={data.user.name} username={data.user.username} avatarUrl={data.user.avatarUrl} size={80} className="mx-auto mb-4 text-3xl" />
+              <Avatar name={data.user.name} username={data.user.username} avatarUrl={data.user.avatarUrl} flair={data.user.flair} size={80} className="mx-auto mb-4 text-3xl" />
               <h1 className="text-xl font-bold text-fg">{data.user.name}</h1>
               <p className="mt-0.5 text-[13px] text-fg-3">@{data.user.username}</p>
               {data.user.bio && <p className="mx-auto mt-3 max-w-xs text-sm text-fg-2">{data.user.bio}</p>}

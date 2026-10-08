@@ -74,6 +74,7 @@ export default function UserSearchModal({ onClose }: { onClose: () => void }) {
                       name={r.user.name}
                       username={r.user.username}
                       avatarUrl={r.user.avatarUrl}
+                      flair={r.user.flair}
                       size={32}
                       className="text-[12px]"
                     />

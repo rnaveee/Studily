@@ -30,15 +30,16 @@ export function invalidateProgress(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: ["progress"] });
   qc.invalidateQueries({ queryKey: ["badges"] });
   qc.invalidateQueries({ queryKey: ["chests"] });
+  qc.invalidateQueries({ queryKey: ["flairs"] });
 }
 
 export function applyDelta(
   delta: ProgressDelta | null | undefined,
   qc: QueryClient,
-  options: { toastXp?: boolean; shownBadges?: string[] } = {},
+  options: { toastXp?: boolean; shownBadges?: string[]; shownFlairs?: string[] } = {},
 ) {
   if (!delta) return;
-  const { toastXp = true, shownBadges = [] } = options;
+  const { toastXp = true, shownBadges = [], shownFlairs = [] } = options;
 
   qc.setQueryData<ProgressDto>(["progress", "me"], (old) =>
     old
@@ -67,6 +68,10 @@ export function applyDelta(
 
   for (const badge of delta.newBadges) {
     if (!shownBadges.includes(badge.code)) toast.success(`New badge unlocked: ${badge.title}`);
+  }
+
+  for (const flair of delta.newFlairs ?? []) {
+    if (!shownFlairs.includes(flair.code)) toast.success(`New flair unlocked: ${flair.title}`);
   }
 
   offerChests(delta.chests);

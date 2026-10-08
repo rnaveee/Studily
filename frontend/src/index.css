@@ -52,6 +52,44 @@
   --glass-shadow: var(--shadow-lg), inset 0 1px 0 rgb(255 255 255 / 0.95);
   --btn-press:    inset 0 2px 4px var(--neu-lo);
   --knob-shadow:  0 1px 3px var(--neu-lo), inset 0 1px 0 var(--edge-hi);
+
+  --flair-mint-1:   #2cc995;
+  --flair-mint-2:   #a8f3d6;
+  --flair-mint-3:   #14a39b;
+  --flair-ocean-1:  #0c3a8f;
+  --flair-ocean-2:  #1b72e2;
+  --flair-ocean-3:  #5ad8ff;
+  --flair-sunset-1: #ff5d6c;
+  --flair-sunset-2: #ffb547;
+  --flair-sunset-3: #c2378c;
+  --flair-gold-1:   #fff4c4;
+  --flair-gold-2:   #f3c440;
+  --flair-gold-3:   #c38b12;
+  --flair-gold-4:   #7a5506;
+  --flair-neon-1:   #ff2ed2;
+  --flair-neon-2:   #27e6ff;
+  --flair-aurora-1: #35f2a4;
+  --flair-aurora-2: #20c2e8;
+  --flair-aurora-3: #8c5cff;
+  --flair-aurora-4: #ff6cc6;
+  --flair-prism-1:  #ff4d6d;
+  --flair-prism-2:  #ffa53b;
+  --flair-prism-3:  #ffe24a;
+  --flair-prism-4:  #3fe38f;
+  --flair-prism-5:  #3ab6ff;
+  --flair-prism-6:  #8b62ff;
+  --flair-galaxy-1: #170e40;
+  --flair-galaxy-2: #5b2fdb;
+  --flair-galaxy-3: #e357d8;
+  --flair-galaxy-4: #3d8bff;
+  --flair-fire-1:   #6f0c0c;
+  --flair-fire-2:   #e3261d;
+  --flair-fire-3:   #ff7a18;
+  --flair-fire-4:   #ffc42e;
+  --flair-fire-hot: #fff5d1;
+  --flair-star:     #ffffff;
+  --flair-shine:    rgb(255 255 255 / 0.78);
+  --flair-shade:    rgb(10 8 30 / 0.22);
 }
 
 .dark {
@@ -94,6 +132,13 @@
   --control-inset: inset 0 1px 3px var(--neu-lo);
   --knob-shadow:  0 1px 3px rgb(0 0 0 / 0.4), inset 0 1px 0 var(--edge-hi);
   --glass-shadow: var(--shadow-lg), inset 0 1px 0 var(--edge-hi);
+
+  --flair-ocean-1:  #1a52c4;
+  --flair-gold-4:   #94690b;
+  --flair-galaxy-1: #2b1c74;
+  --flair-fire-1:   #931515;
+  --flair-shine:    rgb(255 255 255 / 0.6);
+  --flair-shade:    rgb(0 0 0 / 0.3);
 }
 
 .classic {
@@ -801,6 +846,48 @@ textarea.input { resize: vertical; }
   100% { transform: scale(1, 1.03) rotate(0deg);     opacity: 0.9; }
 }
 
+.flair-ring,
+.flair-band,
+.flair-glow,
+.flair-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+.flair-art { pointer-events: none; }
+@keyframes flair-spin {
+  to { transform: rotate(360deg); }
+}
+.flair-spin     { animation: flair-spin 8s linear infinite; }
+.flair-spin-rev { animation: flair-spin 8s linear infinite reverse; }
+@keyframes flair-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+.flair-pulse { animation: flair-pulse 2.4s ease-in-out infinite; }
+@keyframes flair-flicker {
+  0%   { opacity: 0.72; transform: scale(1); }
+  14%  { opacity: 1;    transform: scale(1.05); }
+  29%  { opacity: 0.8;  transform: scale(0.99); }
+  46%  { opacity: 0.96; transform: scale(1.04); }
+  63%  { opacity: 0.74; transform: scale(1.01); }
+  81%  { opacity: 1;    transform: scale(1.06); }
+  100% { opacity: 0.72; transform: scale(1); }
+}
+.flair-flicker { animation: flair-flicker 1.4s ease-in-out infinite; }
+@keyframes flair-twinkle {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 1; }
+}
+.flair-twinkle { animation: flair-twinkle 3s ease-in-out infinite; }
+@keyframes flair-reveal {
+  0%   { opacity: 0; transform: scale(0.6) rotate(-25deg); }
+  65%  { opacity: 1; transform: scale(1.08) rotate(4deg); }
+  100% { opacity: 1; transform: none; }
+}
+.flair-reveal { animation: flair-reveal 0.6s cubic-bezier(0.34, 1.32, 0.64, 1) 0.15s both; }
+
 @media (prefers-reduced-motion: reduce) {
   .reveal,
   .reveal-scale,
@@ -852,4 +939,10 @@ textarea.input { resize: vertical; }
   .chest-shake { animation: none; }
   .checkin-pulse { animation: none; }
   .streak-flame { animation: none; }
+  .flair-spin,
+  .flair-spin-rev,
+  .flair-pulse,
+  .flair-flicker,
+  .flair-twinkle { animation: none; }
+  .flair-reveal { animation: none; opacity: 1; transform: none; }
 }

@@ -229,7 +229,7 @@ function PersonRow({ item }: { item: FriendRequestItem }) {
   const { user } = item;
   return (
     <Link to={`/users/${user.id}`} className="flex min-w-0 items-center gap-3 group">
-      <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} size={36} className="text-[13px]" />
+      <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} flair={user.flair} size={36} className="text-[13px]" />
       <div className="min-w-0">
         <div className="flex items-baseline gap-1.5">
           <span className="font-medium text-fg truncate group-hover:text-accent transition-colors">{user.name}</span>

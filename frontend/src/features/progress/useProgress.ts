@@ -1,9 +1,14 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, isGuestMode } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
+import { flairRef } from "../../lib/flairs";
+import { toast } from "../../lib/toast";
 import type {
   BadgeDto,
   ChestDto,
+  FlairDto,
+  FlairEquipResult,
+  FlairPurchaseResult,
   Page,
   ProgressDto,
   PublicProgressDto,
@@ -19,6 +24,7 @@ export const progressKeys = {
   user: (userId: number) => ["progress", userId] as const,
   badges: (who: number | "me") => ["badges", who] as const,
   chests: ["chests"] as const,
+  flairs: ["flairs"] as const,
   activeSession: ["study-session", "active"] as const,
   streak: ["study-session", "streak"] as const,
   history: ["study-session", "history"] as const,
@@ -31,9 +37,14 @@ export function useProgressEnabled(): boolean {
 
 export function useMyProgress() {
   const enabled = useProgressEnabled();
+  const qc = useQueryClient();
   return useQuery({
     queryKey: progressKeys.me,
-    queryFn: () => api.get<ProgressDto>("/progress/me"),
+    queryFn: async () => {
+      const progress = await api.get<ProgressDto>("/progress/me");
+      qc.invalidateQueries({ queryKey: progressKeys.flairs });
+      return progress;
+    },
     enabled,
   });
 }
@@ -99,5 +110,47 @@ export function useSessionHistory() {
     initialPageParam: 0,
     getNextPageParam: (last, all) => (last.hasMore ? all.length : undefined),
     enabled,
+  });
+}
+
+export function useFlairs() {
+  const enabled = useProgressEnabled();
+  return useQuery({
+    queryKey: progressKeys.flairs,
+    queryFn: () => api.get<FlairDto[]>("/flairs"),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useEquipFlair() {
+  const qc = useQueryClient();
+  const { user, setUser } = useAuth();
+  return useMutation({
+    mutationFn: (code: string | null) => api.put<FlairEquipResult>("/me/flair", { code }),
+    onSuccess: (res) => {
+      const equipped = res?.equipped ?? null;
+      qc.setQueryData<FlairDto[]>(progressKeys.flairs, (old) =>
+        old?.map((f) => ({ ...f, equipped: equipped ? f.code === equipped.code : false })),
+      );
+      if (user) setUser({ ...user, flair: equipped ? flairRef(equipped) : null });
+      qc.invalidateQueries({ queryKey: progressKeys.flairs });
+    },
+  });
+}
+
+export function useBuyFlair() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) => api.post<FlairPurchaseResult>(`/flairs/${encodeURIComponent(code)}/purchase`),
+    onSuccess: (res) => {
+      qc.setQueryData<FlairDto[]>(progressKeys.flairs, (old) =>
+        old?.map((f) => (f.code === res.flair.code ? res.flair : f)),
+      );
+      qc.setQueryData<ProgressDto>(progressKeys.me, (old) => (old ? { ...old, coins: res.coins } : old));
+      qc.invalidateQueries({ queryKey: ["progress"] });
+      qc.invalidateQueries({ queryKey: progressKeys.flairs });
+      toast.success(`${res.flair.title} is yours`);
+    },
   });
 }

@@ -106,6 +106,7 @@ export default function MessagesPage() {
                       name={r.user.name}
                       username={r.user.username}
                       avatarUrl={r.user.avatarUrl}
+                      flair={r.user.flair}
                       size={36}
                       className="text-[13px]"
                     />

@@ -75,6 +75,7 @@ export interface User {
   major?: string | null;
   bio?: string | null;
   avatarUrl?: string | null;
+  flair?: FlairRef | null;
   emailVerified: boolean;
   admin?: boolean;
   createdAt: string;
@@ -360,6 +361,7 @@ export interface PublicUser {
   major?: string | null;
   bio?: string | null;
   avatarUrl?: string | null;
+  flair?: FlairRef | null;
 }
 
 export type RelationshipStatus = "SELF" | "NONE" | "FRIENDS" | "OUTGOING_PENDING" | "INCOMING_PENDING";
@@ -435,6 +437,7 @@ export interface SetOwner {
   username: string;
   name: string;
   avatarUrl?: string | null;
+  flair?: FlairRef | null;
 }
 
 export interface SharedFlashcardSet {
@@ -789,7 +792,7 @@ export interface ChestDto {
   source: ChestSource;
   createdAt: string;
   openedAt: string | null;
-  loot: { coins: number; xp: number; badge: BadgeDto | null } | null;
+  loot: { coins: number; xp: number; badge: BadgeDto | null; flair: FlairDto | null } | null;
 }
 
 export interface ProgressDelta {
@@ -802,7 +805,40 @@ export interface ProgressDelta {
   coinsGained: number;
   coins: number;
   newBadges: BadgeDto[];
+  newFlairs: FlairDto[];
   chests: ChestDto[];
+}
+
+export type FlairRarity = "COMMON" | "RARE" | "EPIC" | "LEGENDARY";
+
+export type FlairUnlock = "SHOP" | "CHEST" | "STREAK";
+
+export interface FlairRef {
+  code: string;
+  imageUrl: string | null;
+}
+
+export interface FlairDto {
+  code: string;
+  title: string;
+  description: string;
+  rarity: FlairRarity;
+  unlock: FlairUnlock;
+  priceCoins: number | null;
+  streakDays: number | null;
+  imageUrl: string | null;
+  owned: boolean;
+  acquiredAt: string | null;
+  equipped: boolean;
+}
+
+export interface FlairPurchaseResult {
+  flair: FlairDto;
+  coins: number;
+}
+
+export interface FlairEquipResult {
+  equipped: FlairDto | null;
 }
 
 export interface BadgePurchaseResult {

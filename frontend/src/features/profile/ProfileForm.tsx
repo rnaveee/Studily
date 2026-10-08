@@ -82,7 +82,7 @@ export default function ProfileForm({
   return (
     <>
       <div className="card p-5 flex items-center gap-4">
-        <Avatar name={user?.name} username={user?.username} avatarUrl={user?.avatarUrl} size={64} className="text-xl" />
+        <Avatar name={user?.name} username={user?.username} avatarUrl={user?.avatarUrl} flair={user?.flair} size={64} className="text-xl" />
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
             <button

@@ -464,6 +464,7 @@ export default function ConversationPage() {
               name={others[0]?.name}
               username={others[0]?.username}
               avatarUrl={others[0]?.avatarUrl}
+              flair={others[0]?.flair}
               size={36}
               className="text-[13px]"
             />
@@ -560,6 +561,7 @@ export default function ConversationPage() {
                           name={m.sender.name}
                           username={m.sender.username}
                           avatarUrl={m.sender.avatarUrl}
+                          flair={m.sender.flair}
                           size={26}
                           className="text-[11px]"
                         />
@@ -750,6 +752,7 @@ function MembersModal({
                   name={m.name}
                   username={m.username}
                   avatarUrl={m.avatarUrl}
+                  flair={m.flair}
                   size={32}
                   className="text-[12px]"
                 />

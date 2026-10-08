@@ -56,7 +56,7 @@ export default function SchoolmatesPage() {
           {mates.map((r) => (
             <li key={r.user.id} className="card p-4 animate-fade flex items-center gap-3">
               <Link to={`/users/${r.user.id}`} className="flex min-w-0 flex-1 items-center gap-3 group">
-                <Avatar name={r.user.name} username={r.user.username} avatarUrl={r.user.avatarUrl} size={40} className="text-sm" />
+                <Avatar name={r.user.name} username={r.user.username} avatarUrl={r.user.avatarUrl} flair={r.user.flair} size={40} className="text-sm" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-1.5">
                     <span className="font-medium text-fg truncate group-hover:text-accent transition-colors">{r.user.name}</span>
