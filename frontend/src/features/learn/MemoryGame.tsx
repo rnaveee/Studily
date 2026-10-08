@@ -50,6 +50,14 @@ export default function MemoryGame({ setId, cards, color, onDone }: Props) {
     setFinishedAt(null);
   }
 
+  function replay() {
+    if (boardIndex === boards.length - 1 && !run.isActive()) {
+      run.reset();
+      setPass({ moves: 0, ms: 0 });
+    }
+    deal(deck, boardIndex);
+  }
+
   function nextBoard() {
     const nextIndex = boardIndex + 1;
     if (nextIndex >= boards.length) {
@@ -144,7 +152,7 @@ export default function MemoryGame({ setId, cards, color, onDone }: Props) {
           {formatClock(elapsed)} · {moves} {moves === 1 ? "move" : "moves"}
         </span>
         <button
-          onClick={() => deal(deck, boardIndex)}
+          onClick={replay}
           className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-surface-hi hover:text-fg"
         >
           <RotateCcw size={11} />
@@ -167,7 +175,7 @@ export default function MemoryGame({ setId, cards, color, onDone }: Props) {
                 Next board
               </button>
             )}
-            <button onClick={() => deal(deck, boardIndex)} className="btn btn-soft">
+            <button onClick={replay} className="btn btn-soft">
               Play again
             </button>
           </div>

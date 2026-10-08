@@ -167,7 +167,7 @@ function Slides() {
         type="button"
         onClick={close}
         aria-label="Close"
-        className="absolute right-3 top-3 z-10 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+        className="absolute right-1.5 top-1.5 z-10 grid h-10 w-10 place-items-center rounded-lg text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
       >
         <X size={16} />
       </button>
@@ -201,7 +201,8 @@ function Slides() {
                     navigate("/learn");
                     close();
                   }}
-                  className="btn btn-primary mt-4 inline-flex"
+                  className="btn btn-primary mt-4"
+                  style={{ minHeight: 40 }}
                 >
                   Start a study session
                 </button>
@@ -217,11 +218,11 @@ function Slides() {
           onClick={() => go(index - 1)}
           disabled={index === 0}
           aria-label="Previous"
-          className="rounded-full p-2 text-fg-2 transition-colors hover:bg-surface-hi hover:text-fg disabled:opacity-30 disabled:hover:bg-transparent"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-fg-2 transition-colors hover:bg-surface-hi hover:text-fg disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <ChevronLeft size={18} />
         </button>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center">
           {SLIDES.map((s, i) => (
             <button
               key={s.eyebrow}
@@ -229,12 +230,16 @@ function Slides() {
               onClick={() => go(i)}
               aria-label={`Go to ${s.eyebrow}`}
               aria-current={i === index}
-              className="h-2 rounded-full transition-all duration-200"
-              style={{
-                width: i === index ? 20 : 8,
-                background: i === index ? "var(--accent)" : "color-mix(in srgb, var(--fg-3) 40%, transparent)",
-              }}
-            />
+              className="grid h-10 w-10 place-items-center"
+            >
+              <span
+                className="h-2 rounded-full transition-all duration-200"
+                style={{
+                  width: i === index ? 20 : 8,
+                  background: i === index ? "var(--accent)" : "color-mix(in srgb, var(--fg-3) 40%, transparent)",
+                }}
+              />
+            </button>
           ))}
         </div>
         <button
@@ -242,7 +247,7 @@ function Slides() {
           onClick={() => go(index + 1)}
           disabled={index === last}
           aria-label="Next"
-          className="rounded-full p-2 text-fg-2 transition-colors hover:bg-surface-hi hover:text-fg disabled:opacity-30 disabled:hover:bg-transparent"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-fg-2 transition-colors hover:bg-surface-hi hover:text-fg disabled:opacity-30 disabled:hover:bg-transparent"
         >
           <ChevronRight size={18} />
         </button>

@@ -37,8 +37,8 @@ export default function BadgeArt({
           className="relative flex h-full w-full select-none items-center justify-center font-bold"
           style={{
             borderRadius: Math.round(size * 0.28),
-            background: `linear-gradient(150deg, color-mix(in srgb, ${color} 72%, #ffffff), ${color})`,
-            color: "#ffffff",
+            background: `linear-gradient(150deg, color-mix(in srgb, ${color} 72%, var(--accent-fg)), ${color})`,
+            color: "var(--accent-fg)",
             fontSize: Math.round(size * 0.42),
             boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.35)",
             filter,

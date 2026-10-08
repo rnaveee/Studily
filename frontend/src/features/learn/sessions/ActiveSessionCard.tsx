@@ -63,13 +63,25 @@ export default function ActiveSessionCard({
 
   useEffect(() => {
     if (phase !== "expired") return;
-    qc.invalidateQueries({ queryKey: progressKeys.activeSession });
-    const id = window.setInterval(
-      () => qc.invalidateQueries({ queryKey: progressKeys.activeSession }),
-      10_000,
-    );
+    const sync = () => {
+      qc.invalidateQueries({ queryKey: progressKeys.activeSession });
+      qc.invalidateQueries({ queryKey: progressKeys.history });
+      qc.invalidateQueries({ queryKey: progressKeys.streak });
+    };
+    sync();
+    const id = window.setInterval(sync, 10_000);
     return () => window.clearInterval(id);
   }, [phase, qc]);
+
+  useEffect(
+    () => () => {
+      if (qc.getQueryData(progressKeys.activeSession) === null) {
+        qc.invalidateQueries({ queryKey: progressKeys.history });
+        qc.invalidateQueries({ queryKey: progressKeys.streak });
+      }
+    },
+    [qc],
+  );
 
   function settle(result: StudySessionResult) {
     const s = result.session;
@@ -113,7 +125,11 @@ export default function ActiveSessionCard({
     onMutate: (v) => {
       qc.setQueryData<StudySessionDto | null>(progressKeys.activeSession, (old) =>
         old
-          ? { ...old, tasks: old.tasks.map((t) => (t.id === v.taskId ? { ...t, done: v.done } : t)) }
+          ? {
+              ...old,
+              serverNow: new Date(Date.now() + skew).toISOString(),
+              tasks: old.tasks.map((t) => (t.id === v.taskId ? { ...t, done: v.done } : t)),
+            }
           : old,
       );
     },
@@ -417,7 +433,7 @@ function TaskList({
                 className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full transition-colors"
                 style={
                   t.done
-                    ? { background: "var(--green)", color: "#ffffff" }
+                    ? { background: "var(--green)", color: "var(--accent-fg)" }
                     : { border: "1.5px solid var(--fg-3)" }
                 }
               >

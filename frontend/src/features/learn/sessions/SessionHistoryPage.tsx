@@ -22,7 +22,7 @@ export default function SessionHistoryPage() {
       ) : (
         <div className="card p-8 text-center">
           <p className="text-[13px] leading-relaxed text-fg-3">Sign in to track your study sessions and streaks.</p>
-          <Link to="/login" className="btn btn-primary mt-4">
+          <Link to="/login" className="btn btn-primary mt-4 min-h-[40px]">
             Sign in
           </Link>
         </div>

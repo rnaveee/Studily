@@ -9,15 +9,17 @@ function reasonText(result: FlashcardRunResult): string | null {
   const reason: XpReason = result.xpReason;
   switch (reason) {
     case "REDUCED":
-      return "This is your second run of this set today, so it earned half XP.";
+      return "You've already had one run of this set earn XP today, so this one earned half XP.";
     case "REPEAT":
-      return "You've already run this set twice today. Try another set, or come back tomorrow for full XP.";
+      return "Two runs of this set have already earned XP today. Try another set, or come back tomorrow for full XP.";
     case "DAILY_CAP":
       return result.xpAwarded > 0
         ? "You reached today's 300 XP limit for flashcards, so this run earned part of its XP."
         : "You've hit today's 300 XP limit for flashcards. It resets tomorrow.";
     case "TOO_FAST":
-      return "That was too quick to count for XP. Runs need about 2 seconds per card.";
+      return `That was too quick to count for XP. Runs need at least ${
+        result.mode === "MATCH" ? "1 second" : "2 seconds"
+      } per card.`;
     case "TOO_FEW":
       return "Runs need at least 5 cards to earn XP.";
     default:

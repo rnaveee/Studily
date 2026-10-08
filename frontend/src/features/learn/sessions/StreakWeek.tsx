@@ -62,7 +62,7 @@ export default function StreakWeek({ data }: { data: StreakWeekDto }) {
                   d.qualified
                     ? {
                         background: "linear-gradient(160deg, var(--amber-vivid), var(--orange-vivid))",
-                        color: "#ffffff",
+                        color: "var(--accent-fg)",
                         boxShadow: "0 3px 10px -3px color-mix(in srgb, var(--orange-vivid) 70%, transparent)",
                       }
                     : future

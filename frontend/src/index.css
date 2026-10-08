@@ -781,7 +781,7 @@ textarea.input { resize: vertical; }
   height: 46%;
   background: radial-gradient(
     ellipse 60% 70% at 50% 75%,
-    #fff3c4 0%,
+    color-mix(in srgb, var(--amber-vivid) 30%, var(--accent-fg)) 0%,
     var(--amber-vivid) 46%,
     transparent 74%
   );

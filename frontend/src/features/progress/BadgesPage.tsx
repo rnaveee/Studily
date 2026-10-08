@@ -49,7 +49,7 @@ function GuestBadges() {
         <p className="mt-2 text-[13px] leading-relaxed text-fg-3">
           Sign in to earn XP, level up, and collect badges for studying, flashcards and friends.
         </p>
-        <Link to="/login" className="btn btn-primary mt-5">
+        <Link to="/login" className="btn btn-primary mt-5 min-h-[40px]">
           Sign in
         </Link>
       </div>
@@ -251,7 +251,7 @@ function Collection({
       {shopHint && !picking && (
         <button
           onClick={shopHint}
-          className="card flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-surface-hi"
+          className="card card-lift flex w-full items-center gap-3 p-4 text-left"
         >
           <span
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"

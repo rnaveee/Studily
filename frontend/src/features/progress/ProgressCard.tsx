@@ -33,7 +33,7 @@ export function MyProgressCard() {
     return (
       <div className="card flex items-center justify-between gap-3 px-5 py-4">
         <p className="text-[13px] text-fg-3">Couldn't load your progress.</p>
-        <button onClick={() => progress.refetch()} className="btn btn-ghost">
+        <button onClick={() => progress.refetch()} className="btn btn-ghost min-h-[40px]">
           Retry
         </button>
       </div>

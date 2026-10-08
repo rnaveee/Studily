@@ -32,7 +32,8 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
   const [flipped, setFlipped] = useState(false);
   const [reviewed, setReviewed] = useState(0);
   const [grading, setGrading] = useState(false);
-  const run = useFlashcardRun(setId, "REVIEW", cards);
+  const initialDue = useRef(queue).current;
+  const run = useFlashcardRun(setId, "REVIEW", initialDue);
   const graded = useRef(new Map<number, boolean>());
   const started = useRef(false);
 

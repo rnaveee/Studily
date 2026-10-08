@@ -50,9 +50,9 @@ Make Studily social and sticky through progression: XP and levels, badges on pro
 | `STUDY_BLOCK` | `2 × creditedMinutes + 10`, × session multiplier, then daily diminishing returns (§4) | `study-block:{blockId}` |
 | `STUDY_PARTIAL` | `2 × floor(elapsedMinutes)`, × multiplier, only if the user ends a block early after ≥10 min | `study-block:{blockId}` |
 | `STUDY_COMPLETE` | +40 × multiplier, when every planned block was confirmed and `planned_minutes ≥ 50` | `study-complete:{sessionId}` |
-| `STUDY_TASK` | +5 per task ticked done, first 5 tasks of a session only, ticked ≥5 min after `started_at`, no multiplier | `study-task:{taskId}` |
+| `STUDY_TASK` | +5 per task, first 5 tasks of a session only, ticked ≥5 min after `started_at`, no multiplier, **paid only once the session has credited minutes** (§4 item 6), max **10 paid tasks per user per `local_date`** (decided by Ryan 2026-10-08 after the security review) | `study-task:{taskId}` |
 | `FLASHCARD_RUN` | §5 | `flashcard-run:{runId}` |
-| `FRIEND` | +50 to each user, once per pair ever, max 10 FRIEND grants per user per rolling 24h | `friend:{recipientId}:{otherId}` |
+| `FRIEND` | +50 to each user, once per pair ever, max 10 FRIEND grants per user per rolling 24h. A user only earns it if the **other** account is ≥7 days old (`users.created_at`) **and** has at least one `xp_events` row with a source other than FRIEND (decided by Ryan 2026-10-08 after the security review). If the condition fails at accept time, no XP is granted for that pair, now or later. Popularity badges still count every friend | `friend:{recipientId}:{otherId}` |
 | `CHEST` | rolled loot (§7) | `chest:{chestId}` |
 
 - Streak multiplier: `min(1.5, 1.0 + 0.1 × max(0, streak − 1))`, where `streak` is the effective current streak when the session **starts**. It's frozen into `study_sessions.multiplier`.
@@ -94,7 +94,7 @@ Lifecycle (server time is authoritative):
 5. **End** (ACTIVE or PAUSED):
    - If the current block is RUNNING with ≥10 elapsed minutes, it becomes `PARTIAL` with STUDY_PARTIAL XP. Otherwise the block is discarded.
    - The session becomes `ENDED`.
-6. **Tasks:** `PATCH done=true|false`. XP is granted only on the first `true`, only for task positions 0–4, and only if ticked ≥5 min after `started_at`. Unticking never revokes XP.
+6. **Tasks** (decided by Ryan 2026-10-08 after the security review): `PATCH done=true|false` sets or clears `done_at`. A task is **payable** when it's done, at position 0–4, ticked ≥5 min after `started_at`, and not yet paid. Payable tasks are paid **immediately on tick** if `session.credited_minutes > 0`. Otherwise they stay pending and are all paid when the session first gets credited minutes (a CONFIRMED or PARTIAL block), in position order. A session that ends with 0 credited minutes pays no task XP. Each payment respects the daily cap of 10 paid tasks per `local_date` (tasks with `xp_awarded > 0` across the user's sessions on that date) and the day factor. Unticking never revokes XP, and the dedupe key stops a re-tick from paying twice.
 
 Daily diminishing returns (decided by Ryan 2026-10-07: applies to **all** study XP):
 - Sum the credited minutes of the user's blocks on the same `local_date` before this block.
@@ -103,7 +103,7 @@ Daily diminishing returns (decided by Ryan 2026-10-07: applies to **all** study 
 - Minutes are still recorded, and they still count for hours badges and streaks.
 
 Streaks:
-- `local_date` is the session start date in `UserTimeZones.zoneFor(user)`.
+- `local_date` is the session start date in the user's **progress zone** (§4a), not the live `users.timezone`.
 - A day **qualifies** when the credited minutes of that `local_date` total ≥15.
 - When a day first qualifies:
   - If `streak_last_date == day`, nothing changes.
@@ -114,8 +114,19 @@ Streaks:
 - **Effective current streak** (for display and the multiplier): `streak_current` if `streak_last_date` is today or yesterday in the user's zone, else 0.
 
 Other limits:
+- `resume` itself expires a PAUSED session whose `paused_at` is more than 30 min ago (status EXPIRED, `ended_at = now`) and returns 409 `This session expired`. It doesn't rely on the sweeper having run.
+- STUDY_BLOCK and STUDY_PARTIAL are rounded half-up **once**, after the multiplier and the curve, not after each step.
 - Max 8 blocks / 200 minutes.
 - Check-in, task and run endpoints share a per-user limiter: 60 requests/min → 429.
+
+### 4a. Progress zone (decided by Ryan 2026-10-08 after the security review)
+
+All progress date math uses a per-user **progress zone** stored on `user_progress`, not the live `users.timezone`. That covers session and run `local_date`, streaks, the effective streak, the streak week, the chest daily limits, the daily XP curve and the flashcard daily cap.
+- `ProgressService.progressZone(progress, user)` returns the zone. Call it only while holding the `findForUpdate` lock; read-only paths may read it without updating it.
+  - If `progress_zone` is null: adopt `UserTimeZones.zoneFor(user)` and set `progress_zone_changed_at = now`.
+  - Else if the live zone differs from `progress_zone` and `now − progress_zone_changed_at ≥ 7 days`: adopt the live zone and set `progress_zone_changed_at = now`.
+  - Otherwise keep `progress_zone`.
+- This means a timezone switch can't fake a new day, while a user who moves or travels gets their new zone within a week.
 
 ## 5. Flashcard runs
 
@@ -135,7 +146,7 @@ Other limits:
   - Daily cap: total FLASHCARD_RUN XP per `local_date` ≤ 300 (`DAILY_CAP`, partial grant allowed).
   - Otherwise the reason is `FULL`.
 - The response always includes the per-card summary, even with 0 XP, so the UI can show right/wrong.
-- Chest: 10% chance when `cardCount ≥ 10` and XP > 0, max 1 `FLASHCARD` chest per user per `local_date`. Source_ref `run:{runId}`.
+- Chest: 10% chance when `cardCount ≥ 10` and XP > 0, max 1 `FLASHCARD` chest per user per `local_date`. The limit is counted with `chests.local_date` = the run's `local_date`, never `created_at`. Source_ref `run:{runId}`.
 
 ## 6. Data model: exact DDL (db-developer)
 
@@ -292,6 +303,15 @@ CREATE INDEX idx_flashcard_runs_user_date ON flashcard_runs(user_id, local_date)
 CREATE INDEX idx_flashcard_runs_user_started ON flashcard_runs(user_id, started_at);
 ```
 
+`V45__progress_zone_and_chest_date.sql` (decided by Ryan 2026-10-08 after the security review)
+```sql
+ALTER TABLE user_progress ADD COLUMN progress_zone VARCHAR(64);
+ALTER TABLE user_progress ADD COLUMN progress_zone_changed_at TIMESTAMPTZ;
+ALTER TABLE chests ADD COLUMN local_date DATE;
+CREATE INDEX idx_chests_user_source_date ON chests(user_id, source, local_date);
+```
+Entity fields: `UserProgress.progressZone` (String), `UserProgress.progressZoneChangedAt` (Instant), `Chest.localDate` (LocalDate).
+
 ### Entities and repositories (db-developer owns these files)
 
 | Package | Entity → table | Enums (same package) | Repository |
@@ -315,7 +335,7 @@ Repository methods the backend relies on. Names are fixed; db-developer may add 
 - `UserProgressRepository`:
   - `@Modifying @Query(nativeQuery) int insertIfMissing(Long userId)`, using `INSERT ... ON CONFLICT DO NOTHING`.
   - `@Lock(PESSIMISTIC_WRITE) @Query Optional<UserProgress> findForUpdate(Long userId)`.
-- `XpEventRepository`:
+- `XpEventRepository` (plus, in the V45 round, `boolean existsByUserIdAndSourceNot(Long userId, XpSource source)` for the friend-XP check):
   - `boolean existsByDedupeKey(String key)`.
   - `long countByUserIdAndSourceAndCreatedAtAfter(Long userId, XpSource source, Instant after)`.
   - `@Query int sumAmountByUserIdAndSourceAndCreatedAtBetween(Long userId, XpSource source, Instant from, Instant to)`, which returns 0 when there are no rows.
@@ -325,7 +345,7 @@ Repository methods the backend relies on. Names are fixed; db-developer may add 
   - `boolean existsByUserIdAndBadgeCode(Long userId, String code)`.
   - `List<UserBadge> findByUserIdAndFeaturedSlotNotNullOrderByFeaturedSlot(Long userId)`.
   - `long countByUserId(Long userId)`.
-- `ChestRepository`:
+- `ChestRepository` (plus, in the V45 round, `long countByUserIdAndSourceAndLocalDate(Long userId, ChestSource source, LocalDate d)`):
   - `List<Chest> findByUserIdAndOpenedAtIsNullOrderByCreatedAt(Long userId)`.
   - `Optional<Chest> findByIdAndUserId(Long id, Long userId)`.
   - `@Modifying @Query int markOpened(Long id, Long userId, Instant at)`, which only updates rows where `opened_at IS NULL`.
@@ -344,8 +364,8 @@ Repository methods the backend relies on. Names are fixed; db-developer may add 
   - `List<StudySessionBlock> findBySessionIdOrderByBlockIndex(Long sessionId)`.
   - `List<StudySessionBlock> findByStatusAndDueAtBeforeAndNotifiedAtIsNull(StudyBlockStatus s, Instant t)`.
   - `List<StudySessionBlock> findByStatusAndDueAtBefore(StudyBlockStatus s, Instant t)`.
-- `StudySessionTaskRepository`: `List<StudySessionTask> findBySessionIdOrderByPosition(Long sessionId)`, `Optional<StudySessionTask> findByIdAndSessionId(Long id, Long sessionId)`.
-- `FlashcardRunRepository` (plus `long countByUserIdAndSetIdAndLocalDateAndXpAwardedGreaterThan(Long userId, Long setId, LocalDate d, int min)` for the repeat factor):
+- `StudySessionTaskRepository`: `List<StudySessionTask> findBySessionIdOrderByPosition(Long sessionId)`, `Optional<StudySessionTask> findByIdAndSessionId(Long id, Long sessionId)`, and (V45 round) `@Query long countPaidByUserIdAndLocalDate(Long userId, LocalDate d)`, which counts tasks with `xp_awarded > 0` whose session belongs to the user and has that `local_date`.
+- `FlashcardRunRepository` (plus `long countByUserIdAndSetIdAndLocalDateAndXpAwardedGreaterThan(Long userId, Long setId, LocalDate d, int min)` for the repeat factor, and, in the V45 round, `long countByUserIdAndCompletedAtIsNotNullAndCardCountGreaterThanEqualAndXpReasonNotIn(Long userId, int min, Collection<String> reasons)` for runs badges):
   - `Optional<FlashcardRun> findByIdAndUserId(Long id, Long userId)`.
   - `long countByUserIdAndStartedAtAfter(Long userId, Instant after)`.
   - `long countByUserIdAndSetIdAndLocalDateAndCompletedAtIsNotNull(Long userId, Long setId, LocalDate d)`.
@@ -358,7 +378,7 @@ Repository methods the backend relies on. Names are fixed; db-developer may add 
 - Chest drops:
   - **LEVEL**: every 5th level.
   - **STREAK**: every time the streak reaches a multiple of 7.
-  - **SESSION**: 20% chance when a session completes with `planned_minutes ≥ 50`, max 1 SESSION chest per user per `local_date`. Source_ref `session:{id}`.
+  - **SESSION**: 20% chance when a session completes with `planned_minutes ≥ 50`, max 1 SESSION chest per user per `local_date`. The limit is counted with `chests.local_date` = the session's `local_date`, never `created_at`. Source_ref `session:{id}`. LEVEL and STREAK chests store `local_date` as null, or the streak day for STREAK.
   - **FLASHCARD**: see §5.
 - Open: `markOpened` must return 1. If it returns 0 and the chest exists for this user, that's 409 `Chest already opened`; otherwise 404.
 - Loot is rolled at open time with one `SecureRandom`:
@@ -415,7 +435,7 @@ Rule details:
 - **first_session:** ≥1 session with status COMPLETED.
 - **hours_*:** `sumCreditedMinutesByUserId` ≥ 600 or ≥ 6000.
 - **streak_*:** `streak_best` ≥ 7 or ≥ 30.
-- **runs_*:** completed runs with `card_count ≥ 5`.
+- **runs_*:** completed runs with `card_count ≥ 5` and `xp_reason` not in (TOO_FAST, TOO_FEW) (lead decision 2026-10-08, matching Ryan's "only XP-eligible runs count" rule).
 
 When to evaluate:
 - `BadgeService.evaluate(userId)` checks every non-cosmetic rule and inserts any missing badges (source `EARNED`). It returns the new ones.
@@ -429,7 +449,7 @@ Art:
 
 ## 9. API contract (backend implements, UI consumes, both match exactly)
 
-JSON uses camelCase. Errors keep the existing `GlobalExceptionHandler` shape. All endpoints require auth. Endpoints under `/api/users/{id}/...` return 404 for unknown users.
+JSON uses camelCase. Errors keep the existing `GlobalExceptionHandler` shape. All endpoints require auth. Endpoints under `/api/users/{id}/...` return 404 for unknown users. `/api/users/*/progress` and `/api/users/*/badges` also require a **verified email**, enforced the same way as the existing profile and schedule endpoints (add them to `EmailVerificationFilter`).
 
 ```ts
 type BadgeCategory = "LEVEL" | "SOCIAL" | "TENURE" | "STUDY" | "FLASHCARDS" | "COSMETIC";

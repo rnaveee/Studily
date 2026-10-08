@@ -94,7 +94,8 @@ function StartForm() {
                 type="button"
                 onClick={() => setBlocks((b) => Math.max(MIN_BLOCKS, b - 1))}
                 disabled={blocks <= MIN_BLOCKS}
-                className="btn btn-ghost h-10 w-10 shrink-0 rounded-full p-0"
+                className="btn btn-ghost h-10 w-10 shrink-0"
+                style={{ borderRadius: 9999, padding: 0 }}
                 aria-label="Fewer blocks"
               >
                 <Minus size={16} />
@@ -111,7 +112,8 @@ function StartForm() {
                 type="button"
                 onClick={() => setBlocks((b) => Math.min(MAX_BLOCKS, b + 1))}
                 disabled={blocks >= MAX_BLOCKS}
-                className="btn btn-ghost h-10 w-10 shrink-0 rounded-full p-0"
+                className="btn btn-ghost h-10 w-10 shrink-0"
+                style={{ borderRadius: 9999, padding: 0 }}
                 aria-label="More blocks"
               >
                 <Plus size={16} />
@@ -129,7 +131,7 @@ function StartForm() {
                   type="button"
                   onClick={() => setMinutes(m)}
                   aria-pressed={active}
-                  className="card press min-h-[40px] px-2 py-2 text-[13px] font-semibold tabular-nums transition-colors hover:bg-surface-hi"
+                  className="card press min-h-[40px] px-2 py-2 text-[13px] font-semibold tabular-nums"
                   style={
                     active
                       ? {
