@@ -490,8 +490,37 @@ class ProgressServiceTest {
 
         assertThat(busy.getXp()).isZero();
         assertThat(fresh.getXp()).isEqualTo(50);
-        assertThat(xpEvents).filteredOn(e -> e.getAmount() > 0).extracting(XpEvent::getDedupeKey)
-                .containsExactly("friend:2:1");
+        assertThat(xpEvents).extracting(XpEvent::getDedupeKey)
+                .containsExactly("friend:2:1")
+                .doesNotContain("friend:1:2");
+    }
+
+    @Test
+    void onFriendshipAccepted_pairCappedEarlier_paysOnceOnReFriendAfterWindow() {
+        UserProgress busy = progress(1L, 0);
+        UserProgress fresh = progress(2L, 0);
+        when(xpEventRepository.sumAmountByUserIdAndSourceAndCreatedAtBetween(1L, XpSource.FRIEND,
+                NOW.minus(Duration.ofHours(24)), NOW)).thenReturn(500);
+        service.onFriendshipAccepted(1L, 2L);
+        assertThat(xpEvents).extracting(XpEvent::getDedupeKey).doesNotContain("friend:1:2");
+
+        Instant reFriendedAt = NOW.plus(Duration.ofHours(25));
+        serviceAt(reFriendedAt).onFriendshipAccepted(1L, 2L);
+
+        assertThat(busy.getXp()).isEqualTo(50);
+        assertThat(fresh.getXp()).isEqualTo(50);
+        assertThat(xpEvents).filteredOn(e -> e.getDedupeKey().equals("friend:1:2")).singleElement()
+                .satisfies(e -> {
+                    assertThat(e.getAmount()).isEqualTo(50);
+                    assertThat(e.getCreatedAt()).isEqualTo(reFriendedAt);
+                });
+
+        serviceAt(reFriendedAt.plus(Duration.ofDays(3))).onFriendshipAccepted(1L, 2L);
+
+        assertThat(busy.getXp()).isEqualTo(50);
+        assertThat(fresh.getXp()).isEqualTo(50);
+        assertThat(xpEvents).extracting(XpEvent::getDedupeKey)
+                .containsExactlyInAnyOrder("friend:2:1", "friend:1:2");
     }
 
     @Test
