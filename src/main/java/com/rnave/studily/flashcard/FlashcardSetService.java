@@ -14,6 +14,7 @@ import com.rnave.studily.flashcard.FlashcardDtos.SetPagePreview;
 import com.rnave.studily.flashcard.FlashcardDtos.SharedFlashcardSetDto;
 import com.rnave.studily.friend.FriendRequestRepository;
 import com.rnave.studily.friend.FriendRequestStatus;
+import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -34,13 +35,16 @@ public class FlashcardSetService {
     private final CurrentUser currentUser;
     private final CourseService courseService;
     private final FriendRequestRepository friendRequestRepository;
+    private final Flairs flairs;
 
     public FlashcardSetService(FlashcardSetRepository flashcardSetRepository, CurrentUser currentUser,
-                               @Lazy CourseService courseService, FriendRequestRepository friendRequestRepository) {
+                               @Lazy CourseService courseService, FriendRequestRepository friendRequestRepository,
+                               Flairs flairs) {
         this.flashcardSetRepository = flashcardSetRepository;
         this.currentUser = currentUser;
         this.courseService = courseService;
         this.friendRequestRepository = friendRequestRepository;
+        this.flairs = flairs;
     }
 
     @Transactional(readOnly = true)
@@ -85,7 +89,7 @@ public class FlashcardSetService {
     public SharedFlashcardSetDto shared(Long id) {
         Long viewerId = currentUser.maybe().map(User::getId).orElse(null);
         FlashcardSet set = requireViewable(id, viewerId);
-        return SharedFlashcardSetDto.from(set, set.getUser().getId().equals(viewerId));
+        return SharedFlashcardSetDto.from(set, set.getUser().getId().equals(viewerId), flairs);
     }
 
     @Transactional(readOnly = true)
@@ -166,7 +170,7 @@ public class FlashcardSetService {
         return new CopiedFromDto(
                 visible ? source.getId() : null,
                 visible ? source.getTitle() : null,
-                SetOwnerDto.from(originalOwner));
+                SetOwnerDto.from(originalOwner, flairs));
     }
 
     @Transactional

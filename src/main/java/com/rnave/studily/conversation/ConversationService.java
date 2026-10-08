@@ -15,6 +15,7 @@ import com.rnave.studily.friend.FriendRequestStatus;
 import com.rnave.studily.notification.NotificationPrefsService;
 import com.rnave.studily.push.PushPayload;
 import com.rnave.studily.push.WebPushSender;
+import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import org.springframework.data.domain.PageRequest;
@@ -50,6 +51,7 @@ public class ConversationService {
     private final WsSessionRegistry wsSessionRegistry;
     private final NotificationPrefsService notificationPrefsService;
     private final WebPushSender webPushSender;
+    private final Flairs flairs;
 
     public ConversationService(ConversationRepository conversationRepository,
                                ConversationMemberRepository conversationMemberRepository,
@@ -62,7 +64,8 @@ public class ConversationService {
                                CurrentUser currentUser,
                                WsSessionRegistry wsSessionRegistry,
                                NotificationPrefsService notificationPrefsService,
-                               WebPushSender webPushSender) {
+                               WebPushSender webPushSender,
+                               Flairs flairs) {
         this.conversationRepository = conversationRepository;
         this.conversationMemberRepository = conversationMemberRepository;
         this.messageRepository = messageRepository;
@@ -75,6 +78,7 @@ public class ConversationService {
         this.wsSessionRegistry = wsSessionRegistry;
         this.notificationPrefsService = notificationPrefsService;
         this.webPushSender = webPushSender;
+        this.flairs = flairs;
     }
 
     @Transactional(readOnly = true)
@@ -159,7 +163,7 @@ public class ConversationService {
         message.setSender(currentUser.entity());
         message.setBody(body.trim());
         conv.setLastMessageAt(Instant.now());
-        MessageDto dto = MessageDto.from(messageRepository.save(message));
+        MessageDto dto = MessageDto.from(messageRepository.save(message), flairs);
         broadcastAfterCommit(conv, dto);
         return dto;
     }
@@ -184,7 +188,7 @@ public class ConversationService {
         blob.setMessageId(message.getId());
         blob.setData(processed.data());
         messageAttachmentRepository.save(blob);
-        MessageDto dto = MessageDto.from(message);
+        MessageDto dto = MessageDto.from(message, flairs);
         broadcastAfterCommit(conv, dto);
         return dto;
     }
@@ -199,7 +203,7 @@ public class ConversationService {
         message.setBody(body.trim());
         message.setEditedAt(Instant.now());
         messageRepository.flush();
-        MessageDto dto = MessageDto.from(message);
+        MessageDto dto = MessageDto.from(message, flairs);
         broadcastToMembersAfterCommit(conv, WsEvents.MessageEditEvent.of(dto));
         return dto;
     }
@@ -274,7 +278,7 @@ public class ConversationService {
             }
         }
         return messages.stream()
-                .map(m -> MessageDto.from(m, counts.getOrDefault(m.getId(), 0), mine.contains(m.getId())))
+                .map(m -> MessageDto.from(m, counts.getOrDefault(m.getId(), 0), mine.contains(m.getId()), flairs))
                 .toList();
     }
 
@@ -419,7 +423,7 @@ public class ConversationService {
                 .findTopByConversationIdAndIdGreaterThanOrderByIdDesc(c.getId(), clearedUpTo)
                 .map(ConversationService::previewText)
                 .orElse(null);
-        return ConversationDto.from(c, lastMessage, isUnread(c, clearedUpTo), otherReadAt(c));
+        return ConversationDto.from(c, lastMessage, isUnread(c, clearedUpTo), otherReadAt(c), flairs);
     }
 
     private long clearedUpTo(Conversation c) {

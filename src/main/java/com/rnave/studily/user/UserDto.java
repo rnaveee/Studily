@@ -13,18 +13,15 @@ public record UserDto(
         String major,
         String bio,
         String avatarUrl,
+        FlairRef flair,
         boolean emailVerified,
         boolean admin,
         Instant createdAt) {
 
-    public static UserDto from(User u) {
-        return from(u, false);
-    }
-
-    public static UserDto from(User u, boolean admin) {
+    public static UserDto from(User u, boolean admin, Flairs flairs) {
         return new UserDto(
                 u.getId(), u.getEmail(), u.getUsername(), u.getName(), u.getSchool(),
-                u.getSchoolId(), u.getYear(), u.getMajor(), u.getBio(), AvatarUrls.of(u),
+                u.getSchoolId(), u.getYear(), u.getMajor(), u.getBio(), AvatarUrls.of(u), flairs.refOf(u),
                 u.isEmailVerified(), admin, u.getCreatedAt());
     }
 }

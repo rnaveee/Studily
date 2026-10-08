@@ -11,6 +11,7 @@ import com.rnave.studily.friend.FriendDtos.PublicUserDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipStatus;
 import com.rnave.studily.progress.ProgressService;
+import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import org.springframework.data.domain.PageRequest;
@@ -31,13 +32,15 @@ public class FriendService {
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
     private final ProgressService progressService;
+    private final Flairs flairs;
 
     public FriendService(FriendRequestRepository friendRequestRepository, UserRepository userRepository,
-                          CurrentUser currentUser, ProgressService progressService) {
+                          CurrentUser currentUser, ProgressService progressService, Flairs flairs) {
         this.friendRequestRepository = friendRequestRepository;
         this.userRepository = userRepository;
         this.currentUser = currentUser;
         this.progressService = progressService;
+        this.flairs = flairs;
     }
 
     @Transactional(readOnly = true)
@@ -109,7 +112,7 @@ public class FriendService {
         User target = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
         if (target.getId().equals(me.getId())) {
-            return new RelationshipDto(PublicUserDto.from(target), RelationshipStatus.SELF, null);
+            return new RelationshipDto(PublicUserDto.from(target, flairs), RelationshipStatus.SELF, null);
         }
         FriendRequest relation = friendRequestRepository.findBetween(me.getId(), target.getId()).orElse(null);
         return toRelationshipDto(target, me.getId(), relation);
@@ -189,7 +192,7 @@ public class FriendService {
 
     private RelationshipDto toRelationshipDto(User other, Long me, FriendRequest relation) {
         if (relation == null) {
-            return new RelationshipDto(PublicUserDto.from(other), RelationshipStatus.NONE, null);
+            return new RelationshipDto(PublicUserDto.from(other, flairs), RelationshipStatus.NONE, null);
         }
         RelationshipStatus status;
         if (relation.getStatus() == FriendRequestStatus.ACCEPTED) {
@@ -199,11 +202,11 @@ public class FriendService {
         } else {
             status = RelationshipStatus.INCOMING_PENDING;
         }
-        return new RelationshipDto(PublicUserDto.from(other), status, relation.getId());
+        return new RelationshipDto(PublicUserDto.from(other, flairs), status, relation.getId());
     }
 
     private FriendRequestDto toDto(FriendRequest f, Long me) {
         User other = f.getRequester().getId().equals(me) ? f.getAddressee() : f.getRequester();
-        return new FriendRequestDto(f.getId(), PublicUserDto.from(other), f.getStatus(), f.getCreatedAt(), f.getRespondedAt());
+        return new FriendRequestDto(f.getId(), PublicUserDto.from(other, flairs), f.getStatus(), f.getCreatedAt(), f.getRespondedAt());
     }
 }

@@ -10,6 +10,7 @@ import com.rnave.studily.config.JwtService;
 import com.rnave.studily.config.LoginRateLimiter;
 import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.config.UnauthorizedException;
+import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserDto;
 import com.rnave.studily.user.UserRepository;
@@ -27,10 +28,11 @@ public class AuthService {
     private final AuthEmailService authEmailService;
     private final AccountTokenService accountTokenService;
     private final AdminGuard adminGuard;
+    private final Flairs flairs;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
                        LoginRateLimiter loginRateLimiter, AuthEmailService authEmailService,
-                       AccountTokenService accountTokenService, AdminGuard adminGuard) {
+                       AccountTokenService accountTokenService, AdminGuard adminGuard, Flairs flairs) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -38,6 +40,7 @@ public class AuthService {
         this.authEmailService = authEmailService;
         this.accountTokenService = accountTokenService;
         this.adminGuard = adminGuard;
+        this.flairs = flairs;
     }
 
     @Transactional
@@ -62,7 +65,7 @@ public class AuthService {
             authEmailService.sendVerification(user);
         } catch (RuntimeException ignored) {
         }
-        return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user, adminGuard.isAdmin(user)));
+        return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user, adminGuard.isAdmin(user), flairs));
     }
 
     @Transactional
@@ -100,6 +103,6 @@ public class AuthService {
         if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
             throw new UnauthorizedException("Invalid email or password");
         }
-        return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user, adminGuard.isAdmin(user)));
+        return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user, adminGuard.isAdmin(user), flairs));
     }
 }

@@ -2,6 +2,7 @@ package com.rnave.studily.progress;
 
 import com.rnave.studily.progress.ProgressDtos.BadgeDto;
 import com.rnave.studily.progress.ProgressDtos.ChestDto;
+import com.rnave.studily.progress.ProgressDtos.FlairDto;
 import com.rnave.studily.progress.ProgressDtos.ProgressDelta;
 
 import java.util.ArrayList;
@@ -15,6 +16,7 @@ public class ProgressDeltaBuilder {
     private final long xpBefore;
     private final int coinsBefore;
     private final List<BadgeDto> newBadges = new ArrayList<>();
+    private final List<FlairDto> newFlairs = new ArrayList<>();
     private final List<ChestDto> chests = new ArrayList<>();
 
     public ProgressDeltaBuilder(UserProgress progress) {
@@ -40,6 +42,14 @@ public class ProgressDeltaBuilder {
         newBadges.addAll(badges);
     }
 
+    public void addFlair(FlairDto flair) {
+        newFlairs.add(flair);
+    }
+
+    public void addFlairs(Collection<FlairDto> flairs) {
+        newFlairs.addAll(flairs);
+    }
+
     public void addChest(ChestDto chest) {
         chests.add(chest);
     }
@@ -57,6 +67,7 @@ public class ProgressDeltaBuilder {
                 progress.getCoins() - coinsBefore,
                 progress.getCoins(),
                 List.copyOf(newBadges),
+                List.copyOf(newFlairs),
                 List.copyOf(chests));
     }
 }

@@ -19,17 +19,20 @@ public class ProfileController {
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
     private final AdminGuard adminGuard;
+    private final Flairs flairs;
 
-    public ProfileController(UserRepository userRepository, CurrentUser currentUser, AdminGuard adminGuard) {
+    public ProfileController(UserRepository userRepository, CurrentUser currentUser, AdminGuard adminGuard,
+                             Flairs flairs) {
         this.userRepository = userRepository;
         this.currentUser = currentUser;
         this.adminGuard = adminGuard;
+        this.flairs = flairs;
     }
 
     @GetMapping
     public UserDto me() {
         User user = currentUser.entity();
-        return UserDto.from(user, adminGuard.isAdmin(user));
+        return UserDto.from(user, adminGuard.isAdmin(user), flairs);
     }
 
     @PutMapping
@@ -43,7 +46,7 @@ public class ProfileController {
         user.setYear(req.year());
         user.setMajor(req.major());
         user.setBio(req.bio());
-        return UserDto.from(userRepository.save(user), adminGuard.isAdmin(user));
+        return UserDto.from(userRepository.save(user), adminGuard.isAdmin(user), flairs);
     }
 
     public record ProfileUpdateRequest(

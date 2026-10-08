@@ -69,4 +69,7 @@ public class User {
     private Instant createdAt = Instant.now();
 
     private Instant lastActiveAt;
+
+    @Column(name = "equipped_flair_code", length = 48)
+    private String equippedFlairCode;
 }

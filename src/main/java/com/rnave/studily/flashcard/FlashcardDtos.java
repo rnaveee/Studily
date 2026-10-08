@@ -1,6 +1,8 @@
 package com.rnave.studily.flashcard;
 
 import com.rnave.studily.user.AvatarUrls;
+import com.rnave.studily.user.FlairRef;
+import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -74,10 +76,10 @@ public class FlashcardDtos {
     public record VisibilityRequest(@NotNull FlashcardSetVisibility visibility) {
     }
 
-    public record SetOwnerDto(Long id, String username, String name, String avatarUrl) {
+    public record SetOwnerDto(Long id, String username, String name, String avatarUrl, FlairRef flair) {
 
-        public static SetOwnerDto from(User u) {
-            return new SetOwnerDto(u.getId(), u.getUsername(), u.getName(), AvatarUrls.of(u));
+        public static SetOwnerDto from(User u, Flairs flairs) {
+            return new SetOwnerDto(u.getId(), u.getUsername(), u.getName(), AvatarUrls.of(u), flairs.refOf(u));
         }
     }
 
@@ -99,7 +101,7 @@ public class FlashcardDtos {
             boolean viewerIsOwner,
             List<SharedCardDto> cards) {
 
-        public static SharedFlashcardSetDto from(FlashcardSet s, boolean viewerIsOwner) {
+        public static SharedFlashcardSetDto from(FlashcardSet s, boolean viewerIsOwner, Flairs flairs) {
             return new SharedFlashcardSetDto(
                     s.getId(),
                     s.getTitle(),
@@ -107,7 +109,7 @@ public class FlashcardDtos {
                     s.getVisibility(),
                     s.getCreatedAt(),
                     s.getCards().size(),
-                    SetOwnerDto.from(s.getUser()),
+                    SetOwnerDto.from(s.getUser(), flairs),
                     viewerIsOwner,
                     s.getCards().stream().map(SharedCardDto::from).toList());
         }

@@ -10,6 +10,7 @@ import com.rnave.studily.course.CourseDtos.CourseDto;
 import com.rnave.studily.course.CourseDtos.CourseMatchDto;
 import com.rnave.studily.friend.FriendDtos.PublicUserDto;
 import com.rnave.studily.semester.SemesterService;
+import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import org.springframework.stereotype.Service;
@@ -34,13 +35,15 @@ public class CourseMatchService {
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
     private final SemesterService semesterService;
+    private final Flairs flairs;
 
     public CourseMatchService(CourseRepository courseRepository, UserRepository userRepository,
-                              CurrentUser currentUser, SemesterService semesterService) {
+                              CurrentUser currentUser, SemesterService semesterService, Flairs flairs) {
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
         this.currentUser = currentUser;
         this.semesterService = semesterService;
+        this.flairs = flairs;
     }
 
     @Transactional(readOnly = true)
@@ -130,7 +133,7 @@ public class CourseMatchService {
             return List.of();
         }
         return userRepository.findClassmates(course.getCodeKey(), me.getSchoolKey(), me.getId())
-                .stream().map(PublicUserDto::from).toList();
+                .stream().map(u -> PublicUserDto.from(u, flairs)).toList();
     }
 
     private String signature(Course c) {

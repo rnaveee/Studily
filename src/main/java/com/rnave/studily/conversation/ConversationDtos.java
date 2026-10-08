@@ -1,6 +1,7 @@
 package com.rnave.studily.conversation;
 
 import com.rnave.studily.friend.FriendDtos.PublicUserDto;
+import com.rnave.studily.user.Flairs;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -21,10 +22,11 @@ public class ConversationDtos {
             boolean unread,
             Instant otherReadAt) {
 
-        public static ConversationDto from(Conversation c, String lastMessage, boolean unread, Instant otherReadAt) {
+        public static ConversationDto from(Conversation c, String lastMessage, boolean unread, Instant otherReadAt,
+                                           Flairs flairs) {
             return new ConversationDto(
                     c.getId(), c.getType(), c.getName(),
-                    c.getMembers().stream().map(m -> PublicUserDto.from(m.getUser())).toList(),
+                    c.getMembers().stream().map(m -> PublicUserDto.from(m.getUser(), flairs)).toList(),
                     lastMessage, c.getLastMessageAt(), unread, otherReadAt);
         }
     }
@@ -40,14 +42,14 @@ public class ConversationDtos {
             int likeCount,
             boolean likedByMe) {
 
-        public static MessageDto from(Message m) {
-            return from(m, 0, false);
+        public static MessageDto from(Message m, Flairs flairs) {
+            return from(m, 0, false, flairs);
         }
 
-        public static MessageDto from(Message m, int likeCount, boolean likedByMe) {
+        public static MessageDto from(Message m, int likeCount, boolean likedByMe, Flairs flairs) {
             return new MessageDto(
                     m.getId(), m.getConversation().getId(),
-                    PublicUserDto.from(m.getSender()), m.getBody(),
+                    PublicUserDto.from(m.getSender(), flairs), m.getBody(),
                     AttachmentDto.from(m), m.getCreatedAt(), m.getEditedAt(),
                     likeCount, likedByMe);
         }

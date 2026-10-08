@@ -10,6 +10,7 @@ import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.config.UnauthorizedException;
 import com.rnave.studily.conversation.ConversationRepository;
 import com.rnave.studily.conversation.ConversationType;
+import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserDto;
 import com.rnave.studily.user.UserRepository;
@@ -43,10 +44,12 @@ public class AccountController {
     private final JwtService jwtService;
     private final AuthEmailService authEmailService;
     private final AdminGuard adminGuard;
+    private final Flairs flairs;
 
     public AccountController(CurrentUser currentUser, UserRepository userRepository,
                              ConversationRepository conversationRepository, PasswordEncoder passwordEncoder,
-                             JwtService jwtService, AuthEmailService authEmailService, AdminGuard adminGuard) {
+                             JwtService jwtService, AuthEmailService authEmailService, AdminGuard adminGuard,
+                             Flairs flairs) {
         this.currentUser = currentUser;
         this.userRepository = userRepository;
         this.conversationRepository = conversationRepository;
@@ -54,6 +57,7 @@ public class AccountController {
         this.jwtService = jwtService;
         this.authEmailService = authEmailService;
         this.adminGuard = adminGuard;
+        this.flairs = flairs;
     }
 
     @PostMapping("/token")
@@ -62,7 +66,7 @@ public class AccountController {
         User user = currentUser.entity();
         return new AuthResponse(
                 jwtService.generateToken(user.getId(), user.getTokenVersion()),
-                UserDto.from(user, adminGuard.isAdmin(user)));
+                UserDto.from(user, adminGuard.isAdmin(user), flairs));
     }
 
     @PostMapping("/verification-email")
@@ -87,7 +91,7 @@ public class AccountController {
         user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
         user.setTokenVersion(user.getTokenVersion() + 1);
         user = userRepository.save(user);
-        return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user, adminGuard.isAdmin(user)));
+        return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user, adminGuard.isAdmin(user), flairs));
     }
 
     @PostMapping("/delete")

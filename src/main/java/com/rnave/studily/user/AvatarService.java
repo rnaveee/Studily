@@ -38,11 +38,14 @@ public class AvatarService {
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
     private final AdminGuard adminGuard;
+    private final Flairs flairs;
 
-    public AvatarService(UserRepository userRepository, CurrentUser currentUser, AdminGuard adminGuard) {
+    public AvatarService(UserRepository userRepository, CurrentUser currentUser, AdminGuard adminGuard,
+                         Flairs flairs) {
         this.userRepository = userRepository;
         this.currentUser = currentUser;
         this.adminGuard = adminGuard;
+        this.flairs = flairs;
     }
 
     @Transactional
@@ -78,7 +81,7 @@ public class AvatarService {
         user.setAvatarContentType("image/jpeg");
         user.setAvatarKey(newAvatarKey());
         user.setAvatarVersion(user.getAvatarVersion() + 1);
-        return UserDto.from(userRepository.save(user), adminGuard.isAdmin(user));
+        return UserDto.from(userRepository.save(user), adminGuard.isAdmin(user), flairs);
     }
 
     @Transactional
@@ -88,7 +91,7 @@ public class AvatarService {
         user.setAvatarContentType(null);
         user.setAvatarKey(null);
         user.setAvatarVersion(user.getAvatarVersion() + 1);
-        return UserDto.from(userRepository.save(user), adminGuard.isAdmin(user));
+        return UserDto.from(userRepository.save(user), adminGuard.isAdmin(user), flairs);
     }
 
     @Transactional(readOnly = true)

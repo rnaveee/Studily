@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 44,
+    date: "2026-10-08",
+    title: "Profile flairs",
+    description:
+      "Your profile picture can wear a ring now. Flairs are rings drawn around your picture, and once you put one on, everyone sees it everywhere your picture shows up: friend lists, search, schoolmates, chats and group chats, the classmates on your courses, shared flashcard sets and your profile. There are eleven to collect, each with a rarity from Common up to Legendary, and the rarer ones glow. Six of them are in the shop, starting at 250 coins for Mint and Ocean and going up to 1,500 for Aurora. Tap your coins at the top of the screen and the shop now opens with a Flairs section above the cosmetic badges, and once you buy a ring you can put it on right there. Two rings, Prism and Galaxy, can't be bought at all. Every so often a chest has a ring inside, either one of those two or a shop ring you don't own yet, and opening it shows you a preview of your picture wearing it. If you have every ring a chest could give you, you get bonus coins instead. Then there are the fire rings, which you earn by studying: Ember for a 7-day study streak, Blaze for 30 days and Inferno for 100, each one fiercer than the last, and Studily tells you the moment you unlock one. They're yours for good once you reach them, even if your streak breaks later, and if your best streak already got there before today, they're already waiting in your collection. You wear one ring at a time. Go to Profile \u203a Badges \u203a Flairs, or tap Change flair on your profile card, to see your picture with your ring on, every ring you own, and what it takes to unlock the rest: a price, Found in chests, or the streak you need. Tap a ring you own to put it on, or take it off to go back to a plain picture. A few of the rings slowly spin or shimmer, but they hold still where your picture is small, like next to messages in a chat, and whenever your device is set to reduce motion. A ring never makes your picture any bigger, so nothing on the page shifts when you put one on or take it off.",
+  },
+  {
     version: 43,
     date: "2026-10-08",
     title: "Level up while you study",

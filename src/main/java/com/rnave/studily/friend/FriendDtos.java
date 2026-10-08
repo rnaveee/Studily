@@ -1,6 +1,8 @@
 package com.rnave.studily.friend;
 
 import com.rnave.studily.user.AvatarUrls;
+import com.rnave.studily.user.FlairRef;
+import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 
 import java.time.Instant;
@@ -23,12 +25,13 @@ public class FriendDtos {
             Integer year,
             String major,
             String bio,
-            String avatarUrl) {
+            String avatarUrl,
+            FlairRef flair) {
 
-        public static PublicUserDto from(User u) {
+        public static PublicUserDto from(User u, Flairs flairs) {
             return new PublicUserDto(
                     u.getId(), u.getUsername(), u.getName(), u.getSchool(),
-                    u.getYear(), u.getMajor(), u.getBio(), AvatarUrls.of(u));
+                    u.getYear(), u.getMajor(), u.getBio(), AvatarUrls.of(u), flairs.refOf(u));
         }
     }
 

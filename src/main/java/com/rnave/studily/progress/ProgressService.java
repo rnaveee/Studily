@@ -43,20 +43,22 @@ public class ProgressService {
     private final ChestRepository chestRepository;
     private final UserRepository userRepository;
     private final BadgeService badgeService;
+    private final FlairService flairService;
     private final UserTimeZones timeZones;
     private final CurrentUser currentUser;
     private final Clock clock;
 
     public ProgressService(UserProgressRepository userProgressRepository, XpEventRepository xpEventRepository,
                            CoinTransactionRepository coinTransactionRepository, ChestRepository chestRepository,
-                           UserRepository userRepository, BadgeService badgeService, UserTimeZones timeZones,
-                           CurrentUser currentUser, Clock clock) {
+                           UserRepository userRepository, BadgeService badgeService, FlairService flairService,
+                           UserTimeZones timeZones, CurrentUser currentUser, Clock clock) {
         this.userProgressRepository = userProgressRepository;
         this.xpEventRepository = xpEventRepository;
         this.coinTransactionRepository = coinTransactionRepository;
         this.chestRepository = chestRepository;
         this.userRepository = userRepository;
         this.badgeService = badgeService;
+        this.flairService = flairService;
         this.timeZones = timeZones;
         this.currentUser = currentUser;
         this.clock = clock;
@@ -184,6 +186,7 @@ public class ProgressService {
     @Transactional
     public ProgressDelta finish(ProgressDeltaBuilder delta) {
         delta.addBadges(badgeService.evaluate(delta.userId()));
+        delta.addFlairs(flairService.evaluateEarned(delta.userId()));
         return delta.build();
     }
 
@@ -243,6 +246,7 @@ public class ProgressService {
         User user = currentUser.entity();
         UserProgress progress = ensure(user.getId());
         badgeService.evaluate(user.getId());
+        flairService.evaluateEarned(user.getId());
         int streak = effectiveStreak(progress, progressZone(progress, user));
         BadgeSummary badges = badgeService.summary(user.getId());
         return new ProgressDto(

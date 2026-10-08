@@ -17,7 +17,7 @@ Make Studily social and sticky through progression: XP and levels, badges on pro
     -e JWT_SECRET=ci-test-secret-not-for-production-use-64chars-minimum-xxxxxxxxxx \
     docker.io/library/maven:3.9-eclipse-temurin-21 mvn -B -q package
   ```
-  `package`, not `compile`: the Docker build compiles tests too. `contextLoads` needs local Postgres up (`pg_isready -h localhost -p 5432`).
+  `package`, not `compile`: the Docker build compiles tests too. `contextLoads` needs local Postgres up (`pg_isready -h localhost -p 5432`). **`contextLoads` runs Flyway against `DB_NAME` (default `studily`, which is Ryan's dev DB), so agents must add `-e DB_NAME=<scratch db>` pointing at a `pg_dump` clone, and build in a scratch copy rather than the repo's `target/` whenever Ryan's app is running from it.**
 - **Frontend build check:** `cd frontend && npm run build` (tsc + vite). There are no frontend unit tests.
 - **Branch:** all feature work lives on `social-progress`. Main auto-deploys to Railway and runs migrations, so nothing lands on main until Ryan says so.
 - **Agents never commit, push, merge, or deploy.** The lead commits after the reviewer approves, with no Claude attribution or co-author lines.
@@ -723,6 +723,7 @@ A **flair** is a decorative ring drawn around a user's avatar, **everywhere that
 | ring_inferno | Inferno | Reach a 100-day study streak. | LEGENDARY | STREAK | | 100 |
 
 - Rings are **drawn in CSS** by the frontend, using a registry keyed by `code`. `image_key` is null for all of them now.
+- Retire a flair with `active = false`, never by deleting it: an owned or looted flair is referenced by `user_flairs` and `chests`. This is the same as badges.
 - Later, Ryan can give a flair an image (a transparent ring WebP). When `image_key` is set, the frontend draws the image instead of the CSS ring. `imageUrl = app.progress.flair-base-url + "/" + image_key`. The default base is `https://badges.studily.ca/flairs/v1` (env `FLAIR_ASSET_BASE_URL`), and art is uploaded with `BADGE_PREFIX=flairs/v1 scripts/badges/upload.sh <dir>`.
 - **Unlock rules:**
   - **SHOP** flairs are bought with coins.

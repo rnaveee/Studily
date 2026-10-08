@@ -6,6 +6,7 @@ import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.progress.ProgressDtos.BadgeDto;
 import com.rnave.studily.progress.ProgressDtos.ChestDto;
 import com.rnave.studily.progress.ProgressDtos.ChestOpenResult;
+import com.rnave.studily.progress.ProgressDtos.FlairDto;
 import com.rnave.studily.progress.ProgressDtos.ProgressDelta;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,19 +28,23 @@ public class ChestService {
     static final int LOOT_XP_MAX = 150;
     static final double LOOT_BADGE_CHANCE = 0.05;
     static final int ALL_COSMETICS_OWNED_COINS = 100;
+    static final double LOOT_FLAIR_CHANCE = 0.05;
+    static final int ALL_LOOT_FLAIRS_OWNED_COINS = 100;
 
     private final ChestRepository chestRepository;
     private final ProgressService progressService;
     private final BadgeService badgeService;
+    private final FlairService flairService;
     private final CurrentUser currentUser;
     private final Clock clock;
     private final RandomGenerator random;
 
     public ChestService(ChestRepository chestRepository, ProgressService progressService, BadgeService badgeService,
-                        CurrentUser currentUser, Clock clock, RandomGenerator random) {
+                        FlairService flairService, CurrentUser currentUser, Clock clock, RandomGenerator random) {
         this.chestRepository = chestRepository;
         this.progressService = progressService;
         this.badgeService = badgeService;
+        this.flairService = flairService;
         this.currentUser = currentUser;
         this.clock = clock;
         this.random = random;
@@ -71,6 +76,7 @@ public class ChestService {
         chest.setLootCoins(loot.coins());
         chest.setLootXp(loot.xp());
         chest.setLootBadge(loot.badge());
+        chest.setLootFlairCode(loot.flair() != null ? loot.flair().getCode() : null);
         chestRepository.save(chest);
 
         String ref = "chest:" + chestId;
@@ -82,8 +88,14 @@ public class ChestService {
             badgeDto = badgeService.toDto(loot.badge(), userBadge);
             delta.addBadge(badgeDto);
         }
+        FlairDto flairDto = null;
+        if (loot.flair() != null) {
+            UserFlair userFlair = flairService.grant(userId, loot.flair(), FlairSource.CHEST);
+            flairDto = flairService.toDto(loot.flair(), userFlair, false);
+            delta.addFlair(flairDto);
+        }
         ProgressDelta result = progressService.finish(delta);
-        return new ChestOpenResult(ChestDto.of(chest, badgeDto), result);
+        return new ChestOpenResult(ChestDto.of(chest, badgeDto, flairDto), result);
     }
 
     @Transactional
@@ -113,9 +125,18 @@ public class ChestService {
                 badge = candidates.get(random.nextInt(candidates.size()));
             }
         }
-        return new Loot(coins, xp, badge);
+        Flair flair = null;
+        if (random.nextDouble() < LOOT_FLAIR_CHANCE) {
+            List<Flair> candidates = flairService.unownedLootable(userId);
+            if (candidates.isEmpty()) {
+                coins += ALL_LOOT_FLAIRS_OWNED_COINS;
+            } else {
+                flair = candidates.get(random.nextInt(candidates.size()));
+            }
+        }
+        return new Loot(coins, xp, badge, flair);
     }
 
-    record Loot(int coins, int xp, Badge badge) {
+    record Loot(int coins, int xp, Badge badge, Flair flair) {
     }
 }
