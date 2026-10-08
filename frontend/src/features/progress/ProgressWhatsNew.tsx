@@ -107,7 +107,7 @@ const SLIDES: Slide[] = [
   {
     eyebrow: "Study sessions",
     title: "Plan a session, keep a streak",
-    body: "Start a session from Learn with 25-minute Pomodoro blocks or a straight timer, and list what you want to get done. Study 15 minutes a day to keep your streak going, and every streak day adds 10% to your session XP, up to ×1.5.",
+    body: "Start a session from the Study page with 25-minute Pomodoro blocks or a straight timer, and list what you want to get done. Study 15 minutes a day to keep your streak going, and every streak day adds 10% to your session XP, up to ×1.5.",
     visual: <SessionVisual />,
   },
   {

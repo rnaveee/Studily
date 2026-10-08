@@ -86,7 +86,7 @@ export default function BadgeTile({
         aria-label={label}
         aria-expanded={picking ? undefined : open}
         aria-pressed={picking ? slot != null : undefined}
-        className="card card-lift relative flex h-full min-h-[148px] flex-col items-center gap-2 px-2.5 pb-3 pt-4 text-center disabled:cursor-not-allowed"
+        className={`card ${pickDisabled ? "" : "card-lift"} relative flex h-full min-h-[148px] flex-col items-center gap-2 px-2.5 pb-3 pt-4 text-center disabled:cursor-not-allowed`}
         style={{
           ...(badge.owned
             ? {

@@ -40,7 +40,7 @@ export default function BadgeArt({
             background: `linear-gradient(150deg, color-mix(in srgb, ${color} 72%, var(--accent-fg)), ${color})`,
             color: "var(--accent-fg)",
             fontSize: Math.round(size * 0.42),
-            boxShadow: "inset 0 1px 0 rgb(255 255 255 / 0.35)",
+            boxShadow: "inset 0 1px 0 var(--edge-hi)",
             filter,
           }}
         >

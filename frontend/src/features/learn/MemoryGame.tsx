@@ -30,6 +30,8 @@ export default function MemoryGame({ setId, cards, color, onDone }: Props) {
   const timer = useRef<number | undefined>(undefined);
   const run = useFlashcardRun(setId, "MEMORY", cards);
   const [pass, setPass] = useState({ moves: 0, ms: 0 });
+  const replayArmed = useRef(false);
+  const runScope = useRef<"deck" | "board">("deck");
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
@@ -54,6 +56,7 @@ export default function MemoryGame({ setId, cards, color, onDone }: Props) {
     if (boardIndex === boards.length - 1 && !run.isActive()) {
       run.reset();
       setPass({ moves: 0, ms: 0 });
+      replayArmed.current = true;
     }
     deal(deck, boardIndex);
   }
@@ -61,6 +64,7 @@ export default function MemoryGame({ setId, cards, color, onDone }: Props) {
   function nextBoard() {
     const nextIndex = boardIndex + 1;
     if (nextIndex >= boards.length) {
+      replayArmed.current = false;
       run.reset();
       setPass({ moves: 0, ms: 0 });
       const fresh = shuffled(playable);
@@ -78,7 +82,12 @@ export default function MemoryGame({ setId, cards, color, onDone }: Props) {
     if (!startedAt) {
       setStartedAt(Date.now());
       setNow(Date.now());
-      if (boardIndex === 0 && pass.moves === 0 && !run.isActive() && run.status === "idle") run.start();
+      const freshPass = boardIndex === 0 && pass.moves === 0;
+      if ((freshPass || replayArmed.current) && !run.isActive() && run.status === "idle") {
+        runScope.current = freshPass ? "deck" : "board";
+        replayArmed.current = false;
+        run.start();
+      }
     }
     const nextOpen = [...open, tile.id];
     if (nextOpen.length < 2) {
@@ -96,8 +105,9 @@ export default function MemoryGame({ setId, cards, color, onDone }: Props) {
         setFinishedAt(end);
         setPass((p) => ({ moves: p.moves + moves + 1, ms: p.ms + (end - (startedAt ?? end)) }));
         if (boardIndex === boards.length - 1 && run.isActive()) {
+          const covered = runScope.current === "deck" ? deck : (boards[boardIndex] ?? []);
           void run.complete(
-            deck.flatMap((c) => {
+            covered.flatMap((c) => {
               const cardId = cardIdOf(c.key);
               return cardId == null ? [] : [{ cardId, correct: true }];
             }),

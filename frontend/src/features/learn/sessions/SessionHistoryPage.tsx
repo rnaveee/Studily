@@ -53,9 +53,9 @@ function HistoryBody() {
       <div className="card p-10 text-center">
         <History className="mx-auto mb-2 text-fg-3" size={28} strokeWidth={1.5} />
         <p className="text-sm font-medium text-fg">No study sessions yet</p>
-        <p className="mt-1 text-[12px] text-fg-3">Start one from Learn to build your streak and earn XP.</p>
+        <p className="mt-1 text-[12px] text-fg-3">Start one from Study to build your streak and earn XP.</p>
         <Link to="/learn" className="btn btn-soft mt-4 min-h-[40px]">
-          Go to Learn
+          Go to Study
         </Link>
       </div>
     );

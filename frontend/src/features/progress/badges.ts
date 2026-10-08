@@ -22,7 +22,7 @@ export const CATEGORY_COLOR: Record<BadgeCategory, string> = {
 
 const EARN_HINT: Record<BadgeCategory, string> = {
   LEVEL: "Earn XP from study sessions, flashcard runs and new friends to level up.",
-  STUDY: "Start a study session on Learn and check in after each block.",
+  STUDY: "Start a study session on Study and check in after each block.",
   FLASHCARDS: "Finish flashcard runs of 5 or more cards.",
   SOCIAL: "Add friends on Studily.",
   TENURE: "Unlocks with time as a Studily member.",
