@@ -10,6 +10,7 @@ import com.rnave.studily.progress.ChestRepository;
 import com.rnave.studily.progress.ChestService;
 import com.rnave.studily.progress.ChestSource;
 import com.rnave.studily.progress.CoinTransactionRepository;
+import com.rnave.studily.progress.ProgressDeltaBuilder;
 import com.rnave.studily.progress.ProgressRateLimiter;
 import com.rnave.studily.progress.ProgressService;
 import com.rnave.studily.progress.UserProgress;
@@ -55,12 +56,14 @@ import java.util.random.RandomGenerator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -79,6 +82,7 @@ class StudySessionServiceTest {
     private UserRepository userRepository;
     private BadgeService badgeService;
     private RandomGenerator random;
+    private ChestService chestService;
     private CurrentUser currentUser;
     private UserTimeZones timeZones;
     private ProgressRateLimiter rateLimiter;
@@ -217,8 +221,8 @@ class StudySessionServiceTest {
         ProgressService progressService = new ProgressService(userProgressRepository, xpEventRepository,
                 coinTransactionRepository, chestRepository, userRepository, badgeService, timeZones, currentUser,
                 clock);
-        ChestService chestService = new ChestService(chestRepository, progressService, badgeService, currentUser,
-                clock, random);
+        chestService = spy(new ChestService(chestRepository, progressService, badgeService, currentUser,
+                clock, random));
         service = new StudySessionService(sessionRepository, blockRepository, taskRepository, progressService,
                 chestService, rateLimiter, currentUser, clock);
     }
@@ -647,6 +651,47 @@ class StudySessionServiceTest {
         assertThat(block(s, 1).getStatus()).isEqualTo(StudyBlockStatus.MISSED);
         assertThat(xp(XpSource.STUDY_BLOCK)).isEqualTo(60);
         assertThat(xp(XpSource.STUDY_COMPLETE)).isZero();
+    }
+
+    @Test
+    void checkin_completingFiftyMinuteSessionWithMissedBlock_skipsBonusAndChestRoll() {
+        when(random.nextDouble()).thenReturn(0.0);
+        StudySession s = startPomodoro(2);
+        at(min(30).plusSeconds(1));
+        service.missBlock(1L, block(s, 1).getId());
+        at(min(31));
+        service.resume(s.getId());
+        at(min(56));
+
+        StudySessionResult result = service.checkin(s.getId());
+
+        assertThat(s.getPlannedMinutes()).isEqualTo(50);
+        assertThat(s.getStatus()).isEqualTo(StudySessionStatus.COMPLETED);
+        assertThat(xp(XpSource.STUDY_COMPLETE)).isZero();
+        verify(chestService, never()).maybeDrop(any(), any(), anyString(), anyDouble(), any());
+        verify(random, never()).nextDouble();
+        assertThat(chests).isEmpty();
+        assertThat(result.delta().chests()).isEmpty();
+    }
+
+    @Test
+    void checkin_completingFullSessionPastSixHours_paysZeroBonusButStillRollsChest() {
+        earlierMinutes.put(TODAY, 360);
+        StudySession s = startPomodoro(2);
+        at(min(25));
+        service.checkin(s.getId());
+        at(min(55));
+
+        StudySessionResult result = service.checkin(s.getId());
+
+        assertThat(s.getStatus()).isEqualTo(StudySessionStatus.COMPLETED);
+        assertThat(blocks).allSatisfy(b -> assertThat(b.getStatus()).isEqualTo(StudyBlockStatus.CONFIRMED));
+        assertThat(xp(XpSource.STUDY_COMPLETE)).isZero();
+        assertThat(result.delta().xpGained()).isZero();
+        assertThat(s.getXpAwarded()).isZero();
+        assertThat(s.getCreditedMinutes()).isEqualTo(50);
+        verify(chestService).maybeDrop(any(ProgressDeltaBuilder.class), eq(ChestSource.SESSION),
+                eq("session:" + s.getId()), eq(0.2), eq(TODAY));
     }
 
     @Test

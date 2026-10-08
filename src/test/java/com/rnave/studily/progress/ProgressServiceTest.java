@@ -103,6 +103,12 @@ class ProgressServiceTest {
                 Clock.fixed(instant, ZoneOffset.UTC));
     }
 
+    private ProgressService serviceAt(Instant instant, String fallbackZone) {
+        return new ProgressService(userProgressRepository, xpEventRepository, coinTransactionRepository,
+                chestRepository, userRepository, badgeService, new UserTimeZones(userRepository, fallbackZone),
+                currentUser, Clock.fixed(instant, ZoneOffset.UTC));
+    }
+
     private User user(Long id) {
         return users.computeIfAbsent(id, key -> {
             User u = new User();
@@ -702,14 +708,69 @@ class ProgressServiceTest {
     }
 
     @Test
-    void progressZone_unset_adoptsLiveZoneAndStampsChange() {
+    void progressZone_noZoneAndNoReportedTimezone_adoptsFallbackWithoutStamp() {
+        ProgressService withFallback = serviceAt(NOW, "America/Toronto");
+        User u = user(1L);
+        u.setTimezone(null);
+        UserProgress p = progress(1L, 0);
+
+        assertThat(withFallback.progressZone(p, u)).isEqualTo(ZoneId.of("America/Toronto"));
+        assertThat(p.getProgressZone()).isEqualTo("America/Toronto");
+        assertThat(p.getProgressZoneChangedAt()).isNull();
+    }
+
+    @Test
+    void progressZone_firstReportedZoneAfterFallback_isAdoptedImmediately() {
+        User u = user(1L);
+        u.setTimezone(null);
+        UserProgress p = progress(1L, 0);
+        serviceAt(NOW, "America/Toronto").progressZone(p, u);
+
+        u.setTimezone("America/Vancouver");
+        Instant shortlyAfter = NOW.plus(Duration.ofHours(1));
+        ZoneId zone = serviceAt(shortlyAfter, "America/Toronto").progressZone(p, u);
+
+        assertThat(zone).isEqualTo(VANCOUVER);
+        assertThat(p.getProgressZone()).isEqualTo("America/Vancouver");
+        assertThat(p.getProgressZoneChangedAt()).isEqualTo(shortlyAfter);
+    }
+
+    @Test
+    void progressZone_noZoneWithReportedTimezone_adoptsItAndStampsChange() {
         User u = user(1L);
         u.setTimezone("America/Vancouver");
         UserProgress p = progress(1L, 0);
 
-        assertThat(service.progressZone(p, u)).isEqualTo(VANCOUVER);
+        assertThat(serviceAt(NOW, "America/Toronto").progressZone(p, u)).isEqualTo(VANCOUVER);
         assertThat(p.getProgressZone()).isEqualTo("America/Vancouver");
         assertThat(p.getProgressZoneChangedAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    void progressZone_firstReportMatchingFallback_stampsChangeAndStartsCooldown() {
+        User u = user(1L);
+        u.setTimezone(null);
+        UserProgress p = progress(1L, 0);
+        serviceAt(NOW, "America/Toronto").progressZone(p, u);
+        assertThat(p.getProgressZoneChangedAt()).isNull();
+
+        u.setTimezone("America/Toronto");
+        Instant reportedAt = NOW.plus(Duration.ofHours(1));
+        assertThat(serviceAt(reportedAt, "America/Toronto").progressZone(p, u))
+                .isEqualTo(ZoneId.of("America/Toronto"));
+        assertThat(p.getProgressZone()).isEqualTo("America/Toronto");
+        assertThat(p.getProgressZoneChangedAt()).isEqualTo(reportedAt);
+
+        u.setTimezone("America/Vancouver");
+        Instant almostWeekLater = reportedAt.plus(Duration.ofDays(7)).minusSeconds(1);
+        assertThat(serviceAt(almostWeekLater, "America/Toronto").progressZone(p, u))
+                .isEqualTo(ZoneId.of("America/Toronto"));
+        assertThat(p.getProgressZoneChangedAt()).isEqualTo(reportedAt);
+
+        Instant weekLater = reportedAt.plus(Duration.ofDays(7));
+        assertThat(serviceAt(weekLater, "America/Toronto").progressZone(p, u)).isEqualTo(VANCOUVER);
+        assertThat(p.getProgressZone()).isEqualTo("America/Vancouver");
+        assertThat(p.getProgressZoneChangedAt()).isEqualTo(weekLater);
     }
 
     @Test
