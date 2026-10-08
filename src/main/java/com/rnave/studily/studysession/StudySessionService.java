@@ -496,12 +496,13 @@ public class StudySessionService {
         long confirmed = blockRepository.findBySessionIdOrderByBlockIndex(session.getId()).stream()
                 .filter(b -> b.getStatus() == StudyBlockStatus.CONFIRMED)
                 .count();
-        if (confirmed >= session.getPlannedBlocks()) {
-            int granted = progressService.grantXp(delta, XpSource.STUDY_COMPLETE,
-                    scaled(COMPLETE_BONUS, session.getMultiplier(), dayFactor(minutesToday)),
-                    "study-complete:" + session.getId(), session.getId());
-            session.setXpAwarded(session.getXpAwarded() + granted);
+        if (confirmed < session.getPlannedBlocks()) {
+            return;
         }
+        int granted = progressService.grantXp(delta, XpSource.STUDY_COMPLETE,
+                scaled(COMPLETE_BONUS, session.getMultiplier(), dayFactor(minutesToday)),
+                "study-complete:" + session.getId(), session.getId());
+        session.setXpAwarded(session.getXpAwarded() + granted);
         chestService.maybeDrop(delta, ChestSource.SESSION, "session:" + session.getId(),
                 SESSION_CHEST_CHANCE, session.getLocalDate());
     }

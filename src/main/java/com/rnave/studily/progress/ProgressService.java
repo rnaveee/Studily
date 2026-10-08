@@ -205,9 +205,12 @@ public class ProgressService {
     public ZoneId progressZone(UserProgress progress, User user) {
         Instant now = clock.instant();
         ZoneId zone = resolveZone(progress, user, now);
-        if (progress.getProgressZone() == null || !zone.getId().equals(progress.getProgressZone())) {
+        boolean reported = user.getTimezone() != null;
+        boolean changed = progress.getProgressZone() == null || !zone.getId().equals(progress.getProgressZone());
+        boolean firstReport = reported && progress.getProgressZoneChangedAt() == null;
+        if (changed || firstReport) {
             progress.setProgressZone(zone.getId());
-            progress.setProgressZoneChangedAt(now);
+            progress.setProgressZoneChangedAt(reported ? now : null);
             progress.setUpdatedAt(now);
         }
         return zone;
