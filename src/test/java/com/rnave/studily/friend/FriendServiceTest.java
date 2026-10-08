@@ -8,10 +8,12 @@ import com.rnave.studily.config.ForbiddenException;
 import com.rnave.studily.friend.FriendDtos.FriendRequestDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipStatus;
+import com.rnave.studily.progress.ProgressService;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.SliceImpl;
 
@@ -21,7 +23,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -32,6 +36,7 @@ class FriendServiceTest {
     private FriendRequestRepository friendRequestRepository;
     private UserRepository userRepository;
     private CurrentUser currentUser;
+    private ProgressService progressService;
     private FriendService friendService;
 
     private User me;
@@ -42,7 +47,8 @@ class FriendServiceTest {
         friendRequestRepository = mock(FriendRequestRepository.class);
         userRepository = mock(UserRepository.class);
         currentUser = mock(CurrentUser.class);
-        friendService = new FriendService(friendRequestRepository, userRepository, currentUser);
+        progressService = mock(ProgressService.class);
+        friendService = new FriendService(friendRequestRepository, userRepository, currentUser, progressService);
 
         me = new User();
         me.setId(1L);
@@ -124,6 +130,25 @@ class FriendServiceTest {
     }
 
     @Test
+    void sendRequest_whenTheyAlreadyRequestedMe_grantsFriendshipProgressAfterSave() {
+        when(currentUser.entity()).thenReturn(me);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(other));
+
+        FriendRequest existing = new FriendRequest();
+        existing.setRequester(other);
+        existing.setAddressee(me);
+        existing.setStatus(FriendRequestStatus.PENDING);
+        when(friendRequestRepository.findBetween(1L, 2L)).thenReturn(Optional.of(existing));
+        when(friendRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        friendService.sendRequest(2L);
+
+        InOrder order = inOrder(friendRequestRepository, progressService);
+        order.verify(friendRequestRepository).save(existing);
+        order.verify(progressService).onFriendshipAccepted(2L, 1L);
+    }
+
+    @Test
     void sendRequest_whenNoExistingRelation_createsPendingRequest() {
         when(currentUser.entity()).thenReturn(me);
         when(userRepository.findById(2L)).thenReturn(Optional.of(other));
@@ -134,6 +159,59 @@ class FriendServiceTest {
 
         assertThat(result.status()).isEqualTo(FriendRequestStatus.PENDING);
         assertThat(result.user().id()).isEqualTo(2L);
+        verify(progressService, never()).onFriendshipAccepted(anyLong(), anyLong());
+    }
+
+    @Test
+    void sendRequest_whenAlreadySentByMe_grantsNoFriendshipProgress() {
+        when(currentUser.entity()).thenReturn(me);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(other));
+
+        FriendRequest existing = new FriendRequest();
+        existing.setRequester(me);
+        existing.setAddressee(other);
+        existing.setStatus(FriendRequestStatus.PENDING);
+        when(friendRequestRepository.findBetween(1L, 2L)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> friendService.sendRequest(2L))
+                .isInstanceOf(ConflictException.class);
+        verify(progressService, never()).onFriendshipAccepted(anyLong(), anyLong());
+    }
+
+    @Test
+    void accept_pendingRequest_grantsFriendshipProgressAfterSave() {
+        when(currentUser.id()).thenReturn(2L);
+
+        FriendRequest req = new FriendRequest();
+        req.setId(10L);
+        req.setRequester(me);
+        req.setAddressee(other);
+        req.setStatus(FriendRequestStatus.PENDING);
+        when(friendRequestRepository.findById(10L)).thenReturn(Optional.of(req));
+        when(friendRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        FriendRequestDto result = friendService.accept(10L);
+
+        assertThat(result.status()).isEqualTo(FriendRequestStatus.ACCEPTED);
+        InOrder order = inOrder(friendRequestRepository, progressService);
+        order.verify(friendRequestRepository).save(req);
+        order.verify(progressService).onFriendshipAccepted(1L, 2L);
+    }
+
+    @Test
+    void accept_whenAlreadyAccepted_grantsNoFriendshipProgress() {
+        when(currentUser.id()).thenReturn(2L);
+
+        FriendRequest req = new FriendRequest();
+        req.setId(10L);
+        req.setRequester(me);
+        req.setAddressee(other);
+        req.setStatus(FriendRequestStatus.ACCEPTED);
+        when(friendRequestRepository.findById(10L)).thenReturn(Optional.of(req));
+
+        assertThatThrownBy(() -> friendService.accept(10L))
+                .isInstanceOf(ConflictException.class);
+        verify(progressService, never()).onFriendshipAccepted(anyLong(), anyLong());
     }
 
     @Test

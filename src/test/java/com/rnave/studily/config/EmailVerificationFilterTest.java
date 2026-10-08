@@ -114,6 +114,53 @@ class EmailVerificationFilterTest {
         assertThat(body.toString()).contains(EmailVerificationFilter.MESSAGE);
     }
 
+    @Test
+    void otherUsersProgress_isBlockedForUnverifiedUsers() throws Exception {
+        authenticateAs(false);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        StringWriter body = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(body));
+
+        filter.doFilter(requestFor("/api/users/5/progress"), response, filterChain);
+
+        verify(filterChain, never()).doFilter(any(), any());
+        verify(response).setStatus(HttpServletResponse.SC_FORBIDDEN);
+        assertThat(body.toString()).contains("EMAIL_UNVERIFIED");
+    }
+
+    @Test
+    void otherUsersBadges_isBlockedForUnverifiedUsers() throws Exception {
+        authenticateAs(false);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        StringWriter body = new StringWriter();
+        when(response.getWriter()).thenReturn(new PrintWriter(body));
+
+        filter.doFilter(requestFor("/api/users/5/badges"), response, filterChain);
+
+        verify(filterChain, never()).doFilter(any(), any());
+        verify(response).setStatus(HttpServletResponse.SC_FORBIDDEN);
+        assertThat(body.toString()).contains("EMAIL_UNVERIFIED");
+    }
+
+    @Test
+    void otherUsersProgressAndBadges_areAllowedForVerifiedUsers() throws Exception {
+        authenticateAs(true);
+
+        filter.doFilter(requestFor("/api/users/5/progress"), mock(HttpServletResponse.class), filterChain);
+        filter.doFilter(requestFor("/api/users/5/badges"), mock(HttpServletResponse.class), filterChain);
+
+        verify(filterChain, times(2)).doFilter(any(), any());
+    }
+
+    @Test
+    void avatars_stayOpenForUnverifiedUsers() throws Exception {
+        authenticateAs(false);
+
+        filter.doFilter(requestFor("/api/users/5/avatar"), mock(HttpServletResponse.class), filterChain);
+
+        verify(filterChain, times(1)).doFilter(any(), any());
+    }
+
     private static <T> T any() {
         return org.mockito.ArgumentMatchers.any();
     }
