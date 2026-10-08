@@ -701,3 +701,125 @@ Each variable change triggers a redeploy, so set both together, before or alongs
   `SELECT status, COUNT(*) FROM study_session_blocks WHERE started_at > now() - interval '7 days' GROUP BY status;`
   A high MISSED share usually means pushes aren't arriving (iOS without the installed PWA), so it's a copy and onboarding fix, not a rule change.
 - Sweeper health. RUNNING blocks with `due_at < now() - interval '10 minutes'` should always be 0.
+
+## 13. Profile flairs (Ryan, 2026-10-08)
+
+A **flair** is a decorative ring drawn around a user's avatar, **everywhere that avatar appears**. Users collect flairs and equip one at a time. They're unlocked by buying them in the shop, finding them in chests, or reaching study streaks (the fire rings). This wave lives on branch `profile-flairs`, which is cut from `social-progress`. §2 house rules apply.
+
+### 13.1 Catalog (seed in V46; Ryan can restyle and re-price later)
+
+| code | title | description | rarity | unlock | price | streak_days |
+|---|---|---|---|---|---|---|
+| ring_mint | Mint | A cool, fresh ring. | COMMON | SHOP | 250 | |
+| ring_ocean | Ocean | Deep blue, calm focus. | COMMON | SHOP | 250 | |
+| ring_sunset | Sunset | Warm evening gradient. | RARE | SHOP | 500 | |
+| ring_gold | Gold | Polished and proud. | RARE | SHOP | 750 | |
+| ring_neon | Neon Pulse | A ring that hums with light. | EPIC | SHOP | 1200 | |
+| ring_aurora | Aurora | Shifting northern lights. | EPIC | SHOP | 1500 | |
+| ring_prism | Prism | Found only in chests. | EPIC | CHEST | | |
+| ring_galaxy | Galaxy | A rare find from a chest. | LEGENDARY | CHEST | | |
+| ring_ember | Ember | Reach a 7-day study streak. | RARE | STREAK | | 7 |
+| ring_blaze | Blaze | Reach a 30-day study streak. | EPIC | STREAK | | 30 |
+| ring_inferno | Inferno | Reach a 100-day study streak. | LEGENDARY | STREAK | | 100 |
+
+- Rings are **drawn in CSS** by the frontend, using a registry keyed by `code`. `image_key` is null for all of them now.
+- Later, Ryan can give a flair an image (a transparent ring WebP). When `image_key` is set, the frontend draws the image instead of the CSS ring. `imageUrl = app.progress.flair-base-url + "/" + image_key`. The default base is `https://badges.studily.ca/flairs/v1` (env `FLAIR_ASSET_BASE_URL`), and art is uploaded with `BADGE_PREFIX=flairs/v1 scripts/badges/upload.sh <dir>`.
+- **Unlock rules:**
+  - **SHOP** flairs are bought with coins.
+  - **CHEST** flairs come only from chests.
+  - **STREAK** flairs unlock **permanently** when `user_progress.streak_best ≥ streak_days`. They're evaluated together with badges (§8), so existing users with a long best streak get them retroactively.
+  - Flairs are never revoked.
+- **Chest loot:** after the existing badge roll (§7), one more draw: `nextDouble() < 0.05`. On a hit, the user gets a random **unowned** active flair with unlock ∈ {SHOP, CHEST}, with source CHEST (`nextInt(n)` picks among the candidates, ordered by `sort_order`). If they own all of those, they get +100 coins instead. Store the result in `chests.loot_flair_code`. STREAK flairs never drop.
+
+### 13.2 DDL: `V46__profile_flairs.sql` (db-developer)
+```sql
+CREATE TABLE flairs (
+    code VARCHAR(48) PRIMARY KEY,
+    title VARCHAR(64) NOT NULL,
+    description VARCHAR(255) NOT NULL,
+    rarity VARCHAR(16) NOT NULL,
+    unlock VARCHAR(16) NOT NULL,
+    price_coins INT CHECK (price_coins IS NULL OR price_coins > 0),
+    streak_days INT CHECK (streak_days IS NULL OR streak_days > 0),
+    image_key VARCHAR(128),
+    sort_order INT NOT NULL DEFAULT 0,
+    active BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE user_flairs (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    flair_code VARCHAR(48) NOT NULL REFERENCES flairs(code),
+    source VARCHAR(16) NOT NULL,
+    acquired_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (user_id, flair_code)
+);
+CREATE INDEX idx_user_flairs_user ON user_flairs(user_id);
+
+ALTER TABLE users ADD COLUMN equipped_flair_code VARCHAR(48) REFERENCES flairs(code) ON DELETE SET NULL;
+ALTER TABLE chests ADD COLUMN loot_flair_code VARCHAR(48) REFERENCES flairs(code);
+```
+Plus `INSERT INTO flairs` for the 11 rows in §13.1, with `sort_order` 10, 20, … in table order.
+- Enum values (stored as strings):
+  - `FlairRarity` = COMMON | RARE | EPIC | LEGENDARY
+  - `FlairUnlock` = SHOP | CHEST | STREAK
+  - `FlairSource` = PURCHASED | CHEST | EARNED
+
+### 13.3 Entities and repositories (db-developer)
+- In package `progress`:
+  - `Flair` → flairs (`@Id String code`).
+  - `UserFlair` → user_flairs (`@ManyToOne(fetch = LAZY) User user`, `@ManyToOne(fetch = LAZY) Flair flair`).
+  - Enums `FlairRarity`, `FlairUnlock`, `FlairSource`.
+  - `FlairRepository.findByActiveTrueOrderBySortOrderAsc()`.
+  - `UserFlairRepository`:
+    - `List<UserFlair> findByUserId(Long userId)`
+    - `boolean existsByUserIdAndFlairCode(Long userId, String code)`
+    - `long countByUserId(Long userId)`
+- New fields on existing entities: `User.equippedFlairCode` (String, column `equipped_flair_code`, length 48) and `Chest.lootFlairCode` (String). For this wave only, db-developer owns these two single-field additions to `user/User.java` and `progress/Chest.java`.
+
+### 13.4 API (backend-developer implements, UI consumes)
+```ts
+type FlairRarity = "COMMON" | "RARE" | "EPIC" | "LEGENDARY";
+type FlairUnlock = "SHOP" | "CHEST" | "STREAK";
+interface FlairRef { code: string; imageUrl: string | null; }
+interface FlairDto { code: string; title: string; description: string; rarity: FlairRarity; unlock: FlairUnlock;
+  priceCoins: number | null; streakDays: number | null; imageUrl: string | null;
+  owned: boolean; acquiredAt: string | null; equipped: boolean; }
+```
+- **Every user-bearing DTO that has `avatarUrl` gains `flair: FlairRef | null`**, built from `users.equipped_flair_code`. These are `user/UserDto`, all records in `friend/FriendDtos` that carry a user's avatar, and `flashcard/FlashcardDtos` (owner and creator avatars). Add a helper next to `AvatarUrls`, e.g. `user/Flairs.refOf(User, baseUrl)`, so every DTO builds it the same way.
+- `ProgressDelta` gains `newFlairs: FlairDto[]`. `ChestDto.loot` gains `flair: FlairDto | null`.
+
+| Method & path | Body | 200 response | Errors |
+|---|---|---|---|
+| GET `/api/flairs` | | `FlairDto[]`, all active flairs with the caller's `owned` and `equipped` | |
+| POST `/api/flairs/{code}/purchase` | | `{flair: FlairDto, coins: number}` | 404 unknown or inactive; 400 `This flair can't be bought` (unlock ≠ SHOP); 409 `You already own this flair`; 400 `Not enough coins`. Checks run in that order, under `findForUpdate`. A `coin_transactions` row is written with reason PURCHASE and ref `flair:{code}`. |
+| PUT `/api/me/flair` | `{code: string \| null}` | `{equipped: FlairDto \| null}` | 400 `You don't own this flair`. `null` unequips. |
+
+- `FlairService.evaluateEarned(userId)` inserts any missing STREAK flairs (source EARNED). It runs wherever `BadgeService.evaluate` runs, and its results go into `delta.newFlairs`.
+- Backend layout: `progress/FlairService`, `progress/FlairController`, `progress/FlairDtos` (or inside `ProgressDtos`), and edits to `ChestService` (loot roll), `ProgressDeltaBuilder`, `ProgressDtos`, the three user DTO files and `application.properties` (`app.progress.flair-base-url=${FLAIR_ASSET_BASE_URL:https://badges.studily.ca/flairs/v1}`).
+
+### 13.5 UI (ui-designer)
+- **`components/Avatar.tsx`** gains an optional `flair?: FlairRef | null` prop.
+  - The ring is drawn **inside** the given `size`, and the photo or initial is inset by the ring width (`max(2, round(size × 0.08))`), so **layouts never shift**.
+  - With `imageUrl`, a transparent ring image is overlaid instead, with an `onError` fallback to the CSS ring for that code, or to no ring.
+  - A frontend registry `lib/flairs.ts` maps each code → CSS ring (conic and linear gradients from tokens or `color-mix`, with a glow for EPIC/LEGENDARY). It's subtly animated (slow rotation or pulse) for `ring_neon`, `ring_aurora`, `ring_galaxy`, `ring_prism`, `ring_blaze` and `ring_inferno`. The three fire rings (ember → blaze → inferno) escalate in intensity.
+  - Every animation class goes into the reduced-motion allowlist.
+  - Small avatars (≤ 32px) get the static version of the ring.
+- **Pass `flair` at every `<Avatar>` call site** that shows a real user: Layout, ProfilePage, ProfileForm preview, UserProfilePage, FriendsPage, SchoolmatesPage, UserSearchModal, Messages, Conversation, NewGroupModal, CourseDetailPage, SharedSetPage. Add `flair` to the TS types those use.
+- **`/profile/badges`** becomes a three-way `SegmentedToggle`: **Badges | Flairs | Shop**.
+  - **Flairs:** an avatar preview with the equipped ring on top, then a grid of all flairs. Owned flairs are tappable to Equip or Unequip (via PUT). Locked flairs show a dimmed ring with how to unlock them: the price, "Found in chests", or "Reach a 7-day streak".
+  - **Shop:** two sections, "Flairs" (SHOP flairs with price and Buy, and an Equip shortcut after buying) and the existing cosmetic badges.
+  - Support `?tab=flairs`. On the own profile card, add a small "Change flair" link to `/profile/badges?tab=flairs`.
+- **Rewards:**
+  - `ChestModal` reveals a flair with an avatar preview.
+  - `applyDelta` toasts `New flair unlocked: <title>` for each `newFlairs` entry, skipping any flair already shown in the chest reveal (same rule as badges).
+- §10 rules apply: responsive at 375px, tokens only, tap targets ≥ 40px, guest gating, no comments.
+
+### 13.6 Ownership for this wave
+| Owner | May edit |
+|---|---|
+| db-developer | `V46__profile_flairs.sql`; the §13.3 entities, enums and repositories; the single new field in `User.java` and in `Chest.java` |
+| backend-developer | all other `src/main/**` (as in §11) |
+| ui-designer | `frontend/src/**` except `ChangelogPage.tsx` |
+| release-docs | `ChangelogPage.tsx` (a new v44 entry "Profile flairs"), `learning/**` (a flairs section with review cards at the end of the F10 deck or a new short deck) |
+| test-engineer | `src/test/**` |
