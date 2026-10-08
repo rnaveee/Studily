@@ -4,6 +4,7 @@ import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
+import com.rnave.studily.flashcard.FlashcardRunDtos.XpReason;
 import com.rnave.studily.flashcard.FlashcardRunRepository;
 import com.rnave.studily.friend.FriendRequestRepository;
 import com.rnave.studily.progress.ProgressDtos.BadgeDto;
@@ -36,6 +37,8 @@ import java.util.stream.Collectors;
 public class BadgeService {
 
     static final int MAX_FEATURED = 3;
+    static final int MIN_RUN_CARDS = 5;
+    static final List<String> INELIGIBLE_RUN_REASONS = List.of(XpReason.TOO_FAST.name(), XpReason.TOO_FEW.name());
     private static final Comparator<Badge> DISPLAY_ORDER = Comparator
             .comparing((Badge b) -> b.getCategory().ordinal())
             .thenComparingInt(Badge::getSortOrder)
@@ -262,7 +265,8 @@ public class BadgeService {
                     .existsByUserIdAndStatus(userId, StudySessionStatus.COMPLETED));
             this.studyMinutes = memo(() -> studySessionRepository.sumCreditedMinutesByUserId(userId));
             this.completedRuns = memo(() -> flashcardRunRepository
-                    .countByUserIdAndCompletedAtIsNotNullAndCardCountGreaterThanEqual(userId, 5));
+                    .countByUserIdAndCompletedAtIsNotNullAndCardCountGreaterThanEqualAndXpReasonNotIn(
+                            userId, MIN_RUN_CARDS, INELIGIBLE_RUN_REASONS));
         }
 
         @Override

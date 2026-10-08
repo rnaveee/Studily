@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "chests")
@@ -50,4 +51,6 @@ public class Chest {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "loot_badge_code")
     private Badge lootBadge;
+
+    private LocalDate localDate;
 }

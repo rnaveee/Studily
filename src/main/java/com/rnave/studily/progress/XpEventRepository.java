@@ -12,6 +12,8 @@ public interface XpEventRepository extends JpaRepository<XpEvent, Long> {
 
     long countByUserIdAndSourceAndCreatedAtAfter(Long userId, XpSource source, Instant after);
 
+    boolean existsByUserIdAndSourceNot(Long userId, XpSource source);
+
     @Query("""
             select coalesce(sum(e.amount), 0) from XpEvent e
             where e.user.id = :userId and e.source = :source

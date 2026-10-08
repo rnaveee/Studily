@@ -39,4 +39,9 @@ public class UserProgress {
 
     @Column(nullable = false)
     private Instant updatedAt = Instant.now();
+
+    @Column(length = 64)
+    private String progressZone;
+
+    private Instant progressZoneChangedAt;
 }

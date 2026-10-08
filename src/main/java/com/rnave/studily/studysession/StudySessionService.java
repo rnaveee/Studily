@@ -21,7 +21,6 @@ import com.rnave.studily.studysession.StudySessionDtos.StudySessionResult;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionSummaryDto;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionTaskDto;
 import com.rnave.studily.user.User;
-import com.rnave.studily.user.UserTimeZones;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -67,6 +66,7 @@ public class StudySessionService {
     static final double SESSION_CHEST_CHANCE = 0.2;
     static final int TASK_XP = 5;
     static final int TASK_XP_POSITIONS = 5;
+    static final int MAX_PAID_TASKS_PER_DAY = 10;
     static final Duration TASK_XP_DELAY = Duration.ofMinutes(5);
     static final int MAX_PAGE_SIZE = 50;
     static final String[] DAY_LABELS = {"Su", "M", "Tu", "W", "Th", "F", "Sa"};
@@ -78,7 +78,6 @@ public class StudySessionService {
     private final ProgressService progressService;
     private final ChestService chestService;
     private final ProgressRateLimiter rateLimiter;
-    private final UserTimeZones timeZones;
     private final CurrentUser currentUser;
     private final Clock clock;
 
@@ -86,15 +85,13 @@ public class StudySessionService {
                                StudySessionBlockRepository blockRepository,
                                StudySessionTaskRepository taskRepository,
                                ProgressService progressService, ChestService chestService,
-                               ProgressRateLimiter rateLimiter, UserTimeZones timeZones,
-                               CurrentUser currentUser, Clock clock) {
+                               ProgressRateLimiter rateLimiter, CurrentUser currentUser, Clock clock) {
         this.sessionRepository = sessionRepository;
         this.blockRepository = blockRepository;
         this.taskRepository = taskRepository;
         this.progressService = progressService;
         this.chestService = chestService;
         this.rateLimiter = rateLimiter;
-        this.timeZones = timeZones;
         this.currentUser = currentUser;
         this.clock = clock;
     }
@@ -117,7 +114,7 @@ public class StudySessionService {
         if (sessionRepository.findFirstByUserIdAndStatusIn(user.getId(), OPEN).isPresent()) {
             throw new ConflictException("You already have a study session running");
         }
-        ZoneId zone = timeZones.zoneFor(user);
+        ZoneId zone = progressService.progressZone(progress, user);
         Instant now = clock.instant();
 
         StudySession session = new StudySession();
@@ -186,7 +183,7 @@ public class StudySessionService {
         return new StudySessionResult(toDto(session, now), progressService.finish(delta));
     }
 
-    @Transactional
+    @Transactional(noRollbackFor = ConflictException.class)
     public StudySessionDto resume(Long id) {
         User user = currentUser.entity();
         progressService.ensure(user.getId());
@@ -194,10 +191,15 @@ public class StudySessionService {
         if (session.getStatus() != StudySessionStatus.PAUSED) {
             throw new ConflictException("This study session isn't paused");
         }
+        Instant now = clock.instant();
+        if (session.getPausedAt() != null && session.getPausedAt().isBefore(now.minus(PAUSE_LIMIT))) {
+            session.setStatus(StudySessionStatus.EXPIRED);
+            session.setEndedAt(now);
+            throw new ConflictException("This session expired");
+        }
         if (session.getCurrentBlock() >= session.getPlannedBlocks()) {
             throw new ConflictException("There are no blocks left in this session");
         }
-        Instant now = clock.instant();
         int next = session.getCurrentBlock() + 1;
         newBlock(session, next, now);
         session.setCurrentBlock(next);
@@ -222,18 +224,10 @@ public class StudySessionService {
             if (task.getDoneAt() == null) {
                 task.setDoneAt(now);
             }
-            boolean eligible = task.getPosition() < TASK_XP_POSITIONS
-                    && !now.isBefore(session.getStartedAt().plus(TASK_XP_DELAY));
-            if (eligible) {
+            if (session.getCreditedMinutes() > 0 && isPayable(session, task)) {
                 int minutesToday = sessionRepository.sumCreditedMinutesByUserIdAndLocalDate(
                         user.getId(), session.getLocalDate());
-                int xp = scaled(TASK_XP, BigDecimal.ONE, dayFactor(minutesToday));
-                int granted = progressService.grantXp(delta, XpSource.STUDY_TASK, xp,
-                        "study-task:" + task.getId(), task.getId());
-                if (granted > 0) {
-                    task.setXpAwarded(granted);
-                    session.setXpAwarded(session.getXpAwarded() + granted);
-                }
+                payTasks(delta, session, List.of(task), minutesToday);
             }
         } else {
             task.setDoneAt(null);
@@ -272,9 +266,9 @@ public class StudySessionService {
     @Transactional(readOnly = true)
     public StreakWeekDto streakWeek() {
         User user = currentUser.entity();
-        ZoneId zone = timeZones.zoneFor(user);
-        LocalDate today = progressService.today(zone);
         UserProgress progress = progressService.current(user.getId());
+        ZoneId zone = progressService.readProgressZone(progress, user);
+        LocalDate today = progressService.today(zone);
         int streak = progressService.effectiveStreak(progress, zone);
         LocalDate sunday = today.minusDays(today.getDayOfWeek().getValue() % 7);
         Set<LocalDate> qualified = new HashSet<>(sessionRepository.qualifiedDates(
@@ -374,10 +368,6 @@ public class StudySessionService {
         return true;
     }
 
-    static int withMultiplier(int base, BigDecimal multiplier) {
-        return BigDecimal.valueOf(base).multiply(multiplier).setScale(0, RoundingMode.HALF_UP).intValue();
-    }
-
     static BigDecimal dayFactor(int minutesToday) {
         if (minutesToday <= FULL_RATE_MINUTES) {
             return BigDecimal.ONE;
@@ -393,18 +383,16 @@ public class StudySessionService {
                 .setScale(0, RoundingMode.HALF_UP).intValue();
     }
 
-    static int diminish(int xp, int minutesBefore, int minutes) {
-        if (xp <= 0 || minutes <= 0) {
+    static int curve(int base, BigDecimal multiplier, int minutesBefore, int minutes) {
+        if (base <= 0 || minutes <= 0) {
             return 0;
         }
         int full = clamp(FULL_RATE_MINUTES - minutesBefore, minutes);
         int half = clamp(Math.min(minutesBefore + minutes, HALF_RATE_MINUTES)
                 - Math.max(minutesBefore, FULL_RATE_MINUTES), minutes);
-        if (full == minutes) {
-            return xp;
-        }
-        long weighted = (long) xp * (2L * full + half);
-        return BigDecimal.valueOf(weighted)
+        return BigDecimal.valueOf(base)
+                .multiply(multiplier)
+                .multiply(BigDecimal.valueOf(2L * full + half))
                 .divide(BigDecimal.valueOf(2L * minutes), 0, RoundingMode.HALF_UP)
                 .intValue();
     }
@@ -481,7 +469,7 @@ public class StudySessionService {
                          Instant now) {
         int minutes = session.getBlockMinutes();
         int before = sessionRepository.sumCreditedMinutesByUserIdAndLocalDate(user.getId(), session.getLocalDate());
-        int xp = diminish(withMultiplier(2 * minutes + 10, session.getMultiplier()), before, minutes);
+        int xp = curve(2 * minutes + 10, session.getMultiplier(), before, minutes);
         block.setStatus(StudyBlockStatus.CONFIRMED);
         block.setConfirmedAt(now);
         block.setCreditedMinutes(minutes);
@@ -491,7 +479,7 @@ public class StudySessionService {
         credit(delta, session, before, minutes, granted);
 
         if (block.getBlockIndex() >= session.getPlannedBlocks()) {
-            complete(delta, user, session, before + minutes, now);
+            complete(delta, session, before + minutes, now);
             return;
         }
         int next = block.getBlockIndex() + 1;
@@ -499,8 +487,7 @@ public class StudySessionService {
         session.setCurrentBlock(next);
     }
 
-    private void complete(ProgressDeltaBuilder delta, User user, StudySession session, int minutesToday,
-                          Instant now) {
+    private void complete(ProgressDeltaBuilder delta, StudySession session, int minutesToday, Instant now) {
         session.setStatus(StudySessionStatus.COMPLETED);
         session.setEndedAt(now);
         if (session.getPlannedMinutes() < BONUS_MIN_PLANNED_MINUTES) {
@@ -516,7 +503,7 @@ public class StudySessionService {
             session.setXpAwarded(session.getXpAwarded() + granted);
         }
         chestService.maybeDrop(delta, ChestSource.SESSION, "session:" + session.getId(),
-                SESSION_CHEST_CHANCE, timeZones.zoneFor(user));
+                SESSION_CHEST_CHANCE, session.getLocalDate());
     }
 
     private void settleRunningBlock(ProgressDeltaBuilder delta, StudySession session, StudySessionBlock block,
@@ -533,7 +520,7 @@ public class StudySessionService {
         int minutes = (int) Math.min(elapsed, session.getBlockMinutes());
         int before = sessionRepository.sumCreditedMinutesByUserIdAndLocalDate(
                 session.getUser().getId(), session.getLocalDate());
-        int xp = diminish(withMultiplier(2 * minutes, session.getMultiplier()), before, minutes);
+        int xp = curve(2 * minutes, session.getMultiplier(), before, minutes);
         block.setStatus(StudyBlockStatus.PARTIAL);
         block.setCreditedMinutes(minutes);
         int granted = progressService.grantXp(delta, XpSource.STUDY_PARTIAL, xp,
@@ -543,10 +530,48 @@ public class StudySessionService {
     }
 
     private void credit(ProgressDeltaBuilder delta, StudySession session, int before, int minutes, int xp) {
+        boolean firstCredit = session.getCreditedMinutes() == 0 && minutes > 0;
         session.setCreditedMinutes(session.getCreditedMinutes() + minutes);
         session.setXpAwarded(session.getXpAwarded() + xp);
         if (before + minutes >= QUALIFY_MINUTES) {
             progressService.recordQualifiedDay(delta, session.getLocalDate());
+        }
+        if (firstCredit) {
+            List<StudySessionTask> pending = taskRepository.findBySessionIdOrderByPosition(session.getId()).stream()
+                    .filter(t -> isPayable(session, t))
+                    .toList();
+            payTasks(delta, session, pending, before + minutes);
+        }
+    }
+
+    private boolean isPayable(StudySession session, StudySessionTask task) {
+        return task.getDoneAt() != null
+                && task.getXpAwarded() == 0
+                && task.getPosition() < TASK_XP_POSITIONS
+                && !task.getDoneAt().isBefore(session.getStartedAt().plus(TASK_XP_DELAY));
+    }
+
+    private void payTasks(ProgressDeltaBuilder delta, StudySession session, List<StudySessionTask> tasks,
+                          int minutesToday) {
+        if (tasks.isEmpty()) {
+            return;
+        }
+        int xp = scaled(TASK_XP, BigDecimal.ONE, dayFactor(minutesToday));
+        if (xp <= 0) {
+            return;
+        }
+        long paidToday = taskRepository.countPaidByUserIdAndLocalDate(session.getUser().getId(), session.getLocalDate());
+        for (StudySessionTask task : tasks) {
+            if (paidToday >= MAX_PAID_TASKS_PER_DAY) {
+                return;
+            }
+            int granted = progressService.grantXp(delta, XpSource.STUDY_TASK, xp,
+                    "study-task:" + task.getId(), task.getId());
+            if (granted > 0) {
+                task.setXpAwarded(granted);
+                session.setXpAwarded(session.getXpAwarded() + granted);
+                paidToday++;
+            }
         }
     }
 

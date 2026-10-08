@@ -16,9 +16,9 @@ import com.rnave.studily.progress.ProgressDeltaBuilder;
 import com.rnave.studily.progress.ProgressDtos.ProgressDelta;
 import com.rnave.studily.progress.ProgressRateLimiter;
 import com.rnave.studily.progress.ProgressService;
+import com.rnave.studily.progress.UserProgress;
 import com.rnave.studily.progress.XpSource;
 import com.rnave.studily.user.User;
-import com.rnave.studily.user.UserTimeZones;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
@@ -26,7 +26,6 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
@@ -55,21 +54,19 @@ public class FlashcardRunService {
     private final ProgressService progressService;
     private final ChestService chestService;
     private final ProgressRateLimiter rateLimiter;
-    private final UserTimeZones timeZones;
     private final CurrentUser currentUser;
     private final Clock clock;
     private final ObjectMapper objectMapper;
 
     public FlashcardRunService(FlashcardRunRepository runRepository, FlashcardSetService flashcardSetService,
                                ProgressService progressService, ChestService chestService,
-                               ProgressRateLimiter rateLimiter, UserTimeZones timeZones, CurrentUser currentUser,
-                               Clock clock, ObjectMapper objectMapper) {
+                               ProgressRateLimiter rateLimiter, CurrentUser currentUser, Clock clock,
+                               ObjectMapper objectMapper) {
         this.runRepository = runRepository;
         this.flashcardSetService = flashcardSetService;
         this.progressService = progressService;
         this.chestService = chestService;
         this.rateLimiter = rateLimiter;
-        this.timeZones = timeZones;
         this.currentUser = currentUser;
         this.clock = clock;
         this.objectMapper = objectMapper;
@@ -83,7 +80,7 @@ public class FlashcardRunService {
         User user = currentUser.entity();
         rateLimiter.check(user.getId());
         FlashcardSet set = flashcardSetService.requireViewable(setId, user.getId());
-        progressService.ensure(user.getId());
+        UserProgress progress = progressService.ensure(user.getId());
         Instant now = clock.instant();
         if (runRepository.countByUserIdAndStartedAtAfter(user.getId(), now.minus(Duration.ofHours(1)))
                 >= MAX_STARTS_PER_HOUR) {
@@ -94,7 +91,7 @@ public class FlashcardRunService {
         run.setSet(set);
         run.setMode(mode);
         run.setStartedAt(now);
-        run.setLocalDate(now.atZone(timeZones.zoneFor(user)).toLocalDate());
+        run.setLocalDate(now.atZone(progressService.progressZone(progress, user)).toLocalDate());
         runRepository.save(run);
         return new FlashcardRunStart(run.getId(), run.getStartedAt());
     }
@@ -148,8 +145,8 @@ public class FlashcardRunService {
         run.setResultsJson(objectMapper.writeValueAsString(results));
 
         if (cardCount >= CHEST_MIN_CARDS && granted > 0) {
-            ZoneId zone = timeZones.zoneFor(user);
-            chestService.maybeDrop(delta, ChestSource.FLASHCARD, "run:" + run.getId(), CHEST_CHANCE, zone);
+            chestService.maybeDrop(delta, ChestSource.FLASHCARD, "run:" + run.getId(), CHEST_CHANCE,
+                    run.getLocalDate());
         }
         ProgressDelta result = progressService.finish(delta);
         List<RunCardDto> summary = results.stream()

@@ -13,6 +13,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Component
 public class EmailVerificationFilter extends OncePerRequestFilter {
@@ -22,6 +23,7 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
 
     private static final List<String> LOCKED_PREFIXES = List.of("/api/friends", "/api/conversations");
     private static final String PARSE_PATH = "/api/courses/parse";
+    private static final Pattern LOCKED_USER_PATHS = Pattern.compile("^/api/users/[^/]+/(progress|badges)/?$");
 
     private final UserRepository userRepository;
 
@@ -36,7 +38,8 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String uri = request.getRequestURI();
-        boolean locked = LOCKED_PREFIXES.stream().anyMatch(uri::startsWith) || uri.equals(PARSE_PATH);
+        boolean locked = LOCKED_PREFIXES.stream().anyMatch(uri::startsWith) || uri.equals(PARSE_PATH)
+                || LOCKED_USER_PATHS.matcher(uri).matches();
         if (!locked) {
             filterChain.doFilter(request, response);
             return;

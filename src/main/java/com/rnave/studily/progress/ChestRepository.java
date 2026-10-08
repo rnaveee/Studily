@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,4 +25,6 @@ public interface ChestRepository extends JpaRepository<Chest, Long> {
     long countByUserIdAndSourceAndCreatedAtBetween(Long userId, ChestSource source, Instant from, Instant to);
 
     long countByUserIdAndOpenedAtIsNull(Long userId);
+
+    long countByUserIdAndSourceAndLocalDate(Long userId, ChestSource source, LocalDate d);
 }

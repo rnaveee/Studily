@@ -30,6 +30,8 @@ public class ProgressService {
     static final int FRIEND_XP = 50;
     static final int FRIEND_GRANTS_PER_WINDOW = 10;
     static final Duration FRIEND_WINDOW = Duration.ofHours(24);
+    static final Duration FRIEND_MIN_ACCOUNT_AGE = Duration.ofDays(7);
+    static final Duration ZONE_CHANGE_COOLDOWN = Duration.ofDays(7);
     static final int STREAK_CHEST_EVERY = 7;
     static final int LEVEL_CHEST_EVERY = 5;
     private static final BigDecimal MAX_MULTIPLIER = new BigDecimal("1.50");
@@ -141,6 +143,12 @@ public class ProgressService {
 
     @Transactional
     public Optional<Chest> grantChest(ProgressDeltaBuilder delta, ChestSource source, String sourceRef) {
+        return grantChest(delta, source, sourceRef, null);
+    }
+
+    @Transactional
+    public Optional<Chest> grantChest(ProgressDeltaBuilder delta, ChestSource source, String sourceRef,
+                                      LocalDate localDate) {
         Long userId = delta.userId();
         if (chestRepository.existsByUserIdAndSourceAndSourceRef(userId, source, sourceRef)) {
             return Optional.empty();
@@ -149,6 +157,7 @@ public class ProgressService {
         chest.setUser(userRepository.getReferenceById(userId));
         chest.setSource(source);
         chest.setSourceRef(sourceRef);
+        chest.setLocalDate(localDate);
         chest.setCreatedAt(clock.instant());
         chestRepository.save(chest);
         delta.addChest(ChestDto.of(chest, null));
@@ -168,7 +177,7 @@ public class ProgressService {
         progress.setStreakLastDate(day);
         progress.setUpdatedAt(clock.instant());
         if (progress.getStreakCurrent() % STREAK_CHEST_EVERY == 0) {
-            grantChest(delta, ChestSource.STREAK, "streak:" + day);
+            grantChest(delta, ChestSource.STREAK, "streak:" + day, day);
         }
     }
 
@@ -192,6 +201,36 @@ public class ProgressService {
         return last.isBefore(today.minusDays(1)) ? 0 : progress.getStreakCurrent();
     }
 
+    @Transactional
+    public ZoneId progressZone(UserProgress progress, User user) {
+        Instant now = clock.instant();
+        ZoneId zone = resolveZone(progress, user, now);
+        if (progress.getProgressZone() == null || !zone.getId().equals(progress.getProgressZone())) {
+            progress.setProgressZone(zone.getId());
+            progress.setProgressZoneChangedAt(now);
+            progress.setUpdatedAt(now);
+        }
+        return zone;
+    }
+
+    public ZoneId readProgressZone(UserProgress progress, User user) {
+        return resolveZone(progress, user, clock.instant());
+    }
+
+    private ZoneId resolveZone(UserProgress progress, User user, Instant now) {
+        ZoneId live = timeZones.zoneFor(user);
+        if (progress.getProgressZone() == null) {
+            return live;
+        }
+        ZoneId stored = timeZones.parse(progress.getProgressZone());
+        if (stored.equals(live)) {
+            return stored;
+        }
+        Instant changedAt = progress.getProgressZoneChangedAt();
+        boolean cooledDown = changedAt == null || !changedAt.plus(ZONE_CHANGE_COOLDOWN).isAfter(now);
+        return cooledDown ? live : stored;
+    }
+
     public LocalDate today(ZoneId zone) {
         return LocalDate.now(clock.withZone(zone));
     }
@@ -201,7 +240,7 @@ public class ProgressService {
         User user = currentUser.entity();
         UserProgress progress = ensure(user.getId());
         badgeService.evaluate(user.getId());
-        int streak = effectiveStreak(progress, timeZones.zoneFor(user));
+        int streak = effectiveStreak(progress, progressZone(progress, user));
         BadgeSummary badges = badgeService.summary(user.getId());
         return new ProgressDto(
                 progress.getLevel(),
@@ -228,7 +267,7 @@ public class ProgressService {
                 progress.getXp(),
                 LevelMath.xpIntoLevel(progress.getXp(), progress.getLevel()),
                 LevelMath.xpToNext(progress.getLevel()),
-                effectiveStreak(progress, timeZones.zoneFor(user)),
+                effectiveStreak(progress, readProgressZone(progress, user)),
                 badges.featured(),
                 badges.count(),
                 badges.total());
@@ -250,11 +289,40 @@ public class ProgressService {
     }
 
     private void grantFriendXp(ProgressDeltaBuilder delta, Long otherId) {
-        Instant since = clock.instant().minus(FRIEND_WINDOW);
-        long recent = xpEventRepository.countByUserIdAndSourceAndCreatedAtAfter(delta.userId(), XpSource.FRIEND, since);
-        if (recent >= FRIEND_GRANTS_PER_WINDOW) {
+        String key = "friend:" + delta.userId() + ":" + otherId;
+        if (xpEventRepository.existsByDedupeKey(key)) {
             return;
         }
-        grantXp(delta, XpSource.FRIEND, FRIEND_XP, "friend:" + delta.userId() + ":" + otherId, otherId);
+        Instant now = clock.instant();
+        if (!earnsFriendXp(otherId, now)) {
+            recordWithoutXp(delta.userId(), XpSource.FRIEND, key, otherId, now);
+            return;
+        }
+        int recent = xpEventRepository.sumAmountByUserIdAndSourceAndCreatedAtBetween(
+                delta.userId(), XpSource.FRIEND, now.minus(FRIEND_WINDOW), now);
+        if (recent >= FRIEND_GRANTS_PER_WINDOW * FRIEND_XP) {
+            return;
+        }
+        grantXp(delta, XpSource.FRIEND, FRIEND_XP, key, otherId);
+    }
+
+    private boolean earnsFriendXp(Long otherId, Instant now) {
+        User other = userRepository.findById(otherId).orElse(null);
+        if (other == null || other.getCreatedAt() == null
+                || other.getCreatedAt().plus(FRIEND_MIN_ACCOUNT_AGE).isAfter(now)) {
+            return false;
+        }
+        return xpEventRepository.existsByUserIdAndSourceNot(otherId, XpSource.FRIEND);
+    }
+
+    private void recordWithoutXp(Long userId, XpSource source, String dedupeKey, Long refId, Instant now) {
+        XpEvent event = new XpEvent();
+        event.setUser(userRepository.getReferenceById(userId));
+        event.setSource(source);
+        event.setAmount(0);
+        event.setDedupeKey(dedupeKey);
+        event.setRefId(refId);
+        event.setCreatedAt(now);
+        xpEventRepository.save(event);
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Optional;
 
 public interface FlashcardRunRepository extends JpaRepository<FlashcardRun, Long> {
@@ -25,4 +26,7 @@ public interface FlashcardRunRepository extends JpaRepository<FlashcardRun, Long
     int sumXpByUserIdAndLocalDate(@Param("userId") Long userId, @Param("d") LocalDate d);
 
     long countByUserIdAndCompletedAtIsNotNullAndCardCountGreaterThanEqual(Long userId, int min);
+
+    long countByUserIdAndCompletedAtIsNotNullAndCardCountGreaterThanEqualAndXpReasonNotIn(Long userId, int min,
+                                                                                        Collection<String> reasons);
 }

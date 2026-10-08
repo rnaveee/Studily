@@ -13,8 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.random.RandomGenerator;
@@ -90,17 +88,14 @@ public class ChestService {
 
     @Transactional
     public Optional<Chest> maybeDrop(ProgressDeltaBuilder delta, ChestSource source, String sourceRef,
-                                     double chance, ZoneId zone) {
-        LocalDate today = LocalDate.now(clock.withZone(zone));
-        Instant from = today.atStartOfDay(zone).toInstant();
-        Instant to = today.plusDays(1).atStartOfDay(zone).toInstant().minus(1, ChronoUnit.MICROS);
-        if (chestRepository.countByUserIdAndSourceAndCreatedAtBetween(delta.userId(), source, from, to) > 0) {
+                                     double chance, LocalDate localDate) {
+        if (chestRepository.countByUserIdAndSourceAndLocalDate(delta.userId(), source, localDate) > 0) {
             return Optional.empty();
         }
         if (random.nextDouble() >= chance) {
             return Optional.empty();
         }
-        return progressService.grantChest(delta, source, sourceRef);
+        return progressService.grantChest(delta, source, sourceRef, localDate);
     }
 
     Loot rollLoot(Long userId) {
