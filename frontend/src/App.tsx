@@ -38,6 +38,8 @@ import AiChatPage from "./features/learn/AiChatPage";
 import PomodoroPage from "./features/learn/PomodoroPage";
 import SettingsPage from "./features/settings/SettingsPage";
 import TodosPage from "./features/todos/TodosPage";
+import BadgesPage from "./features/progress/BadgesPage";
+import SessionHistoryPage from "./features/learn/sessions/SessionHistoryPage";
 
 const PeriodicTablePage = lazy(() => import("./features/learn/PeriodicTablePage"));
 const CalculatorPage = lazy(() => import("./features/learn/CalculatorPage"));
@@ -72,6 +74,7 @@ export default function App() {
         <Route path="/learn/flashcards" element={<FlashcardsPage />} />
         <Route path="/flashcards" element={<Navigate to="/learn/flashcards" replace />} />
         <Route path="/learn/flashcards/:id" element={<FlashcardSetPage />} />
+        <Route path="/learn/sessions" element={<SessionHistoryPage />} />
         <Route path="/learn/ai" element={<AiChatPage />} />
         <Route
           path="/learn/periodic-table"
@@ -96,6 +99,7 @@ export default function App() {
         <Route path="/friends/schoolmates" element={<VerifyGate><SchoolmatesPage /></VerifyGate>} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/profile/edit" element={<ProfileEditPage />} />
+        <Route path="/profile/badges" element={<BadgesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route
           path="/admin"
@@ -106,6 +110,7 @@ export default function App() {
           }
         />
         <Route path="/users/:userId" element={<VerifyGate><UserProfilePage /></VerifyGate>} />
+        <Route path="/users/:userId/badges" element={<VerifyGate><BadgesPage /></VerifyGate>} />
         <Route path="/profile/:userId/add" element={<VerifyGate><UserProfilePage /></VerifyGate>} />
       </Route>
       <Route element={<Layout />}>

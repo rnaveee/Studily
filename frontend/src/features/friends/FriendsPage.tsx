@@ -11,6 +11,7 @@ import Avatar from "../../components/Avatar";
 import UserSearchModal from "./UserSearchModal";
 import type { FriendRequestItem } from "../../types";
 import { SkeletonList } from "../../components/Skeleton";
+import { invalidateProgress } from "../../lib/progressDelta";
 
 export default function FriendsPage() {
   const { user } = useAuth();
@@ -42,6 +43,7 @@ export default function FriendsPage() {
     onSuccess: () => {
       toast.success("Friend request accepted");
       invalidateAll();
+      invalidateProgress(queryClient);
     },
   });
 

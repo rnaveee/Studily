@@ -29,4 +29,19 @@ public interface FriendRequestRepository extends JpaRepository<FriendRequest, Lo
                or (f.requester.id = :b and f.addressee.id = :a)
             """)
     Optional<FriendRequest> findBetween(@Param("a") Long a, @Param("b") Long b);
+
+    @Query("""
+            select count(f) from FriendRequest f
+            where f.status = com.rnave.studily.friend.FriendRequestStatus.ACCEPTED
+              and (f.requester.id = :userId or f.addressee.id = :userId)
+            """)
+    long countFriendsOf(@Param("userId") Long userId);
+
+    @Query("""
+            select count(f) from FriendRequest f
+            where f.status = com.rnave.studily.friend.FriendRequestStatus.ACCEPTED
+              and ((f.requester.id = :userId and f.addressee.schoolKey = :schoolKey)
+                or (f.addressee.id = :userId and f.requester.schoolKey = :schoolKey))
+            """)
+    long countSchoolmateFriendsOf(@Param("userId") Long userId, @Param("schoolKey") String schoolKey);
 }

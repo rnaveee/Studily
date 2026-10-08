@@ -131,7 +131,8 @@ public class FlashcardSetService {
         return ownerDto(flashcardSetRepository.save(copy));
     }
 
-    private FlashcardSet requireViewable(Long id, Long viewerId) {
+    @Transactional(readOnly = true)
+    public FlashcardSet requireViewable(Long id, Long viewerId) {
         return flashcardSetRepository.findById(id)
                 .filter(s -> canView(s, viewerId))
                 .orElseThrow(() -> new NotFoundException("Flashcard set not found"));

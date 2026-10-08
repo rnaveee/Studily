@@ -13,6 +13,8 @@ import {
 import type { LearnProgress, Question, Verdict } from "./learnEngine";
 import { readJson, removeKey, writeJson } from "./studyStorage";
 import type { StudyMode } from "./SetModePicker";
+import RunSummary from "./RunSummary";
+import { cardIdOf, useFlashcardRun } from "./useFlashcardRun";
 import type { StudyCard } from "../../types";
 
 interface Props {
@@ -50,6 +52,9 @@ export default function LearnMode({ setId, cards, color, viewerKey, onSwitchMode
   const [revealed, setRevealed] = useState(false);
   const lastAsked = useRef<Record<string, number>>({});
   const askCounter = useRef(0);
+  const run = useFlashcardRun(setId, "LEARN", cards);
+  const answers = useRef(new Map<string, boolean>());
+  const runStarted = useRef(false);
 
   const byKey = useMemo(() => new Map(deck.map((c) => [c.key, c])), [deck]);
   const counts = levelCounts(deck, progress.levels);
@@ -79,6 +84,23 @@ export default function LearnMode({ setId, cards, color, viewerKey, onSwitchMode
     if (deck.length >= 2) startRound(progress);
   }, []);
 
+  useEffect(() => {
+    if (runStarted.current || !run.eligible || deck.length < 2) return;
+    if (deck.every((c) => progress.levels[c.key] === 2)) return;
+    runStarted.current = true;
+    answers.current.clear();
+    run.start();
+  }, [run.eligible]);
+
+  useEffect(() => {
+    if (phase !== "done" || !run.isActive()) return;
+    const results = [...answers.current].flatMap(([key, correct]) => {
+      const cardId = cardIdOf(key);
+      return cardId == null ? [] : [{ cardId, correct }];
+    });
+    void run.complete(results);
+  }, [phase]);
+
   function save(p: LearnProgress) {
     setProgress(p);
     writeJson(key, p);
@@ -89,6 +111,7 @@ export default function LearnMode({ setId, cards, color, viewerKey, onSwitchMode
     const cardKey = question.card.key;
     const level = progress.levels[cardKey] ?? 0;
     const levels = { ...progress.levels, [cardKey]: nextLevel(level, correct) };
+    answers.current.set(cardKey, correct && answers.current.get(cardKey) !== false);
     lastAsked.current[cardKey] = askCounter.current++;
     let rest = queue.slice(1);
     if (!correct) rest = [...rest, cardKey];
@@ -112,6 +135,10 @@ export default function LearnMode({ setId, cards, color, viewerKey, onSwitchMode
   function restart() {
     removeKey(key);
     lastAsked.current = {};
+    answers.current.clear();
+    run.reset();
+    runStarted.current = true;
+    run.start();
     const fresh = restoreProgress(null, deck);
     setProgress(fresh);
     startRound(fresh);
@@ -205,6 +232,23 @@ export default function LearnMode({ setId, cards, color, viewerKey, onSwitchMode
       </div>
     </div>
   );
+
+  if (phase === "done" && (run.status === "completing" || run.status === "done")) {
+    return (
+      <div className="space-y-3 animate-in">
+        {bar}
+        <RunSummary
+          mode="LEARN"
+          result={run.result}
+          pending={run.status === "completing"}
+          headline={`You've mastered all ${total} cards!`}
+          color={color}
+          onAgain={restart}
+          onDone={() => onSwitchMode("flashcards")}
+        />
+      </div>
+    );
+  }
 
   if (phase === "done") {
     return (

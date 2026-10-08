@@ -8,6 +8,7 @@ import ScheduleCard from "../../components/ScheduleCard";
 import ScheduleExportButtons from "../../components/ScheduleExportButtons";
 import { hasMeetings } from "../../lib/scheduleImage";
 import PublicSetsSection from "../learn/PublicSetsSection";
+import { MyProgressCard } from "../progress/ProgressCard";
 import type { ProfileSchedule } from "../../types";
 
 export default function ProfilePage() {
@@ -53,6 +54,8 @@ export default function ProfilePage() {
           <p className="mx-auto mt-3 max-w-xs text-sm text-fg-2">{user.bio}</p>
         )}
       </div>
+
+      <MyProgressCard />
 
       <div className="card divide-y divide-line">
         {(user.school || user.schoolId) && (

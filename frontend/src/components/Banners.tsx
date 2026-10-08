@@ -1,16 +1,16 @@
   import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Eye, FileText, Layers, MailWarning, Smartphone, Timer, X } from "lucide-react";
+import { Eye, FileText, MailWarning, Smartphone, Timer, Trophy, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { api } from "../lib/api";
 import type { ParseAvailability } from "../types";
 import { formatMs, pomodoroColor, usePomodoro } from "../lib/pomodoro";
-import { openFlashcardsWhatsNew } from "../features/learn/FlashcardsWhatsNew";
+import { openProgressWhatsNew } from "../features/progress/ProgressWhatsNew";
 
 const INSTALL_KEY = "studily.banner.install";
 const PARSER_KEY = "studily.banner.parser";
-const FLASHCARDS_KEY = "studily.banner.flashcards";
+const PROGRESS_KEY = "studily.banner.progress";
 
 function isStandalone() {
   return (
@@ -27,8 +27,8 @@ export default function Banners() {
   const [parserDismissed, setParserDismissed] = useState(
     () => localStorage.getItem(PARSER_KEY) === "1",
   );
-  const [flashcardsDismissed, setFlashcardsDismissed] = useState(
-    () => localStorage.getItem(FLASHCARDS_KEY) === "1",
+  const [progressDismissed, setProgressDismissed] = useState(
+    () => localStorage.getItem(PROGRESS_KEY) === "1",
   );
 
   const { data: parseAvailability } = useQuery({
@@ -38,7 +38,7 @@ export default function Banners() {
     enabled: !!user && !parserDismissed,
   });
   const showParser = !parserDismissed && !!user && (parseAvailability?.enabled ?? false);
-  const showFlashcards = !flashcardsDismissed && !!user;
+  const showProgress = !progressDismissed && !!user;
 
   function dismiss(key: string, set: (v: boolean) => void) {
     localStorage.setItem(key, "1");
@@ -51,7 +51,7 @@ export default function Banners() {
   if (
     installDismissed &&
     !showParser &&
-    !showFlashcards &&
+    !showProgress &&
     !unverified &&
     !pomo.running &&
     !guest
@@ -89,16 +89,16 @@ export default function Banners() {
           .
         </Banner>
       )}
-      {showFlashcards && (
+      {showProgress && (
         <Banner
-          icon={<Layers size={13} className="shrink-0" />}
-          onDismiss={() => dismiss(FLASHCARDS_KEY, setFlashcardsDismissed)}
+          icon={<Trophy size={13} className="shrink-0" />}
+          onDismiss={() => dismiss(PROGRESS_KEY, setProgressDismissed)}
           wrap
         >
-          Flashcards got an update!{" "}
+          Your studying now earns XP, badges and chests!{" "}
           <Link
-            to="/learn/flashcards"
-            onClick={() => openFlashcardsWhatsNew()}
+            to="/learn"
+            onClick={() => openProgressWhatsNew()}
             className="font-medium underline underline-offset-2"
           >
             See what's new

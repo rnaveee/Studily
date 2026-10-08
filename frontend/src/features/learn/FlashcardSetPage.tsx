@@ -204,10 +204,19 @@ export default function FlashcardSetPage() {
         />
       )}
 
-      {mode === "memory" && <MemoryGame key={data.id} cards={data.cards} color={color} />}
+      {mode === "memory" && (
+        <MemoryGame key={data.id} setId={data.id} cards={data.cards} color={color} onDone={() => setMode("flashcards")} />
+      )}
 
       {mode === "match" && (
-        <SpeedMatch key={data.id} setId={data.id} cards={data.cards} color={color} viewerKey={viewerKey} />
+        <SpeedMatch
+          key={data.id}
+          setId={data.id}
+          cards={data.cards}
+          color={color}
+          viewerKey={viewerKey}
+          onDone={() => setMode("flashcards")}
+        />
       )}
 
       {sharing && <ShareSetModal set={data} onClose={() => setSharing(false)} />}

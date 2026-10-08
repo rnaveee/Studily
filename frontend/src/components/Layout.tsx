@@ -18,7 +18,8 @@ import { useKeyboardViewport } from "../lib/keyboardDock";
 import { prefersReducedMotion } from "../lib/motion";
 import Avatar from "./Avatar";
 import Banners from "./Banners";
-import FlashcardsWhatsNew from "../features/learn/FlashcardsWhatsNew";
+import ProgressWhatsNew from "../features/progress/ProgressWhatsNew";
+import ProgressHost from "../features/progress/ProgressHost";
 import MobileFooter from "./MobileFooter";
 import ViewportDebug from "./ViewportDebug";
 import type { Conversation, FriendRequestItem } from "../types";
@@ -286,7 +287,7 @@ export default function Layout() {
         </header>
 
         <Banners />
-        <FlashcardsWhatsNew />
+        <ProgressWhatsNew />
 
         <main className="flex-1 overflow-y-auto overscroll-contain">
           <div
@@ -308,6 +309,7 @@ export default function Layout() {
         />
       </div>
       {debug && <ViewportDebug />}
+      <ProgressHost />
     </div>
   );
 }

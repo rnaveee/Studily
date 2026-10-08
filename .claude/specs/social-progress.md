@@ -88,7 +88,7 @@ Lifecycle (server time is authoritative):
    - Check-in is idempotent: confirming an already-confirmed block returns the current state with an empty delta.
 3. **Sweeper** (`@Scheduled(fixedDelay = 30_000)`, DB-driven so it survives restarts):
    - (a) For ACTIVE sessions whose current block has `due_at ≤ now` and `notified_at IS NULL`: sends a push and sets `notified_at`. Push: title `Study session`, body `Block done! Check in to keep your XP.`, url `/learn`. Use `WebPushSender.sendToUser(userId, PushPayload.of(...), 300)`.
-   - (b) For ACTIVE sessions where `now > due_at + 5 min`: block → `MISSED` (0 XP), session → `PAUSED`, `next_checkin_due_at = null`.
+   - (b) For ACTIVE sessions where `now > due_at + 5 min`: block → `MISSED` (0 XP), session → `PAUSED`, `next_checkin_due_at = null`. If the missed block was the last planned block, the session goes straight to `EXPIRED` with `ended_at = now`, because there is nothing left to resume. A missed block uses up one planned block: resume starts block `current_block + 1`, so a session with a missed block can never earn STUDY_COMPLETE.
    - (c) For PAUSED sessions paused more than 30 min: → `EXPIRED`, `ended_at = now`.
 4. **Resume** (PAUSED only): a new block starts now, and the session becomes ACTIVE.
 5. **End** (ACTIVE or PAUSED):
@@ -96,9 +96,10 @@ Lifecycle (server time is authoritative):
    - The session becomes `ENDED`.
 6. **Tasks:** `PATCH done=true|false`. XP is granted only on the first `true`, only for task positions 0–4, and only if ticked ≥5 min after `started_at`. Unticking never revokes XP.
 
-Daily diminishing returns:
+Daily diminishing returns (decided by Ryan 2026-10-07: applies to **all** study XP):
 - Sum the credited minutes of the user's blocks on the same `local_date` before this block.
-- Minutes up to 240 earn the full rate, 240–360 earn half rate, and anything beyond earns 0 XP.
+- Minutes up to 240 earn the full rate, 240–360 earn half rate, and anything beyond earns 0 XP. This applies to STUDY_BLOCK and STUDY_PARTIAL.
+- STUDY_COMPLETE and STUDY_TASK use a single factor taken from the day's credited minutes at the moment of the grant (including the block just credited): 1.0 if ≤ 240, 0.5 if ≤ 360, else 0. Round half-up after the multiplier and the factor.
 - Minutes are still recorded, and they still count for hours badges and streaks.
 
 Streaks:
@@ -129,8 +130,8 @@ Other limits:
   - `base = 2 × min(cardCount, 40)`.
   - `+20` if mode ∈ {REVIEW, LEARN} and `correct / cardCount ≥ 0.8`.
   - 0 if `cardCount < 5` (reason `TOO_FEW`).
-  - 0 if `completed_at − started_at < 2s × cardCount` (reason `TOO_FAST`).
-  - Repeat factor for the same set on the same `local_date`: the 1st completed run gets 1.0, the 2nd 0.5 (`REDUCED`), and later runs 0 (`REPEAT`).
+  - 0 if `completed_at − started_at < minSeconds × cardCount` (reason `TOO_FAST`), where `minSeconds` is **1 for MATCH** and 2 for REVIEW, LEARN and MEMORY (decided by Ryan 2026-10-07).
+  - Repeat factor for the same set on the same `local_date`: count only that day's earlier runs of the set that **earned XP** (`xp_awarded > 0`; decided by Ryan 2026-10-07). With 0 such runs the factor is 1.0, with 1 it's 0.5 (`REDUCED`), and with 2 or more it's 0 (`REPEAT`). Runs rejected as TOO_FAST or TOO_FEW don't use up the full-XP run.
   - Daily cap: total FLASHCARD_RUN XP per `local_date` ≤ 300 (`DAILY_CAP`, partial grant allowed).
   - Otherwise the reason is `FULL`.
 - The response always includes the per-card summary, even with 0 XP, so the UI can show right/wrong.
@@ -344,7 +345,7 @@ Repository methods the backend relies on. Names are fixed; db-developer may add 
   - `List<StudySessionBlock> findByStatusAndDueAtBeforeAndNotifiedAtIsNull(StudyBlockStatus s, Instant t)`.
   - `List<StudySessionBlock> findByStatusAndDueAtBefore(StudyBlockStatus s, Instant t)`.
 - `StudySessionTaskRepository`: `List<StudySessionTask> findBySessionIdOrderByPosition(Long sessionId)`, `Optional<StudySessionTask> findByIdAndSessionId(Long id, Long sessionId)`.
-- `FlashcardRunRepository`:
+- `FlashcardRunRepository` (plus `long countByUserIdAndSetIdAndLocalDateAndXpAwardedGreaterThan(Long userId, Long setId, LocalDate d, int min)` for the repeat factor):
   - `Optional<FlashcardRun> findByIdAndUserId(Long id, Long userId)`.
   - `long countByUserIdAndStartedAtAfter(Long userId, Instant after)`.
   - `long countByUserIdAndSetIdAndLocalDateAndCompletedAtIsNotNull(Long userId, Long setId, LocalDate d)`.
@@ -604,4 +605,70 @@ Mounting `ProgressWhatsNew` belongs to ui-designer, because `App.tsx` and `Layou
 
 ## 12. Ops runbook (platform-ops fills in; release-docs appends release notes)
 
-Pending.
+### Badge art hosting (platform-ops)
+
+**What exists (created 2026-10-07).**
+- R2 bucket `studily-badges` on Ryan's Cloudflare account (`a7930b03a95082547ead7123d5981afe`), Standard storage class.
+- Custom domain `badges.studily.ca` (zone `studily.ca`, `0a1b7f8fd952c5b1f00c3dbddcac1ad9`), min TLS 1.2, ownership and SSL `active`. Cloudflare added the proxied DNS record for it. No other DNS record was touched.
+- The `r2.dev` public URL is **off**. The custom domain is the only public way in.
+- Key layout: `badges/v1/<code>.webp`, so the public URL is `https://badges.studily.ca/badges/v1/<code>.webp`. That's exactly `app.progress.badge-base-url + "/" + image_key` with the code default.
+- Every object is uploaded with `Content-Type: image/webp` and `Cache-Control: public, max-age=31536000, immutable`.
+- Placeholder art for all 27 §8 codes is uploaded. The source files are `scripts/badges/placeholders/<code>.webp`: 256×256, transparent background, a rounded tile in the category colour with a short label. Verified: `level_1`, `level_100`, `cosmetic_crown` and `schoolmates_10` return 200 `image/webp`, and an unknown key returns 404.
+
+**Uploading real art later.**
+1. Put the final files in one folder, each named `<code>.webp` to match `badges.image_key`. Square artwork, 256×256 or larger, with a transparent background so the locked-badge CSS silhouette (`grayscale(1) brightness(0.25)`) reads as a shape.
+2. From the repo root, with a valid wrangler login (`npx wrangler@latest whoami`), run `scripts/badges/upload.sh <dir>`.
+3. The script uploads every `*.webp` in that folder to `studily-badges/badges/v1/<filename>` and skips other files.
+4. Optional overrides: `BADGE_BUCKET` (default `studily-badges`) and `BADGE_PREFIX` (default `badges/v1`).
+
+**Cache busting.** The objects are `immutable` with a one-year max-age, so browsers and the Cloudflare edge won't re-fetch a key that was overwritten. When real art replaces the placeholders:
+1. Upload to a new prefix: `BADGE_PREFIX=badges/v2 scripts/badges/upload.sh <dir>`.
+2. Point the app at it: `BADGE_ASSET_BASE_URL=https://badges.studily.ca/badges/v2` on Railway.
+3. Leave `v1` in place, since old pages and cached API responses still reference it.
+
+A single badge added later can go into the current prefix under its new code, because that key has never been cached.
+
+**Railway variables at merge time (optional).** The code defaults (§8, §9 `application.properties`) already point at the right values, so the deploy works with neither set. Set them only to pin the values explicitly or to change them later without a code change. Use the dashboard (app service → Variables → New Variable) or the Railway CLI, linked to the production app service:
+```
+railway variables --set "BADGE_ASSET_BASE_URL=https://badges.studily.ca/badges/v1"
+railway variables --set "PROGRESS_OG_CUTOFF=2026-10-11"
+```
+Each variable change triggers a redeploy, so set both together, before or alongside the merge. `PROGRESS_OG_CUTOFF` only needs setting if the OG window moves (for example, if launch slips past 2026-10-11).
+
+**CSP.** The backend adds `https://badges.studily.ca` to `img-src` (§9 hooks). Without it the browser blocks every badge image even though the bucket serves fine.
+
+**Firewall risk.** `badges.studily.ca` is a subdomain of `studily.ca`. School firewalls that sinkhole `studily.ca` as a newly registered domain (Palo Alto NRD) block the subdomain too, but they already block the app itself, so badges add no new failure mode. The recategorization fix for `studily.ca` covers both. Badge tiles already fall back to a silhouette if the image fails to load (§10).
+
+**Local DNS gotcha.** If you look up `badges.studily.ca` before it exists, a caching resolver can hold the NXDOMAIN for up to 30 min (the zone's SOA negative TTL is 1800 s). To check the bucket while that's still cached, use `curl -sI --resolve badges.studily.ca:443:104.21.53.89 https://badges.studily.ca/badges/v1/level_1.webp` or DNS-over-HTTPS.
+
+### Release notes (release-docs)
+
+**What ships.** Levels and XP, study sessions with check-ins and streaks on `/learn`, badges with 3 featured on profiles, the coin shop, chests, and flashcard run summaries. The announcement copies the flashcards launch (`91fc0cc`):
+- Changelog `v43` "Level up while you study", dated 2026-10-07. Change the date to the merge day.
+- The banner in `Banners.tsx` (`studily.banner.progress`, links to `/learn` and opens the walkthrough) replaces the flashcards banner.
+- `features/progress/ProgressWhatsNew.tsx`: 5 slides (Levels & XP, Study sessions, Badges, Chests & coins, Check-ins). It auto-opens once per device for accounts older than a day, with seen key `studily.whatsnew.progress`, and also marks `studily.whatsnew.flashcards` seen so the two never stack. ui-designer mounts it in `Layout.tsx`.
+- Study site tour F10 (`learning/curriculum/study/f10-progress.html`) and 20 review cards. It isn't deployed yet.
+
+**Left for Ryan before launch.**
+- Real badge art (27 `.webp` files named by `image_key`) and final titles/descriptions. The V41 seed copy is placeholder. Flyway is forward-only, so copy edits go in a new migration, not in V41.
+- The Railway vars from the runbook above (`BADGE_ASSET_BASE_URL`, `PROGRESS_OG_CUTOFF`). If launch slips past 2026-10-11, decide whether the OG cutoff moves too.
+- An on-device push check-in test on the installed iOS PWA:
+  1. Start a 1-block Pomodoro and lock the phone.
+  2. "Block done! Check in to keep your XP." should arrive within about 30 s of the due time.
+  3. Tap it, land on `/learn`, and check in.
+  4. Repeat and let a block lapse. It should go MISSED, the session should go PAUSED, and Resume should work.
+- Deploy the study site: from `learning/curriculum/study/`, run `npx wrangler pages deploy . --project-name studily-learn --branch main --commit-dirty=true`.
+
+**Watch after launch (first two weeks).**
+- XP per user per day. A heavy honest day is under ~1,000. The theoretical ceiling is roughly 2,500 (6 h of sessions split into short sessions, the 300 flashcard cap, 10 friends, chests). Anything higher is a bug or an exploit.
+  `SELECT user_id, created_at::date d, source, SUM(amount) FROM xp_events WHERE created_at > now() - interval '7 days' GROUP BY 1,2,3 ORDER BY 4 DESC LIMIT 20;`
+- Ledger audits. Both should return 0 rows:
+  `SELECT p.user_id FROM user_progress p LEFT JOIN (SELECT user_id, SUM(amount) s FROM xp_events GROUP BY user_id) x USING (user_id) WHERE p.xp <> COALESCE(x.s, 0);`
+  The same query with `coins` and `coin_transactions`.
+- Chest open rate by source. A low rate means the open prompt isn't being found.
+  `SELECT source, COUNT(*), COUNT(opened_at) FROM chests GROUP BY source;`
+- Purchase errors: 4xx/5xx on `POST /api/badges/{code}/purchase` in the Railway logs. Spend should match `coin_transactions` with reason `PURCHASE`.
+- The missed-block share:
+  `SELECT status, COUNT(*) FROM study_session_blocks WHERE started_at > now() - interval '7 days' GROUP BY status;`
+  A high MISSED share usually means pushes aren't arriving (iOS without the installed PWA), so it's a copy and onboarding fix, not a rule change.
+- Sweeper health. RUNNING blocks with `due_at < now() - interval '10 minutes'` should always be 0.

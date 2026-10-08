@@ -7,6 +7,7 @@ import Avatar from "../../components/Avatar";
 import BackButton from "../../components/BackButton";
 import type { Page, Relationship } from "../../types";
 import { SkeletonList } from "../../components/Skeleton";
+import { invalidateProgress } from "../../lib/progressDelta";
 
 const PAGE_SIZE = 30;
 
@@ -32,7 +33,10 @@ export default function SchoolmatesPage() {
 
   const accept = useMutation({
     mutationFn: (requestId: number) => api.post(`/friends/requests/${requestId}/accept`),
-    onSuccess: invalidateAll,
+    onSuccess: () => {
+      invalidateAll();
+      invalidateProgress(queryClient);
+    },
   });
 
   return (

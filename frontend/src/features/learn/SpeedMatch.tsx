@@ -4,6 +4,8 @@ import { buildTiles, playableCards, ROUND_SIZE, tileTextClass } from "./gameRoun
 import type { GameCard, Tile } from "./gameRound";
 import { shuffled } from "./shuffle";
 import { readJson, writeJson } from "./studyStorage";
+import RunSummary from "./RunSummary";
+import { cardIdOf, useFlashcardRun } from "./useFlashcardRun";
 import type { StudyCard } from "../../types";
 
 interface Props {
@@ -11,6 +13,7 @@ interface Props {
   cards: StudyCard[];
   color: string;
   viewerKey: string;
+  onDone?: () => void;
 }
 
 function deal(playable: GameCard[]): Tile[] {
@@ -21,7 +24,7 @@ function seconds(ms: number): string {
   return (ms / 1000).toFixed(1);
 }
 
-export default function SpeedMatch({ setId, cards, color, viewerKey }: Props) {
+export default function SpeedMatch({ setId, cards, color, viewerKey, onDone }: Props) {
   const playable = useMemo(() => playableCards(cards), [cards]);
   const bestKey = `studily.match.best.${viewerKey}.${setId}`;
   const [tiles, setTiles] = useState<Tile[]>(() => deal(playable));
@@ -35,6 +38,7 @@ export default function SpeedMatch({ setId, cards, color, viewerKey }: Props) {
   const [best, setBest] = useState<number | null>(() => readJson<number>(bestKey));
   const [newBest, setNewBest] = useState(false);
   const wrongTimer = useRef<number | undefined>(undefined);
+  const run = useFlashcardRun(setId, "MATCH", cards);
 
   useEffect(() => () => window.clearTimeout(wrongTimer.current), []);
 
@@ -54,12 +58,14 @@ export default function SpeedMatch({ setId, cards, color, viewerKey }: Props) {
     setStartedAt(null);
     setFinishedAt(null);
     setNewBest(false);
+    run.reset();
   }
 
   function start() {
     const at = Date.now();
     setStartedAt(at);
     setNow(at);
+    run.start();
   }
 
   function finish(start: number) {
@@ -70,6 +76,14 @@ export default function SpeedMatch({ setId, cards, color, viewerKey }: Props) {
       setBest(total);
       setNewBest(true);
       writeJson(bestKey, total);
+    }
+    if (run.isActive()) {
+      void run.complete(
+        [...new Set(tiles.map((t) => t.pair))].flatMap((pair) => {
+          const cardId = cardIdOf(pair);
+          return cardId == null ? [] : [{ cardId, correct: true }];
+        }),
+      );
     }
   }
 
@@ -110,6 +124,32 @@ export default function SpeedMatch({ setId, cards, color, viewerKey }: Props) {
   }
 
   const elapsed = startedAt ? (finishedAt ?? now) - startedAt + penalty : 0;
+
+  if (finishedAt && (run.status === "completing" || run.status === "done")) {
+    return (
+      <RunSummary
+        mode="MATCH"
+        result={run.result}
+        pending={run.status === "completing"}
+        headline={`${seconds(elapsed)}s`}
+        color={color}
+        stats={[
+          { label: "Pairs", value: String(tiles.length / 2) },
+          { label: "Penalty", value: `+${penalty / 1000}s` },
+          { label: "Best", value: best != null ? `${seconds(best)}s` : "—" },
+        ]}
+        onAgain={reset}
+        againLabel="Play again"
+        onDone={onDone}
+      >
+        {newBest && (
+          <p className="mt-2">
+            <span className="badge badge-green">New best!</span>
+          </p>
+        )}
+      </RunSummary>
+    );
+  }
 
   if (finishedAt) {
     return (

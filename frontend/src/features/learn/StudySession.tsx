@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PartyPopper } from "lucide-react";
 import { api } from "../../lib/api";
 import { toast } from "../../lib/toast";
 import { intervalLabel, isDue, nextIntervalDays } from "./sm2";
+import RunSummary from "./RunSummary";
+import { useFlashcardRun } from "./useFlashcardRun";
 import type { Flashcard, ReviewGrade } from "../../types";
 
 const GRADES: { grade: ReviewGrade; label: string; explain: string; color: string }[] = [
@@ -30,8 +32,22 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
   const [flipped, setFlipped] = useState(false);
   const [reviewed, setReviewed] = useState(0);
   const [grading, setGrading] = useState(false);
+  const run = useFlashcardRun(setId, "REVIEW", cards);
+  const graded = useRef(new Map<number, boolean>());
+  const started = useRef(false);
 
   const card = queue[0];
+
+  useEffect(() => {
+    if (started.current || !run.eligible || queue.length === 0) return;
+    started.current = true;
+    run.start();
+  }, [run.eligible]);
+
+  useEffect(() => {
+    if (card || !run.isActive()) return;
+    void run.complete([...graded.current].map(([cardId, correct]) => ({ cardId, correct })));
+  }, [card]);
 
   function done() {
     qc.invalidateQueries({ queryKey: ["flashcards"] });
@@ -46,6 +62,10 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
         `/flashcard-sets/${setId}/cards/${card.id}/review`,
         { grade: g },
       );
+      if (card.id != null) {
+        const id = card.id;
+        graded.current.set(id, g !== "AGAIN" && graded.current.get(id) !== false);
+      }
       setQueue((q) => (g === "AGAIN" ? [...q.slice(1), updated] : q.slice(1)));
       setReviewed((n) => n + 1);
       setFlipped(false);
@@ -54,6 +74,24 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
     } finally {
       setGrading(false);
     }
+  }
+
+  if (!card && (run.status === "completing" || run.status === "done")) {
+    return (
+      <RunSummary
+        mode="REVIEW"
+        result={run.result}
+        pending={run.status === "completing"}
+        headline="All caught up!"
+        color={color}
+        onDone={done}
+        doneLabel="Back to set"
+      >
+        <p className="mt-1 text-[12px] text-fg-3">
+          You reviewed {reviewed} {reviewed === 1 ? "card" : "cards"}. Come back when more are due.
+        </p>
+      </RunSummary>
+    );
   }
 
   if (!card) {

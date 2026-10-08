@@ -178,10 +178,19 @@ export default function SharedSetPage() {
         />
       )}
 
-      {mode === "memory" && <MemoryGame key={data.id} cards={data.cards} color={COLOR} />}
+      {mode === "memory" && (
+        <MemoryGame key={data.id} setId={data.id} cards={data.cards} color={COLOR} onDone={() => setMode("flashcards")} />
+      )}
 
       {mode === "match" && (
-        <SpeedMatch key={data.id} setId={data.id} cards={data.cards} color={COLOR} viewerKey={viewerKey} />
+        <SpeedMatch
+          key={data.id}
+          setId={data.id}
+          cards={data.cards}
+          color={COLOR}
+          viewerKey={viewerKey}
+          onDone={() => setMode("flashcards")}
+        />
       )}
     </div>
   );

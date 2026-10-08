@@ -3,14 +3,18 @@ import { PartyPopper, RotateCcw } from "lucide-react";
 import { buildTiles, formatClock, playableCards, splitBoards, tileTextClass } from "./gameRound";
 import type { GameCard, Tile } from "./gameRound";
 import { shuffled } from "./shuffle";
+import RunSummary from "./RunSummary";
+import { cardIdOf, useFlashcardRun } from "./useFlashcardRun";
 import type { StudyCard } from "../../types";
 
 interface Props {
+  setId: number;
   cards: StudyCard[];
   color: string;
+  onDone?: () => void;
 }
 
-export default function MemoryGame({ cards, color }: Props) {
+export default function MemoryGame({ setId, cards, color, onDone }: Props) {
   const playable = useMemo(() => playableCards(cards), [cards]);
   const [deck, setDeck] = useState<GameCard[]>(() => shuffled(playable));
   const boards = useMemo(() => splitBoards(deck), [deck]);
@@ -24,6 +28,8 @@ export default function MemoryGame({ cards, color }: Props) {
   const [finishedAt, setFinishedAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const timer = useRef<number | undefined>(undefined);
+  const run = useFlashcardRun(setId, "MEMORY", cards);
+  const [pass, setPass] = useState({ moves: 0, ms: 0 });
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
@@ -47,6 +53,8 @@ export default function MemoryGame({ cards, color }: Props) {
   function nextBoard() {
     const nextIndex = boardIndex + 1;
     if (nextIndex >= boards.length) {
+      run.reset();
+      setPass({ moves: 0, ms: 0 });
       const fresh = shuffled(playable);
       setDeck(fresh);
       setBoardIndex(0);
@@ -62,6 +70,7 @@ export default function MemoryGame({ cards, color }: Props) {
     if (!startedAt) {
       setStartedAt(Date.now());
       setNow(Date.now());
+      if (boardIndex === 0 && pass.moves === 0 && !run.isActive() && run.status === "idle") run.start();
     }
     const nextOpen = [...open, tile.id];
     if (nextOpen.length < 2) {
@@ -74,7 +83,19 @@ export default function MemoryGame({ cards, color }: Props) {
       const nextMatched = [...matched, a.pair];
       setMatched(nextMatched);
       setOpen([]);
-      if (nextMatched.length === tiles.length / 2) setFinishedAt(Date.now());
+      if (nextMatched.length === tiles.length / 2) {
+        const end = Date.now();
+        setFinishedAt(end);
+        setPass((p) => ({ moves: p.moves + moves + 1, ms: p.ms + (end - (startedAt ?? end)) }));
+        if (boardIndex === boards.length - 1 && run.isActive()) {
+          void run.complete(
+            deck.flatMap((c) => {
+              const cardId = cardIdOf(c.key);
+              return cardId == null ? [] : [{ cardId, correct: true }];
+            }),
+          );
+        }
+      }
       return;
     }
     setOpen(nextOpen);
@@ -94,6 +115,26 @@ export default function MemoryGame({ cards, color }: Props) {
   }
 
   const elapsed = startedAt ? (finishedAt ?? now) - startedAt : 0;
+
+  if (finishedAt && boardIndex === boards.length - 1 && (run.status === "completing" || run.status === "done")) {
+    return (
+      <RunSummary
+        mode="MEMORY"
+        result={run.result}
+        pending={run.status === "completing"}
+        headline={boards.length > 1 ? "Every board cleared!" : "Board cleared!"}
+        color={color}
+        stats={[
+          { label: "Time", value: formatClock(pass.ms) },
+          { label: "Moves", value: String(pass.moves) },
+          ...(boards.length > 1 ? [{ label: "Boards", value: String(boards.length) }] : []),
+        ]}
+        onAgain={nextBoard}
+        againLabel="Play again"
+        onDone={onDone}
+      />
+    );
+  }
 
   return (
     <div className="space-y-3 animate-in">

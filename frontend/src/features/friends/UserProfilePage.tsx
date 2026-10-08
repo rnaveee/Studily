@@ -9,6 +9,8 @@ import ScheduleCard from "../../components/ScheduleCard";
 import type { Conversation, ProfileSchedule, Relationship } from "../../types";
 import { Spinner } from "../../components/Skeleton";
 import PublicSetsSection from "../learn/PublicSetsSection";
+import { UserProgressCard } from "../progress/ProgressCard";
+import { invalidateProgress } from "../../lib/progressDelta";
 
 export default function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>();
@@ -42,7 +44,10 @@ export default function UserProfilePage() {
 
   const accept = useMutation({
     mutationFn: (requestId: number) => api.post(`/friends/requests/${requestId}/accept`),
-    onSuccess: invalidateAll,
+    onSuccess: () => {
+      invalidateAll();
+      invalidateProgress(queryClient);
+    },
   });
 
   const withdraw = useMutation({
@@ -133,6 +138,8 @@ export default function UserProfilePage() {
             </button>
           )}
         </div>
+
+        <UserProgressCard userId={id} />
 
         {(schedule.data || schedule.error) && (
           schedule.data?.visible && schedule.data.semester ? (

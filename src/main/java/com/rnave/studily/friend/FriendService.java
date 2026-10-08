@@ -10,6 +10,7 @@ import com.rnave.studily.friend.FriendDtos.FriendRequestDto;
 import com.rnave.studily.friend.FriendDtos.PublicUserDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipStatus;
+import com.rnave.studily.progress.ProgressService;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import org.springframework.data.domain.PageRequest;
@@ -29,12 +30,14 @@ public class FriendService {
     private final FriendRequestRepository friendRequestRepository;
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
+    private final ProgressService progressService;
 
     public FriendService(FriendRequestRepository friendRequestRepository, UserRepository userRepository,
-                          CurrentUser currentUser) {
+                          CurrentUser currentUser, ProgressService progressService) {
         this.friendRequestRepository = friendRequestRepository;
         this.userRepository = userRepository;
         this.currentUser = currentUser;
+        this.progressService = progressService;
     }
 
     @Transactional(readOnly = true)
@@ -132,7 +135,9 @@ public class FriendService {
             }
             req.setStatus(FriendRequestStatus.ACCEPTED);
             req.setRespondedAt(Instant.now());
-            return toDto(friendRequestRepository.save(req), me.getId());
+            FriendRequest saved = friendRequestRepository.save(req);
+            progressService.onFriendshipAccepted(req.getRequester().getId(), req.getAddressee().getId());
+            return toDto(saved, me.getId());
         }
 
         FriendRequest req = new FriendRequest();
@@ -153,7 +158,9 @@ public class FriendService {
         }
         req.setStatus(FriendRequestStatus.ACCEPTED);
         req.setRespondedAt(Instant.now());
-        return toDto(friendRequestRepository.save(req), me);
+        FriendRequest saved = friendRequestRepository.save(req);
+        progressService.onFriendshipAccepted(req.getRequester().getId(), req.getAddressee().getId());
+        return toDto(saved, me);
     }
 
     @Transactional

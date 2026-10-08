@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Atom, Calculator, Layers, ListChecks, Sparkles, Timer } from "lucide-react";
 import { formatMs, pomodoroColor, usePomodoro } from "../../lib/pomodoro";
+import StudySessionsPanel from "./sessions/StudySessionsPanel";
 
 const TOOLS = [
   {
@@ -58,6 +59,8 @@ export default function LearnPage() {
           Study tools to help you master your courses.
         </p>
       </div>
+
+      <StudySessionsPanel />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {TOOLS.map(({ to, icon: Icon, title, description, disabled }) => {

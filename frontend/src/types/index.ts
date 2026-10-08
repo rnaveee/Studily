@@ -736,3 +736,183 @@ export interface OnboardingStatus {
   complete: boolean;
   courseCount: number;
 }
+
+export type BadgeCategory = "LEVEL" | "SOCIAL" | "TENURE" | "STUDY" | "FLASHCARDS" | "COSMETIC";
+
+export interface BadgeDto {
+  code: string;
+  category: BadgeCategory;
+  title: string;
+  description: string;
+  imageUrl: string;
+  priceCoins: number | null;
+  owned: boolean;
+  acquiredAt: string | null;
+  featuredSlot: number | null;
+}
+
+export interface StreakDto {
+  current: number;
+  best: number;
+  multiplier: number;
+}
+
+export interface ProgressDto {
+  level: number;
+  xp: number;
+  xpIntoLevel: number;
+  xpForNext: number;
+  coins: number;
+  streak: StreakDto;
+  featuredBadges: BadgeDto[];
+  badgeCount: number;
+  badgeTotal: number;
+  unopenedChests: number;
+}
+
+export interface PublicProgressDto {
+  userId: number;
+  level: number;
+  xp: number;
+  xpIntoLevel: number;
+  xpForNext: number;
+  streakCurrent: number;
+  featuredBadges: BadgeDto[];
+  badgeCount: number;
+  badgeTotal: number;
+}
+
+export type ChestSource = "LEVEL" | "STREAK" | "SESSION" | "FLASHCARD";
+
+export interface ChestDto {
+  id: number;
+  source: ChestSource;
+  createdAt: string;
+  openedAt: string | null;
+  loot: { coins: number; xp: number; badge: BadgeDto | null } | null;
+}
+
+export interface ProgressDelta {
+  xpGained: number;
+  levelBefore: number;
+  levelAfter: number;
+  xp: number;
+  xpIntoLevel: number;
+  xpForNext: number;
+  coinsGained: number;
+  coins: number;
+  newBadges: BadgeDto[];
+  chests: ChestDto[];
+}
+
+export interface BadgePurchaseResult {
+  badge: BadgeDto;
+  coins: number;
+}
+
+export interface ChestOpenResult {
+  chest: ChestDto;
+  delta: ProgressDelta;
+}
+
+export type StudySessionMode = "POMODORO" | "TIMER";
+
+export type StudySessionStatus = "ACTIVE" | "PAUSED" | "COMPLETED" | "ENDED" | "EXPIRED";
+
+export interface StudySessionTaskDto {
+  id: number;
+  position: number;
+  text: string;
+  done: boolean;
+}
+
+export interface StudySessionBlockDto {
+  index: number;
+  status: "RUNNING" | "CONFIRMED" | "MISSED" | "PARTIAL";
+  startedAt: string;
+  dueAt: string;
+  creditedMinutes: number;
+  xpAwarded: number;
+}
+
+export interface StudySessionDto {
+  id: number;
+  mode: StudySessionMode;
+  status: StudySessionStatus;
+  plannedBlocks: number;
+  blockMinutes: number;
+  breakMinutes: number;
+  plannedMinutes: number;
+  startedAt: string;
+  endedAt: string | null;
+  currentBlock: number;
+  checkinOpensAt: string | null;
+  checkinClosesAt: string | null;
+  creditedMinutes: number;
+  xpAwarded: number;
+  multiplier: number;
+  tasks: StudySessionTaskDto[];
+  blocks: StudySessionBlockDto[];
+  serverNow: string;
+}
+
+export interface StudySessionSummaryDto {
+  id: number;
+  mode: StudySessionMode;
+  status: StudySessionStatus;
+  startedAt: string;
+  endedAt: string | null;
+  plannedMinutes: number;
+  creditedMinutes: number;
+  xpAwarded: number;
+  tasksDone: number;
+  tasksTotal: number;
+}
+
+export interface StudySessionResult {
+  session: StudySessionDto;
+  delta: ProgressDelta;
+}
+
+export interface StartStudySessionRequest {
+  mode: StudySessionMode;
+  blocks?: number;
+  minutes?: number;
+  tasks: string[];
+}
+
+export type StreakDayLabel = "Su" | "M" | "Tu" | "W" | "Th" | "F" | "Sa";
+
+export interface StreakWeekDto {
+  current: number;
+  best: number;
+  multiplier: number;
+  minutesToday: number;
+  today: string;
+  week: { date: string; label: StreakDayLabel; qualified: boolean; isToday: boolean }[];
+}
+
+export type FlashcardRunMode = "REVIEW" | "LEARN" | "MEMORY" | "MATCH";
+
+export type XpReason = "FULL" | "REDUCED" | "REPEAT" | "DAILY_CAP" | "TOO_FAST" | "TOO_FEW";
+
+export interface FlashcardRunStart {
+  runId: number;
+  startedAt: string;
+}
+
+export interface FlashcardRunCardResult {
+  cardId: number;
+  correct: boolean;
+}
+
+export interface FlashcardRunResult {
+  runId: number;
+  mode: FlashcardRunMode;
+  cardCount: number;
+  correctCount: number;
+  xpAwarded: number;
+  xpReason: XpReason;
+  cards: { cardId: number; front: string; back: string; correct: boolean }[];
+  delta: ProgressDelta;
+}
