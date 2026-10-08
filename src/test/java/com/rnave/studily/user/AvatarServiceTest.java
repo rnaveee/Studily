@@ -4,6 +4,8 @@ import com.rnave.studily.admin.AdminGuard;
 import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
+import com.rnave.studily.progress.Flair;
+import com.rnave.studily.progress.FlairRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
@@ -12,6 +14,8 @@ import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.Clock;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -24,6 +28,7 @@ class AvatarServiceTest {
     private UserRepository userRepository;
     private CurrentUser currentUser;
     private AdminGuard adminGuard;
+    private FlairRepository flairRepository;
     private AvatarService avatarService;
     private User user;
 
@@ -32,7 +37,9 @@ class AvatarServiceTest {
         userRepository = mock(UserRepository.class);
         currentUser = mock(CurrentUser.class);
         adminGuard = mock(AdminGuard.class);
-        avatarService = new AvatarService(userRepository, currentUser, adminGuard);
+        flairRepository = mock(FlairRepository.class);
+        avatarService = new AvatarService(userRepository, currentUser, adminGuard,
+                new Flairs(flairRepository, Clock.systemUTC(), "https://badges.studily.ca/flairs/v1"));
 
         user = new User();
         user.setId(1L);
@@ -122,6 +129,21 @@ class AvatarServiceTest {
         assertThat(user.getAvatarContentType()).isNull();
         assertThat(user.getAvatarVersion()).isEqualTo(4);
         assertThat(dto.avatarUrl()).isNull();
+        assertThat(dto.flair()).isNull();
+    }
+
+    @Test
+    void delete_userWithEquippedFlair_userDtoKeepsFlairRef() {
+        Flair inferno = new Flair();
+        inferno.setCode("ring_inferno");
+        inferno.setImageKey("inferno.webp");
+        when(flairRepository.findAll()).thenReturn(List.of(inferno));
+        user.setEquippedFlairCode("ring_inferno");
+
+        UserDto dto = avatarService.delete();
+
+        assertThat(dto.flair()).isEqualTo(new FlairRef("ring_inferno",
+                "https://badges.studily.ca/flairs/v1/inferno.webp"));
     }
 
     private byte[] pngBytes(int width, int height) throws IOException {

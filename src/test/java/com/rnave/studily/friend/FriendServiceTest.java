@@ -8,7 +8,10 @@ import com.rnave.studily.config.ForbiddenException;
 import com.rnave.studily.friend.FriendDtos.FriendRequestDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipStatus;
+import com.rnave.studily.progress.Flair;
+import com.rnave.studily.progress.FlairRepository;
 import com.rnave.studily.progress.ProgressService;
+import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +20,7 @@ import org.mockito.InOrder;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.SliceImpl;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,6 +41,7 @@ class FriendServiceTest {
     private UserRepository userRepository;
     private CurrentUser currentUser;
     private ProgressService progressService;
+    private FlairRepository flairRepository;
     private FriendService friendService;
 
     private User me;
@@ -48,7 +53,9 @@ class FriendServiceTest {
         userRepository = mock(UserRepository.class);
         currentUser = mock(CurrentUser.class);
         progressService = mock(ProgressService.class);
-        friendService = new FriendService(friendRequestRepository, userRepository, currentUser, progressService);
+        flairRepository = mock(FlairRepository.class);
+        friendService = new FriendService(friendRequestRepository, userRepository, currentUser, progressService,
+                new Flairs(flairRepository, Clock.systemUTC(), "https://badges.studily.ca/flairs/v1"));
 
         me = new User();
         me.setId(1L);
@@ -159,7 +166,23 @@ class FriendServiceTest {
 
         assertThat(result.status()).isEqualTo(FriendRequestStatus.PENDING);
         assertThat(result.user().id()).isEqualTo(2L);
+        assertThat(result.user().flair()).isNull();
         verify(progressService, never()).onFriendshipAccepted(anyLong(), anyLong());
+    }
+
+    @Test
+    void sendRequest_toUserWithEquippedFlair_publicUserCarriesFlairRef() {
+        other.setEquippedFlairCode("ring_ember");
+        when(currentUser.entity()).thenReturn(me);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(other));
+        when(friendRequestRepository.findBetween(1L, 2L)).thenReturn(Optional.empty());
+        when(friendRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        FriendRequestDto result = friendService.sendRequest(2L);
+
+        assertThat(result.user().flair()).isNotNull();
+        assertThat(result.user().flair().code()).isEqualTo("ring_ember");
+        assertThat(result.user().flair().imageUrl()).isNull();
     }
 
     @Test
@@ -313,6 +336,36 @@ class FriendServiceTest {
         assertThat(statusFor(result, 3L)).isEqualTo(RelationshipStatus.INCOMING_PENDING);
         assertThat(statusFor(result, 4L)).isEqualTo(RelationshipStatus.FRIENDS);
         assertThat(statusFor(result, 5L)).isEqualTo(RelationshipStatus.NONE);
+    }
+
+    @Test
+    void schoolmates_mapsEachUsersEquippedFlair() {
+        when(currentUser.entity()).thenReturn(me);
+        Flair aurora = new Flair();
+        aurora.setCode("ring_aurora");
+        aurora.setImageKey("aurora.webp");
+        when(flairRepository.findAll()).thenReturn(List.of(aurora));
+        User withArt = new User();
+        withArt.setId(2L);
+        withArt.setEquippedFlairCode("ring_aurora");
+        User withCss = new User();
+        withCss.setId(3L);
+        withCss.setEquippedFlairCode("ring_mint");
+        User bare = new User();
+        bare.setId(4L);
+        when(userRepository.findBySchoolKeyAndIdNotOrderByNameAsc(eq("sfu"), eq(1L), any(Pageable.class)))
+                .thenReturn(new SliceImpl<>(List.of(withArt, withCss, bare)));
+        when(friendRequestRepository.findByRequesterIdOrAddresseeId(1L, 1L)).thenReturn(List.of());
+
+        List<RelationshipDto> result = friendService.schoolmates(0, 30).items();
+
+        assertThat(result.get(0).user().flair().code()).isEqualTo("ring_aurora");
+        assertThat(result.get(0).user().flair().imageUrl())
+                .isEqualTo("https://badges.studily.ca/flairs/v1/aurora.webp");
+        assertThat(result.get(1).user().flair().code()).isEqualTo("ring_mint");
+        assertThat(result.get(1).user().flair().imageUrl()).isNull();
+        assertThat(result.get(2).user().flair()).isNull();
+        verify(flairRepository).findAll();
     }
 
     private RelationshipStatus statusFor(List<RelationshipDto> dtos, Long userId) {

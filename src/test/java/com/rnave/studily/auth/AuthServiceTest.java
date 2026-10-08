@@ -8,12 +8,15 @@ import com.rnave.studily.config.JwtService;
 import com.rnave.studily.config.LoginRateLimiter;
 import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.config.UnauthorizedException;
+import com.rnave.studily.progress.FlairRepository;
+import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.time.Clock;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,7 +48,8 @@ class AuthServiceTest {
         adminGuard = mock(AdminGuard.class);
         when(loginRateLimiter.tryConsume(anyString())).thenReturn(true);
         authService = new AuthService(userRepository, passwordEncoder, jwtService, loginRateLimiter,
-                authEmailService, accountTokenService, adminGuard);
+                authEmailService, accountTokenService, adminGuard,
+                new Flairs(mock(FlairRepository.class), Clock.systemUTC(), "https://badges.studily.ca/flairs/v1"));
     }
 
     @Test
@@ -151,6 +155,27 @@ class AuthServiceTest {
         var response = authService.login(new LoginRequest("me@example.com", "correct"));
 
         assertThat(response.token()).isEqualTo("token-xyz");
+        assertThat(response.user().flair()).isNull();
+    }
+
+    @Test
+    void login_userWithEquippedFlair_carriesFlairRef() {
+        User user = new User();
+        user.setId(7L);
+        user.setEmail("me@example.com");
+        user.setUsername("me");
+        user.setPasswordHash("hashed");
+        user.setEquippedFlairCode("ring_gold");
+
+        when(userRepository.findByEmail("me@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("correct", "hashed")).thenReturn(true);
+        when(jwtService.generateToken(7L, 0)).thenReturn("token-xyz");
+
+        var response = authService.login(new LoginRequest("me@example.com", "correct"));
+
+        assertThat(response.user().flair()).isNotNull();
+        assertThat(response.user().flair().code()).isEqualTo("ring_gold");
+        assertThat(response.user().flair().imageUrl()).isNull();
     }
 
     @Test

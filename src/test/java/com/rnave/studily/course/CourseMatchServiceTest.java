@@ -4,6 +4,7 @@ import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.ForbiddenException;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.semester.SemesterService;
+import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +35,7 @@ class CourseMatchServiceTest {
         userRepository = mock(UserRepository.class);
         currentUser = mock(CurrentUser.class);
         service = new CourseMatchService(courseRepository, userRepository, currentUser,
-                mock(SemesterService.class));
+                mock(SemesterService.class), mock(Flairs.class));
     }
 
     @Test

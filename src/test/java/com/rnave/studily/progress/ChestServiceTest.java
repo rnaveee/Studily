@@ -5,6 +5,8 @@ import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.progress.ProgressDtos.BadgeDto;
 import com.rnave.studily.progress.ProgressDtos.ChestOpenResult;
+import com.rnave.studily.progress.ProgressDtos.FlairDto;
+import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import com.rnave.studily.user.UserTimeZones;
@@ -17,9 +19,11 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 import java.util.random.RandomGenerator;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,6 +34,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,6 +48,9 @@ class ChestServiceTest {
     private CoinTransactionRepository coinTransactionRepository;
     private UserRepository userRepository;
     private BadgeService badgeService;
+    private FlairRepository flairRepository;
+    private UserFlairRepository userFlairRepository;
+    private FlairService flairService;
     private CurrentUser currentUser;
     private RandomGenerator random;
     private ProgressService progressService;
@@ -50,6 +58,8 @@ class ChestServiceTest {
 
     private final List<XpEvent> xpEvents = new ArrayList<>();
     private final List<CoinTransaction> coinTransactions = new ArrayList<>();
+    private final List<Flair> flairCatalog = new ArrayList<>();
+    private final List<UserFlair> ownedFlairs = new ArrayList<>();
     private UserProgress progress;
     private Chest chest;
 
@@ -61,13 +71,20 @@ class ChestServiceTest {
         coinTransactionRepository = mock(CoinTransactionRepository.class);
         userRepository = mock(UserRepository.class);
         badgeService = mock(BadgeService.class);
+        flairRepository = mock(FlairRepository.class);
+        userFlairRepository = mock(UserFlairRepository.class);
         currentUser = mock(CurrentUser.class);
         random = mock(RandomGenerator.class);
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+        flairService = new FlairService(flairRepository, userFlairRepository, userRepository, userProgressRepository,
+                mock(ProgressService.class), currentUser,
+                new Flairs(flairRepository, clock, "https://badges.studily.ca/flairs/v1"), clock);
         progressService = new ProgressService(userProgressRepository, xpEventRepository, coinTransactionRepository,
-                chestRepository, userRepository, badgeService, new UserTimeZones(userRepository, "UTC"),
+                chestRepository, userRepository, badgeService, flairService, new UserTimeZones(userRepository, "UTC"),
                 currentUser, clock);
-        service = new ChestService(chestRepository, progressService, badgeService, currentUser, clock, random);
+        service = new ChestService(chestRepository, progressService, badgeService, flairService, currentUser, clock,
+                random);
+        seedFlairCatalog();
 
         progress = new UserProgress();
         progress.setUserId(1L);
@@ -104,6 +121,55 @@ class ChestServiceTest {
             return new BadgeDto(b.getCode(), b.getCategory(), b.getTitle(), b.getDescription(),
                     "u/" + b.getImageKey(), b.getPriceCoins(), inv.getArgument(1) != null, NOW, null);
         });
+        when(flairRepository.findByActiveTrueOrderBySortOrderAsc()).thenAnswer(inv -> List.copyOf(flairCatalog));
+        when(userFlairRepository.findByUserId(1L)).thenAnswer(inv -> List.copyOf(ownedFlairs));
+        when(userFlairRepository.save(any(UserFlair.class))).thenAnswer(inv -> {
+            ownedFlairs.add(inv.getArgument(0));
+            return inv.getArgument(0);
+        });
+    }
+
+    private void seedFlairCatalog() {
+        flairCatalog.add(flair("ring_mint", FlairRarity.COMMON, FlairUnlock.SHOP, 250, null, 10));
+        flairCatalog.add(flair("ring_ocean", FlairRarity.COMMON, FlairUnlock.SHOP, 250, null, 20));
+        flairCatalog.add(flair("ring_sunset", FlairRarity.RARE, FlairUnlock.SHOP, 500, null, 30));
+        flairCatalog.add(flair("ring_gold", FlairRarity.RARE, FlairUnlock.SHOP, 750, null, 40));
+        flairCatalog.add(flair("ring_neon", FlairRarity.EPIC, FlairUnlock.SHOP, 1200, null, 50));
+        flairCatalog.add(flair("ring_aurora", FlairRarity.EPIC, FlairUnlock.SHOP, 1500, null, 60));
+        flairCatalog.add(flair("ring_prism", FlairRarity.EPIC, FlairUnlock.CHEST, null, null, 70));
+        flairCatalog.add(flair("ring_galaxy", FlairRarity.LEGENDARY, FlairUnlock.CHEST, null, null, 80));
+        flairCatalog.add(flair("ring_ember", FlairRarity.RARE, FlairUnlock.STREAK, null, 7, 90));
+        flairCatalog.add(flair("ring_blaze", FlairRarity.EPIC, FlairUnlock.STREAK, null, 30, 100));
+        flairCatalog.add(flair("ring_inferno", FlairRarity.LEGENDARY, FlairUnlock.STREAK, null, 100, 110));
+    }
+
+    private static Flair flair(String code, FlairRarity rarity, FlairUnlock unlock, Integer price,
+                               Integer streakDays, int sortOrder) {
+        Flair f = new Flair();
+        f.setCode(code);
+        f.setTitle(code);
+        f.setDescription(code);
+        f.setRarity(rarity);
+        f.setUnlock(unlock);
+        f.setPriceCoins(price);
+        f.setStreakDays(streakDays);
+        f.setSortOrder(sortOrder);
+        return f;
+    }
+
+    private Flair catalogFlair(String code) {
+        return flairCatalog.stream().filter(f -> f.getCode().equals(code)).findFirst().orElseThrow();
+    }
+
+    private void own(String... codes) {
+        for (String code : codes) {
+            UserFlair uf = new UserFlair();
+            uf.setUser(user(1L));
+            uf.setFlair(catalogFlair(code));
+            uf.setSource(FlairSource.PURCHASED);
+            uf.setAcquiredAt(NOW.minusSeconds(3_600));
+            ownedFlairs.add(uf);
+        }
     }
 
     private static User user(Long id) {
@@ -126,7 +192,7 @@ class ChestServiceTest {
     @Test
     void open_typicalRoll_appliesLootAndStoresItOnChest() {
         when(random.nextInt(91)).thenReturn(45);
-        when(random.nextDouble()).thenReturn(0.1, 0.5);
+        when(random.nextDouble()).thenReturn(0.1, 0.5, 0.5);
         when(random.nextInt(101)).thenReturn(50);
 
         ChestOpenResult result = service.open(7L);
@@ -135,6 +201,7 @@ class ChestServiceTest {
         assertThat(chest.getLootCoins()).isEqualTo(75);
         assertThat(chest.getLootXp()).isEqualTo(100);
         assertThat(chest.getLootBadge()).isNull();
+        assertThat(chest.getLootFlairCode()).isNull();
         verify(chestRepository).save(chest);
         assertThat(progress.getCoins()).isEqualTo(75);
         assertThat(progress.getXp()).isEqualTo(100);
@@ -152,6 +219,8 @@ class ChestServiceTest {
         assertThat(result.chest().loot().coins()).isEqualTo(75);
         assertThat(result.chest().loot().xp()).isEqualTo(100);
         assertThat(result.chest().loot().badge()).isNull();
+        assertThat(result.chest().loot().flair()).isNull();
+        assertThat(result.delta().newFlairs()).isEmpty();
         assertThat(result.delta().coinsGained()).isEqualTo(75);
         assertThat(result.delta().xpGained()).isEqualTo(100);
         verify(badgeService).evaluate(1L);
@@ -160,7 +229,7 @@ class ChestServiceTest {
     @Test
     void open_lowestRoll_givesThirtyCoinsOnly() {
         when(random.nextInt(91)).thenReturn(0);
-        when(random.nextDouble()).thenReturn(0.4, 0.05);
+        when(random.nextDouble()).thenReturn(0.4, 0.05, 0.05);
 
         ChestOpenResult result = service.open(7L);
 
@@ -170,6 +239,8 @@ class ChestServiceTest {
         assertThat(xpEvents).isEmpty();
         verify(random, never()).nextInt(101);
         verify(badgeService, never()).unownedCosmetics(anyLong());
+        verify(userFlairRepository, never()).save(any(UserFlair.class));
+        assertThat(chest.getLootFlairCode()).isNull();
     }
 
     @Test
@@ -178,7 +249,7 @@ class ChestServiceTest {
         Badge comet = cosmetic("cosmetic_comet", 600);
         Badge crown = cosmetic("cosmetic_crown", 1200);
         when(random.nextInt(91)).thenReturn(90);
-        when(random.nextDouble()).thenReturn(0.3999, 0.0499);
+        when(random.nextDouble()).thenReturn(0.3999, 0.0499, 0.05);
         when(random.nextInt(101)).thenReturn(100);
         when(badgeService.unownedCosmetics(1L)).thenReturn(List.of(spark, comet, crown));
         when(random.nextInt(3)).thenReturn(2);
@@ -193,12 +264,15 @@ class ChestServiceTest {
         assertThat(result.delta().newBadges()).extracting(BadgeDto::code).contains("cosmetic_crown");
         assertThat(progress.getCoins()).isEqualTo(120);
         assertThat(progress.getXp()).isEqualTo(150);
+        assertThat(chest.getLootFlairCode()).isNull();
+        assertThat(result.chest().loot().flair()).isNull();
+        verify(random, times(3)).nextDouble();
     }
 
     @Test
     void open_badgeRollWhenAllCosmeticsOwned_givesHundredExtraCoins() {
         when(random.nextInt(91)).thenReturn(20);
-        when(random.nextDouble()).thenReturn(0.9, 0.01);
+        when(random.nextDouble()).thenReturn(0.9, 0.01, 0.9);
         when(badgeService.unownedCosmetics(1L)).thenReturn(List.of());
 
         ChestOpenResult result = service.open(7L);
@@ -210,6 +284,122 @@ class ChestServiceTest {
         assertThat(coinTransactions).singleElement().satisfies(tx -> assertThat(tx.getAmount()).isEqualTo(150));
         verify(badgeService, never()).grant(anyLong(), any(), any());
         verify(random, never()).nextInt(0);
+        assertThat(chest.getLootFlairCode()).isNull();
+    }
+
+    @Test
+    void open_flairRollHit_grantsUnownedLootableFlairFromChest() {
+        when(random.nextInt(91)).thenReturn(20);
+        when(random.nextDouble()).thenReturn(0.9, 0.9, 0.0499);
+        when(random.nextInt(8)).thenReturn(7);
+
+        ChestOpenResult result = service.open(7L);
+
+        assertThat(chest.getLootFlairCode()).isEqualTo("ring_galaxy");
+        assertThat(chest.getLootBadge()).isNull();
+        assertThat(chest.getLootCoins()).isEqualTo(50);
+        assertThat(ownedFlairs).singleElement().satisfies(uf -> {
+            assertThat(uf.getFlair().getCode()).isEqualTo("ring_galaxy");
+            assertThat(uf.getSource()).isEqualTo(FlairSource.CHEST);
+            assertThat(uf.getUser().getId()).isEqualTo(1L);
+            assertThat(uf.getAcquiredAt()).isEqualTo(NOW);
+        });
+        FlairDto loot = result.chest().loot().flair();
+        assertThat(loot.code()).isEqualTo("ring_galaxy");
+        assertThat(loot.rarity()).isEqualTo(FlairRarity.LEGENDARY);
+        assertThat(loot.unlock()).isEqualTo(FlairUnlock.CHEST);
+        assertThat(loot.owned()).isTrue();
+        assertThat(loot.acquiredAt()).isEqualTo(NOW);
+        assertThat(loot.equipped()).isFalse();
+        assertThat(result.delta().newFlairs()).containsExactly(loot);
+        assertThat(result.chest().loot().badge()).isNull();
+        assertThat(progress.getCoins()).isEqualTo(50);
+        verify(chestRepository).save(chest);
+    }
+
+    @Test
+    void open_flairRollHit_picksAmongUnownedCandidatesInSortOrder() {
+        own("ring_mint", "ring_ocean", "ring_sunset", "ring_gold", "ring_neon", "ring_aurora");
+        when(random.nextDouble()).thenReturn(0.9, 0.9, 0.0);
+        when(random.nextInt(2)).thenReturn(1);
+
+        ChestOpenResult result = service.open(7L);
+
+        assertThat(chest.getLootFlairCode()).isEqualTo("ring_galaxy");
+        assertThat(result.chest().loot().flair().code()).isEqualTo("ring_galaxy");
+        verify(random).nextInt(2);
+    }
+
+    @Test
+    void open_flairRollAtChance_grantsNoFlair() {
+        when(random.nextInt(91)).thenReturn(20);
+        when(random.nextDouble()).thenReturn(0.9, 0.9, 0.05);
+
+        ChestOpenResult result = service.open(7L);
+
+        assertThat(chest.getLootFlairCode()).isNull();
+        assertThat(result.chest().loot().flair()).isNull();
+        assertThat(result.delta().newFlairs()).isEmpty();
+        assertThat(ownedFlairs).isEmpty();
+        assertThat(progress.getCoins()).isEqualTo(50);
+    }
+
+    @Test
+    void open_flairRollWhenAllShopAndChestFlairsOwned_givesHundredExtraCoins() {
+        own("ring_mint", "ring_ocean", "ring_sunset", "ring_gold", "ring_neon", "ring_aurora", "ring_prism",
+                "ring_galaxy");
+        when(random.nextInt(91)).thenReturn(20);
+        when(random.nextDouble()).thenReturn(0.9, 0.9, 0.01);
+
+        ChestOpenResult result = service.open(7L);
+
+        assertThat(chest.getLootCoins()).isEqualTo(150);
+        assertThat(chest.getLootFlairCode()).isNull();
+        assertThat(result.chest().loot().flair()).isNull();
+        assertThat(result.chest().loot().coins()).isEqualTo(150);
+        assertThat(result.delta().newFlairs()).isEmpty();
+        assertThat(progress.getCoins()).isEqualTo(150);
+        assertThat(coinTransactions).singleElement().satisfies(tx -> assertThat(tx.getAmount()).isEqualTo(150));
+        assertThat(ownedFlairs).hasSize(8);
+        verify(userFlairRepository, never()).save(any(UserFlair.class));
+        verify(random, never()).nextInt(0);
+    }
+
+    @Test
+    void open_flairRollWhenOnlyStreakFlairsUnowned_neverDropsStreakFlair() {
+        own("ring_mint", "ring_ocean", "ring_sunset", "ring_gold", "ring_neon", "ring_aurora", "ring_prism",
+                "ring_galaxy");
+        when(random.nextInt(91)).thenReturn(0);
+        when(random.nextDouble()).thenReturn(0.9, 0.9, 0.0);
+        when(random.nextInt(3)).thenReturn(0);
+
+        ChestOpenResult result = service.open(7L);
+
+        assertThat(chest.getLootFlairCode()).isNull();
+        assertThat(chest.getLootCoins()).isEqualTo(130);
+        assertThat(ownedFlairs).extracting(uf -> uf.getFlair().getUnlock()).doesNotContain(FlairUnlock.STREAK);
+        assertThat(result.delta().newFlairs()).isEmpty();
+        verify(random, never()).nextInt(3);
+    }
+
+    @Test
+    void open_badgeAndFlairBothHit_grantsBoth() {
+        Badge spark = cosmetic("cosmetic_spark", 300);
+        when(random.nextInt(91)).thenReturn(10);
+        when(random.nextDouble()).thenReturn(0.9, 0.0, 0.0);
+        when(badgeService.unownedCosmetics(1L)).thenReturn(List.of(spark));
+        when(random.nextInt(1)).thenReturn(0);
+        when(random.nextInt(8)).thenReturn(0);
+
+        ChestOpenResult result = service.open(7L);
+
+        assertThat(chest.getLootBadge()).isSameAs(spark);
+        assertThat(chest.getLootFlairCode()).isEqualTo("ring_mint");
+        assertThat(result.chest().loot().badge().code()).isEqualTo("cosmetic_spark");
+        assertThat(result.chest().loot().flair().code()).isEqualTo("ring_mint");
+        assertThat(result.delta().newBadges()).extracting(BadgeDto::code).containsExactly("cosmetic_spark");
+        assertThat(result.delta().newFlairs()).extracting(FlairDto::code).containsExactly("ring_mint");
+        assertThat(chest.getLootCoins()).isEqualTo(40);
     }
 
     @Test
@@ -250,8 +440,8 @@ class ChestServiceTest {
 
     @Test
     void rollLoot_seededRandom_staysWithinSpecRanges() {
-        ChestService seeded = new ChestService(chestRepository, progressService, badgeService, currentUser,
-                Clock.fixed(NOW, ZoneOffset.UTC), new Random(20261007L));
+        ChestService seeded = new ChestService(chestRepository, progressService, badgeService, flairService,
+                currentUser, Clock.fixed(NOW, ZoneOffset.UTC), new Random(20261007L));
         Badge spark = cosmetic("cosmetic_spark", 300);
         when(badgeService.unownedCosmetics(1L)).thenReturn(List.of(spark));
         int draws = 20_000;
@@ -261,6 +451,8 @@ class ChestServiceTest {
         int maxXp = Integer.MIN_VALUE;
         int xpHits = 0;
         int badgeHits = 0;
+        int flairHits = 0;
+        Set<String> droppedFlairs = new HashSet<>();
 
         for (int i = 0; i < draws; i++) {
             ChestService.Loot loot = seeded.rollLoot(1L);
@@ -277,6 +469,11 @@ class ChestServiceTest {
                 assertThat(loot.badge()).isSameAs(spark);
                 badgeHits++;
             }
+            if (loot.flair() != null) {
+                assertThat(loot.flair().getUnlock()).isIn(FlairUnlock.SHOP, FlairUnlock.CHEST);
+                flairHits++;
+                droppedFlairs.add(loot.flair().getCode());
+            }
         }
 
         assertThat(minCoins).isEqualTo(30);
@@ -285,6 +482,9 @@ class ChestServiceTest {
         assertThat(maxXp).isEqualTo(150);
         assertThat(xpHits / (double) draws).isBetween(0.38, 0.42);
         assertThat(badgeHits / (double) draws).isBetween(0.04, 0.06);
+        assertThat(flairHits / (double) draws).isBetween(0.04, 0.06);
+        assertThat(droppedFlairs).containsExactlyInAnyOrder("ring_mint", "ring_ocean", "ring_sunset", "ring_gold",
+                "ring_neon", "ring_aurora", "ring_prism", "ring_galaxy");
     }
 
     @Test

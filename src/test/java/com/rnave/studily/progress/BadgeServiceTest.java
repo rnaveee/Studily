@@ -81,7 +81,7 @@ class BadgeServiceTest {
 
         ProgressService progressService = new ProgressService(userProgressRepository, mock(XpEventRepository.class),
                 coinTransactionRepository, mock(ChestRepository.class), userRepository, mock(BadgeService.class),
-                new UserTimeZones(userRepository, "UTC"), currentUser, clock);
+                mock(FlairService.class), new UserTimeZones(userRepository, "UTC"), currentUser, clock);
         service = new BadgeService(badgeRepository, userBadgeRepository, userRepository, userProgressRepository,
                 friendRequestRepository, studySessionRepository, flashcardRunRepository, progressService,
                 currentUser, clock, BASE_URL + "/", "2026-10-11");

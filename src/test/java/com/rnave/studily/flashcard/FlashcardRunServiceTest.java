@@ -20,6 +20,7 @@ import com.rnave.studily.progress.ChestRepository;
 import com.rnave.studily.progress.ChestService;
 import com.rnave.studily.progress.ChestSource;
 import com.rnave.studily.progress.CoinTransactionRepository;
+import com.rnave.studily.progress.FlairService;
 import com.rnave.studily.progress.ProgressRateLimiter;
 import com.rnave.studily.progress.ProgressService;
 import com.rnave.studily.progress.UserProgress;
@@ -27,6 +28,7 @@ import com.rnave.studily.progress.UserProgressRepository;
 import com.rnave.studily.progress.XpEvent;
 import com.rnave.studily.progress.XpEventRepository;
 import com.rnave.studily.progress.XpSource;
+import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import com.rnave.studily.user.UserTimeZones;
@@ -74,6 +76,7 @@ class FlashcardRunServiceTest {
     private RandomGenerator random;
     private CurrentUser currentUser;
     private BadgeService badgeService;
+    private FlairService flairService;
     private UserTimeZones timeZones;
     private ProgressRateLimiter rateLimiter;
     private FlashcardRunService service;
@@ -99,6 +102,7 @@ class FlashcardRunServiceTest {
         random = mock(RandomGenerator.class);
         currentUser = mock(CurrentUser.class);
         badgeService = mock(BadgeService.class);
+        flairService = mock(FlairService.class);
         timeZones = new UserTimeZones(userRepository, "UTC");
         rateLimiter = new ProgressRateLimiter();
 
@@ -147,12 +151,12 @@ class FlashcardRunServiceTest {
     private void at(Instant instant) {
         Clock clock = Clock.fixed(instant, ZoneOffset.UTC);
         ProgressService progressService = new ProgressService(userProgressRepository, xpEventRepository,
-                mock(CoinTransactionRepository.class), chestRepository, userRepository, badgeService,
+                mock(CoinTransactionRepository.class), chestRepository, userRepository, badgeService, flairService,
                 timeZones, currentUser, clock);
-        ChestService chestService = new ChestService(chestRepository, progressService, badgeService, currentUser,
-                clock, random);
+        ChestService chestService = new ChestService(chestRepository, progressService, badgeService, flairService,
+                currentUser, clock, random);
         FlashcardSetService setService = new FlashcardSetService(flashcardSetRepository, currentUser,
-                mock(CourseService.class), friendRequestRepository);
+                mock(CourseService.class), friendRequestRepository, mock(Flairs.class));
         service = new FlashcardRunService(runRepository, setService, progressService, chestService, rateLimiter,
                 currentUser, clock, new ObjectMapper());
     }

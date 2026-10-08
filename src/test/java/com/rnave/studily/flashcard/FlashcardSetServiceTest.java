@@ -11,11 +11,15 @@ import com.rnave.studily.flashcard.FlashcardDtos.SharedFlashcardSetDto;
 import com.rnave.studily.friend.FriendRequest;
 import com.rnave.studily.friend.FriendRequestRepository;
 import com.rnave.studily.friend.FriendRequestStatus;
+import com.rnave.studily.progress.Flair;
+import com.rnave.studily.progress.FlairRepository;
+import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.flashcard.Sm2.Grade;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
@@ -34,6 +38,7 @@ class FlashcardSetServiceTest {
     private FlashcardSetRepository flashcardSetRepository;
     private CurrentUser currentUser;
     private FriendRequestRepository friendRequestRepository;
+    private FlairRepository flairRepository;
     private FlashcardSetService service;
 
     @BeforeEach
@@ -41,8 +46,10 @@ class FlashcardSetServiceTest {
         flashcardSetRepository = mock(FlashcardSetRepository.class);
         currentUser = mock(CurrentUser.class);
         friendRequestRepository = mock(FriendRequestRepository.class);
+        flairRepository = mock(FlairRepository.class);
         service = new FlashcardSetService(flashcardSetRepository, currentUser, mock(CourseService.class),
-                friendRequestRepository);
+                friendRequestRepository,
+                new Flairs(flairRepository, Clock.systemUTC(), "https://badges.studily.ca/flairs/v1"));
         when(friendRequestRepository.findBetween(any(), any())).thenReturn(Optional.empty());
         when(currentUser.id()).thenReturn(1L);
         when(currentUser.maybe()).thenReturn(Optional.of(user(1L)));
@@ -194,8 +201,37 @@ class FlashcardSetServiceTest {
 
         assertThat(dto.viewerIsOwner()).isFalse();
         assertThat(dto.owner().username()).isEqualTo("user2");
+        assertThat(dto.owner().flair()).isNull();
         assertThat(dto.cardCount()).isEqualTo(1);
         assertThat(dto.cards().get(0).front()).isEqualTo("Mitochondria");
+    }
+
+    @Test
+    void shared_ownerWithEquippedFlair_ownerCarriesFlairRef() {
+        Flair galaxy = new Flair();
+        galaxy.setCode("ring_galaxy");
+        galaxy.setImageKey("galaxy.webp");
+        when(flairRepository.findAll()).thenReturn(List.of(galaxy));
+        FlashcardSet set = setOwnedBy(20L, 2L, FlashcardSetVisibility.PUBLIC);
+        set.getUser().setEquippedFlairCode("ring_galaxy");
+
+        SharedFlashcardSetDto dto = service.shared(20L);
+
+        assertThat(dto.owner().flair()).isNotNull();
+        assertThat(dto.owner().flair().code()).isEqualTo("ring_galaxy");
+        assertThat(dto.owner().flair().imageUrl()).isEqualTo("https://badges.studily.ca/flairs/v1/galaxy.webp");
+    }
+
+    @Test
+    void copy_originalOwnerWithEquippedFlair_attributionCarriesFlairRef() {
+        FlashcardSet source = setOwnedBy(20L, 2L, FlashcardSetVisibility.PUBLIC);
+        source.getUser().setEquippedFlairCode("ring_mint");
+
+        FlashcardSetDto dto = service.copy(20L);
+
+        assertThat(dto.copiedFrom().owner().flair()).isNotNull();
+        assertThat(dto.copiedFrom().owner().flair().code()).isEqualTo("ring_mint");
+        assertThat(dto.copiedFrom().owner().flair().imageUrl()).isNull();
     }
 
     @Test

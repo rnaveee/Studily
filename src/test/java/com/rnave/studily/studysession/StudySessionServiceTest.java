@@ -10,6 +10,7 @@ import com.rnave.studily.progress.ChestRepository;
 import com.rnave.studily.progress.ChestService;
 import com.rnave.studily.progress.ChestSource;
 import com.rnave.studily.progress.CoinTransactionRepository;
+import com.rnave.studily.progress.FlairService;
 import com.rnave.studily.progress.ProgressDeltaBuilder;
 import com.rnave.studily.progress.ProgressRateLimiter;
 import com.rnave.studily.progress.ProgressService;
@@ -81,6 +82,7 @@ class StudySessionServiceTest {
     private ChestRepository chestRepository;
     private UserRepository userRepository;
     private BadgeService badgeService;
+    private FlairService flairService;
     private RandomGenerator random;
     private ChestService chestService;
     private CurrentUser currentUser;
@@ -111,6 +113,7 @@ class StudySessionServiceTest {
         chestRepository = mock(ChestRepository.class);
         userRepository = mock(UserRepository.class);
         badgeService = mock(BadgeService.class);
+        flairService = mock(FlairService.class);
         random = mock(RandomGenerator.class);
         currentUser = mock(CurrentUser.class);
         timeZones = new UserTimeZones(userRepository, "UTC");
@@ -219,10 +222,10 @@ class StudySessionServiceTest {
     private void at(Instant instant) {
         Clock clock = Clock.fixed(instant, ZoneOffset.UTC);
         ProgressService progressService = new ProgressService(userProgressRepository, xpEventRepository,
-                coinTransactionRepository, chestRepository, userRepository, badgeService, timeZones, currentUser,
-                clock);
-        chestService = spy(new ChestService(chestRepository, progressService, badgeService, currentUser,
-                clock, random));
+                coinTransactionRepository, chestRepository, userRepository, badgeService, flairService, timeZones,
+                currentUser, clock);
+        chestService = spy(new ChestService(chestRepository, progressService, badgeService, flairService,
+                currentUser, clock, random));
         service = new StudySessionService(sessionRepository, blockRepository, taskRepository, progressService,
                 chestService, rateLimiter, currentUser, clock);
     }

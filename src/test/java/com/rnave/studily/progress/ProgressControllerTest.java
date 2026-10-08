@@ -45,7 +45,8 @@ class ProgressControllerTest {
         badgeService = mock(BadgeService.class);
         ProgressService service = new ProgressService(userProgressRepository, mock(XpEventRepository.class),
                 mock(CoinTransactionRepository.class), mock(ChestRepository.class), userRepository, badgeService,
-                new UserTimeZones(userRepository, "UTC"), mock(CurrentUser.class), Clock.fixed(NOW, ZoneOffset.UTC));
+                mock(FlairService.class), new UserTimeZones(userRepository, "UTC"), mock(CurrentUser.class),
+                Clock.fixed(NOW, ZoneOffset.UTC));
         controller = new ProgressController(service);
 
         User other = new User();

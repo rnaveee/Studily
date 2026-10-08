@@ -5,6 +5,7 @@ import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.progress.ProgressDtos.BadgeDto;
 import com.rnave.studily.progress.ProgressDtos.BadgeSummary;
+import com.rnave.studily.progress.ProgressDtos.FlairDto;
 import com.rnave.studily.progress.ProgressDtos.ProgressDelta;
 import com.rnave.studily.progress.ProgressDtos.ProgressDto;
 import com.rnave.studily.user.User;
@@ -50,6 +51,7 @@ class ProgressServiceTest {
     private ChestRepository chestRepository;
     private UserRepository userRepository;
     private BadgeService badgeService;
+    private FlairService flairService;
     private CurrentUser currentUser;
     private UserTimeZones timeZones;
     private ProgressService service;
@@ -68,6 +70,7 @@ class ProgressServiceTest {
         chestRepository = mock(ChestRepository.class);
         userRepository = mock(UserRepository.class);
         badgeService = mock(BadgeService.class);
+        flairService = mock(FlairService.class);
         currentUser = mock(CurrentUser.class);
         timeZones = new UserTimeZones(userRepository, "UTC");
         service = serviceAt(NOW);
@@ -99,14 +102,14 @@ class ProgressServiceTest {
 
     private ProgressService serviceAt(Instant instant) {
         return new ProgressService(userProgressRepository, xpEventRepository, coinTransactionRepository,
-                chestRepository, userRepository, badgeService, timeZones, currentUser,
+                chestRepository, userRepository, badgeService, flairService, timeZones, currentUser,
                 Clock.fixed(instant, ZoneOffset.UTC));
     }
 
     private ProgressService serviceAt(Instant instant, String fallbackZone) {
         return new ProgressService(userProgressRepository, xpEventRepository, coinTransactionRepository,
-                chestRepository, userRepository, badgeService, new UserTimeZones(userRepository, fallbackZone),
-                currentUser, Clock.fixed(instant, ZoneOffset.UTC));
+                chestRepository, userRepository, badgeService, flairService,
+                new UserTimeZones(userRepository, fallbackZone), currentUser, Clock.fixed(instant, ZoneOffset.UTC));
     }
 
     private User user(Long id) {
@@ -301,6 +304,20 @@ class ProgressServiceTest {
         ProgressDelta delta = service.finish(service.begin(1L));
 
         assertThat(delta.newBadges()).containsExactly(badge);
+        assertThat(delta.newFlairs()).isEmpty();
+    }
+
+    @Test
+    void finish_addsNewlyEarnedFlairsToDelta() {
+        progress(1L, 0);
+        FlairDto ember = new FlairDto("ring_ember", "Ember", "Reach a 7-day study streak.", FlairRarity.RARE,
+                FlairUnlock.STREAK, null, 7, null, true, NOW, false);
+        when(flairService.evaluateEarned(1L)).thenReturn(List.of(ember));
+
+        ProgressDelta delta = service.finish(service.begin(1L));
+
+        assertThat(delta.newFlairs()).containsExactly(ember);
+        verify(flairService).evaluateEarned(1L);
     }
 
     @Test
@@ -463,6 +480,8 @@ class ProgressServiceTest {
                 .singleElement().satisfies(e -> assertThat(e.getRefId()).isEqualTo(2L));
         verify(badgeService).evaluate(1L);
         verify(badgeService).evaluate(2L);
+        verify(flairService).evaluateEarned(1L);
+        verify(flairService).evaluateEarned(2L);
     }
 
     @Test
@@ -583,6 +602,7 @@ class ProgressServiceTest {
         assertThat(dto.badgeTotal()).isEqualTo(24);
         assertThat(dto.unopenedChests()).isEqualTo(2);
         verify(badgeService).evaluate(1L);
+        verify(flairService).evaluateEarned(1L);
     }
 
     @Test
