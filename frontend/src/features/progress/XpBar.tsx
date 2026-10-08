@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 export default function XpBar({
   xpIntoLevel,
@@ -13,13 +13,7 @@ export default function XpBar({
   leading?: ReactNode;
   showLabel?: boolean;
 }) {
-  const target = xpForNext > 0 ? Math.min(1, Math.max(0, xpIntoLevel / xpForNext)) : 0;
-  const [fill, setFill] = useState(0);
-
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setFill(target));
-    return () => cancelAnimationFrame(id);
-  }, [target]);
+  const fill = xpForNext > 0 ? Math.min(1, Math.max(0, xpIntoLevel / xpForNext)) : 0;
 
   return (
     <div className="w-full">
@@ -33,7 +27,7 @@ export default function XpBar({
         style={{ height, background: "var(--surface-hi)", boxShadow: "var(--control-inset)" }}
       >
         <div
-          className="xp-fill h-full rounded-full"
+          className="xp-fill xp-grow h-full rounded-full"
           style={{
             width: `${fill * 100}%`,
             minWidth: fill > 0 ? height : 0,

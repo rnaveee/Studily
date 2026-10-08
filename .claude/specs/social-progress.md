@@ -52,7 +52,7 @@ Make Studily social and sticky through progression: XP and levels, badges on pro
 | `STUDY_COMPLETE` | +40 × multiplier, when every planned block was confirmed and `planned_minutes ≥ 50` | `study-complete:{sessionId}` |
 | `STUDY_TASK` | +5 per task, first 5 tasks of a session only, ticked ≥5 min after `started_at`, no multiplier, **paid only once the session has credited minutes** (§4 item 6), max **10 paid tasks per user per `local_date`** (decided by Ryan 2026-10-08 after the security review) | `study-task:{taskId}` |
 | `FLASHCARD_RUN` | §5 | `flashcard-run:{runId}` |
-| `FRIEND` | +50 to each user, once per pair ever, max 10 FRIEND grants per user per rolling 24h. A user only earns it if the **other** account is ≥7 days old (`users.created_at`) **and** has at least one `xp_events` row with a source other than FRIEND (decided by Ryan 2026-10-08 after the security review). If the condition fails at accept time, no XP is granted for that pair, now or later. Popularity badges still count every friend | `friend:{recipientId}:{otherId}` |
+| `FRIEND` | +50 to each user, once per pair ever, max 10 FRIEND grants per user per rolling 24h (counted by summed FRIEND XP ÷ 50; a pair that hits the cap gets no 0-XP row, so it can still pay once on a later re-friend). A user only earns it if the **other** account is ≥7 days old (`users.created_at`) **and** has at least one `xp_events` row with a source other than FRIEND (decided by Ryan 2026-10-08 after the security review). If the condition fails at accept time, no XP is granted for that pair, now or later. Popularity badges still count every friend | `friend:{recipientId}:{otherId}` |
 | `CHEST` | rolled loot (§7) | `chest:{chestId}` |
 
 - Streak multiplier: `min(1.5, 1.0 + 0.1 × max(0, streak − 1))`, where `streak` is the effective current streak when the session **starts**. It's frozen into `study_sessions.multiplier`.
@@ -85,7 +85,7 @@ Lifecycle (server time is authoritative):
    - Confirming credits `block_minutes` and grants STUDY_BLOCK XP.
    - If this was the last planned block: the session becomes `COMPLETED` and gets the STUDY_COMPLETE bonus.
    - Otherwise the next block starts with `started_at = now + break_minutes` and `due_at = started_at + block_minutes`.
-   - Check-in is idempotent: confirming an already-confirmed block returns the current state with an empty delta.
+   - Check-in is idempotent: confirming an already-confirmed block returns the current state with an empty delta. This holds for 2 minutes after the confirm (the request has no block index). A later retry during a break gets 409 `This block isn't finished yet`, and the UI simply refetches (lead decision 2026-10-08).
 3. **Sweeper** (`@Scheduled(fixedDelay = 30_000)`, DB-driven so it survives restarts):
    - (a) For ACTIVE sessions whose current block has `due_at ≤ now` and `notified_at IS NULL`: sends a push and sets `notified_at`. Push: title `Study session`, body `Block done! Check in to keep your XP.`, url `/learn`. Use `WebPushSender.sendToUser(userId, PushPayload.of(...), 300)`.
    - (b) For ACTIVE sessions where `now > due_at + 5 min`: block → `MISSED` (0 XP), session → `PAUSED`, `next_checkin_due_at = null`. If the missed block was the last planned block, the session goes straight to `EXPIRED` with `ended_at = now`, because there is nothing left to resume. A missed block uses up one planned block: resume starts block `current_block + 1`, so a session with a missed block can never earn STUDY_COMPLETE.
@@ -123,7 +123,7 @@ Other limits:
 
 All progress date math uses a per-user **progress zone** stored on `user_progress`, not the live `users.timezone`. That covers session and run `local_date`, streaks, the effective streak, the streak week, the chest daily limits, the daily XP curve and the flashcard daily cap.
 - `ProgressService.progressZone(progress, user)` returns the zone. Call it only while holding the `findForUpdate` lock; read-only paths may read it without updating it.
-  - If `progress_zone` is null: adopt `UserTimeZones.zoneFor(user)` and set `progress_zone_changed_at = now`.
+  - If `progress_zone` is null: adopt `UserTimeZones.zoneFor(user)`. Set `progress_zone_changed_at = now` only if `users.timezone` is non-null. If the user has no reported zone yet, the fallback is adopted with `progress_zone_changed_at` left null, so their first real reported zone is adopted immediately (lead decision 2026-10-08; safe because a timezone can't be reset to null).
   - Else if the live zone differs from `progress_zone` and `now − progress_zone_changed_at ≥ 7 days`: adopt the live zone and set `progress_zone_changed_at = now`.
   - Otherwise keep `progress_zone`.
 - This means a timezone switch can't fake a new day, while a user who moves or travels gets their new zone within a week.
@@ -378,7 +378,7 @@ Repository methods the backend relies on. Names are fixed; db-developer may add 
 - Chest drops:
   - **LEVEL**: every 5th level.
   - **STREAK**: every time the streak reaches a multiple of 7.
-  - **SESSION**: 20% chance when a session completes with `planned_minutes ≥ 50`, max 1 SESSION chest per user per `local_date`. The limit is counted with `chests.local_date` = the session's `local_date`, never `created_at`. Source_ref `session:{id}`. LEVEL and STREAK chests store `local_date` as null, or the streak day for STREAK.
+  - **SESSION**: 20% chance when a session completes with `planned_minutes ≥ 50` **and every planned block was confirmed**, the same condition as STUDY_COMPLETE (lead decision 2026-10-08), max 1 SESSION chest per user per `local_date`. The limit is counted with `chests.local_date` = the session's `local_date`, never `created_at`. Source_ref `session:{id}`. LEVEL and STREAK chests store `local_date` as null, or the streak day for STREAK.
   - **FLASHCARD**: see §5.
 - Open: `markOpened` must return 1. If it returns 0 and the chest exists for this user, that's 409 `Chest already opened`; otherwise 404.
 - Loot is rolled at open time with one `SecureRandom`:
@@ -571,9 +571,14 @@ Follow the Studily look:
   - `BadgeTile`: lit when owned. When locked: `filter: grayscale(1) brightness(0.25)` plus a lock glyph. Tap or hover opens a popover with title, description, how to earn it, and the price for cosmetics. Uses a fallback silhouette if the image fails to load.
   - `ChestModal`: tap to open, then reveal coins, XP and badge.
 
-**Profile:**
-- `features/profile/ProfilePage.tsx` and `features/friends/UserProfilePage.tsx` get a progress card under the header: LevelPill, XpBar, up to 3 featured badges, a streak flame if `current > 0`, and an "All badges (12/31)" link.
-- The own profile also shows coins and an unopened-chest button.
+**Profile** (layout revised by Ryan, 2026-10-08; "display" means a card/container). This applies to `features/profile/ProfilePage.tsx` and, with the same structure, `features/friends/UserProfilePage.tsx`. There are exactly **four cards**:
+1. **Profile card**: avatar, name, @username, email (own profile only), bio, **and** the progress, all in **one** card. The progress part is LevelPill + XpBar (`724 / 1100 XP`), a streak flame if `current > 0`, up to 3 featured badges **centered**, and the "All badges (12/31)" link. No separate progress card, no trophy icon, no "Progress" title. The unopened-chest button can live in this card on the own profile.
+2. **Education card**, titled "Education": school, major, year. It's its own card, under the profile card.
+3. **Current semester schedule card**: the existing schedule card.
+4. **Shared flashcard sets card**: the existing "your shared flashcard sets" section.
+- **Desktop (≥ lg, or md if it fits):** two columns. Left: Profile card, then Education card. Right: Current semester schedule, then Shared flashcard sets. Widen the page container to fit two columns; it's currently `max-w-lg`.
+- **Mobile:** the cards stack in order 1 → 2 → 3 → 4. Progress stays merged into the profile card.
+- **Coins** are no longer shown in the profile view. They go in the **app header** (`components/Layout.tsx`) for signed-in, non-guest users: a coin icon plus the balance, linking to `/profile/badges?tab=shop`, readable at 375px.
 
 **Badge pages:**
 - `BadgesPage` at routes `/profile/badges` (own) and `/users/:userId/badges` (wrapped in `VerifyGate`, like `/users/:userId`).
@@ -582,8 +587,12 @@ Follow the Studily look:
   - Shop: cosmetic badges with price and a Buy button (confirm via `lib/confirm.tsx`), plus the coin balance.
 - Other users' page: Collection only, read-only.
 
-**/learn** (`features/learn/LearnPage.tsx`): a **Study sessions** card above the tools grid, built from `features/learn/sessions/`:
-- **`StudySessionsPanel`**: the title, a "Start study session" button (or `ActiveSessionCard` when one is open), `StreakWeek`, and the last 3 sessions with a "See all" link to `/learn/sessions`.
+**/learn** (`features/learn/LearnPage.tsx`, revised by Ryan, 2026-10-08):
+- The nav label "Learn" becomes **"Study"** in the app header (desktop) and the mobile footer. The route stays `/learn`.
+- The page order is: the **Study sessions** card first. Then the old page heading ("Learn" plus "Study tools to help you master your courses.") moves **under** the Study sessions card, as the heading of the tools grid. Then the tools grid.
+- The Study sessions card has to stand out: a real, prominent **centered title "Study sessions"** with **no logo/icon next to the title**. Give it stronger visual weight than a normal card (e.g. a larger title, an accent-tinted surface or border, more padding), staying within the tokens and the glass/neu rules.
+The card is built from `features/learn/sessions/`:
+- **`StudySessionsPanel`**: the centered title, a "Start study session" button (or `ActiveSessionCard` when one is open), `StreakWeek`, and the last 3 sessions with a "See all" link to `/learn/sessions`.
 - **`StartSessionModal`** (`components/Modal`):
   - "How long will I study?" uses a SegmentedToggle: Pomodoro | Timer.
     - Pomodoro: a stepper for 1–8 blocks of 25/5 (default 5), with total time shown.

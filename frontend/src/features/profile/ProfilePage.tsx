@@ -8,7 +8,7 @@ import ScheduleCard from "../../components/ScheduleCard";
 import ScheduleExportButtons from "../../components/ScheduleExportButtons";
 import { hasMeetings } from "../../lib/scheduleImage";
 import PublicSetsSection from "../learn/PublicSetsSection";
-import { MyProgressCard } from "../progress/ProgressCard";
+import { MyProfileProgress } from "../progress/ProfileProgress";
 import type { ProfileSchedule } from "../../types";
 
 export default function ProfilePage() {
@@ -35,8 +35,46 @@ export default function ProfilePage() {
       </div>
     );
 
+  const scheduleCard = schedule.data?.semester ? (
+    <ScheduleCard
+      courses={schedule.data.courses}
+      semesterLabel={schedule.data.semester.label}
+      actions={
+        <ScheduleExportButtons
+          name={user.name || user.username}
+          school={user.school}
+          semesterLabel={schedule.data.semester.label}
+          courses={schedule.data.courses}
+          disabled={!hasMeetings(schedule.data.courses)}
+        />
+      }
+    />
+  ) : (
+    <div className="card">
+      <div className="flex items-center justify-between px-5 pb-1 pt-4">
+        <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-fg">
+          <CalendarDays size={14} className="text-fg-3" />
+          Current semester
+        </h3>
+      </div>
+      <p className="px-5 py-4 text-[13px] text-fg-3">
+        {schedule.isLoading ? (
+          "Loading…"
+        ) : (
+          <>
+            No active semester.{" "}
+            <Link to="/semesters" className="text-accent hover:text-accent-2 transition-colors">
+              Set one up
+            </Link>
+            .
+          </>
+        )}
+      </p>
+    </div>
+  );
+
   return (
-    <div className="mx-auto w-full max-w-lg space-y-5 stagger-children">
+    <div className="mx-auto w-full max-w-5xl space-y-5 stagger-children">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-fg">Profile</h1>
         <Link to="/profile/edit" className="btn btn-ghost">
@@ -45,91 +83,63 @@ export default function ProfilePage() {
         </Link>
       </div>
 
-      <div className="card p-6 text-center">
-        <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} size={80} className="mx-auto mb-4 text-3xl" />
-        <h2 className="text-xl font-bold text-fg">{user.name}</h2>
-        <p className="mt-0.5 text-[13px] text-fg-3">@{user.username}</p>
-        <p className="mt-0.5 text-[13px] text-fg-3">{user.email}</p>
-        {user.bio && (
-          <p className="mx-auto mt-3 max-w-xs text-sm text-fg-2">{user.bio}</p>
-        )}
-      </div>
-
-      <MyProgressCard />
-
-      <div className="card divide-y divide-line">
-        {(user.school || user.schoolId) && (
-          <ProfileRow
-            icon={<School size={14} />}
-            label="School"
-            value={
-              <span className="flex items-center gap-2">
-                {user.school}
-                {user.schoolId && <span className="badge badge-muted">{user.schoolId}</span>}
-              </span>
-            }
-          />
-        )}
-        {user.major && (
-          <ProfileRow icon={<BookOpen size={14} />} label="Major" value={user.major} />
-        )}
-        {user.year != null && (
-          <ProfileRow icon={<GraduationCap size={14} />} label="Year" value={`Year ${user.year}`} />
-        )}
-        {!user.school && !user.major && !user.year && !user.schoolId && (
-          <div className="px-5 py-4 text-[13px] text-fg-3">
-            No details yet.{" "}
-            <Link to="/profile/edit" className="text-accent hover:text-accent-2 transition-colors">
-              Fill in your profile
-            </Link>
-            .
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+        <div className="min-w-0 space-y-5">
+          <div className="card p-6 text-center">
+            <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} size={80} className="mx-auto mb-4 text-3xl" />
+            <h2 className="text-xl font-bold text-fg">{user.name}</h2>
+            <p className="mt-0.5 text-[13px] text-fg-3">@{user.username}</p>
+            <p className="mt-0.5 break-words text-[13px] text-fg-3">{user.email}</p>
+            {user.bio && <p className="mx-auto mt-3 max-w-xs text-sm text-fg-2">{user.bio}</p>}
+            <MyProfileProgress />
           </div>
-        )}
-      </div>
 
-      {schedule.data?.semester ? (
-        <ScheduleCard
-          courses={schedule.data.courses}
-          semesterLabel={schedule.data.semester.label}
-          actions={
-            <ScheduleExportButtons
-              name={user.name || user.username}
-              school={user.school}
-              semesterLabel={schedule.data.semester.label}
-              courses={schedule.data.courses}
-              disabled={!hasMeetings(schedule.data.courses)}
-            />
-          }
-        />
-      ) : (
-        <div className="card">
-          <div className="flex items-center justify-between px-5 pb-1 pt-4">
-            <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-fg">
-              <CalendarDays size={14} className="text-fg-3" />
-              Current semester
-            </h3>
+          <div className="card">
+            <div className="px-5 pb-1 pt-4">
+              <h3 className="flex items-center gap-1.5 text-[13px] font-semibold text-fg">
+                <GraduationCap size={14} className="text-fg-3" />
+                Education
+              </h3>
+            </div>
+            <div className="divide-y divide-line">
+              {(user.school || user.schoolId) && (
+                <ProfileRow
+                  icon={<School size={14} />}
+                  label="School"
+                  value={
+                    <span className="flex flex-wrap items-center gap-2">
+                      {user.school}
+                      {user.schoolId && <span className="badge badge-muted">{user.schoolId}</span>}
+                    </span>
+                  }
+                />
+              )}
+              {user.major && <ProfileRow icon={<BookOpen size={14} />} label="Major" value={user.major} />}
+              {user.year != null && (
+                <ProfileRow icon={<GraduationCap size={14} />} label="Year" value={`Year ${user.year}`} />
+              )}
+              {!user.school && !user.major && !user.year && !user.schoolId && (
+                <div className="px-5 py-4 text-[13px] text-fg-3">
+                  No details yet.{" "}
+                  <Link to="/profile/edit" className="text-accent hover:text-accent-2 transition-colors">
+                    Fill in your profile
+                  </Link>
+                  .
+                </div>
+              )}
+            </div>
           </div>
-          <p className="px-5 py-4 text-[13px] text-fg-3">
-            {schedule.isLoading ? (
-              "Loading…"
-            ) : (
-              <>
-                No active semester.{" "}
-                <Link to="/semesters" className="text-accent hover:text-accent-2 transition-colors">
-                  Set one up
-                </Link>
-                .
-              </>
-            )}
-          </p>
         </div>
-      )}
 
-      <PublicSetsSection
-        userId={user.id}
-        title="Your shared flashcard sets"
-        emptyHint="Share a set with your friends or make it public from its Share button and it will show here."
-      />
+        <div className="min-w-0 space-y-5">
+          {scheduleCard}
+          <PublicSetsSection
+            userId={user.id}
+            title="Your shared flashcard sets"
+            emptyHint="Share a set with your friends or make it public from its Share button and it will show here."
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -146,8 +156,8 @@ function ProfileRow({
   return (
     <div className="flex items-center gap-3 px-5 py-3.5">
       <span className="text-fg-3">{icon}</span>
-      <span className="w-24 shrink-0 text-[12px] text-fg-3">{label}</span>
-      <span className="text-[13px] font-medium text-fg">{value}</span>
+      <span className="w-20 shrink-0 text-[12px] text-fg-3">{label}</span>
+      <span className="min-w-0 break-words text-[13px] font-medium text-fg">{value}</span>
     </div>
   );
 }

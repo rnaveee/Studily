@@ -724,6 +724,10 @@ textarea.input { resize: vertical; }
 .xp-fill {
   transition: width 0.8s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
+@keyframes xp-grow {
+  from { width: 0; min-width: 0; }
+}
+.xp-grow { animation: xp-grow 0.9s cubic-bezier(0.22, 0.61, 0.36, 1) 0.1s backwards; }
 
 @keyframes level-pop {
   0%   { opacity: 0; transform: scale(0.55); }
@@ -841,6 +845,7 @@ textarea.input { resize: vertical; }
   .nav-ind { transition: none; }
   .frame-hover:hover { transform: none; }
   .xp-fill { transition: none; }
+  .xp-grow { animation: none; }
   .level-pop,
   .chest-reveal { animation: none; opacity: 1; transform: none; }
   .level-glow { animation: none; opacity: 0; }

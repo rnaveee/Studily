@@ -53,14 +53,14 @@ export default function LearnPage() {
 
   return (
     <div className="space-y-6 stagger-children">
-      <div>
-        <h1 className="text-xl font-semibold text-fg">Learn</h1>
+      <StudySessionsPanel />
+
+      <div className="pt-2">
+        <h2 className="text-xl font-semibold text-fg">Learn</h2>
         <p className="mt-1 text-[13px] text-fg-3">
           Study tools to help you master your courses.
         </p>
       </div>
-
-      <StudySessionsPanel />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {TOOLS.map(({ to, icon: Icon, title, description, disabled }) => {

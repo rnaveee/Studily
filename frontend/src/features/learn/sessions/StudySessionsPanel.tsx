@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight, Play, Target } from "lucide-react";
+import { ChevronRight, Play } from "lucide-react";
 import { Skeleton } from "../../../components/Skeleton";
 import { unlockAudio } from "../../../lib/ringtones";
 import StreakFlame from "../../progress/StreakFlame";
@@ -14,22 +14,24 @@ export default function StudySessionsPanel() {
   const enabled = useProgressEnabled();
 
   return (
-    <section className="card p-4 sm:p-5" aria-labelledby="study-sessions-title">
-      <div className="flex items-center gap-3">
-        <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-          style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}
-        >
-          <Target size={16} className="text-accent" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <h2 id="study-sessions-title" className="text-[15px] font-semibold text-fg">
-            Study sessions
-          </h2>
-          <p className="text-[12px] text-fg-3">Focus in blocks, check in to earn XP, and keep your streak alive.</p>
-        </div>
+    <section
+      className="card card-raised px-4 pb-5 pt-6 sm:px-7 sm:pb-7 sm:pt-8"
+      aria-labelledby="study-sessions-title"
+      style={{
+        borderColor: "color-mix(in srgb, var(--accent) 30%, var(--line))",
+        backgroundImage:
+          "radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--accent) 11%, transparent) 0%, transparent 70%), var(--card-grad)",
+      }}
+    >
+      <div className="text-center">
+        <h1 id="study-sessions-title" className="display text-[26px] font-bold text-fg sm:text-[30px]">
+          Study sessions
+        </h1>
+        <p className="mx-auto mt-2 max-w-md text-[13px] leading-snug text-fg-2">
+          Focus in blocks, check in to earn XP, and keep your streak alive.
+        </p>
       </div>
-      <div className="mt-4">{enabled ? <PanelBody /> : <GuestPrompt />}</div>
+      <div className="mt-6">{enabled ? <PanelBody /> : <GuestPrompt />}</div>
     </section>
   );
 }
@@ -64,21 +66,25 @@ function PanelBody() {
   return (
     <div className="space-y-4">
       {active.isLoading ? (
-        <Skeleton height={48} className="rounded-xl" />
+        <div className="flex justify-center">
+          <Skeleton height={52} className="w-full rounded-xl sm:max-w-sm" />
+        </div>
       ) : active.data ? (
         <ActiveSessionCard session={active.data} receivedAt={active.dataUpdatedAt} />
       ) : (
-        <button
-          onClick={() => {
-            unlockAudio();
-            setStarting(true);
-          }}
-          className="btn btn-primary btn-lg w-full"
-          style={{ minHeight: 48 }}
-        >
-          <Play size={15} fill="currentColor" strokeWidth={0} />
-          Start study session
-        </button>
+        <div className="flex justify-center">
+          <button
+            onClick={() => {
+              unlockAudio();
+              setStarting(true);
+            }}
+            className="btn btn-primary btn-lg w-full sm:max-w-sm"
+            style={{ minHeight: 52, fontSize: 15 }}
+          >
+            <Play size={16} fill="currentColor" strokeWidth={0} />
+            Start study session
+          </button>
+        </div>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

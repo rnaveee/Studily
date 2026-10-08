@@ -20,6 +20,7 @@ import Avatar from "./Avatar";
 import Banners from "./Banners";
 import ProgressWhatsNew from "../features/progress/ProgressWhatsNew";
 import ProgressHost from "../features/progress/ProgressHost";
+import CoinBalance from "../features/progress/CoinBalance";
 import MobileFooter from "./MobileFooter";
 import ViewportDebug from "./ViewportDebug";
 import type { Conversation, FriendRequestItem } from "../types";
@@ -28,7 +29,7 @@ const NAV = [
   { to: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard, end: true },
   { to: "/semesters",  label: "Semesters",  icon: GraduationCap },
   { to: "/messages",   label: "Messages",   icon: MessageSquare },
-  { to: "/learn",      label: "Learn",      icon: Brain },
+  { to: "/learn",      label: "Study",      icon: Brain },
   { to: "/friends",    label: "Friends",    icon: Users2 },
   { to: "/profile",    label: "Profile",    icon: User },
 ];
@@ -131,11 +132,12 @@ export default function Layout() {
         className="hidden md:flex w-[220px] shrink-0 flex-col"
         style={{ background: "var(--surface)", borderRight: "1px solid var(--line)" }}
       >
-        <div className="px-5 py-5">
-          <Link to="/onboarding" className="flex items-center gap-1.5">
-            <img src="/studily-3a.svg" alt="" className="h-8 w-8" />
+        <div className="flex items-center justify-between gap-2 py-4 pl-5 pr-3">
+          <Link to="/onboarding" className="flex min-w-0 items-center gap-1.5">
+            <img src="/studily-3a.svg" alt="" className="h-8 w-8 shrink-0" />
             <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
           </Link>
+          <CoinBalance />
         </div>
 
         <nav ref={sideNavRef} className="relative flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
@@ -248,6 +250,7 @@ export default function Layout() {
           </Link>
 
           <div className="flex items-center gap-0.5">
+            {user && <CoinBalance />}
             <NavLink
               to="/settings"
               className="rounded-lg p-2 text-fg-2 transition-colors hover:bg-surface-hi"
@@ -263,7 +266,7 @@ export default function Layout() {
                   className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[12px] text-fg-2 transition-colors hover:bg-surface-hi"
                 >
                   <Avatar name={user.name} username={user.username} avatarUrl={user.avatarUrl} size={20} className="text-[10px]" />
-                  <span className="max-w-[80px] truncate">@{user.username}</span>
+                  <span className="hidden max-w-[80px] truncate min-[420px]:inline">@{user.username}</span>
                 </NavLink>
 
                 <button
