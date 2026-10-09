@@ -20,7 +20,7 @@ export default function BadgeArt({
   const lockSize = Math.max(16, Math.round(size * 0.34));
   const filter = isLocked
     ? "grayscale(1) brightness(0.25)"
-    : `drop-shadow(0 0 ${Math.max(4, Math.round(size / 7))}px color-mix(in srgb, var(--accent) 42%, transparent))`;
+    : `drop-shadow(0 0 ${Math.max(2, Math.round(size / 18))}px color-mix(in srgb, var(--accent) 28%, transparent))`;
 
   return (
     <span className="relative inline-flex shrink-0" style={{ width: size, height: size }}>

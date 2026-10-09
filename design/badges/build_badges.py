@@ -60,7 +60,6 @@ BADGES = [
 ]
 
 FACE = "M56 300 L256 150 L456 300 L256 450 Z"
-BEVEL = "M92 300 L256 177 L420 300 L256 423 Z"
 RAINBOW = ["#FF5A6E", "#FF9F43", "#FFE066", "#4CD964", "#4CB8F0", "#8E7CFF", "#E05CFF"]
 
 
@@ -151,7 +150,6 @@ def sparkle(x, y, r, color):
 
 
 def frame(m):
-    bevel_color = m["hi"] if m["motif"] != "wood" else m["light"]
     return (
         leaves(m)
         + bowl(m)
@@ -159,7 +157,6 @@ def frame(m):
         + '<path d="M56 300 L256 150 L256 450 Z" fill="url(#faceL)"/>'
         + '<path d="M256 150 L456 300 L256 450 Z" fill="url(#faceR)"/>'
         + motif(m)
-        + f'<path d="{BEVEL}" fill="none" stroke="{bevel_color}" stroke-width="5" opacity="0.6" stroke-linejoin="round"/>'
         + f'<path d="{FACE}" fill="none" stroke="{OUT}" stroke-width="{SW}" stroke-linejoin="round"/>'
     )
 
@@ -250,19 +247,19 @@ def icon_people():
     return back + front
 
 
-ARM = ("M20 125 C30 85 70 60 106 76 C118 82 124 92 126 100 L114 64 C102 50 104 22 128 17 "
-       "C150 12 168 28 162 52 L184 140 C190 166 172 186 146 186 L20 184 Z")
+ARM = ("M16 128 C34 100 76 86 108 100 C118 104 124 110 128 116 L120 66 C112 46 118 24 138 22 "
+       "C158 20 170 36 164 56 L184 148 C188 172 170 188 148 188 L16 184 Z")
 
 
 def arm_shape():
     return (
         f'<path d="{ARM}" fill="#FFC83D"/>'
-        '<path d="M20 160 L150 162 C170 162 182 152 184 140 C190 166 172 186 146 186 L20 184 Z" fill="#E9A10C"/>'
-        '<path d="M158 54 L178 132" stroke="#E9A10C" stroke-width="7" stroke-linecap="round"/>'
-        '<path d="M120 34 C128 28 140 28 148 34" fill="none" stroke="#E9A10C" stroke-width="6" stroke-linecap="round"/>'
-        '<path d="M116 50 C124 44 138 44 146 50" fill="none" stroke="#E9A10C" stroke-width="6" stroke-linecap="round"/>'
-        '<path d="M86 96 C100 104 110 118 112 132" fill="none" stroke="#E9A10C" stroke-width="6" stroke-linecap="round"/>'
-        '<ellipse cx="62" cy="100" rx="22" ry="11" fill="#FFFFFF" opacity="0.55" transform="rotate(-22 62 100)"/>'
+        '<path d="M16 162 L150 164 C170 164 182 156 184 148 C188 172 170 188 148 188 L16 184 Z" fill="#E9A10C"/>'
+        '<path d="M160 62 L178 138" stroke="#E9A10C" stroke-width="7" stroke-linecap="round"/>'
+        '<path d="M128 36 C136 31 148 31 155 36" fill="none" stroke="#E9A10C" stroke-width="6" stroke-linecap="round"/>'
+        '<path d="M125 51 C133 46 146 46 153 51" fill="none" stroke="#E9A10C" stroke-width="6" stroke-linecap="round"/>'
+        '<path d="M94 112 C106 118 114 128 116 140" fill="none" stroke="#E9A10C" stroke-width="6" stroke-linecap="round"/>'
+        '<ellipse cx="64" cy="114" rx="20" ry="9" fill="#FFFFFF" opacity="0.55" transform="rotate(-14 64 114)"/>'
         f'<path d="{ARM}" fill="none" stroke="{OUT}" stroke-width="9" stroke-linejoin="round"/>'
     )
 
@@ -344,7 +341,7 @@ def banner(label, special):
         f'<path d="{band}" fill="#2A2552"/>'
         f'<path d="M66 386 Q256 352 446 386" fill="none" stroke="{edge}" stroke-width="7" stroke-linecap="round" opacity="0.9"/>'
         f'<path d="{band}" fill="none" stroke="{OUT}" stroke-width="{SW}" stroke-linejoin="round"/>'
-        '<path id="tp" d="M76 418 Q256 384 436 418" fill="none"/>'
+        '<path id="tp" d="M76 404 Q256 370 436 404" fill="none"/>'
         f'<text font-family="Montserrat" font-weight="900" font-size="{size:.1f}" fill="#FFFFFF" '
         f'stroke="#120F26" stroke-width="6" paint-order="stroke" letter-spacing="1">'
         f'<textPath href="#tp" startOffset="50%" text-anchor="middle" dominant-baseline="central">{label}</textPath></text>'

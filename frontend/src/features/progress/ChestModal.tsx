@@ -137,7 +137,7 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left"
               style={{ background: "color-mix(in srgb, var(--accent) 9%, transparent)" }}
             >
-              <BadgeArt badge={loot.badge} size={40} locked={false} />
+              <BadgeArt badge={loot.badge} size={64} locked={false} />
               <span className="min-w-0">
                 <span className="block text-[11px] font-semibold uppercase tracking-wider text-accent">New badge</span>
                 <span className="block truncate text-[14px] font-semibold text-fg">{loot.badge.title}</span>

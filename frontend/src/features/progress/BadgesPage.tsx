@@ -344,11 +344,11 @@ function FeaturedBar({
             return (
               <span
                 key={i}
-                className="flex h-11 w-11 items-center justify-center rounded-xl"
+                className="flex h-14 w-14 items-center justify-center rounded-xl"
                 style={b ? undefined : { border: "1px dashed var(--line)" }}
               >
                 {b ? (
-                  <BadgeArt badge={b} size={38} />
+                  <BadgeArt badge={b} size={52} />
                 ) : (
                   <span className="text-[11px] font-semibold tabular-nums text-fg-3">{i + 1}</span>
                 )}
@@ -461,7 +461,7 @@ function Shop({
               return (
                 <div key={b.code} className="card flex items-center gap-3.5 p-4 sm:flex-col sm:items-stretch sm:text-center">
                   <span className="flex justify-center">
-                    <BadgeArt badge={b} size={64} locked={false} />
+                    <BadgeArt badge={b} size={88} locked={false} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="text-[14px] font-semibold text-fg">{b.title}</div>

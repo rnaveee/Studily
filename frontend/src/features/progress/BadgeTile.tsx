@@ -61,9 +61,9 @@ export default function BadgeTile({
           onBlur={() => setPinned(false)}
           aria-label={label}
           aria-expanded={open}
-          className="press flex w-[76px] min-h-[40px] flex-col items-center gap-1.5 rounded-xl px-1 py-1.5 text-center transition-colors hover:bg-surface-hi"
+          className="press flex w-[88px] min-h-[40px] flex-col items-center gap-1.5 rounded-xl px-1 py-1.5 text-center transition-colors hover:bg-surface-hi"
         >
-          <BadgeArt badge={badge} size={44} />
+          <BadgeArt badge={badge} size={72} />
           <span className="line-clamp-2 text-[11px] font-medium leading-tight text-fg-2">{badge.title}</span>
         </button>
         {open && <BadgePopover anchor={ref} badge={badge} onClose={() => { setPinned(false); setHovered(false); }} />}
@@ -124,7 +124,7 @@ export default function BadgeTile({
             {slot ?? ""}
           </span>
         )}
-        <BadgeArt badge={badge} size={60} />
+        <BadgeArt badge={badge} size={96} />
         <span className="flex min-w-0 flex-col items-center gap-0.5">
           <span className={`line-clamp-2 text-[12.5px] font-semibold leading-snug ${locked ? "text-fg-2" : "text-fg"}`}>
             {badge.title}
@@ -209,7 +209,7 @@ function BadgePopover({
       }}
     >
       <div className="flex items-center gap-3">
-        <BadgeArt badge={badge} size={40} showLock={false} />
+        <BadgeArt badge={badge} size={56} showLock={false} />
         <div className="min-w-0">
           <div className="text-[10px] font-semibold uppercase tracking-wider" style={{ color }}>
             {CATEGORY_LABEL[badge.category]}
