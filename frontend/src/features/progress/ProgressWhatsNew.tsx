@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { BellRing, Check, ChevronLeft, ChevronRight, Coins, Flame, Gift, Layers, ListChecks, Timer, Users, X } from "lucide-react";
+import { BellRing, Check, ChevronLeft, ChevronRight, Coins, Gift, Layers, ListChecks, Timer, Users, X } from "lucide-react";
 import Modal, { useModalClose } from "../../components/Modal";
 import Avatar from "../../components/Avatar";
 import { useAuth } from "../../lib/auth";
+import StreakFlame from "./StreakFlame";
 
 const SEEN_KEY = "studily.whatsnew.progress.v2";
 const SUPERSEDED_KEYS = ["studily.whatsnew.flashcards", "studily.whatsnew.progress"];
@@ -343,7 +344,7 @@ function StreakVisual() {
       <MiniCard className="flex-1 p-3">
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1 text-[13px] font-semibold text-fg">
-            <Flame size={14} style={{ color: "var(--orange-vivid)" }} />4
+            <StreakFlame streak={4} size={20} />4
           </span>
           <span className="text-[11px] text-fg-3">day streak</span>
           <span className="badge badge-orange ml-auto font-semibold">×1.3</span>

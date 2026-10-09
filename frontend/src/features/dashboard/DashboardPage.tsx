@@ -24,6 +24,7 @@ import WeekGrid, { toMin } from "../../components/WeekGrid";
 import { SkeletonBlock } from "../../components/Skeleton";
 import TodoQuickView from "../todos/TodoQuickView";
 import { priorityLabel, priorityTone } from "../todos/priority";
+import DashboardStreak from "./DashboardStreak";
 import { quoteOfTheDay } from "./quotes";
 
 
@@ -238,9 +239,12 @@ export default function DashboardPage() {
         </p>
       )}
 
-      <div className="stagger-item" style={staggerDelay(1)}>
-        <h1 className="display text-3xl font-bold text-fg">{firstName ? `${greeting()}, ${firstName}` : greeting()}</h1>
-        <p className="mt-1 text-sm text-fg-3">Here's your weekly schedule</p>
+      <div className="stagger-item flex flex-col-reverse items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6" style={staggerDelay(1)}>
+        <div className="min-w-0">
+          <h1 className="display text-3xl font-bold text-fg">{firstName ? `${greeting()}, ${firstName}` : greeting()}</h1>
+          <p className="mt-1 text-sm text-fg-3">Here's your weekly schedule</p>
+        </div>
+        <DashboardStreak />
       </div>
 
       <SetupNudge />

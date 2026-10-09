@@ -1,10 +1,8 @@
 import { Check, Zap } from "lucide-react";
 import { Skeleton } from "../../../components/Skeleton";
 import StreakFlame from "../../progress/StreakFlame";
-import { formatMultiplier } from "./sessionFormat";
+import { QUALIFY_MINUTES, formatMultiplier } from "./sessionFormat";
 import type { StreakWeekDto } from "../../../types";
-
-const QUALIFY_MINUTES = 15;
 
 export default function StreakWeek({ data }: { data: StreakWeekDto }) {
   const lit = data.current > 0;
@@ -15,7 +13,7 @@ export default function StreakWeek({ data }: { data: StreakWeekDto }) {
   return (
     <div className="rounded-xl border border-line p-3.5" style={{ background: "var(--surface)" }}>
       <div className="flex items-center gap-3">
-        <StreakFlame lit={lit} size={46} />
+        <StreakFlame streak={data.current} size={56} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-1.5">
             <span className="text-[24px] font-bold leading-none tabular-nums text-fg">{data.current}</span>
@@ -103,7 +101,7 @@ export function StreakWeekSkeleton() {
   return (
     <div className="rounded-xl border border-line p-3.5" aria-hidden="true">
       <div className="flex items-center gap-3">
-        <Skeleton width={46} height={46} className="rounded-full" />
+        <Skeleton width={56} height={56} className="rounded-full" />
         <div className="flex-1 space-y-2">
           <Skeleton width={110} height={16} />
           <Skeleton width="70%" height={10} />

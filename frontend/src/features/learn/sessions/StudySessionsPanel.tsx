@@ -42,7 +42,7 @@ function GuestPrompt() {
       className="flex flex-col items-center gap-3 rounded-xl px-4 py-5 text-center sm:flex-row sm:text-left"
       style={{ background: "var(--surface-hi)" }}
     >
-      <StreakFlame lit={false} size={40} />
+      <StreakFlame streak={0} size={44} />
       <p className="min-w-0 flex-1 text-[13px] leading-snug text-fg-2">
         Sign in to track study sessions, build a daily streak, and earn XP and badges.
       </p>

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Bell, CalendarDays, Coins, FileText, Flame, MessagesSquare } from "lucide-react";
+import { ArrowRight, Bell, CalendarDays, Coins, FileText, MessagesSquare } from "lucide-react";
 import Avatar from "../../components/Avatar";
 import { demoCourseGrades, demoCourses, demoFlashcardSets, demoItems, demoWeek } from "../../lib/demo";
 import { hhmm } from "../../lib/format";
 import { itemColor } from "../../lib/itemType";
 import { prefersReducedMotion } from "../../lib/motion";
 import { revealClass, useReveal } from "../../lib/useReveal";
+import StreakFlame from "../progress/StreakFlame";
 import { MEETING_KIND_LABEL, type DayOfWeek } from "../../types";
 
 const GRID_START = 9 * 60;
@@ -488,7 +489,7 @@ export function MockStudySession() {
         <div className="p-4">
           <div className="flex items-center gap-2">
             <span className="flex items-center gap-1 text-[13px] font-semibold text-fg">
-              <Flame size={14} style={{ color: "var(--orange-vivid)" }} />5
+              <StreakFlame streak={5} size={20} />5
             </span>
             <span className="text-[11.5px] text-fg-3">day streak</span>
             <span className="badge badge-orange ml-auto font-semibold">×1.4</span>

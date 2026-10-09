@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 45,
+    date: "2026-10-09",
+    title: "A streak flame that grows",
+    description:
+      "Your study streak is a real flame now, with the Studily logo set into it, and it changes as your streak grows. It's a small orange flame for your first few days, gets bigger and redder with flickering side flames at 7 days, throws off sparks with a blue-hot core at 30, and burns completely blue once you pass 100 days, the same days you unlock the Ember, Blaze and Inferno rings. It flickers gently, and holds still if your device is set to reduce motion. With no streak, the flame shows in grey so you can see what you're working towards. Your streak now sits next to the greeting on your dashboard, with a line underneath that cheers you on once today's 15 minutes are in, or reminds you to study if they aren't yet. It's also on your profile and on the profiles of everyone else you visit, even at zero days.",
+  },
+  {
     version: 44,
     date: "2026-10-08",
     title: "Profile flairs",

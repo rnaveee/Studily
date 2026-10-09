@@ -1,5 +1,7 @@
 import type { StudySessionMode, StudySessionStatus } from "../../../types";
 
+export const QUALIFY_MINUTES = 15;
+
 export function formatMinutes(total: number): string {
   const m = Math.max(0, Math.round(total));
   const h = Math.floor(m / 60);

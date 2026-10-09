@@ -112,19 +112,18 @@ function ProgressView({
     <Section>
       <div className="flex flex-wrap items-center justify-center gap-2">
         <LevelPill level={level} size="lg" />
-        {streak > 0 && (
-          <span
-            className="inline-flex items-center gap-1 rounded-full py-0.5 pl-1 pr-2.5 text-[12.5px] font-semibold tabular-nums"
-            style={{
-              background: "color-mix(in srgb, var(--orange-vivid) 12%, transparent)",
-              color: "var(--orange)",
-            }}
-            title={`${streak}-day study streak`}
-          >
-            <StreakFlame lit size={24} />
-            {streak}-day streak
-          </span>
-        )}
+        <span
+          className="inline-flex items-center gap-1 rounded-full py-0.5 pl-1 pr-2.5 text-[12.5px] font-semibold tabular-nums"
+          style={
+            streak > 0
+              ? { background: "color-mix(in srgb, var(--orange-vivid) 12%, transparent)", color: "var(--orange)" }
+              : { background: "var(--surface-hi)", color: "var(--fg-3)" }
+          }
+          title={`${streak}-day study streak`}
+        >
+          <StreakFlame streak={streak} size={28} />
+          {streak}-day streak
+        </span>
       </div>
 
       <div className="mt-3">
