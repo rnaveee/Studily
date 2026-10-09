@@ -53,6 +53,15 @@
   --btn-press:    inset 0 2px 4px var(--neu-lo);
   --knob-shadow:  0 1px 3px var(--neu-lo), inset 0 1px 0 var(--edge-hi);
 
+  --badge-glow-wood:            #d9a066;
+  --badge-glow-bronze:          #ff9a4d;
+  --badge-glow-silver:          #dfe8f5;
+  --badge-glow-gold:            #ffd34d;
+  --badge-glow-diamond:         #7fe3ff;
+  --badge-glow-ruby:            #ff4d6d;
+  --badge-glow-obsidian-red:    #ff5a6e;
+  --badge-glow-obsidian-blue:   #4cb8f0;
+  --badge-glow-obsidian-violet: #8e7cff;
   --flair-mint-1:   #2cc995;
   --flair-mint-2:   #a8f3d6;
   --flair-mint-3:   #14a39b;

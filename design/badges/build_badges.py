@@ -88,8 +88,6 @@ def leaves(m):
     if m["motif"] == "obsidian":
         out.append('<path d="M84 76 C96 150 128 214 168 262" fill="none" stroke="url(#rainbowV)" stroke-width="6" stroke-linecap="round" opacity="0.8"/>')
         out.append('<path d="M150 92 C160 160 186 210 214 248" fill="none" stroke="url(#rainbowV)" stroke-width="5" stroke-linecap="round" opacity="0.7"/>')
-    else:
-        out.append(f'<path d="M86 84 C98 150 126 210 164 258" fill="none" stroke="{m["hi"]}" stroke-width="6" stroke-linecap="round" opacity="0.55"/>')
     return "".join(out)
 
 

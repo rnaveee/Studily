@@ -61,9 +61,9 @@ export default function BadgeTile({
           onBlur={() => setPinned(false)}
           aria-label={label}
           aria-expanded={open}
-          className="press flex w-[88px] min-h-[40px] flex-col items-center gap-1.5 rounded-xl px-1 py-1.5 text-center transition-colors hover:bg-surface-hi"
+          className="press flex w-[96px] min-h-[40px] flex-col items-center gap-1.5 rounded-xl px-1 py-1.5 text-center transition-colors hover:bg-surface-hi"
         >
-          <BadgeArt badge={badge} size={72} />
+          <BadgeArt badge={badge} size={90} />
           <span className="line-clamp-2 text-[11px] font-medium leading-tight text-fg-2">{badge.title}</span>
         </button>
         {open && <BadgePopover anchor={ref} badge={badge} onClose={() => { setPinned(false); setHovered(false); }} />}

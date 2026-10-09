@@ -3,13 +3,13 @@ set -euo pipefail
 
 if [[ $# -ne 1 || ! -d "$1" ]]; then
   echo "usage: $0 <dir-of-webp-files>" >&2
-  echo "env: BADGE_BUCKET (default studily-badges), BADGE_PREFIX (default badges/v3)" >&2
+  echo "env: BADGE_BUCKET (default studily-badges), BADGE_PREFIX (default badges/v4)" >&2
   exit 1
 fi
 
 dir="${1%/}"
 bucket="${BADGE_BUCKET:-studily-badges}"
-prefix="${BADGE_PREFIX:-badges/v3}"
+prefix="${BADGE_PREFIX:-badges/v4}"
 prefix="${prefix%/}"
 
 shopt -s nullglob

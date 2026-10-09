@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Lock } from "lucide-react";
-import { CATEGORY_COLOR } from "./badges";
+import { CATEGORY_COLOR, badgeGlow } from "./badges";
 import type { BadgeDto } from "../../types";
 
 export default function BadgeArt({
@@ -20,7 +20,7 @@ export default function BadgeArt({
   const lockSize = Math.max(16, Math.round(size * 0.34));
   const filter = isLocked
     ? "grayscale(1) brightness(0.25)"
-    : `drop-shadow(0 0 ${Math.max(2, Math.round(size / 18))}px color-mix(in srgb, var(--accent) 28%, transparent))`;
+    : badgeGlow(badge.code, size);
 
   return (
     <span className="relative inline-flex shrink-0" style={{ width: size, height: size }}>

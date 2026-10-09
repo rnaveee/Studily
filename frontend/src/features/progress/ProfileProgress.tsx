@@ -136,7 +136,7 @@ function ProgressView({
       </div>
 
       {featured.length > 0 ? (
-        <div className="mt-4 flex flex-wrap justify-center gap-1">
+        <div className="mt-4 flex flex-wrap justify-center gap-0.5">
           {featured.slice(0, 3).map((b) => (
             <BadgeTile key={b.code} badge={b} variant="compact" />
           ))}

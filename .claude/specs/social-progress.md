@@ -444,7 +444,7 @@ When to evaluate:
 Featured badges: max 3, owned only, slots 1–3 in the order given.
 
 Art:
-- `imageUrl = app.progress.badge-base-url + "/" + image_key`. The default is `https://badges.studily.ca/badges/v3`, overridable with env `BADGE_ASSET_BASE_URL`.
+- `imageUrl = app.progress.badge-base-url + "/" + image_key`. The default is `https://badges.studily.ca/badges/v4`, overridable with env `BADGE_ASSET_BASE_URL`.
 - Locked badges use the same image with a CSS silhouette.
 
 ## 9. API contract (backend implements, UI consumes, both match exactly)
@@ -543,7 +543,7 @@ Backend layout (backend-developer):
 - **Hooks:**
   - `FriendService.accept` calls `progressService.onFriendshipAccepted(requesterId, addresseeId)`, which grants FRIEND XP to both and evaluates badges for both.
   - `SecurityConfig` CSP `img-src` gains `https://badges.studily.ca`.
-  - `application.properties` gains `app.progress.badge-base-url=${BADGE_ASSET_BASE_URL:https://badges.studily.ca/badges/v3}` and `app.progress.og-cutoff=${PROGRESS_OG_CUTOFF:2026-10-11}`.
+  - `application.properties` gains `app.progress.badge-base-url=${BADGE_ASSET_BASE_URL:https://badges.studily.ca/badges/v4}` and `app.progress.og-cutoff=${PROGRESS_OG_CUTOFF:2026-10-11}`.
 - **Locking:** any method that changes xp, level, coins or streak calls `findForUpdate` first, after `insertIfMissing`. The dedupe check (`existsByDedupeKey`) happens under that lock, and the unique constraint is the backstop.
 
 ## 10. UI (ui-designer)
@@ -640,7 +640,7 @@ Mounting `ProgressWhatsNew` belongs to ui-designer, because `App.tsx` and `Layou
 - R2 bucket `studily-badges` on Ryan's Cloudflare account (`a7930b03a95082547ead7123d5981afe`), Standard storage class.
 - Custom domain `badges.studily.ca` (zone `studily.ca`, `0a1b7f8fd952c5b1f00c3dbddcac1ad9`), min TLS 1.2, ownership and SSL `active`. Cloudflare added the proxied DNS record for it. No other DNS record was touched.
 - The `r2.dev` public URL is **off**. The custom domain is the only public way in.
-- Key layout: `badges/v3/<code>.webp`, so the public URL is `https://badges.studily.ca/badges/v3/<code>.webp`. That's exactly `app.progress.badge-base-url + "/" + image_key` with the code default.
+- Key layout: `badges/v3/<code>.webp`, so the public URL is `https://badges.studily.ca/badges/v4/<code>.webp`. That's exactly `app.progress.badge-base-url + "/" + image_key` with the code default.
 - Every object is uploaded with `Content-Type: image/webp` and `Cache-Control: public, max-age=31536000, immutable`.
 - Placeholder art for all 27 §8 codes is uploaded. The source files are `scripts/badges/placeholders/<code>.webp`: 256×256, transparent background, a rounded tile in the category colour with a short label. Verified: `level_1`, `level_100`, `cosmetic_crown` and `schoolmates_10` return 200 `image/webp`, and an unknown key returns 404.
 
@@ -652,14 +652,14 @@ Mounting `ProgressWhatsNew` belongs to ui-designer, because `App.tsx` and `Layou
 
 **Cache busting.** The objects are `immutable` with a one-year max-age, so browsers and the Cloudflare edge won't re-fetch a key that was overwritten. When real art replaces the placeholders:
 1. Upload to a new prefix: `BADGE_PREFIX=badges/v3 scripts/badges/upload.sh <dir>`.
-2. Point the app at it: `BADGE_ASSET_BASE_URL=https://badges.studily.ca/badges/v3` on Railway.
+2. Point the app at it: `BADGE_ASSET_BASE_URL=https://badges.studily.ca/badges/v4` on Railway.
 3. Leave `v1` in place, since old pages and cached API responses still reference it.
 
 A single badge added later can go into the current prefix under its new code, because that key has never been cached.
 
 **Railway variables at merge time (optional).** The code defaults (§8, §9 `application.properties`) already point at the right values, so the deploy works with neither set. Set them only to pin the values explicitly or to change them later without a code change. Use the dashboard (app service → Variables → New Variable) or the Railway CLI, linked to the production app service:
 ```
-railway variables --set "BADGE_ASSET_BASE_URL=https://badges.studily.ca/badges/v3"
+railway variables --set "BADGE_ASSET_BASE_URL=https://badges.studily.ca/badges/v4"
 railway variables --set "PROGRESS_OG_CUTOFF=2026-10-11"
 ```
 Each variable change triggers a redeploy, so set both together, before or alongside the merge. `PROGRESS_OG_CUTOFF` only needs setting if the OG window moves (for example, if launch slips past 2026-10-11).
@@ -668,7 +668,7 @@ Each variable change triggers a redeploy, so set both together, before or alongs
 
 **Firewall risk.** `badges.studily.ca` is a subdomain of `studily.ca`. School firewalls that sinkhole `studily.ca` as a newly registered domain (Palo Alto NRD) block the subdomain too, but they already block the app itself, so badges add no new failure mode. The recategorization fix for `studily.ca` covers both. Badge tiles already fall back to a silhouette if the image fails to load (§10).
 
-**Local DNS gotcha.** If you look up `badges.studily.ca` before it exists, a caching resolver can hold the NXDOMAIN for up to 30 min (the zone's SOA negative TTL is 1800 s). To check the bucket while that's still cached, use `curl -sI --resolve badges.studily.ca:443:104.21.53.89 https://badges.studily.ca/badges/v3/level_1.webp` or DNS-over-HTTPS.
+**Local DNS gotcha.** If you look up `badges.studily.ca` before it exists, a caching resolver can hold the NXDOMAIN for up to 30 min (the zone's SOA negative TTL is 1800 s). To check the bucket while that's still cached, use `curl -sI --resolve badges.studily.ca:443:104.21.53.89 https://badges.studily.ca/badges/v4/level_1.webp` or DNS-over-HTTPS.
 
 ### Release notes (release-docs)
 
@@ -836,5 +836,6 @@ interface FlairDto { code: string; title: string; description: string; rarity: F
 - Each badge has three layers: the Studily logo frame in a tier material, a type icon, and a curved banner.
   - Tiers: wood → bronze → silver → gold → diamond → ruby → rainbow obsidian.
   - Icons: arrow (levels), brain (study), cards (flashcards), two people (friends), bicep (membership), double bicep (OG), plus spark, comet and crown for the cosmetics.
-- The art lives in `studily-badges/badges/v3/` (v3 is review round 1: smaller bicep, no inner bevel line, banner text centred), and the code default and `upload.sh` default point at v3. `badges/v1/` (placeholders) and `badges/v2/` (first draft) aren't referenced by anything, and can be deleted once v3 is confirmed in prod.
-- To change a badge, edit `BADGES` or `MATERIALS` in the generator and run `python3 design/badges/build_badges.py [codes…]`. Then re-upload into a **new** version folder (`BADGE_PREFIX=badges/v4`, then bump the default), because objects are cached `immutable` for a year.
+- The art lives in `studily-badges/badges/v4/` (v3 was review round 1: smaller bicep, no inner bevel line, banner text centred; v4 also removes the leaf highlight stroke), and the code default and `upload.sh` default point at v4. `badges/v1/`, `v2/` and `v3/` aren't referenced by anything, and can be deleted once v4 is confirmed in prod.
+- Glow in the UI scales with tier (`badgeGlow` in `frontend/src/features/progress/badges.ts`, colours `--badge-glow-*` in `index.css`). Wood gets a faint, tight glow; rainbow obsidian gets a strong red/blue/violet glow. The code → tier map there must match `BADGES` in the generator.
+- To change a badge, edit `BADGES` or `MATERIALS` in the generator and run `python3 design/badges/build_badges.py [codes…]`. Then re-upload into a **new** version folder (`BADGE_PREFIX=badges/v5`, then bump the default), because objects are cached `immutable` for a year.
