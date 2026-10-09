@@ -59,7 +59,9 @@ public class FlairService {
     public List<FlairDto> mine() {
         User user = currentUser.entity();
         Map<String, UserFlair> owned = ownedBy(user.getId());
-        return activeFlairs().stream()
+        return flairRepository.findAll().stream()
+                .filter(f -> f.isActive() || owned.containsKey(f.getCode()))
+                .sorted(DISPLAY_ORDER)
                 .map(f -> toDto(f, owned.get(f.getCode()), f.getCode().equals(user.getEquippedFlairCode())))
                 .toList();
     }
@@ -88,18 +90,16 @@ public class FlairService {
 
     @Transactional
     public EquippedFlairResult equip(String code) {
-        User user = currentUser.entity();
+        Long userId = currentUser.id();
         if (code == null) {
-            user.setEquippedFlairCode(null);
-            userRepository.save(user);
+            userRepository.updateEquippedFlairCode(userId, null);
             return new EquippedFlairResult(null);
         }
-        UserFlair owned = ownedBy(user.getId()).get(code);
+        UserFlair owned = ownedBy(userId).get(code);
         if (owned == null) {
             throw new BadRequestException("You don't own this flair");
         }
-        user.setEquippedFlairCode(code);
-        userRepository.save(user);
+        userRepository.updateEquippedFlairCode(userId, code);
         return new EquippedFlairResult(toDto(owned.getFlair(), owned, true));
     }
 

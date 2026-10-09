@@ -149,7 +149,6 @@ export function useBuyFlair() {
       );
       qc.setQueryData<ProgressDto>(progressKeys.me, (old) => (old ? { ...old, coins: res.coins } : old));
       qc.invalidateQueries({ queryKey: ["progress"] });
-      qc.invalidateQueries({ queryKey: progressKeys.flairs });
       toast.success(`${res.flair.title} is yours`);
     },
   });

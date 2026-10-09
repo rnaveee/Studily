@@ -208,23 +208,21 @@ function FlairLoot({ flair }: { flair: FlairDto }) {
         </span>
         <span className="block truncate text-[14px] font-semibold text-fg">{flair.title}</span>
       </span>
-      <button
-        onClick={() => equip.mutate(flair.code)}
-        disabled={wearing || equip.isPending}
-        className="btn btn-soft shrink-0"
-        style={{ minHeight: 40 }}
-      >
-        {wearing ? (
-          <>
-            <Check size={14} />
-            Wearing
-          </>
-        ) : equip.isPending ? (
-          "Equipping…"
-        ) : (
-          "Equip"
-        )}
-      </button>
+      {wearing ? (
+        <span className="btn btn-ghost pointer-events-none shrink-0" style={{ minHeight: 40, color: "var(--green)" }}>
+          <Check size={14} />
+          Equipped
+        </span>
+      ) : (
+        <button
+          onClick={() => equip.mutate(flair.code)}
+          disabled={equip.isPending}
+          className="btn btn-soft shrink-0"
+          style={{ minHeight: 40 }}
+        >
+          {equip.isPending ? "Equipping…" : "Equip"}
+        </button>
+      )}
     </li>
   );
 }

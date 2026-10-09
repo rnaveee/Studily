@@ -3,6 +3,7 @@ package com.rnave.studily.user;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -35,4 +36,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findClassmates(@Param("codeKey") String codeKey,
                               @Param("schoolKey") String schoolKey,
                               @Param("userId") Long userId);
+
+    @Modifying
+    @Query("update User u set u.equippedFlairCode = :code where u.id = :userId")
+    int updateEquippedFlairCode(@Param("userId") Long userId, @Param("code") String code);
 }

@@ -7,7 +7,7 @@ export default function FlairRing({ ring, size, animate }: { ring: Ring; size: n
 
   return (
     <span aria-hidden className="flair-ring">
-      {ring.glow && (
+      {soft && ring.glow && (
         <span
           className={`flair-glow ${animate && ring.glowAnim ? `flair-${ring.glowAnim}` : ""}`}
           style={{

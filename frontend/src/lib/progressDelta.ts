@@ -30,7 +30,6 @@ export function invalidateProgress(qc: QueryClient) {
   qc.invalidateQueries({ queryKey: ["progress"] });
   qc.invalidateQueries({ queryKey: ["badges"] });
   qc.invalidateQueries({ queryKey: ["chests"] });
-  qc.invalidateQueries({ queryKey: ["flairs"] });
 }
 
 export function applyDelta(

@@ -143,6 +143,7 @@ export function FlairShop({ coins }: { coins: number }) {
                     flair={flairRef(f)}
                     size={64}
                     className="text-xl"
+                    still
                   />
                 </span>
                 <div className="min-w-0 flex-1">
@@ -307,6 +308,7 @@ function OwnedTile({
         flair={flairRef(flair)}
         size={64}
         className="text-xl"
+        still={!equipped}
       />
       <span className="mt-1 line-clamp-1 text-[13px] font-semibold text-fg">{flair.title}</span>
       <RarityLabel flair={flair} />
