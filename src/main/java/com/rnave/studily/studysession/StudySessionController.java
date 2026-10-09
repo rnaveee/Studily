@@ -1,7 +1,10 @@
 package com.rnave.studily.studysession;
 
 import com.rnave.studily.config.PageResponse;
+import com.rnave.studily.progress.ProgressDtos.ProgressDelta;
+import com.rnave.studily.progress.StreakRestoreService;
 import com.rnave.studily.studysession.StudySessionDtos.StartSessionRequest;
+import com.rnave.studily.studysession.StudySessionDtos.StreakRestoreResult;
 import com.rnave.studily.studysession.StudySessionDtos.StreakWeekDto;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionDto;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionResult;
@@ -25,9 +28,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class StudySessionController {
 
     private final StudySessionService studySessionService;
+    private final StreakRestoreService streakRestoreService;
 
-    public StudySessionController(StudySessionService studySessionService) {
+    public StudySessionController(StudySessionService studySessionService,
+                                  StreakRestoreService streakRestoreService) {
         this.studySessionService = studySessionService;
+        this.streakRestoreService = streakRestoreService;
     }
 
     @PostMapping
@@ -52,6 +58,12 @@ public class StudySessionController {
     @GetMapping("/streak")
     public StreakWeekDto streak() {
         return studySessionService.streakWeek();
+    }
+
+    @PostMapping("/streak/restore")
+    public StreakRestoreResult restoreStreak() {
+        ProgressDelta delta = streakRestoreService.restore();
+        return new StreakRestoreResult(studySessionService.streakWeek(), delta);
     }
 
     @PostMapping("/{id}/checkin")

@@ -174,12 +174,30 @@ public class ProgressService {
             return;
         }
         boolean continues = last != null && last.equals(day.minusDays(1));
+        if (continues) {
+            progress.setStreakLost(0);
+            progress.setStreakLostLastDate(null);
+        } else if (last != null && progress.getStreakCurrent() > 0) {
+            progress.setStreakLost(progress.getStreakCurrent());
+            progress.setStreakLostLastDate(last);
+        }
         progress.setStreakCurrent(continues ? progress.getStreakCurrent() + 1 : 1);
         progress.setStreakBest(Math.max(progress.getStreakBest(), progress.getStreakCurrent()));
         progress.setStreakLastDate(day);
         progress.setUpdatedAt(clock.instant());
         if (progress.getStreakCurrent() % STREAK_CHEST_EVERY == 0) {
             grantChest(delta, ChestSource.STREAK, "streak:" + day, day);
+        }
+    }
+
+    @Transactional
+    public void mergeRestoredStreak(ProgressDeltaBuilder delta, int lostStreak, LocalDate today) {
+        UserProgress progress = delta.progress();
+        progress.setStreakCurrent(lostStreak + progress.getStreakCurrent());
+        progress.setStreakBest(Math.max(progress.getStreakBest(), progress.getStreakCurrent()));
+        progress.setUpdatedAt(clock.instant());
+        if (progress.getStreakCurrent() % STREAK_CHEST_EVERY == 0) {
+            grantChest(delta, ChestSource.STREAK, "streak:" + today, today);
         }
     }
 

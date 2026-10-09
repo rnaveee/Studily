@@ -14,11 +14,14 @@ import com.rnave.studily.progress.FlairService;
 import com.rnave.studily.progress.ProgressDeltaBuilder;
 import com.rnave.studily.progress.ProgressRateLimiter;
 import com.rnave.studily.progress.ProgressService;
+import com.rnave.studily.progress.StreakRestoreRepository;
+import com.rnave.studily.progress.StreakRestoreService;
 import com.rnave.studily.progress.UserProgress;
 import com.rnave.studily.progress.UserProgressRepository;
 import com.rnave.studily.progress.XpEvent;
 import com.rnave.studily.progress.XpEventRepository;
 import com.rnave.studily.progress.XpSource;
+import com.rnave.studily.studysession.StudySessionDtos.BrokenStreakDto;
 import com.rnave.studily.studysession.StudySessionDtos.StartSessionRequest;
 import com.rnave.studily.studysession.StudySessionDtos.StreakDayDto;
 import com.rnave.studily.studysession.StudySessionDtos.StreakWeekDto;
@@ -88,6 +91,7 @@ class StudySessionServiceTest {
     private CurrentUser currentUser;
     private UserTimeZones timeZones;
     private ProgressRateLimiter rateLimiter;
+    private StreakRestoreRepository streakRestoreRepository;
     private StudySessionService service;
 
     private final AtomicLong ids = new AtomicLong(100);
@@ -118,6 +122,7 @@ class StudySessionServiceTest {
         currentUser = mock(CurrentUser.class);
         timeZones = new UserTimeZones(userRepository, "UTC");
         rateLimiter = new ProgressRateLimiter();
+        streakRestoreRepository = mock(StreakRestoreRepository.class);
 
         user = new User();
         user.setId(1L);
@@ -226,8 +231,10 @@ class StudySessionServiceTest {
                 currentUser, clock);
         chestService = spy(new ChestService(chestRepository, progressService, badgeService, flairService,
                 currentUser, clock, random));
+        StreakRestoreService streakRestoreService = new StreakRestoreService(progressService,
+                streakRestoreRepository, userRepository, rateLimiter, currentUser, clock);
         service = new StudySessionService(sessionRepository, blockRepository, taskRepository, progressService,
-                chestService, rateLimiter, currentUser, clock);
+                chestService, streakRestoreService, rateLimiter, currentUser, clock);
     }
 
     private void at(Duration sinceStart) {
@@ -1490,5 +1497,32 @@ class StudySessionServiceTest {
                 .satisfies(d -> assertThat(d.date()).isEqualTo(TODAY));
         assertThat(week.week()).filteredOn(StreakDayDto::qualified).extracting(StreakDayDto::date)
                 .containsExactly(LocalDate.of(2026, 10, 6), TODAY);
+    }
+
+    @Test
+    void streakWeek_brokenStreak_reportsLostStreakRestoresLeftAndRestoredDays() {
+        streak(12, TODAY.minusDays(3));
+        LocalDate sunday = LocalDate.of(2026, 10, 4);
+        when(streakRestoreRepository.countByUserIdAndUsedOnBetween(1L, sunday, sunday.plusDays(6))).thenReturn(1L);
+        when(streakRestoreRepository.restoredDates(1L, sunday, sunday.plusDays(6))).thenReturn(List.of(sunday));
+
+        StreakWeekDto week = service.streakWeek();
+
+        assertThat(week.current()).isZero();
+        assertThat(week.restoresLeft()).isEqualTo(1);
+        assertThat(week.broken()).isEqualTo(
+                new BrokenStreakDto(12, List.of(TODAY.minusDays(2), TODAY.minusDays(1))));
+        assertThat(week.week()).filteredOn(StreakDayDto::restored).extracting(StreakDayDto::date)
+                .containsExactly(sunday);
+    }
+
+    @Test
+    void streakWeek_streakAlive_isNotBrokenAndHasBothRestores() {
+        streak(4, TODAY.minusDays(1));
+
+        StreakWeekDto week = service.streakWeek();
+
+        assertThat(week.broken()).isNull();
+        assertThat(week.restoresLeft()).isEqualTo(2);
     }
 }

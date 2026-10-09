@@ -2,6 +2,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { api, isGuestMode } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { flairRef } from "../../lib/flairs";
+import { applyDelta } from "../../lib/progressDelta";
 import { toast } from "../../lib/toast";
 import type {
   BadgeDto,
@@ -12,6 +13,7 @@ import type {
   Page,
   ProgressDto,
   PublicProgressDto,
+  StreakRestoreResult,
   StreakWeekDto,
   StudySessionDto,
   StudySessionSummaryDto,
@@ -96,6 +98,17 @@ export function useStreakWeek() {
     queryKey: progressKeys.streak,
     queryFn: () => api.get<StreakWeekDto>("/study-sessions/streak"),
     enabled,
+  });
+}
+
+export function useRestoreStreak() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.post<StreakRestoreResult>("/study-sessions/streak/restore"),
+    onSuccess: (res) => {
+      qc.setQueryData(progressKeys.streak, res.streak);
+      applyDelta(res.delta, qc, { toastXp: false });
+    },
   });
 }
 

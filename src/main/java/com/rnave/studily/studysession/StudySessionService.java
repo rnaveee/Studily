@@ -10,9 +10,11 @@ import com.rnave.studily.progress.ChestSource;
 import com.rnave.studily.progress.ProgressDeltaBuilder;
 import com.rnave.studily.progress.ProgressRateLimiter;
 import com.rnave.studily.progress.ProgressService;
+import com.rnave.studily.progress.StreakRestoreService;
 import com.rnave.studily.progress.UserProgress;
 import com.rnave.studily.progress.XpSource;
 import com.rnave.studily.studysession.StudySessionDtos.StartSessionRequest;
+import com.rnave.studily.studysession.StudySessionDtos.BrokenStreakDto;
 import com.rnave.studily.studysession.StudySessionDtos.StreakDayDto;
 import com.rnave.studily.studysession.StudySessionDtos.StreakWeekDto;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionBlockDto;
@@ -77,6 +79,7 @@ public class StudySessionService {
     private final StudySessionTaskRepository taskRepository;
     private final ProgressService progressService;
     private final ChestService chestService;
+    private final StreakRestoreService streakRestoreService;
     private final ProgressRateLimiter rateLimiter;
     private final CurrentUser currentUser;
     private final Clock clock;
@@ -85,12 +88,14 @@ public class StudySessionService {
                                StudySessionBlockRepository blockRepository,
                                StudySessionTaskRepository taskRepository,
                                ProgressService progressService, ChestService chestService,
+                               StreakRestoreService streakRestoreService,
                                ProgressRateLimiter rateLimiter, CurrentUser currentUser, Clock clock) {
         this.sessionRepository = sessionRepository;
         this.blockRepository = blockRepository;
         this.taskRepository = taskRepository;
         this.progressService = progressService;
         this.chestService = chestService;
+        this.streakRestoreService = streakRestoreService;
         this.rateLimiter = rateLimiter;
         this.currentUser = currentUser;
         this.clock = clock;
@@ -270,21 +275,28 @@ public class StudySessionService {
         ZoneId zone = progressService.readProgressZone(progress, user);
         LocalDate today = progressService.today(zone);
         int streak = progressService.effectiveStreak(progress, zone);
-        LocalDate sunday = today.minusDays(today.getDayOfWeek().getValue() % 7);
+        LocalDate sunday = StreakRestoreService.weekStart(today);
         Set<LocalDate> qualified = new HashSet<>(sessionRepository.qualifiedDates(
                 user.getId(), sunday, sunday.plusDays(6), QUALIFY_MINUTES));
+        Set<LocalDate> restored = streakRestoreService.restoredDates(user.getId(), sunday, sunday.plusDays(6));
         List<StreakDayDto> week = new ArrayList<>();
         for (int i = 0; i < 7; i++) {
             LocalDate date = sunday.plusDays(i);
-            week.add(new StreakDayDto(date, DAY_LABELS[i], qualified.contains(date), date.equals(today)));
+            week.add(new StreakDayDto(date, DAY_LABELS[i], qualified.contains(date), date.equals(today),
+                    restored.contains(date)));
         }
+        BrokenStreakDto broken = streakRestoreService.brokenStreak(progress, today)
+                .map(b -> new BrokenStreakDto(b.lostStreak(), b.missedDays()))
+                .orElse(null);
         return new StreakWeekDto(
                 streak,
                 progress.getStreakBest(),
                 progressService.multiplierFor(streak).doubleValue(),
                 sessionRepository.sumCreditedMinutesByUserIdAndLocalDate(user.getId(), today),
                 today,
-                week);
+                week,
+                streakRestoreService.restoresLeft(user.getId(), today),
+                broken);
     }
 
     @Transactional(readOnly = true)

@@ -925,7 +925,19 @@ export interface StreakWeekDto {
   multiplier: number;
   minutesToday: number;
   today: string;
-  week: { date: string; label: StreakDayLabel; qualified: boolean; isToday: boolean }[];
+  week: { date: string; label: StreakDayLabel; qualified: boolean; isToday: boolean; restored: boolean }[];
+  restoresLeft: number;
+  broken: BrokenStreakDto | null;
+}
+
+export interface BrokenStreakDto {
+  lostStreak: number;
+  missedDays: string[];
+}
+
+export interface StreakRestoreResult {
+  streak: StreakWeekDto;
+  delta: ProgressDelta;
 }
 
 export type FlashcardRunMode = "REVIEW" | "LEARN" | "MEMORY" | "MATCH";

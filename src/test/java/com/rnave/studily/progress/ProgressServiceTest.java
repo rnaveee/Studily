@@ -421,6 +421,34 @@ class ProgressServiceTest {
     }
 
     @Test
+    void recordQualifiedDay_afterGap_remembersTheLostStreak() {
+        UserProgress p = progress(1L, 0);
+        p.setStreakCurrent(5);
+        p.setStreakBest(9);
+        p.setStreakLastDate(LocalDate.of(2026, 10, 5));
+
+        service.recordQualifiedDay(service.begin(1L), LocalDate.of(2026, 10, 7));
+
+        assertThat(p.getStreakLost()).isEqualTo(5);
+        assertThat(p.getStreakLostLastDate()).isEqualTo(LocalDate.of(2026, 10, 5));
+    }
+
+    @Test
+    void recordQualifiedDay_consecutiveDay_forgetsTheLostStreak() {
+        UserProgress p = progress(1L, 0);
+        p.setStreakCurrent(1);
+        p.setStreakLastDate(LocalDate.of(2026, 10, 6));
+        p.setStreakLost(5);
+        p.setStreakLostLastDate(LocalDate.of(2026, 10, 3));
+
+        service.recordQualifiedDay(service.begin(1L), LocalDate.of(2026, 10, 7));
+
+        assertThat(p.getStreakCurrent()).isEqualTo(2);
+        assertThat(p.getStreakLost()).isZero();
+        assertThat(p.getStreakLostLastDate()).isNull();
+    }
+
+    @Test
     void recordQualifiedDay_firstEver_startsAtOne() {
         UserProgress p = progress(1L, 0);
 

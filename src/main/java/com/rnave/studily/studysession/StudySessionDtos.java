@@ -83,7 +83,11 @@ public class StudySessionDtos {
             LocalDate date,
             String label,
             boolean qualified,
-            @JsonProperty("isToday") boolean isToday) {
+            @JsonProperty("isToday") boolean isToday,
+            boolean restored) {
+    }
+
+    public record BrokenStreakDto(int lostStreak, List<LocalDate> missedDays) {
     }
 
     public record StreakWeekDto(
@@ -92,6 +96,11 @@ public class StudySessionDtos {
             double multiplier,
             int minutesToday,
             LocalDate today,
-            List<StreakDayDto> week) {
+            List<StreakDayDto> week,
+            int restoresLeft,
+            BrokenStreakDto broken) {
+    }
+
+    public record StreakRestoreResult(StreakWeekDto streak, ProgressDelta delta) {
     }
 }

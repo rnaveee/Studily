@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Skeleton } from "../../components/Skeleton";
 import StreakFlame from "../progress/StreakFlame";
+import StreakRestoreModal from "../progress/StreakRestoreModal";
 import { useProgressEnabled, useStreakWeek } from "../progress/useProgress";
 import praise from "./streakPraise.json";
-import type { StreakWeekDto } from "../../types";
+import type { BrokenStreakDto, StreakWeekDto } from "../../types";
 
 const PRAISE_STYLE: React.CSSProperties = {
   color: "var(--orange)",
@@ -47,23 +48,53 @@ export default function DashboardStreak() {
 }
 
 function StreakSummary({ data, cheer }: { data: StreakWeekDto; cheer: string }) {
+  const [restoring, setRestoring] = useState<BrokenStreakDto | null>(null);
+  const modal = restoring && (
+    <StreakRestoreModal broken={restoring} restoresLeft={data.restoresLeft} onClose={() => setRestoring(null)} />
+  );
+
+  if (data.broken) {
+    const broken = data.broken;
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setRestoring(broken)}
+          className="press -mx-2 flex min-w-0 items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-surface-hi"
+        >
+          <StreakFlame streak={0} size={40} />
+          <div className="min-w-0">
+            <p className="text-[15px] font-bold leading-tight tabular-nums text-fg-3 line-through">
+              {broken.lostStreak}-day streak
+            </p>
+            <p className="mt-0.5 text-[12.5px] font-semibold leading-snug text-red">Oh no! You've lost your streak.</p>
+          </div>
+        </button>
+        {modal}
+      </>
+    );
+  }
+
   const doneToday = data.week.some((d) => d.isToday && d.qualified);
   const note = streakNote(data, doneToday, cheer);
 
   return (
-    <Link
-      to="/learn"
-      className="press -mx-2 flex min-w-0 items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors hover:bg-surface-hi"
-    >
-      <StreakFlame streak={data.current} size={40} />
-      <div className="min-w-0">
-        <p className={`text-[15px] font-bold leading-tight tabular-nums ${data.current > 0 ? "text-fg" : "text-fg-2"}`}>
-          {data.current}-day streak
-        </p>
-        <p className={`mt-0.5 text-[12.5px] leading-snug ${note.className}`} style={note.style}>
-          {note.text}
-        </p>
-      </div>
-    </Link>
+    <>
+      <Link
+        to="/learn"
+        className="press -mx-2 flex min-w-0 items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors hover:bg-surface-hi"
+      >
+        <StreakFlame streak={data.current} size={40} />
+        <div className="min-w-0">
+          <p className={`text-[15px] font-bold leading-tight tabular-nums ${data.current > 0 ? "text-fg" : "text-fg-2"}`}>
+            {data.current}-day streak
+          </p>
+          <p className={`mt-0.5 text-[12.5px] leading-snug ${note.className}`} style={note.style}>
+            {note.text}
+          </p>
+        </div>
+      </Link>
+      {modal}
+    </>
   );
 }

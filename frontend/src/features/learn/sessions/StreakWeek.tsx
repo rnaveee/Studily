@@ -1,33 +1,56 @@
-import { Check, Zap } from "lucide-react";
+import { useState } from "react";
+import { Check, RotateCcw, Zap } from "lucide-react";
 import { Skeleton } from "../../../components/Skeleton";
 import StreakFlame from "../../progress/StreakFlame";
+import StreakRestoreModal from "../../progress/StreakRestoreModal";
 import { QUALIFY_MINUTES, formatMultiplier } from "./sessionFormat";
-import type { StreakWeekDto } from "../../../types";
+import type { BrokenStreakDto, StreakWeekDto } from "../../../types";
 
 export default function StreakWeek({ data }: { data: StreakWeekDto }) {
   const lit = data.current > 0;
   const boosted = data.multiplier > 1;
   const todayDone = data.week.some((d) => d.isToday && d.qualified);
   const todayLeft = Math.max(0, QUALIFY_MINUTES - data.minutesToday);
+  const broken = data.broken;
+  const [restoring, setRestoring] = useState<BrokenStreakDto | null>(null);
 
   return (
     <div className="rounded-xl border border-line p-3.5" style={{ background: "var(--surface)" }}>
       <div className="flex items-center gap-3">
-        <StreakFlame streak={data.current} size={56} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-[24px] font-bold leading-none tabular-nums text-fg">{data.current}</span>
-            <span className="text-[13px] font-medium text-fg-2">day streak</span>
-          </div>
-          <p className="mt-1 text-[11.5px] leading-snug text-fg-3">
-            {todayDone
-              ? "Today counts"
-              : lit
-                ? `${todayLeft} more min today keeps it going`
-                : `Study ${todayLeft} min today to start one`}
-            {data.best > 0 && ` · Best ${data.best}`}
-          </p>
-        </div>
+        {broken ? (
+          <button
+            type="button"
+            onClick={() => setRestoring(broken)}
+            className="press -m-1.5 flex min-w-0 flex-1 items-center gap-3 rounded-xl p-1.5 text-left transition-colors hover:bg-surface-hi"
+          >
+            <StreakFlame streak={0} size={56} />
+            <div className="min-w-0 flex-1">
+              <p className="leading-none text-fg-3 line-through">
+                <span className="text-[24px] font-bold tabular-nums">{broken.lostStreak}</span>{" "}
+                <span className="text-[13px] font-medium">day streak</span>
+              </p>
+              <p className="mt-1 text-[11.5px] font-semibold leading-snug text-red">Oh no! You've lost your streak.</p>
+            </div>
+          </button>
+        ) : (
+          <>
+            <StreakFlame streak={data.current} size={56} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-[24px] font-bold leading-none tabular-nums text-fg">{data.current}</span>
+                <span className="text-[13px] font-medium text-fg-2">day streak</span>
+              </div>
+              <p className="mt-1 text-[11.5px] leading-snug text-fg-3">
+                {todayDone
+                  ? "Today counts"
+                  : lit
+                    ? `${todayLeft} more min today keeps it going`
+                    : `Study ${todayLeft} min today to start one`}
+                {data.best > 0 && ` · Best ${data.best}`}
+              </p>
+            </div>
+          </>
+        )}
         <span
           className={`badge shrink-0 tabular-nums ${boosted ? "" : "badge-muted"}`}
           style={
@@ -50,11 +73,12 @@ export default function StreakWeek({ data }: { data: StreakWeekDto }) {
       <div className="mt-3.5 flex justify-between gap-1" role="list" aria-label="This week">
         {data.week.map((d) => {
           const future = d.date > data.today;
+          const restored = d.restored && !d.qualified;
           const progress = d.isToday && !d.qualified ? Math.min(1, data.minutesToday / QUALIFY_MINUTES) : 0;
           return (
             <div key={d.date} role="listitem" className="flex w-9 flex-col items-center gap-1.5">
               <span
-                aria-label={`${d.label}: ${d.qualified ? "studied" : future ? "upcoming" : "no study"}`}
+                aria-label={`${d.label}: ${d.qualified ? "studied" : restored ? "restored" : future ? "upcoming" : "no study"}`}
                 className="relative flex h-[34px] w-[34px] items-center justify-center rounded-full"
                 style={
                   d.qualified
@@ -63,7 +87,13 @@ export default function StreakWeek({ data }: { data: StreakWeekDto }) {
                         color: "var(--accent-fg)",
                         boxShadow: "0 3px 10px -3px color-mix(in srgb, var(--orange-vivid) 70%, transparent)",
                       }
-                    : future
+                    : restored
+                      ? {
+                          background: "linear-gradient(160deg, var(--flame-blue-2), var(--flame-blue-1))",
+                          color: "#fff",
+                          boxShadow: "0 3px 10px -3px color-mix(in srgb, var(--flame-blue-1) 70%, transparent)",
+                        }
+                      : future
                       ? { border: "1.5px dashed var(--line)" }
                       : progress > 0
                         ? {
@@ -76,6 +106,7 @@ export default function StreakWeek({ data }: { data: StreakWeekDto }) {
                   <span className="absolute inset-[4px] rounded-full" style={{ background: "var(--surface)" }} />
                 )}
                 {d.qualified && <Check size={15} strokeWidth={3} />}
+                {restored && <RotateCcw size={14} strokeWidth={3} />}
                 {d.isToday && (
                   <span
                     aria-hidden
@@ -93,6 +124,10 @@ export default function StreakWeek({ data }: { data: StreakWeekDto }) {
           );
         })}
       </div>
+
+      {restoring && (
+        <StreakRestoreModal broken={restoring} restoresLeft={data.restoresLeft} onClose={() => setRestoring(null)} />
+      )}
     </div>
   );
 }

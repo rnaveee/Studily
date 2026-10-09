@@ -4,6 +4,7 @@ import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.progress.ChestService;
 import com.rnave.studily.progress.ProgressRateLimiter;
 import com.rnave.studily.progress.ProgressService;
+import com.rnave.studily.progress.StreakRestoreService;
 import com.rnave.studily.push.PushPayload;
 import com.rnave.studily.push.WebPushSender;
 import com.rnave.studily.studysession.StudySessionService.SweepTarget;
@@ -92,7 +93,7 @@ class StudySessionSweeperTest {
         Clock clock = Clock.fixed(instant, ZoneOffset.UTC);
         StudySessionService service = new StudySessionService(sessionRepository, blockRepository,
                 mock(StudySessionTaskRepository.class), mock(ProgressService.class), mock(ChestService.class),
-                new ProgressRateLimiter(), mock(CurrentUser.class), clock);
+                mock(StreakRestoreService.class), new ProgressRateLimiter(), mock(CurrentUser.class), clock);
         sweeper = new StudySessionSweeper(service, pushSender);
     }
 

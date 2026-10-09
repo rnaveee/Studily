@@ -38,6 +38,11 @@ public class UserProgress {
     private LocalDate streakLastDate;
 
     @Column(nullable = false)
+    private int streakLost = 0;
+
+    private LocalDate streakLostLastDate;
+
+    @Column(nullable = false)
     private Instant updatedAt = Instant.now();
 
     @Column(length = 64)
