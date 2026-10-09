@@ -488,10 +488,23 @@ class ChestServiceTest {
     }
 
     @Test
-    void maybeDrop_chestAlreadyOnThatLocalDate_skipsRoll() {
+    void maybeDrop_oneChestAlreadyOnThatLocalDate_stillRolls() {
         ProgressDeltaBuilder delta = progressService.begin(1L);
         LocalDate day = LocalDate.of(2026, 10, 7);
         when(chestRepository.countByUserIdAndSourceAndLocalDate(1L, ChestSource.SESSION, day)).thenReturn(1L);
+        when(random.nextDouble()).thenReturn(0.0);
+
+        Optional<Chest> dropped = service.maybeDrop(delta, ChestSource.SESSION, "session:5", 0.35, day);
+
+        assertThat(dropped).isPresent();
+        assertThat(dropped.get().getLocalDate()).isEqualTo(day);
+    }
+
+    @Test
+    void maybeDrop_dailyLimitOfTwoReached_skipsRoll() {
+        ProgressDeltaBuilder delta = progressService.begin(1L);
+        LocalDate day = LocalDate.of(2026, 10, 7);
+        when(chestRepository.countByUserIdAndSourceAndLocalDate(1L, ChestSource.SESSION, day)).thenReturn(2L);
 
         Optional<Chest> dropped = service.maybeDrop(delta, ChestSource.SESSION, "session:5", 0.2, day);
 

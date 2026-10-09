@@ -146,7 +146,7 @@ All progress date math uses a per-user **progress zone** stored on `user_progres
   - Daily cap: total FLASHCARD_RUN XP per `local_date` ≤ 300 (`DAILY_CAP`, partial grant allowed).
   - Otherwise the reason is `FULL`.
 - The response always includes the per-card summary, even with 0 XP, so the UI can show right/wrong.
-- Chest: 10% chance when `cardCount ≥ 10` and XP > 0, max 1 `FLASHCARD` chest per user per `local_date`. The limit is counted with `chests.local_date` = the run's `local_date`, never `created_at`. Source_ref `run:{runId}`.
+- Chest: **20%** chance when `cardCount ≥ 10` and XP > 0, max **2** `FLASHCARD` chests per user per `local_date` (Ryan, 2026-10-08; was 10%, max 1). The limit is counted with `chests.local_date` = the run's `local_date`, never `created_at`. Source_ref `run:{runId}`.
 
 ## 6. Data model: exact DDL (db-developer)
 
@@ -378,7 +378,7 @@ Repository methods the backend relies on. Names are fixed; db-developer may add 
 - Chest drops:
   - **LEVEL**: every 5th level.
   - **STREAK**: every time the streak reaches a multiple of 7.
-  - **SESSION**: 20% chance when a session completes with `planned_minutes ≥ 50` **and every planned block was confirmed**, the same condition as STUDY_COMPLETE (lead decision 2026-10-08), max 1 SESSION chest per user per `local_date`. The limit is counted with `chests.local_date` = the session's `local_date`, never `created_at`. Source_ref `session:{id}`. LEVEL and STREAK chests store `local_date` as null, or the streak day for STREAK.
+  - **SESSION**: **35%** chance when a session completes with `planned_minutes ≥ 50` **and every planned block was confirmed**, the same condition as STUDY_COMPLETE (lead decision 2026-10-08), max **2** SESSION chests per user per `local_date` (Ryan, 2026-10-08; was 20%, max 1). The limit is counted with `chests.local_date` = the session's `local_date`, never `created_at`. Source_ref `session:{id}`. LEVEL and STREAK chests store `local_date` as null, or the streak day for STREAK.
   - **FLASHCARD**: see §5.
 - Open: `markOpened` must return 1. If it returns 0 and the chest exists for this user, that's 409 `Chest already opened`; otherwise 404.
 - Loot is rolled at open time with one `SecureRandom`:

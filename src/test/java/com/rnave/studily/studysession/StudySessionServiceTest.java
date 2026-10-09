@@ -694,7 +694,7 @@ class StudySessionServiceTest {
         assertThat(s.getXpAwarded()).isZero();
         assertThat(s.getCreditedMinutes()).isEqualTo(50);
         verify(chestService).maybeDrop(any(ProgressDeltaBuilder.class), eq(ChestSource.SESSION),
-                eq("session:" + s.getId()), eq(0.2), eq(TODAY));
+                eq("session:" + s.getId()), eq(0.35), eq(TODAY));
     }
 
     @Test
@@ -1281,8 +1281,8 @@ class StudySessionServiceTest {
     }
 
     @Test
-    void checkin_completingFiftyMinuteSession_dropsSessionChestUnderTwentyPercent() {
-        when(random.nextDouble()).thenReturn(0.1999);
+    void checkin_completingFiftyMinuteSession_dropsSessionChestUnderThirtyFivePercent() {
+        when(random.nextDouble()).thenReturn(0.3499);
         StudySession s = startPomodoro(2);
         at(min(25));
         service.checkin(s.getId());
@@ -1299,8 +1299,8 @@ class StudySessionServiceTest {
     }
 
     @Test
-    void checkin_completingSessionWithRollAtTwentyPercent_dropsNothing() {
-        when(random.nextDouble()).thenReturn(0.2);
+    void checkin_completingSessionWithRollAtThirtyFivePercent_dropsNothing() {
+        when(random.nextDouble()).thenReturn(0.35);
         StudySession s = startPomodoro(2);
         at(min(25));
         service.checkin(s.getId());
@@ -1313,9 +1313,9 @@ class StudySessionServiceTest {
     }
 
     @Test
-    void checkin_sessionChestAlreadyDroppedOnLocalDate_skipsRoll() {
+    void checkin_twoSessionChestsAlreadyDroppedOnLocalDate_skipsRoll() {
         when(random.nextDouble()).thenReturn(0.0);
-        when(chestRepository.countByUserIdAndSourceAndLocalDate(1L, ChestSource.SESSION, TODAY)).thenReturn(1L);
+        when(chestRepository.countByUserIdAndSourceAndLocalDate(1L, ChestSource.SESSION, TODAY)).thenReturn(2L);
         StudySession s = startPomodoro(2);
         at(min(25));
         service.checkin(s.getId());

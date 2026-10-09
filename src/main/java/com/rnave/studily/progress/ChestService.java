@@ -26,6 +26,7 @@ public class ChestService {
     static final double LOOT_XP_CHANCE = 0.4;
     static final int LOOT_XP_MIN = 50;
     static final int LOOT_XP_MAX = 150;
+    static final int DAILY_DROP_LIMIT = 2;
     static final double LOOT_BADGE_CHANCE = 0.05;
     static final int ALL_COSMETICS_OWNED_COINS = 100;
     static final double LOOT_FLAIR_CHANCE = 0.05;
@@ -101,7 +102,7 @@ public class ChestService {
     @Transactional
     public Optional<Chest> maybeDrop(ProgressDeltaBuilder delta, ChestSource source, String sourceRef,
                                      double chance, LocalDate localDate) {
-        if (chestRepository.countByUserIdAndSourceAndLocalDate(delta.userId(), source, localDate) > 0) {
+        if (chestRepository.countByUserIdAndSourceAndLocalDate(delta.userId(), source, localDate) >= DAILY_DROP_LIMIT) {
             return Optional.empty();
         }
         if (random.nextDouble() >= chance) {

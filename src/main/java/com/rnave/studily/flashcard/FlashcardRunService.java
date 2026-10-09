@@ -46,7 +46,7 @@ public class FlashcardRunService {
     static final long MIN_MILLIS_PER_CARD_MATCH = 1_000;
     static final int DAILY_CAP = 300;
     static final int CHEST_MIN_CARDS = 10;
-    static final double CHEST_CHANCE = 0.1;
+    static final double CHEST_CHANCE = 0.2;
     static final Set<FlashcardRunMode> GRADED_MODES = EnumSet.of(FlashcardRunMode.REVIEW, FlashcardRunMode.LEARN);
 
     private final FlashcardRunRepository runRepository;

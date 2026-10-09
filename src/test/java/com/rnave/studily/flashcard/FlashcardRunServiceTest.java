@@ -570,8 +570,8 @@ class FlashcardRunServiceTest {
     }
 
     @Test
-    void complete_tenCardsWithXp_dropsFlashcardChestUnderTenPercent() {
-        when(random.nextDouble()).thenReturn(0.0999);
+    void complete_tenCardsWithXp_dropsFlashcardChestUnderTwentyPercent() {
+        when(random.nextDouble()).thenReturn(0.1999);
         FlashcardRun run = startedRun(FlashcardRunMode.REVIEW);
 
         FlashcardRunResult result = complete(run, Duration.ofSeconds(30), results(10, 10));
@@ -585,8 +585,8 @@ class FlashcardRunServiceTest {
     }
 
     @Test
-    void complete_rollAtTenPercent_dropsNothing() {
-        when(random.nextDouble()).thenReturn(0.1);
+    void complete_rollAtTwentyPercent_dropsNothing() {
+        when(random.nextDouble()).thenReturn(0.2);
         FlashcardRun run = startedRun(FlashcardRunMode.REVIEW);
 
         complete(run, Duration.ofSeconds(30), results(10, 10));
@@ -618,9 +618,9 @@ class FlashcardRunServiceTest {
     }
 
     @Test
-    void complete_flashcardChestAlreadyDroppedOnRunLocalDate_skipsRoll() {
+    void complete_twoFlashcardChestsAlreadyDroppedOnRunLocalDate_skipsRoll() {
         when(random.nextDouble()).thenReturn(0.0);
-        when(chestRepository.countByUserIdAndSourceAndLocalDate(1L, ChestSource.FLASHCARD, TODAY)).thenReturn(1L);
+        when(chestRepository.countByUserIdAndSourceAndLocalDate(1L, ChestSource.FLASHCARD, TODAY)).thenReturn(2L);
         FlashcardRun run = startedRun(FlashcardRunMode.REVIEW);
 
         complete(run, Duration.ofSeconds(30), results(10, 10));

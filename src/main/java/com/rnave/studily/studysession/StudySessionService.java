@@ -63,7 +63,7 @@ public class StudySessionService {
     static final BigDecimal HALF = new BigDecimal("0.5");
     static final int COMPLETE_BONUS = 40;
     static final int BONUS_MIN_PLANNED_MINUTES = 50;
-    static final double SESSION_CHEST_CHANCE = 0.2;
+    static final double SESSION_CHEST_CHANCE = 0.35;
     static final int TASK_XP = 5;
     static final int TASK_XP_POSITIONS = 5;
     static final int MAX_PAID_TASKS_PER_DAY = 10;
