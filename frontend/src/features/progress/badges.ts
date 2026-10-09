@@ -44,9 +44,9 @@ export function badgeGlow(code: string, size: number): string {
   const rank = BADGE_TIER[code] ?? 2;
   const alpha = 26 + 10 * rank;
   if (rank >= 6) {
-    const b = Math.max(2, Math.round(size * 0.1));
+    const b = Math.max(2, Math.round(size * 0.05));
     return ["red", "blue", "violet"]
-      .map((c) => `drop-shadow(0 0 ${b}px color-mix(in srgb, var(--badge-glow-obsidian-${c}) ${alpha}%, transparent))`)
+      .map((c) => `drop-shadow(0 0 ${b}px color-mix(in srgb, var(--badge-glow-obsidian-${c}) 45%, transparent))`)
       .join(" ");
   }
   const blur = Math.max(2, Math.round(size * (0.02 + 0.024 * rank)));
