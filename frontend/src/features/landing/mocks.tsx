@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Bell, CalendarDays, FileText, MessagesSquare } from "lucide-react";
+import { ArrowRight, Bell, CalendarDays, Coins, FileText, Flame, MessagesSquare } from "lucide-react";
+import Avatar from "../../components/Avatar";
 import { demoCourseGrades, demoCourses, demoFlashcardSets, demoItems, demoWeek } from "../../lib/demo";
 import { hhmm } from "../../lib/format";
 import { itemColor } from "../../lib/itemType";
@@ -451,6 +452,133 @@ export function MockSprawl() {
         <p className="mt-1.5 font-mono text-[15px] font-bold tracking-tight text-fg">Studily</p>
         <p className="mt-1 text-[11px] text-fg-2">All four, wired to the same courses.</p>
       </div>
+    </div>
+  );
+}
+
+const BADGE_ART = "https://badges.studily.ca/badges/v4";
+
+const STREAK_DAYS = [
+  { label: "Su", lit: true },
+  { label: "M", lit: true },
+  { label: "Tu", lit: true },
+  { label: "W", lit: true },
+  { label: "Th", lit: true, today: true },
+  { label: "F", lit: false },
+  { label: "Sa", lit: false },
+];
+
+export function MockStudySession() {
+  const { ref, inView } = useReveal<HTMLDivElement>();
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    if (!inView) return;
+    if (prefersReducedMotion()) {
+      setChecked(true);
+      return;
+    }
+    const t = setTimeout(() => setChecked(true), 900);
+    return () => clearTimeout(t);
+  }, [inView]);
+
+  return (
+    <div ref={ref}>
+      <Frame label="Study session" meta="Block 3 of 5">
+        <div className="p-4">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1 text-[13px] font-semibold text-fg">
+              <Flame size={14} style={{ color: "var(--orange-vivid)" }} />5
+            </span>
+            <span className="text-[11.5px] text-fg-3">day streak</span>
+            <span className="badge badge-orange ml-auto font-semibold">×1.4</span>
+          </div>
+          <div className="mt-3 flex justify-between">
+            {STREAK_DAYS.map((d) => (
+              <div key={d.label} className="flex flex-col items-center gap-1">
+                <span
+                  className="h-5 w-5 rounded-full"
+                  style={{
+                    background: d.lit ? "var(--orange-vivid)" : "var(--surface-hi)",
+                    boxShadow: d.today ? "0 0 0 2px var(--surface), 0 0 0 3.5px var(--accent)" : undefined,
+                  }}
+                />
+                <span className="text-[9.5px] text-fg-3">{d.label}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex items-center gap-3 border-t border-line pt-3">
+            <div className="min-w-0">
+              <p className="text-[11px] text-fg-3">Block done</p>
+              <p className="text-[13px] font-semibold text-fg">Finish lab report draft</p>
+            </div>
+            <span
+              className="ml-auto rounded-lg px-3 py-1.5 text-[12px] font-semibold"
+              style={{
+                background: checked ? "color-mix(in srgb, var(--green) 16%, transparent)" : "var(--accent)",
+                color: checked ? "var(--green)" : "var(--accent-fg)",
+                transition: prefersReducedMotion() ? "none" : "background 0.3s ease, color 0.3s ease",
+              }}
+            >
+              {checked ? "+84 XP" : "Check in"}
+            </span>
+          </div>
+        </div>
+      </Frame>
+    </div>
+  );
+}
+
+const PODIUM = [
+  { code: "level_20", alt: "Level 20 badge", size: 64 },
+  { code: "streak_30", alt: "30-day streak badge", size: 80 },
+  { code: "friends_20", alt: "Popular badge", size: 64 },
+];
+
+export function MockProgressProfile() {
+  const { ref, inView } = useReveal<HTMLDivElement>();
+  const xp = useCountUp(724, inView);
+
+  return (
+    <div ref={ref}>
+      <Frame label="Profile" meta="Lv 14">
+        <div className="flex flex-col items-center p-4 text-center">
+          <Avatar name="Maya Chen" username="maya" size={68} flair={{ code: "ring_aurora", imageUrl: null }} />
+          <p className="mt-2 text-[14px] font-semibold text-fg">Maya Chen</p>
+          <p className="text-[11.5px] text-fg-3">@maya</p>
+          <div className="mt-3 flex w-full items-center gap-2">
+            <span className="badge badge-accent font-semibold">Lv 14</span>
+            <span className="flex items-center gap-1 text-[11px] font-semibold tabular-nums text-fg-2">
+              <Coins size={11} style={{ color: "var(--yellow)" }} />
+              1,240
+            </span>
+            <span className="ml-auto text-[11px] tabular-nums text-fg-3">{Math.round(xp)} / 1150 XP</span>
+          </div>
+          <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--surface-hi)" }}>
+            <div className="h-full rounded-full" style={{ width: `${(xp / 1150) * 100}%`, background: "var(--accent)" }} />
+          </div>
+          <div className="mt-4 flex items-end justify-center">
+            {PODIUM.map((b, i) => (
+              <div key={b.code} className="flex flex-col items-center" style={{ width: i === 1 ? 92 : 78 }}>
+                <img src={`${BADGE_ART}/${b.code}.webp`} alt={b.alt} width={b.size} height={b.size} />
+                <div
+                  className={`mt-1 w-full ${i === 1 ? "rounded-t-lg" : i === 0 ? "rounded-tl-lg" : "rounded-tr-lg"}`}
+                  style={{
+                    height: i === 1 ? 26 : 16,
+                    border: "1px solid var(--line)",
+                    borderBottom: "none",
+                    background:
+                      i === 1
+                        ? "linear-gradient(180deg, color-mix(in srgb, var(--accent) 24%, var(--surface-hi)), var(--surface-hi))"
+                        : "var(--surface-hi)",
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="h-1 w-[260px] max-w-full rounded-full" style={{ background: "var(--line)" }} />
+        </div>
+      </Frame>
     </div>
   );
 }

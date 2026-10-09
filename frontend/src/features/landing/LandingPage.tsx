@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  Brain,
   CalendarSync,
   Check,
   MessageSquare,
   Moon,
+  Share2,
   Smartphone,
   Sun,
   Timer,
@@ -18,8 +18,10 @@ import {
   MockDueList,
   MockFlashcard,
   MockGradeCard,
+  MockProgressProfile,
   MockPush,
   MockSprawl,
+  MockStudySession,
   MockToday,
   MockWeekGrid,
 } from "./mocks";
@@ -32,9 +34,9 @@ const SPRAWL_LINES = [
 
 const EXTRAS = [
   {
-    icon: Brain,
-    title: "Flashcards that space themselves",
-    body: "Decks per course, graded Again / Hard / Good / Easy. SM-2 scheduling brings each card back right before you'd forget it.",
+    icon: Share2,
+    title: "Flashcards you can share",
+    body: "Share a set with your friends, copy theirs with credit to whoever made it, and see a preview of any set link right in your chat.",
   },
   {
     icon: Users2,
@@ -49,12 +51,12 @@ const EXTRAS = [
   {
     icon: CalendarSync,
     title: "Bring the calendar you already have",
-    body: "Paste an .ics link from Google Calendar, Apple Calendar, Outlook, or your school's timetable. Export yours back out the same way.",
+    body: "Paste your Canvas calendar feed and your due dates come with you, or an .ics link from Google Calendar, Apple Calendar, Outlook, or your school's timetable. Export yours back out the same way.",
   },
   {
     icon: Timer,
     title: "Study tools when you need them",
-    body: "A Pomodoro timer that keeps running across the app, and a searchable periodic table for all 118 elements.",
+    body: "A Pomodoro timer that keeps running across the app, a to-do list, a scientific calculator with fractions and units, and a searchable periodic table for all 118 elements.",
   },
   {
     icon: Smartphone,
@@ -125,9 +127,10 @@ export default function LandingPage() {
               Your whole semester on one screen.
             </h1>
             <p className="measure mt-5 text-[15.5px] leading-relaxed text-fg-2">
-              Enter your classes once. Studily turns them into a weekly schedule, tracks every
-              assignment and exam against it, tells you where your grade stands, and connects you
-              with the people in your courses.
+              Upload your course outlines or enter your classes once. Studily turns them into a
+              weekly schedule, tracks every assignment and exam, tells you where your grade stands,
+              rewards your study time with XP and badges, and connects you with the people in your
+              courses.
             </p>
             <div className="mt-7 flex flex-wrap gap-2.5">
               <Link to="/signup" className="btn btn-primary btn-lg">
@@ -154,9 +157,8 @@ export default function LandingPage() {
                 Right now it's spread across four apps.
               </h2>
               <p className="mt-4 text-[15px] leading-relaxed text-fg-2">
-                Studily aims to combine all those apps and tools that students regularly
-                use into one app. It features stuff like a working calendar, reminders,
-                flashcards, and more.
+                Studily puts your schedule, deadlines, grades, flashcards, study timer and
+                classmates in one app, so nothing slips through the gaps between them.
               </p>
             </Reveal>
           </div>
@@ -184,8 +186,8 @@ export default function LandingPage() {
         <Feature
           num="01"
           eyebrow="Your schedule"
-          title="Type your classes once, read your week at a glance."
-          body="Add each course with its lecture, lab, and tutorial blocks. Studily lays them out on a real time axis, so a three-hour lab looks like three hours. Every class carries its room and its colour straight through to your calendar and your deadlines."
+          title="Upload your outline, read your week at a glance."
+          body="Drop in a course outline and Studily reads it for you: class times, rooms, assignments, exams and how much each one is worth. Or add a course yourself. Lectures, labs and tutorials land on a real time axis, so a three-hour lab looks like three hours, and every class carries its colour through to your calendar and your deadlines."
           mock={
             <div className="space-y-3">
               <MockWeekGrid />
@@ -221,8 +223,21 @@ export default function LandingPage() {
           num="04"
           eyebrow="Your studying"
           title="Review it before you forget it."
-          body="Build a deck against a course and study it flashcard style. Each card comes back on its own schedule, and every grade button shows you exactly when you'll see that card next."
+          body="Build a set for a course and study it four ways: spaced-repetition flashcards that bring each card back right before you'd forget it, Learn mode to quiz yourself, and Memory and Match when you want a game. Every run ends with a summary of what you got right and what to review."
           mock={<MockFlashcard />}
+        />
+
+        <Feature
+          num="05"
+          eyebrow="Your progress"
+          title="Studying that actually adds up."
+          body="Start a study session with Pomodoro blocks or a timer and check off what you planned. Every block you finish earns XP, a daily streak multiplies it, and every level pays out coins. Collect badges in seven tiers from wood to rainbow obsidian, show your best three on your profile, and spend coins on flair rings that everyone sees around your profile picture."
+          mock={
+            <div className="space-y-3">
+              <MockStudySession />
+              <MockProgressProfile />
+            </div>
+          }
         />
 
         <section className="py-16">
