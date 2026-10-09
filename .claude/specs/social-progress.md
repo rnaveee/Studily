@@ -710,17 +710,17 @@ A **flair** is a decorative ring drawn around a user's avatar, **everywhere that
 
 | code | title | description | rarity | unlock | price | streak_days |
 |---|---|---|---|---|---|---|
-| ring_mint | Mint | A cool, fresh ring. | COMMON | SHOP | 250 | |
-| ring_ocean | Ocean | Deep blue, calm focus. | COMMON | SHOP | 250 | |
-| ring_sunset | Sunset | Warm evening gradient. | RARE | SHOP | 500 | |
-| ring_gold | Gold | Polished and proud. | RARE | SHOP | 750 | |
-| ring_neon | Neon Pulse | A ring that hums with light. | EPIC | SHOP | 1200 | |
-| ring_aurora | Aurora | Shifting northern lights. | EPIC | SHOP | 1500 | |
-| ring_prism | Prism | Found only in chests. | EPIC | CHEST | | |
-| ring_galaxy | Galaxy | A rare find from a chest. | LEGENDARY | CHEST | | |
-| ring_ember | Ember | Reach a 7-day study streak. | RARE | STREAK | | 7 |
-| ring_blaze | Blaze | Reach a 30-day study streak. | EPIC | STREAK | | 30 |
-| ring_inferno | Inferno | Reach a 100-day study streak. | LEGENDARY | STREAK | | 100 |
+| ring_mint | Mint | A mint green ring. | COMMON | SHOP | 250 | |
+| ring_ocean | Ocean | A deep blue ring. | COMMON | SHOP | 250 | |
+| ring_sunset | Sunset | A pink and orange ring. | RARE | SHOP | 500 | |
+| ring_gold | Gold | A gold ring. | RARE | SHOP | 750 | |
+| ring_neon | Neon Pulse | A glowing pink and cyan ring. | EPIC | SHOP | 1200 | |
+| ring_aurora | Aurora | A green, blue and purple ring. | EPIC | SHOP | 1500 | |
+| ring_prism | Prism | A rainbow ring. | EPIC | CHEST | | |
+| ring_galaxy | Galaxy | A purple and blue ring with stars. | LEGENDARY | CHEST | | |
+| ring_ember | Ember | A warm orange ring. | RARE | STREAK | | 7 |
+| ring_blaze | Blaze | An orange and red fire ring. | EPIC | STREAK | | 30 |
+| ring_inferno | Inferno | A red-hot fire ring. | LEGENDARY | STREAK | | 100 |
 
 - Rings are **drawn in CSS** by the frontend, using a registry keyed by `code`. `image_key` is null for all of them now.
 - Retire a flair with `active = false`, never by deleting it: an owned or looted flair is referenced by `user_flairs` and `chests`. This is the same as badges.
@@ -731,6 +731,8 @@ A **flair** is a decorative ring drawn around a user's avatar, **everywhere that
   - **STREAK** flairs unlock **permanently** when `user_progress.streak_best ≥ streak_days`. They're evaluated together with badges (§8), so existing users with a long best streak get them retroactively.
   - Flairs are never revoked.
 - **Chest loot:** after the existing badge roll (§7), one more draw: `nextDouble() < 0.05`. On a hit, the user gets a random **unowned** active flair with unlock ∈ {SHOP, CHEST}, with source CHEST (`nextInt(n)` picks among the candidates, ordered by `sort_order`). If they own all of those, they get +100 coins instead. Store the result in `chests.loot_flair_code`. STREAK flairs never drop.
+
+Descriptions describe each ring's colour (changed in V47, 2026-10-08). Unlock rules are shown separately in the UI.
 
 ### 13.2 DDL: `V46__profile_flairs.sql` (db-developer)
 ```sql

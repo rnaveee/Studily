@@ -1,0 +1,11 @@
+UPDATE flairs SET description = 'A mint green ring.' WHERE code = 'ring_mint';
+UPDATE flairs SET description = 'A deep blue ring.' WHERE code = 'ring_ocean';
+UPDATE flairs SET description = 'A pink and orange ring.' WHERE code = 'ring_sunset';
+UPDATE flairs SET description = 'A gold ring.' WHERE code = 'ring_gold';
+UPDATE flairs SET description = 'A glowing pink and cyan ring.' WHERE code = 'ring_neon';
+UPDATE flairs SET description = 'A green, blue and purple ring.' WHERE code = 'ring_aurora';
+UPDATE flairs SET description = 'A rainbow ring.' WHERE code = 'ring_prism';
+UPDATE flairs SET description = 'A purple and blue ring with stars.' WHERE code = 'ring_galaxy';
+UPDATE flairs SET description = 'A warm orange ring.' WHERE code = 'ring_ember';
+UPDATE flairs SET description = 'An orange and red fire ring.' WHERE code = 'ring_blaze';
+UPDATE flairs SET description = 'A red-hot fire ring.' WHERE code = 'ring_inferno';
