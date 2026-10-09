@@ -244,7 +244,7 @@ class FlairServiceTest {
             assertThat(uf.getUser()).isSameAs(user);
             assertThat(uf.getAcquiredAt()).isEqualTo(NOW);
         });
-        assertThat(user.getEquippedFlairCode()).isNull();
+        verify(userRepository, never()).updateEquippedFlairCode(any(), any());
     }
 
     @Test
@@ -278,8 +278,8 @@ class FlairServiceTest {
 
         EquippedFlairResult result = service.equip("ring_gold");
 
-        assertThat(user.getEquippedFlairCode()).isEqualTo("ring_gold");
-        verify(userRepository).save(user);
+        verify(userRepository).updateEquippedFlairCode(1L, "ring_gold");
+        verify(userRepository, never()).save(any(User.class));
         assertThat(result.equipped().code()).isEqualTo("ring_gold");
         assertThat(result.equipped().equipped()).isTrue();
         assertThat(result.equipped().owned()).isTrue();
@@ -292,9 +292,11 @@ class FlairServiceTest {
         own("ring_ember", FlairSource.EARNED);
         user.setEquippedFlairCode("ring_gold");
 
-        service.equip("ring_ember");
+        EquippedFlairResult result = service.equip("ring_ember");
 
-        assertThat(user.getEquippedFlairCode()).isEqualTo("ring_ember");
+        verify(userRepository).updateEquippedFlairCode(1L, "ring_ember");
+        verify(userRepository, never()).save(any(User.class));
+        assertThat(result.equipped().code()).isEqualTo("ring_ember");
     }
 
     @Test
@@ -305,7 +307,7 @@ class FlairServiceTest {
         assertThatThrownBy(() -> service.equip("ring_galaxy"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("You don't own this flair");
-        assertThat(user.getEquippedFlairCode()).isEqualTo("ring_gold");
+        verify(userRepository, never()).updateEquippedFlairCode(any(), any());
         verify(userRepository, never()).save(any(User.class));
     }
 
@@ -314,7 +316,7 @@ class FlairServiceTest {
         assertThatThrownBy(() -> service.equip("ring_nope"))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("You don't own this flair");
-        assertThat(user.getEquippedFlairCode()).isNull();
+        verify(userRepository, never()).updateEquippedFlairCode(any(), any());
     }
 
     @Test
@@ -325,8 +327,21 @@ class FlairServiceTest {
         EquippedFlairResult result = service.equip(null);
 
         assertThat(result.equipped()).isNull();
-        assertThat(user.getEquippedFlairCode()).isNull();
-        verify(userRepository).save(user);
+        verify(userRepository).updateEquippedFlairCode(1L, null);
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    void equip_ownedInactiveFlair_succeeds() {
+        own("ring_galaxy", FlairSource.CHEST);
+        catalog.get("ring_galaxy").setActive(false);
+
+        EquippedFlairResult result = service.equip("ring_galaxy");
+
+        verify(userRepository).updateEquippedFlairCode(1L, "ring_galaxy");
+        assertThat(result.equipped().code()).isEqualTo("ring_galaxy");
+        assertThat(result.equipped().equipped()).isTrue();
+        assertThat(result.equipped().owned()).isTrue();
     }
 
     @Test
@@ -336,6 +351,7 @@ class FlairServiceTest {
         user.setEquippedFlairCode("ring_ember");
         catalog.get("ring_neon").setActive(false);
         catalog.get("ring_galaxy").setImageKey("galaxy.webp");
+        when(flairRepository.findAll()).thenReturn(catalog.values().stream().toList().reversed());
 
         List<FlairDto> flairs = service.mine();
 
@@ -353,6 +369,25 @@ class FlairServiceTest {
             assertThat(f.priceCoins()).isNull();
             assertThat(f.imageUrl()).isNull();
         });
+    }
+
+    @Test
+    void mine_inactiveOwnedFlair_isListedOwnedAndEquippedWhileInactiveUnownedIsHidden() {
+        own("ring_galaxy", FlairSource.CHEST);
+        user.setEquippedFlairCode("ring_galaxy");
+        catalog.get("ring_galaxy").setActive(false);
+        catalog.get("ring_neon").setActive(false);
+
+        List<FlairDto> flairs = service.mine();
+
+        assertThat(flairs).extracting(FlairDto::code).containsExactly("ring_mint", "ring_ocean", "ring_sunset",
+                "ring_gold", "ring_aurora", "ring_prism", "ring_galaxy", "ring_ember", "ring_blaze", "ring_inferno");
+        assertThat(flairs).filteredOn(f -> f.code().equals("ring_galaxy")).singleElement().satisfies(f -> {
+            assertThat(f.owned()).isTrue();
+            assertThat(f.equipped()).isTrue();
+            assertThat(f.acquiredAt()).isEqualTo(NOW.minusSeconds(3_600));
+        });
+        assertThat(flairs).filteredOn(FlairDto::equipped).extracting(FlairDto::code).containsExactly("ring_galaxy");
     }
 
     @Test
