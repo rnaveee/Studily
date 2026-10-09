@@ -42,15 +42,14 @@ const TIER_GLOW = ["wood", "bronze", "silver", "gold", "diamond", "ruby"];
 
 export function badgeGlow(code: string, size: number): string {
   const rank = BADGE_TIER[code] ?? 2;
-  const alpha = 26 + 10 * rank;
   if (rank >= 6) {
     const b = Math.max(2, Math.round(size * 0.05));
     return ["red", "blue", "violet"]
       .map((c) => `drop-shadow(0 0 ${b}px color-mix(in srgb, var(--badge-glow-obsidian-${c}) 45%, transparent))`)
       .join(" ");
   }
-  const blur = Math.max(2, Math.round(size * (0.02 + 0.024 * rank)));
-  return `drop-shadow(0 0 ${blur}px color-mix(in srgb, var(--badge-glow-${TIER_GLOW[rank]}) ${alpha}%, transparent))`;
+  const blur = Math.max(1, Math.round(size * (0.012 + 0.008 * rank)));
+  return `drop-shadow(0 0 ${blur}px color-mix(in srgb, var(--badge-glow-${TIER_GLOW[rank]}) ${18 + 6 * rank}%, transparent))`;
 }
 
 export function howToEarn(badge: BadgeDto): string {

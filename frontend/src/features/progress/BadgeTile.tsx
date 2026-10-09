@@ -18,9 +18,11 @@ export default function BadgeTile({
   picking = false,
   slot = null,
   onPick,
+  artSize = 90,
 }: {
   badge: BadgeDto;
-  variant?: "tile" | "compact";
+  variant?: "tile" | "compact" | "podium";
+  artSize?: number;
   picking?: boolean;
   slot?: number | null;
   onPick?: (badge: BadgeDto) => void;
@@ -48,6 +50,28 @@ export default function BadgeTile({
   }
 
   const label = `${badge.title}${locked ? ", locked" : ""}${slot ? `, featured slot ${slot}` : ""}`;
+
+  if (variant === "podium") {
+    return (
+      <>
+        <button
+          ref={ref}
+          type="button"
+          onClick={handleClick}
+          onMouseEnter={() => canHover() && setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+          onBlur={() => setPinned(false)}
+          aria-label={label}
+          aria-expanded={open}
+          className="press flex items-center justify-center rounded-full"
+          style={{ width: artSize + 8, height: artSize + 8 }}
+        >
+          <BadgeArt badge={badge} size={artSize} />
+        </button>
+        {open && <BadgePopover anchor={ref} badge={badge} onClose={() => { setPinned(false); setHovered(false); }} />}
+      </>
+    );
+  }
 
   if (variant === "compact") {
     return (

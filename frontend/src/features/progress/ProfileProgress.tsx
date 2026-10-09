@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { ChevronRight, Gift } from "lucide-react";
 import { Skeleton } from "../../components/Skeleton";
 import { offerChests } from "../../lib/progressDelta";
-import BadgeTile from "./BadgeTile";
+import BadgePodium from "./BadgePodium";
 import LevelPill from "./LevelPill";
 import StreakFlame from "./StreakFlame";
 import XpBar from "./XpBar";
@@ -136,11 +136,7 @@ function ProgressView({
       </div>
 
       {featured.length > 0 ? (
-        <div className="mt-4 flex flex-wrap justify-center gap-0.5">
-          {featured.slice(0, 3).map((b) => (
-            <BadgeTile key={b.code} badge={b} variant="compact" />
-          ))}
-        </div>
+        <BadgePodium badges={featured} />
       ) : own ? (
         <Link
           to={badgesHref}
