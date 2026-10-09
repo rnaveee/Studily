@@ -424,9 +424,9 @@ Criteria are code (`BadgeRules` keyed by code). Copy, art and price are DB rows 
 | hours_100 | STUDY | Centurion | Study for 100 hours in sessions. | |
 | runs_10 | FLASHCARDS | Card Shark | Complete 10 flashcard runs. | |
 | runs_100 | FLASHCARDS | Flashcard Master | Complete 100 flashcard runs. | |
-| cosmetic_spark | COSMETIC | Spark | A little flair for your profile. | 300 |
-| cosmetic_comet | COSMETIC | Comet | Streak across the leaderboard in style. | 600 |
-| cosmetic_crown | COSMETIC | Crown | For the true royalty of studying. | 1200 |
+| cosmetic_spark | COSMETIC | Spark | A silver badge with a yellow star. | 300 |
+| cosmetic_comet | COSMETIC | Comet | A gold badge with a blue comet. | 600 |
+| cosmetic_crown | COSMETIC | Crown | A ruby badge with a gold crown. | 1200 |
 
 Rule details:
 - **Friend counts:** accepted friend requests in either direction. **schoolmates_10** counts friends with the same non-null `school_key`.
