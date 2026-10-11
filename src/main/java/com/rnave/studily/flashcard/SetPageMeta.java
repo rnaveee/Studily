@@ -13,17 +13,20 @@ public final class SetPageMeta {
 
     private SetPageMeta() {}
 
-    public static String render(String html, SetPagePreview preview, String url) {
-        String title = preview.title();
+    public static String render(String html, SetPagePreview preview, String url, String imageUrl) {
+        String title = "Studily - " + preview.title() + " by " + preview.ownerLabel();
         String description = describe(preview);
         String out = TITLE.matcher(html)
-                .replaceFirst(Matcher.quoteReplacement("<title>" + HtmlUtils.htmlEscape(title + " · Studily", "UTF-8") + "</title>"));
+                .replaceFirst(Matcher.quoteReplacement("<title>" + HtmlUtils.htmlEscape(title, "UTF-8") + "</title>"));
         out = meta(out, "name", "description", description);
         out = meta(out, "property", "og:title", title);
         out = meta(out, "property", "og:description", description);
         out = meta(out, "property", "og:url", url);
+        out = meta(out, "property", "og:image", imageUrl);
+        out = meta(out, "property", "og:image:alt", preview.title() + " flashcard set on Studily");
         out = meta(out, "name", "twitter:title", title);
         out = meta(out, "name", "twitter:description", description);
+        out = meta(out, "name", "twitter:image", imageUrl);
         return out;
     }
 

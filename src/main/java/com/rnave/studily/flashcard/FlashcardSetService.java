@@ -107,8 +107,14 @@ public class FlashcardSetService {
     public Optional<SetPagePreview> publicPreview(Long id) {
         return flashcardSetRepository.findById(id)
                 .filter(s -> s.getVisibility() == FlashcardSetVisibility.PUBLIC)
-                .map(s -> new SetPagePreview(s.getTitle(), s.getDescription(), s.getUser().getName(),
-                        s.getUser().getUsername(), s.getCards().size()));
+                .map(s -> {
+                    Course course = s.getCourse();
+                    return new SetPagePreview(s.getId(), s.getTitle(), s.getDescription(), s.getUser().getName(),
+                            s.getUser().getUsername(), s.getCards().size(),
+                            course != null ? course.getCode() : null,
+                            course != null ? course.getName() : null,
+                            course != null ? course.getColor() : null);
+                });
     }
 
     @Transactional

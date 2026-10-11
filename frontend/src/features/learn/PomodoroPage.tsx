@@ -11,6 +11,7 @@ import {
   type PomodoroState,
 } from "../../lib/pomodoro";
 import { formatTime } from "../../lib/format";
+import { useFullscreen } from "../../lib/fullscreen";
 import { playRingtone, RINGTONES, unlockAudio } from "../../lib/ringtones";
 import BackButton from "../../components/BackButton";
 import SegmentedToggle from "../../components/SegmentedToggle";
@@ -337,53 +338,10 @@ function SoundCard({ s }: { s: PomodoroState }) {
   );
 }
 
-type FullscreenEl = HTMLElement & {
-  webkitRequestFullscreen?: () => Promise<void>;
-};
-type FullscreenDoc = Document & {
-  webkitFullscreenElement?: Element | null;
-  webkitExitFullscreen?: () => Promise<void>;
-};
-
-function requestFullscreen(el: FullscreenEl) {
-  const fn = el.requestFullscreen ?? el.webkitRequestFullscreen;
-  return fn?.call(el);
-}
-
-function exitFullscreen() {
-  const doc = document as FullscreenDoc;
-  const fn = doc.exitFullscreen ?? doc.webkitExitFullscreen;
-  return fn?.call(doc);
-}
-
-function isFullscreenActive() {
-  const doc = document as FullscreenDoc;
-  return !!(doc.fullscreenElement ?? doc.webkitFullscreenElement);
-}
-
 function FullscreenTimer({ onClose }: { onClose: () => void }) {
   const s = usePomodoro();
   const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (containerEl) requestFullscreen(containerEl)?.catch(() => {});
-  }, [containerEl]);
-
-  useEffect(() => {
-    function onFullscreenChange() {
-      if (!isFullscreenActive()) onClose();
-    }
-    document.addEventListener("fullscreenchange", onFullscreenChange);
-    document.addEventListener("webkitfullscreenchange", onFullscreenChange);
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("fullscreenchange", onFullscreenChange);
-      document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
-      document.body.style.overflow = prevOverflow;
-      if (isFullscreenActive()) exitFullscreen()?.catch(() => {});
-    };
-  }, [onClose]);
+  useFullscreen(containerEl, onClose);
 
   return createPortal(
     <div

@@ -99,11 +99,20 @@ const LOOKS: Record<FlameTier, TierLook> = {
   },
 };
 
-export default function StreakFlame({ streak, size = 40 }: { streak: number; size?: number }) {
+export default function StreakFlame({
+  streak,
+  size = 40,
+  centered = false,
+}: {
+  streak: number;
+  size?: number;
+  centered?: boolean;
+}) {
   const tier = flameTier(streak);
   const look = LOOKS[tier];
   const lit = tier !== "out";
   const sparks = look.spark && size >= 32;
+  const lift = centered ? 48 * (look.scale - 1) : 0;
 
   return (
     <span
@@ -123,35 +132,37 @@ export default function StreakFlame({ streak, size = 40 }: { streak: number; siz
             : undefined
         }
       >
-        <g transform={`translate(50 98) scale(${look.scale}) translate(-50 -98)`}>
-          {look.licks && (
-            <>
-              <path d={LICK_L} className="sf-lick sf-lick-l" style={{ fill: look.outer }} />
-              <path d={LICK_R} className="sf-lick sf-lick-r" style={{ fill: look.outer }} />
-            </>
-          )}
-          <path d={OUTER} className={lit ? "sf-layer" : undefined} style={{ fill: look.outer }} />
-          {look.mid && (
-            <g className="sf-layer sf-mid">
-              <path d={MID} style={{ fill: look.mid }} />
-              <path d={SHINE} style={{ fill: "#fff", opacity: 0.45 }} />
-            </g>
-          )}
-          {look.core && <path d={CORE} className="sf-layer sf-core" style={{ fill: look.core }} />}
-        </g>
-        {sparks &&
-          SPARKS.map((s) => (
-            <path
-              key={s.x}
-              d={`M${s.x} ${s.y - 4} l3 4 l-3 4 l-3 -4 Z`}
-              className="sf-spark"
-              style={{ fill: look.spark, animationDelay: `${-s.delay * look.speed}s` }}
-            />
-          ))}
-        <g transform="translate(25 44.5) scale(0.25)" style={{ fill: look.logo, opacity: look.logoOpacity }}>
-          {LOGO.map((d) => (
-            <path key={d} d={d} />
-          ))}
+        <g transform={lift ? `translate(0 ${lift})` : undefined}>
+          <g transform={`translate(50 98) scale(${look.scale}) translate(-50 -98)`}>
+            {look.licks && (
+              <>
+                <path d={LICK_L} className="sf-lick sf-lick-l" style={{ fill: look.outer }} />
+                <path d={LICK_R} className="sf-lick sf-lick-r" style={{ fill: look.outer }} />
+              </>
+            )}
+            <path d={OUTER} className={lit ? "sf-layer" : undefined} style={{ fill: look.outer }} />
+            {look.mid && (
+              <g className="sf-layer sf-mid">
+                <path d={MID} style={{ fill: look.mid }} />
+                <path d={SHINE} style={{ fill: "#fff", opacity: 0.45 }} />
+              </g>
+            )}
+            {look.core && <path d={CORE} className="sf-layer sf-core" style={{ fill: look.core }} />}
+          </g>
+          {sparks &&
+            SPARKS.map((s) => (
+              <path
+                key={s.x}
+                d={`M${s.x} ${s.y - 4} l3 4 l-3 4 l-3 -4 Z`}
+                className="sf-spark"
+                style={{ fill: look.spark, animationDelay: `${-s.delay * look.speed}s` }}
+              />
+            ))}
+          <g transform="translate(25 44.5) scale(0.25)" style={{ fill: look.logo, opacity: look.logoOpacity }}>
+            {LOGO.map((d) => (
+              <path key={d} d={d} />
+            ))}
+          </g>
         </g>
       </svg>
     </span>

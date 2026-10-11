@@ -19,6 +19,7 @@ RUN mvn -B -q -DskipTests package
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
+RUN apk add --no-cache font-droid-nonlatin
 RUN addgroup -S studily && adduser -S studily -G studily
 COPY --from=backend-build /app/target/*.jar app.jar
 USER studily

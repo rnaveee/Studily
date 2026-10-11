@@ -15,30 +15,46 @@ class SetPageMetaTest {
                 <meta property="og:description" content="Generic description" />
                 <meta property="og:url" content="https://studily.ca" />
                 <meta property="og:image" content="https://studily.ca/og-image.png" />
+                <meta property="og:image:alt" content="Studily logo" />
                 <meta name="twitter:title" content="Studily: Your whole semester on one screen" />
                 <meta name="twitter:description" content="Generic description" />
+                <meta name="twitter:image" content="https://studily.ca/og-image.png" />
             </head>
             """;
+    private static final String IMAGE = "https://studily.ca/api/public/flashcard-sets/26/preview.png?v=abc";
+
+    private static SetPagePreview preview(String title, String description, String name, String username, int cards) {
+        return new SetPagePreview(26L, title, description, name, username, cards, null, null, null);
+    }
 
     @Test
-    void replacesTitleDescriptionAndUrl() {
-        String out = SetPageMeta.render(HTML, new SetPagePreview("BIOL 101 Cells", null, "Ryan", "ryan", 8),
-                "https://studily.ca/sets/26");
+    void replacesTitleDescriptionUrlAndImage() {
+        String out = SetPageMeta.render(HTML, preview("BIOL 101 Cells", null, "Ryan", "ryan", 8),
+                "https://studily.ca/sets/26", IMAGE);
 
-        assertThat(out).contains("<title>BIOL 101 Cells · Studily</title>");
-        assertThat(out).contains("<meta property=\"og:title\" content=\"BIOL 101 Cells\" />");
-        assertThat(out).contains("<meta name=\"twitter:title\" content=\"BIOL 101 Cells\" />");
+        assertThat(out).contains("<title>Studily - BIOL 101 Cells by Ryan</title>");
+        assertThat(out).contains("<meta property=\"og:title\" content=\"Studily - BIOL 101 Cells by Ryan\" />");
+        assertThat(out).contains("<meta name=\"twitter:title\" content=\"Studily - BIOL 101 Cells by Ryan\" />");
         assertThat(out).contains("<meta property=\"og:url\" content=\"https://studily.ca/sets/26\" />");
         assertThat(out).contains("content=\"Flashcard set by Ryan (@ryan) · 8 cards. Study it free on Studily.\"");
-        assertThat(out).contains("<meta property=\"og:image\" content=\"https://studily.ca/og-image.png\" />");
-        assertThat(out).doesNotContain("Generic description");
+        assertThat(out).contains("<meta property=\"og:image\" content=\"" + IMAGE + "\" />");
+        assertThat(out).contains("<meta name=\"twitter:image\" content=\"" + IMAGE + "\" />");
+        assertThat(out).contains("<meta property=\"og:image:alt\" content=\"BIOL 101 Cells flashcard set on Studily\" />");
+        assertThat(out).doesNotContain("Generic description").doesNotContain("og-image.png");
+    }
+
+    @Test
+    void fallsBackToUsernameWithoutDisplayName() {
+        String out = SetPageMeta.render(HTML, preview("Cells", null, " ", "ryan", 2), "https://studily.ca/sets/26", IMAGE);
+
+        assertThat(out).contains("<meta property=\"og:title\" content=\"Studily - Cells by @ryan\" />");
     }
 
     @Test
     void escapesUserText() {
         String out = SetPageMeta.render(HTML,
-                new SetPagePreview("\"><script>alert(1)</script> $1 \\\\", "A & B", "<b>", "x", 1),
-                "https://studily.ca/sets/1");
+                preview("\"><script>alert(1)</script> $1 \\\\", "A & B", "<b>", "x", 1),
+                "https://studily.ca/sets/1", IMAGE);
 
         assertThat(out).doesNotContain("<script>");
         assertThat(out).doesNotContain("<b>");
@@ -48,16 +64,16 @@ class SetPageMetaTest {
 
     @Test
     void keepsNonAsciiTextReadable() {
-        String out = SetPageMeta.render(HTML, new SetPagePreview("Café 化学", null, "Zoë", "zoe", 2),
-                "https://studily.ca/sets/3");
+        String out = SetPageMeta.render(HTML, preview("Café 化学", null, "Zoë", "zoe", 2),
+                "https://studily.ca/sets/3", IMAGE);
 
-        assertThat(out).contains("<meta property=\"og:title\" content=\"Café 化学\" />");
+        assertThat(out).contains("<meta property=\"og:title\" content=\"Studily - Café 化学 by Zoë\" />");
         assertThat(out).contains("Flashcard set by Zoë (@zoe)");
     }
 
     @Test
     void truncatesLongDescriptions() {
-        String description = SetPageMeta.describe(new SetPagePreview("T", "x".repeat(500), "N", "n", 3));
+        String description = SetPageMeta.describe(preview("T", "x".repeat(500), "N", "n", 3));
 
         assertThat(description).hasSizeLessThanOrEqualTo(300).endsWith("…");
     }

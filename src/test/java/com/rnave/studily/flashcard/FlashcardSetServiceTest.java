@@ -2,6 +2,7 @@ package com.rnave.studily.flashcard;
 
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
+import com.rnave.studily.course.Course;
 import com.rnave.studily.course.CourseService;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardDto;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetDto;
@@ -447,14 +448,22 @@ class FlashcardSetServiceTest {
 
     @Test
     void publicPreviewOnlyForPublicSets() {
-        setOwnedBy(20L, 2L, FlashcardSetVisibility.PUBLIC);
+        Course course = new Course();
+        course.setCode("BIOL 101");
+        course.setName("Intro to Biology");
+        course.setColor("#10b981");
+        setOwnedBy(20L, 2L, FlashcardSetVisibility.PUBLIC).setCourse(course);
         setOwnedBy(21L, 2L, FlashcardSetVisibility.FRIENDS);
         setOwnedBy(22L, 2L, FlashcardSetVisibility.PRIVATE);
 
         assertThat(service.publicPreview(20L)).hasValueSatisfying(p -> {
+            assertThat(p.id()).isEqualTo(20L);
             assertThat(p.title()).isEqualTo("Cells");
             assertThat(p.ownerUsername()).isEqualTo("user2");
             assertThat(p.cardCount()).isEqualTo(1);
+            assertThat(p.courseCode()).isEqualTo("BIOL 101");
+            assertThat(p.courseName()).isEqualTo("Intro to Biology");
+            assertThat(p.courseColor()).isEqualTo("#10b981");
         });
         assertThat(service.publicPreview(21L)).isEmpty();
         assertThat(service.publicPreview(22L)).isEmpty();

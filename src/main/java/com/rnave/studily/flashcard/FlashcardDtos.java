@@ -124,7 +124,11 @@ public class FlashcardDtos {
         }
     }
 
-    public record SetPagePreview(String title, String description, String ownerName, String ownerUsername,
-                                 int cardCount) {
+    public record SetPagePreview(Long id, String title, String description, String ownerName, String ownerUsername,
+                                 int cardCount, String courseCode, String courseName, String courseColor) {
+
+        public String ownerLabel() {
+            return ownerName != null && !ownerName.isBlank() ? ownerName.trim() : "@" + ownerUsername;
+        }
     }
 }

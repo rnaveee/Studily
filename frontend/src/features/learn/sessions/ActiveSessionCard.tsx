@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Clock, Coffee, Pause, Play, Square, Zap } from "lucide-react";
+import { Check, Clock, Coffee, Maximize2, Minimize2, Pause, Play, Square, Zap } from "lucide-react";
 import { api } from "../../../lib/api";
 import { useConfirm } from "../../../lib/confirm";
 import { formatTime } from "../../../lib/format";
+import { useFullscreen } from "../../../lib/fullscreen";
 import { formatMs, pomodoro, pomodoroColor } from "../../../lib/pomodoro";
 import { applyDelta } from "../../../lib/progressDelta";
 import { playRingtone } from "../../../lib/ringtones";
@@ -26,6 +28,7 @@ export default function ActiveSessionCard({
 }) {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const [expanded, setExpanded] = useState(false);
   const skew = Date.parse(session.serverNow) - receivedAt;
   const [now, setNow] = useState(() => Date.now() + skew);
 
@@ -183,6 +186,24 @@ export default function ActiveSessionCard({
   fraction = Math.min(1, Math.max(0, fraction));
 
   const canCheckIn = phase === "checkin" || phase === "late";
+  const ringProps = { color, fraction, label, clock, caption, glow: phase === "focus" || phase === "break" };
+  const blocks = <BlockRow session={session} phase={phase} now={now} startMs={startMs} dueMs={dueMs} />;
+  const actions = (
+    <SessionActions
+      phase={phase}
+      busy={busy}
+      canCheckIn={canCheckIn}
+      untilStart={startMs - now}
+      untilCheckin={opensMs - now}
+      onCheckIn={() => checkin.mutate()}
+      onResume={() => resume.mutate()}
+      onEnd={endSession}
+    />
+  );
+  const tasks =
+    session.tasks.length > 0 ? (
+      <TaskList tasks={session.tasks} onToggle={(t) => toggleTask.mutate({ taskId: t.id, done: !t.done })} />
+    ) : null;
 
   return (
     <div
@@ -192,109 +213,228 @@ export default function ActiveSessionCard({
         background: `color-mix(in srgb, ${color} 5%, var(--surface))`,
       }}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color }}>
-          {MODE_LABEL[session.mode]} · Block {Math.min(session.currentBlock, session.plannedBlocks)} of{" "}
-          {session.plannedBlocks}
-        </span>
-        <span className="flex items-center gap-1.5">
-          {session.multiplier > 1 && (
-            <span
-              className="badge tabular-nums"
-              style={{ background: "color-mix(in srgb, var(--orange-vivid) 14%, transparent)", color: "var(--orange)" }}
-              title="Streak multiplier for this session"
-            >
-              <Zap size={10} />
-              {formatMultiplier(session.multiplier)}
-            </span>
-          )}
-          <span className="text-[12px] font-semibold tabular-nums text-accent">+{session.xpAwarded} XP</span>
-        </span>
-      </div>
+      <SessionHeader session={session} color={color} onExpand={() => setExpanded(true)} />
 
       <div className="mt-3 grid grid-cols-1 items-center gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-6">
-        <Ring color={color} fraction={fraction} label={label} clock={clock} caption={caption} />
+        <Ring {...ringProps} />
 
         <div className="min-w-0 space-y-3">
-          <BlockRow session={session} phase={phase} now={now} startMs={startMs} dueMs={dueMs} />
-
-          {phase === "paused" ? (
-            <>
-              <p className="text-[12.5px] leading-snug text-fg-2">
-                You missed a check-in, so this session is on hold. Resume within 30 minutes or it ends on its own.
-              </p>
-              <button
-                onClick={() => resume.mutate()}
-                disabled={busy}
-                className="btn btn-primary btn-lg w-full"
-                style={{ minHeight: 48 }}
-              >
-                <Play size={15} fill="currentColor" strokeWidth={0} />
-                Resume session
-              </button>
-            </>
-          ) : (
-            <>
-              <p className="text-[12.5px] leading-snug text-fg-2">
-                {phase === "break"
-                  ? "Stretch, refill your water. The next block starts on its own."
-                  : phase === "focus"
-                    ? "Stay on task. Check in when the block ends to bank its XP."
-                    : phase === "expired"
-                      ? "The check-in window closed, so this block didn't count."
-                      : "Block done! Check in now to keep its XP."}
-              </p>
-              <button
-                onClick={() => checkin.mutate()}
-                disabled={!canCheckIn || busy}
-                className={`btn btn-lg w-full ${canCheckIn ? "btn-primary checkin-pulse" : "btn-ghost"}`}
-                style={{ minHeight: 48, fontSize: 15 }}
-              >
-                {canCheckIn ? (
-                  <>
-                    <Check size={17} strokeWidth={2.6} />
-                    Check in
-                  </>
-                ) : phase === "break" ? (
-                  <>
-                    <Coffee size={15} />
-                    Next block in {formatMs(startMs - now)}
-                  </>
-                ) : phase === "expired" ? (
-                  <>
-                    <Pause size={15} />
-                    Block expired
-                  </>
-                ) : (
-                  <>
-                    <Clock size={15} />
-                    Check-in opens in {formatMs(opensMs - now)}
-                  </>
-                )}
-              </button>
-            </>
-          )}
-
-          <div className="flex justify-end">
-            <button
-              onClick={endSession}
-              disabled={busy}
-              className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
-            >
-              <Square size={12} />
-              End session
-            </button>
-          </div>
+          {blocks}
+          {actions}
         </div>
       </div>
 
-      {session.tasks.length > 0 && (
-        <TaskList
-          tasks={session.tasks}
-          onToggle={(t) => toggleTask.mutate({ taskId: t.id, done: !t.done })}
-        />
+      {tasks && <div className="mt-4 border-t border-line pt-3">{tasks}</div>}
+
+      {expanded && (
+        <FullscreenSession color={color} onClose={() => setExpanded(false)}>
+          <div
+            className={`mx-auto grid w-full items-center gap-8 ${
+              tasks ? "max-w-5xl lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:gap-14" : "max-w-xl"
+            }`}
+          >
+            <div className="flex min-w-0 flex-col items-center gap-6">
+              <SessionHeader session={session} color={color} centered />
+              <Ring {...ringProps} large />
+              <div className="w-full max-w-md space-y-3">
+                {blocks}
+                {actions}
+              </div>
+            </div>
+            {tasks && (
+              <div
+                className="w-full rounded-2xl border p-4 sm:p-5"
+                style={{ borderColor: "var(--line)", background: "var(--surface)" }}
+              >
+                {tasks}
+              </div>
+            )}
+          </div>
+        </FullscreenSession>
       )}
     </div>
+  );
+}
+
+function SessionHeader({
+  session,
+  color,
+  centered = false,
+  onExpand,
+}: {
+  session: StudySessionDto;
+  color: string;
+  centered?: boolean;
+  onExpand?: () => void;
+}) {
+  return (
+    <div className={`flex flex-wrap items-center gap-2 ${centered ? "justify-center" : "justify-between"}`}>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.12em]" style={{ color }}>
+        {MODE_LABEL[session.mode]} · Block {Math.min(session.currentBlock, session.plannedBlocks)} of{" "}
+        {session.plannedBlocks}
+      </span>
+      <span className="flex items-center gap-1.5">
+        {session.multiplier > 1 && (
+          <span
+            className="badge tabular-nums"
+            style={{ background: "color-mix(in srgb, var(--orange-vivid) 14%, transparent)", color: "var(--orange)" }}
+            title="Streak multiplier for this session"
+          >
+            <Zap size={10} />
+            {formatMultiplier(session.multiplier)}
+          </span>
+        )}
+        <span className="text-[12px] font-semibold tabular-nums text-accent">+{session.xpAwarded} XP</span>
+        {onExpand && (
+          <button
+            onClick={onExpand}
+            aria-label="Open fullscreen"
+            title="Fullscreen"
+            className="-my-1 -mr-1.5 ml-0.5 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+          >
+            <Maximize2 size={15} />
+          </button>
+        )}
+      </span>
+    </div>
+  );
+}
+
+function SessionActions({
+  phase,
+  busy,
+  canCheckIn,
+  untilStart,
+  untilCheckin,
+  onCheckIn,
+  onResume,
+  onEnd,
+}: {
+  phase: Phase;
+  busy: boolean;
+  canCheckIn: boolean;
+  untilStart: number;
+  untilCheckin: number;
+  onCheckIn: () => void;
+  onResume: () => void;
+  onEnd: () => void;
+}) {
+  return (
+    <>
+      {phase === "paused" ? (
+        <>
+          <p className="text-[12.5px] leading-snug text-fg-2">
+            You missed a check-in, so this session is on hold. Resume within 30 minutes or it ends on its own.
+          </p>
+          <button onClick={onResume} disabled={busy} className="btn btn-primary btn-lg w-full" style={{ minHeight: 48 }}>
+            <Play size={15} fill="currentColor" strokeWidth={0} />
+            Resume session
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="text-[12.5px] leading-snug text-fg-2">
+            {phase === "break"
+              ? "Stretch, refill your water. The next block starts on its own."
+              : phase === "focus"
+                ? "Stay on task. Check in when the block ends to bank its XP."
+                : phase === "expired"
+                  ? "The check-in window closed, so this block didn't count."
+                  : "Block done! Check in now to keep its XP."}
+          </p>
+          <button
+            onClick={onCheckIn}
+            disabled={!canCheckIn || busy}
+            className={`btn btn-lg w-full ${canCheckIn ? "btn-primary checkin-pulse" : "btn-ghost"}`}
+            style={{ minHeight: 48, fontSize: 15 }}
+          >
+            {canCheckIn ? (
+              <>
+                <Check size={17} strokeWidth={2.6} />
+                Check in
+              </>
+            ) : phase === "break" ? (
+              <>
+                <Coffee size={15} />
+                Next block in {formatMs(untilStart)}
+              </>
+            ) : phase === "expired" ? (
+              <>
+                <Pause size={15} />
+                Block expired
+              </>
+            ) : (
+              <>
+                <Clock size={15} />
+                Check-in opens in {formatMs(untilCheckin)}
+              </>
+            )}
+          </button>
+        </>
+      )}
+
+      <div className="flex justify-end">
+        <button
+          onClick={onEnd}
+          disabled={busy}
+          className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
+        >
+          <Square size={12} />
+          End session
+        </button>
+      </div>
+    </>
+  );
+}
+
+function FullscreenSession({
+  color,
+  onClose,
+  children,
+}: {
+  color: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  useFullscreen(document.documentElement, onClose);
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Study session"
+      className="fixed inset-x-0 top-0 z-[85] overflow-y-auto overscroll-contain animate-in"
+      style={{
+        height: "var(--app-height, 100%)",
+        background: `color-mix(in srgb, ${color} 6%, var(--bg))`,
+        transition: "background-color 0.6s ease",
+      }}
+    >
+      <div
+        className="sticky top-0 z-10"
+        style={{ height: "env(safe-area-inset-top, 0px)", background: "var(--surface)" }}
+      />
+
+      <button
+        onClick={onClose}
+        aria-label="Exit fullscreen"
+        className="fixed right-4 z-10 rounded-lg p-2 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+        style={{ top: "calc(env(safe-area-inset-top, 0px) + 16px)" }}
+      >
+        <Minimize2 size={18} />
+      </button>
+
+      <div
+        className="flex min-h-full flex-col justify-center px-5 sm:px-8"
+        style={{
+          paddingTop: "calc(env(safe-area-inset-top, 0px) + 64px)",
+          paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 32px)",
+        }}
+      >
+        {children}
+      </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -304,18 +444,35 @@ function Ring({
   label,
   clock,
   caption,
+  glow = false,
+  large = false,
 }: {
   color: string;
   fraction: number;
   label: string;
   clock: string;
   caption: string;
+  glow?: boolean;
+  large?: boolean;
 }) {
   const r = 46;
   const circumference = 2 * Math.PI * r;
   return (
-    <div className="relative mx-auto aspect-square w-[156px] shrink-0">
-      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90 overflow-visible">
+    <div
+      className={`relative mx-auto aspect-square shrink-0 ${large ? "" : "w-[156px]"}`}
+      style={large ? { width: "min(72vw, 44vh, 380px)" } : undefined}
+    >
+      {large && (
+        <div
+          aria-hidden
+          className={`absolute inset-[8%] rounded-full ${glow ? "pomo-breathe" : ""}`}
+          style={{
+            background: `radial-gradient(circle, color-mix(in srgb, ${color} 26%, transparent) 0%, transparent 70%)`,
+            filter: "blur(18px)",
+          }}
+        />
+      )}
+      <svg viewBox="0 0 100 100" className="relative h-full w-full -rotate-90 overflow-visible">
         <circle cx="50" cy="50" r={r} fill="none" stroke="var(--surface-hi)" strokeWidth="5" />
         <circle
           cx="50"
@@ -332,11 +489,22 @@ function Ring({
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color }}>
+        <span
+          className={`font-semibold uppercase ${large ? "text-[12px] tracking-[0.18em]" : "text-[10px] tracking-[0.16em]"}`}
+          style={{ color }}
+        >
           {label}
         </span>
-        <span className="mt-0.5 font-mono text-[32px] font-bold leading-none tabular-nums text-fg">{clock}</span>
-        <span className="mt-1 max-w-[120px] truncate text-[11px] text-fg-3">{caption}</span>
+        <span
+          className={`font-mono font-bold leading-none tabular-nums text-fg ${
+            large ? "mt-1.5 text-[min(15vw,9vh,80px)]" : "mt-0.5 text-[32px]"
+          }`}
+        >
+          {clock}
+        </span>
+        <span className={`truncate text-fg-3 ${large ? "mt-2 max-w-[70%] text-[13px]" : "mt-1 max-w-[120px] text-[11px]"}`}>
+          {caption}
+        </span>
       </div>
     </div>
   );
@@ -413,7 +581,7 @@ function TaskList({
   const sorted = [...tasks].sort((a, b) => a.position - b.position);
   const done = tasks.filter((t) => t.done).length;
   return (
-    <div className="mt-4 border-t border-line pt-3">
+    <div>
       <div className="mb-1 flex items-center justify-between px-0.5 text-[12px]">
         <span className="font-semibold text-fg">Tasks</span>
         <span className="tabular-nums text-fg-3">

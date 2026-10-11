@@ -121,7 +121,7 @@ function ProgressView({
           }
           title={`${streak}-day study streak`}
         >
-          <StreakFlame streak={streak} size={28} />
+          <StreakFlame streak={streak} size={28} centered />
           {streak}-day streak
         </span>
       </div>

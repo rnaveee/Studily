@@ -37,7 +37,9 @@ public class SharedSetPageController {
         }
         String body = parseId(id)
                 .flatMap(flashcardSetService::publicPreview)
-                .map(preview -> SetPageMeta.render(html, preview, baseUrl + "/sets/" + id))
+                .map(preview -> SetPageMeta.render(html, preview, baseUrl + "/sets/" + preview.id(),
+                        baseUrl + "/api/public/flashcard-sets/" + preview.id() + "/preview.png?v="
+                                + SetPreviewImage.version(preview)))
                 .orElse(html);
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noCache())
