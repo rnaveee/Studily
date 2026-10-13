@@ -90,11 +90,22 @@ Lifecycle (server time is authoritative):
    - (a) For ACTIVE sessions whose current block has `due_at ≤ now` and `notified_at IS NULL`: sends a push and sets `notified_at`. Push: title `Study session`, body `Block done! Check in to keep your XP.`, url `/learn`. Use `WebPushSender.sendToUser(userId, PushPayload.of(...), 300)`.
    - (b) For ACTIVE sessions where `now > due_at + 5 min`: block → `MISSED` (0 XP), session → `PAUSED`, `next_checkin_due_at = null`. If the missed block was the last planned block, the session goes straight to `EXPIRED` with `ended_at = now`, because there is nothing left to resume. A missed block uses up one planned block: resume starts block `current_block + 1`, so a session with a missed block can never earn STUDY_COMPLETE.
    - (c) For PAUSED sessions paused more than 30 min: → `EXPIRED`, `ended_at = now`.
+   - (d) (V50) For ACTIVE sessions with `user_paused_at` more than 30 min ago: settle the running block as of `user_paused_at`, then → `ENDED`. Steps (a) and (b) skip sessions with `user_paused_at` set.
 4. **Resume** (PAUSED only): a new block starts now, and the session becomes ACTIVE.
 5. **End** (ACTIVE or PAUSED):
    - If the current block is RUNNING with ≥10 elapsed minutes, it becomes `PARTIAL` with STUDY_PARTIAL XP. Otherwise the block is discarded.
    - The session becomes `ENDED`.
+5a. **User pause** (decided by Ryan 2026-10-13, V50 `study_sessions.user_paused_at`). This is separate from `PAUSED`, which only means a missed check-in. The session stays `ACTIVE`, with `user_paused_at` set.
+   - `POST /pause` works on an ACTIVE session with a RUNNING block (focus or break) while `now < due_at − 60s`. Inside the check-in window it returns 409 `Check in first`. A repeat call returns the current state.
+   - While paused: check-in returns 409 `Resume the session first`. The sweeper's missed-block and push steps skip the session. Tasks can still be ticked and edited.
+   - `POST /resume` on a user-paused session shifts the running block's `started_at` and `due_at` forward by the paused time and clears the flag. The remaining time is unchanged, and the push fires at the new `due_at`.
+   - End while paused settles the running block **as of `user_paused_at`**, so paused time never counts toward partial credit.
+   - A pause longer than 30 min ends the session (ENDED, settled as of the pause). This is sweeper step (d), and `resume` does the same itself, returning 409 `This session ended after 30 minutes paused`.
 6. **Tasks** (decided by Ryan 2026-10-08 after the security review): `PATCH done=true|false` sets or clears `done_at`. A task is **payable** when it's done, at position 0–4, ticked ≥5 min after `started_at`, and not yet paid. Payable tasks are paid **immediately on tick** if `session.credited_minutes > 0`. Otherwise they stay pending and are all paid when the session first gets credited minutes (a CONFIRMED or PARTIAL block), in position order. A session that ends with 0 credited minutes pays no task XP. Each payment respects the daily cap of 10 paid tasks per `local_date` (tasks with `xp_awarded > 0` across the user's sessions on that date) and the day factor. Unticking never revokes XP, and the dedupe key stops a re-tick from paying twice.
+   - **Editing during a session** (decided by Ryan 2026-10-13):
+     - Tasks can be added (`POST /tasks`), renamed (`PATCH` with `text`) and deleted while the session is OPEN. There are at most 10 live tasks, each 1–200 chars.
+     - A new task gets `max(position) + 1`.
+     - A task that earned XP (`xp_awarded > 0`) **can't be deleted** (409). Paid tasks stay forever, so each payable position 0–4 can pay at most once, and the daily cap count can't be lowered by deleting rows.
 
 Daily diminishing returns (decided by Ryan 2026-10-07: applies to **all** study XP):
 - Sum the credited minutes of the user's blocks on the same `local_date` before this block.
@@ -483,14 +494,14 @@ Study session types:
 ```ts
 type StudySessionMode = "POMODORO" | "TIMER";
 type StudySessionStatus = "ACTIVE" | "PAUSED" | "COMPLETED" | "ENDED" | "EXPIRED";
-interface StudySessionTaskDto { id: number; position: number; text: string; done: boolean; }
+interface StudySessionTaskDto { id: number; position: number; text: string; done: boolean; earned: boolean; }
 interface StudySessionBlockDto { index: number; status: "RUNNING" | "CONFIRMED" | "MISSED" | "PARTIAL";
   startedAt: string; dueAt: string; creditedMinutes: number; xpAwarded: number; }
 interface StudySessionDto { id: number; mode: StudySessionMode; status: StudySessionStatus; plannedBlocks: number;
   blockMinutes: number; breakMinutes: number; plannedMinutes: number; startedAt: string; endedAt: string | null;
   currentBlock: number; checkinOpensAt: string | null; checkinClosesAt: string | null;
   creditedMinutes: number; xpAwarded: number; multiplier: number;
-  tasks: StudySessionTaskDto[]; blocks: StudySessionBlockDto[]; serverNow: string; }
+  tasks: StudySessionTaskDto[]; blocks: StudySessionBlockDto[]; userPausedAt: string | null; serverNow: string; }
 interface StudySessionSummaryDto { id: number; mode: StudySessionMode; status: StudySessionStatus; startedAt: string;
   endedAt: string | null; plannedMinutes: number; creditedMinutes: number; xpAwarded: number;
   tasksDone: number; tasksTotal: number; }
@@ -507,8 +518,11 @@ interface StreakWeekDto { current: number; best: number; multiplier: number; min
 | POST `/api/study-sessions` | `{mode, blocks?, minutes?, tasks: string[]}` | `StudySessionDto` (201) | 400, 409 |
 | GET `/api/study-sessions/active` | | `StudySessionDto`, or 204 if none | |
 | POST `/api/study-sessions/{id}/checkin` | | `StudySessionResult` | 404, 409 |
-| POST `/api/study-sessions/{id}/resume` | | `StudySessionDto` | 404, 409 not paused |
-| PATCH `/api/study-sessions/{id}/tasks/{taskId}` | `{done: boolean}` | `StudySessionResult` | 404, 409 session finished |
+| POST `/api/study-sessions/{id}/pause` | | `StudySessionDto` | 404, 409 not running / check-in open |
+| POST `/api/study-sessions/{id}/resume` | | `StudySessionDto` | 404, 409 not paused / ended after 30 min paused |
+| POST `/api/study-sessions/{id}/tasks` | `{text}` | `StudySessionDto` | 400, 404, 409 session finished |
+| PATCH `/api/study-sessions/{id}/tasks/{taskId}` | `{done?: boolean, text?: string}` | `StudySessionResult` | 400, 404, 409 session finished |
+| DELETE `/api/study-sessions/{id}/tasks/{taskId}` | | `StudySessionDto` | 404, 409 session finished / task earned XP |
 | POST `/api/study-sessions/{id}/end` | | `StudySessionResult` | 404, 409 already finished |
 | GET `/api/study-sessions?page=0&size=20` | | `PageResponse<StudySessionSummaryDto>` (`{items, hasMore}`), newest first, size ≤ 50 | |
 | GET `/api/study-sessions/streak` | | `StreakWeekDto` | |
@@ -603,6 +617,9 @@ The card is built from `features/learn/sessions/`:
   - Countdown to the current block's `dueAt`, corrected with `serverNow`. Reuse `formatMs` and `pomodoroColor` from `lib/pomodoro.ts` and `playRingtone` from `lib/ringtones.ts` for the block-end sound.
   - A block progress row and a big "Check in" button, enabled during the check-in window and pulsing then.
   - Paused state with a Resume button, task checkboxes (PATCH), and an End session button with confirm.
+  - (2026-10-13) A Pause button during focus and break. While paused, the ring freezes and shows when the session will end on its own, and the main button becomes Resume. The missed-check-in hold is labelled "On hold".
+  - (2026-10-13) Tasks can be edited inline: tap the text to rename it, X removes it (hidden once it earned XP), and an add row sits at the bottom.
+  - (2026-10-13) When an open session closes with unticked tasks, `StudySessionsPanel` shows "You have unfinished work" with "I'm okay" and "Do it". "Do it" adds each task to the main todo list (`POST /api/todos`, MEDIUM priority).
   - Do **not** drive the existing pomodoro store; the backend sends the block-end push.
 - **`StreakWeek`**: seven circles labelled `Su M Tu W Th F Sa`, lit when `qualified`, with today ringed. Next to them, the Studily logo (`/studily-3a.svg`) with a flame animation when `current > 0` (grey when 0), the streak count, and a `×1.3` multiplier chip.
 - **`SessionHistoryList`** and **`SessionHistoryPage`** (`/learn/sessions`): infinite "Load more" on `PageResponse`. Rows show date, mode, credited minutes, XP, tasks done/total and a status chip.

@@ -18,7 +18,7 @@ export const MODE_LABEL: Record<StudySessionMode, string> = {
 
 export const STATUS_META: Record<StudySessionStatus, { label: string; className: string }> = {
   ACTIVE: { label: "In progress", className: "badge-accent" },
-  PAUSED: { label: "Paused", className: "badge-orange" },
+  PAUSED: { label: "On hold", className: "badge-orange" },
   COMPLETED: { label: "Completed", className: "badge-green" },
   ENDED: { label: "Ended early", className: "badge-muted" },
   EXPIRED: { label: "Expired", className: "badge-red" },

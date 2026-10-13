@@ -31,6 +31,8 @@ public interface StudySessionRepository extends JpaRepository<StudySession, Long
 
     List<StudySession> findByStatusAndPausedAtBefore(StudySessionStatus s, Instant t);
 
+    List<StudySession> findByStatusAndUserPausedAtBefore(StudySessionStatus s, Instant t);
+
     @Query("""
             select s.localDate from StudySession s
             where s.user.id = :userId and s.localDate between :from and :to

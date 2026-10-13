@@ -308,4 +308,32 @@ class StudySessionSweeperTest {
 
         verify(pushSender, never()).sendToUser(anyLong(), any(), anyInt());
     }
+
+    @Test
+    void sweep_overdueBlockOfUserPausedSession_isLeftAlone() {
+        StudySession s = session(10L, 3, StudySessionStatus.ACTIVE);
+        s.setUserPausedAt(T0.plus(Duration.ofMinutes(10)));
+        StudySessionBlock b = block(20L, s, 1);
+        at(Duration.ofMinutes(31));
+
+        sweeper.markMissed();
+        sweeper.notifyDue();
+
+        assertThat(b.getStatus()).isEqualTo(StudyBlockStatus.RUNNING);
+        assertThat(b.getNotifiedAt()).isNull();
+        assertThat(s.getStatus()).isEqualTo(StudySessionStatus.ACTIVE);
+        verify(pushSender, never()).sendToUser(anyLong(), any(), anyInt());
+    }
+
+    @Test
+    void sweep_staleUserPause_endsTheSession() {
+        StudySessionService service = mock(StudySessionService.class);
+        StudySessionSweeper isolated = new StudySessionSweeper(service, pushSender);
+        when(service.staleUserPauses()).thenReturn(List.of(new SweepTarget(1L, 40L), new SweepTarget(2L, 41L)));
+        when(service.endStalePause(1L, 40L)).thenThrow(new IllegalStateException("boom"));
+
+        isolated.sweep();
+
+        verify(service).endStalePause(2L, 41L);
+    }
 }

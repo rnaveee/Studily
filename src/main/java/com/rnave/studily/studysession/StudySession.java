@@ -60,6 +60,8 @@ public class StudySession {
 
     private Instant pausedAt;
 
+    private Instant userPausedAt;
+
     @Column(nullable = false)
     private LocalDate localDate;
 

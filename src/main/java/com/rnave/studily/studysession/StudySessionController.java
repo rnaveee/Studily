@@ -3,16 +3,18 @@ package com.rnave.studily.studysession;
 import com.rnave.studily.config.PageResponse;
 import com.rnave.studily.progress.ProgressDtos.ProgressDelta;
 import com.rnave.studily.progress.StreakRestoreService;
+import com.rnave.studily.studysession.StudySessionDtos.AddTaskRequest;
 import com.rnave.studily.studysession.StudySessionDtos.StartSessionRequest;
 import com.rnave.studily.studysession.StudySessionDtos.StreakRestoreResult;
 import com.rnave.studily.studysession.StudySessionDtos.StreakWeekDto;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionDto;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionResult;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionSummaryDto;
-import com.rnave.studily.studysession.StudySessionDtos.TaskDoneRequest;
+import com.rnave.studily.studysession.StudySessionDtos.TaskUpdateRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -71,15 +73,30 @@ public class StudySessionController {
         return studySessionService.checkin(id);
     }
 
+    @PostMapping("/{id}/pause")
+    public StudySessionDto pause(@PathVariable Long id) {
+        return studySessionService.pause(id);
+    }
+
     @PostMapping("/{id}/resume")
     public StudySessionDto resume(@PathVariable Long id) {
         return studySessionService.resume(id);
     }
 
+    @PostMapping("/{id}/tasks")
+    public StudySessionDto addTask(@PathVariable Long id, @Valid @RequestBody AddTaskRequest req) {
+        return studySessionService.addTask(id, req.text());
+    }
+
     @PatchMapping("/{id}/tasks/{taskId}")
-    public StudySessionResult setTaskDone(@PathVariable Long id, @PathVariable Long taskId,
-                                          @Valid @RequestBody TaskDoneRequest req) {
-        return studySessionService.setTaskDone(id, taskId, req.done());
+    public StudySessionResult updateTask(@PathVariable Long id, @PathVariable Long taskId,
+                                         @Valid @RequestBody TaskUpdateRequest req) {
+        return studySessionService.updateTask(id, taskId, req.done(), req.text());
+    }
+
+    @DeleteMapping("/{id}/tasks/{taskId}")
+    public StudySessionDto deleteTask(@PathVariable Long id, @PathVariable Long taskId) {
+        return studySessionService.deleteTask(id, taskId);
     }
 
     @PostMapping("/{id}/end")

@@ -64,7 +64,7 @@ class StudySessionControllerTest {
     void active_openSession_returnsIt() {
         Instant now = Instant.parse("2026-10-07T17:00:00Z");
         StudySessionDto dto = new StudySessionDto(5L, StudySessionMode.TIMER, StudySessionStatus.ACTIVE, 2, 30, 0,
-                60, now, null, 1, null, null, 0, 0, BigDecimal.ONE.doubleValue(), List.of(), List.of(), now);
+                60, now, null, 1, null, null, 0, 0, BigDecimal.ONE.doubleValue(), List.of(), List.of(), null, now);
         when(service.active()).thenReturn(Optional.of(dto));
 
         ResponseEntity<StudySessionDto> response = controller.active();

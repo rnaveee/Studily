@@ -58,6 +58,7 @@ public class StudySessionService {
     static final Duration CHECKIN_LATE = Duration.ofMinutes(5);
     static final Duration REPLAY_WINDOW = Duration.ofMinutes(2);
     static final Duration PAUSE_LIMIT = Duration.ofMinutes(30);
+    static final Duration USER_PAUSE_LIMIT = Duration.ofMinutes(30);
     static final int PARTIAL_MIN_MINUTES = 10;
     static final int QUALIFY_MINUTES = 15;
     static final int FULL_RATE_MINUTES = 240;
@@ -170,6 +171,9 @@ public class StudySessionService {
             case ACTIVE -> {
             }
         }
+        if (session.getUserPausedAt() != null) {
+            throw new ConflictException("Resume the session first");
+        }
         StudySessionBlock block = blockRepository.findBySessionIdAndBlockIndex(session.getId(), session.getCurrentBlock())
                 .orElseThrow(() -> new ConflictException("This block expired"));
         if (block.getStatus() == StudyBlockStatus.CONFIRMED) {
@@ -188,15 +192,54 @@ public class StudySessionService {
         return new StudySessionResult(toDto(session, now), progressService.finish(delta));
     }
 
+    @Transactional
+    public StudySessionDto pause(Long id) {
+        User user = currentUser.entity();
+        rateLimiter.check(user.getId());
+        progressService.ensure(user.getId());
+        StudySession session = requireOwned(id, user.getId());
+        if (session.getStatus() != StudySessionStatus.ACTIVE) {
+            throw new ConflictException("Only a running session can be paused");
+        }
+        Instant now = clock.instant();
+        if (session.getUserPausedAt() != null) {
+            return toDto(session, now);
+        }
+        StudySessionBlock block = blockRepository.findBySessionIdAndBlockIndex(session.getId(), session.getCurrentBlock())
+                .filter(b -> b.getStatus() == StudyBlockStatus.RUNNING)
+                .orElseThrow(() -> new ConflictException("This block expired"));
+        if (!now.isBefore(block.getDueAt().minus(CHECKIN_EARLY))) {
+            throw new ConflictException("Check in first");
+        }
+        session.setUserPausedAt(now);
+        return toDto(session, now);
+    }
+
     @Transactional(noRollbackFor = ConflictException.class)
     public StudySessionDto resume(Long id) {
         User user = currentUser.entity();
-        progressService.ensure(user.getId());
+        ProgressDeltaBuilder delta = progressService.begin(user.getId());
         StudySession session = requireOwned(id, user.getId());
+        Instant now = clock.instant();
+        if (session.getStatus() == StudySessionStatus.ACTIVE && session.getUserPausedAt() != null) {
+            if (session.getUserPausedAt().isBefore(now.minus(USER_PAUSE_LIMIT))) {
+                close(delta, session, now);
+                progressService.finish(delta);
+                throw new ConflictException("This session ended after 30 minutes paused");
+            }
+            Duration held = Duration.between(session.getUserPausedAt(), now);
+            blockRepository.findBySessionIdAndBlockIndex(session.getId(), session.getCurrentBlock())
+                    .filter(b -> b.getStatus() == StudyBlockStatus.RUNNING)
+                    .ifPresent(b -> {
+                        b.setStartedAt(b.getStartedAt().plus(held));
+                        b.setDueAt(b.getDueAt().plus(held));
+                    });
+            session.setUserPausedAt(null);
+            return toDto(session, now);
+        }
         if (session.getStatus() != StudySessionStatus.PAUSED) {
             throw new ConflictException("This study session isn't paused");
         }
-        Instant now = clock.instant();
         if (session.getPausedAt() != null && session.getPausedAt().isBefore(now.minus(PAUSE_LIMIT))) {
             session.setStatus(StudySessionStatus.EXPIRED);
             session.setEndedAt(now);
@@ -214,17 +257,65 @@ public class StudySessionService {
     }
 
     @Transactional
+    public StudySessionDto addTask(Long id, String text) {
+        User user = currentUser.entity();
+        rateLimiter.check(user.getId());
+        progressService.ensure(user.getId());
+        StudySession session = requireOwned(id, user.getId());
+        requireOpen(session);
+        String clean = cleanTask(text);
+        List<StudySessionTask> existing = taskRepository.findBySessionIdOrderByPosition(session.getId());
+        if (existing.size() >= MAX_TASKS) {
+            throw new BadRequestException("You can add up to 10 tasks");
+        }
+        StudySessionTask task = new StudySessionTask();
+        task.setSession(session);
+        task.setPosition(existing.stream().mapToInt(StudySessionTask::getPosition).max().orElse(-1) + 1);
+        task.setText(clean);
+        taskRepository.save(task);
+        return toDto(session, clock.instant());
+    }
+
+    @Transactional
+    public StudySessionDto deleteTask(Long id, Long taskId) {
+        User user = currentUser.entity();
+        rateLimiter.check(user.getId());
+        progressService.ensure(user.getId());
+        StudySession session = requireOwned(id, user.getId());
+        StudySessionTask task = taskRepository.findByIdAndSessionId(taskId, session.getId())
+                .orElseThrow(() -> new NotFoundException("Task not found"));
+        requireOpen(session);
+        if (task.getXpAwarded() > 0) {
+            throw new ConflictException("Tasks that earned XP can't be removed");
+        }
+        taskRepository.delete(task);
+        return toDto(session, clock.instant());
+    }
+
+    @Transactional
     public StudySessionResult setTaskDone(Long id, Long taskId, boolean done) {
+        return updateTask(id, taskId, done, null);
+    }
+
+    @Transactional
+    public StudySessionResult updateTask(Long id, Long taskId, Boolean done, String text) {
+        if (done == null && text == null) {
+            throw new BadRequestException("Nothing to update");
+        }
         User user = currentUser.entity();
         rateLimiter.check(user.getId());
         ProgressDeltaBuilder delta = progressService.begin(user.getId());
         StudySession session = requireOwned(id, user.getId());
         StudySessionTask task = taskRepository.findByIdAndSessionId(taskId, session.getId())
                 .orElseThrow(() -> new NotFoundException("Task not found"));
-        if (!OPEN.contains(session.getStatus())) {
-            throw new ConflictException("This study session has finished");
-        }
+        requireOpen(session);
         Instant now = clock.instant();
+        if (text != null) {
+            task.setText(cleanTask(text));
+        }
+        if (done == null) {
+            return new StudySessionResult(toDto(session, now), progressService.finish(delta));
+        }
         if (done) {
             if (task.getDoneAt() == null) {
                 task.setDoneAt(now);
@@ -249,13 +340,7 @@ public class StudySessionService {
             throw new ConflictException("This study session has already finished");
         }
         Instant now = clock.instant();
-        if (session.getStatus() == StudySessionStatus.ACTIVE) {
-            blockRepository.findBySessionIdAndBlockIndex(session.getId(), session.getCurrentBlock())
-                    .filter(b -> b.getStatus() == StudyBlockStatus.RUNNING)
-                    .ifPresent(b -> settleRunningBlock(delta, session, b, now));
-        }
-        session.setStatus(StudySessionStatus.ENDED);
-        session.setEndedAt(now);
+        close(delta, session, now);
         return new StudySessionResult(toDto(session, now), progressService.finish(delta));
     }
 
@@ -303,7 +388,7 @@ public class StudySessionService {
     public List<SweepTarget> overdueBlocks() {
         Instant cutoff = clock.instant().minus(CHECKIN_LATE);
         return blockRepository.findByStatusAndDueAtBefore(StudyBlockStatus.RUNNING, cutoff).stream()
-                .filter(b -> b.getSession().getStatus() == StudySessionStatus.ACTIVE)
+                .filter(b -> isRunning(b.getSession()))
                 .map(b -> new SweepTarget(b.getSession().getUser().getId(), b.getId()))
                 .toList();
     }
@@ -312,7 +397,7 @@ public class StudySessionService {
     public List<SweepTarget> dueUnnotifiedBlocks() {
         return blockRepository.findByStatusAndDueAtBeforeAndNotifiedAtIsNull(StudyBlockStatus.RUNNING, clock.instant())
                 .stream()
-                .filter(b -> b.getSession().getStatus() == StudySessionStatus.ACTIVE)
+                .filter(b -> isRunning(b.getSession()))
                 .map(b -> new SweepTarget(b.getSession().getUser().getId(), b.getId()))
                 .toList();
     }
@@ -325,6 +410,28 @@ public class StudySessionService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<SweepTarget> staleUserPauses() {
+        Instant cutoff = clock.instant().minus(USER_PAUSE_LIMIT);
+        return sessionRepository.findByStatusAndUserPausedAtBefore(StudySessionStatus.ACTIVE, cutoff).stream()
+                .map(s -> new SweepTarget(s.getUser().getId(), s.getId()))
+                .toList();
+    }
+
+    @Transactional
+    public boolean endStalePause(Long userId, Long sessionId) {
+        ProgressDeltaBuilder delta = progressService.begin(userId);
+        StudySession session = sessionRepository.findByIdAndUserId(sessionId, userId).orElse(null);
+        Instant now = clock.instant();
+        if (session == null || session.getStatus() != StudySessionStatus.ACTIVE || session.getUserPausedAt() == null
+                || !session.getUserPausedAt().isBefore(now.minus(USER_PAUSE_LIMIT))) {
+            return false;
+        }
+        close(delta, session, now);
+        progressService.finish(delta);
+        return true;
+    }
+
     @Transactional
     public boolean missBlock(Long userId, Long blockId) {
         progressService.ensure(userId);
@@ -335,7 +442,7 @@ public class StudySessionService {
             return false;
         }
         StudySession session = block.getSession();
-        if (session.getStatus() != StudySessionStatus.ACTIVE || !session.getUser().getId().equals(userId)) {
+        if (!isRunning(session) || !session.getUser().getId().equals(userId)) {
             return false;
         }
         block.setStatus(StudyBlockStatus.MISSED);
@@ -359,7 +466,7 @@ public class StudySessionService {
             return false;
         }
         StudySession session = block.getSession();
-        if (session.getStatus() != StudySessionStatus.ACTIVE || !session.getUser().getId().equals(userId)) {
+        if (!isRunning(session) || !session.getUser().getId().equals(userId)) {
             return false;
         }
         block.setNotifiedAt(now);
@@ -433,6 +540,39 @@ public class StudySessionService {
                 yield new Plan(StudySessionMode.TIMER, minutes / TIMER_BLOCK_MINUTES, TIMER_BLOCK_MINUTES, 0);
             }
         };
+    }
+
+    private static boolean isRunning(StudySession session) {
+        return session.getStatus() == StudySessionStatus.ACTIVE && session.getUserPausedAt() == null;
+    }
+
+    private static void requireOpen(StudySession session) {
+        if (!OPEN.contains(session.getStatus())) {
+            throw new ConflictException("This study session has finished");
+        }
+    }
+
+    private static String cleanTask(String text) {
+        String clean = text == null ? "" : text.trim();
+        if (clean.isEmpty()) {
+            throw new BadRequestException("Tasks can't be empty");
+        }
+        if (clean.length() > MAX_TASK_LENGTH) {
+            throw new BadRequestException("Tasks can be at most 200 characters");
+        }
+        return clean;
+    }
+
+    private void close(ProgressDeltaBuilder delta, StudySession session, Instant now) {
+        if (session.getStatus() == StudySessionStatus.ACTIVE) {
+            Instant at = session.getUserPausedAt() != null ? session.getUserPausedAt() : now;
+            blockRepository.findBySessionIdAndBlockIndex(session.getId(), session.getCurrentBlock())
+                    .filter(b -> b.getStatus() == StudyBlockStatus.RUNNING)
+                    .ifPresent(b -> settleRunningBlock(delta, session, b, at));
+        }
+        session.setStatus(StudySessionStatus.ENDED);
+        session.setEndedAt(now);
+        session.setUserPausedAt(null);
     }
 
     private List<String> cleanTasks(List<String> raw) {
@@ -612,6 +752,7 @@ public class StudySessionService {
                 s.getMultiplier().doubleValue(),
                 tasks.stream().map(StudySessionTaskDto::from).toList(),
                 blocks.stream().map(StudySessionBlockDto::from).toList(),
+                s.getUserPausedAt(),
                 now);
     }
 

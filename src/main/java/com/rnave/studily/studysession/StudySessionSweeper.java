@@ -30,6 +30,7 @@ public class StudySessionSweeper {
         markMissed();
         notifyDue();
         expirePaused();
+        endStalePauses();
     }
 
     void markMissed() {
@@ -51,6 +52,16 @@ public class StudySessionSweeper {
                 }
             } catch (RuntimeException e) {
                 log.warn("Failed to notify study block {}: {}", target.id(), e.getMessage());
+            }
+        }
+    }
+
+    void endStalePauses() {
+        for (SweepTarget target : service.staleUserPauses()) {
+            try {
+                service.endStalePause(target.userId(), target.id());
+            } catch (RuntimeException e) {
+                log.warn("Failed to end paused study session {}: {}", target.id(), e.getMessage());
             }
         }
     }

@@ -860,6 +860,7 @@ export interface StudySessionTaskDto {
   position: number;
   text: string;
   done: boolean;
+  earned: boolean;
 }
 
 export interface StudySessionBlockDto {
@@ -889,6 +890,7 @@ export interface StudySessionDto {
   multiplier: number;
   tasks: StudySessionTaskDto[];
   blocks: StudySessionBlockDto[];
+  userPausedAt: string | null;
   serverNow: string;
 }
 

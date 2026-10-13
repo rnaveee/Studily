@@ -2,6 +2,7 @@ package com.rnave.studily.studysession;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rnave.studily.progress.ProgressDtos.ProgressDelta;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
@@ -18,13 +19,17 @@ public class StudySessionDtos {
             @Size(max = 50) List<String> tasks) {
     }
 
-    public record TaskDoneRequest(@NotNull Boolean done) {
+    public record TaskUpdateRequest(Boolean done, @Size(max = 200) String text) {
     }
 
-    public record StudySessionTaskDto(Long id, int position, String text, boolean done) {
+    public record AddTaskRequest(@NotBlank @Size(max = 200) String text) {
+    }
+
+    public record StudySessionTaskDto(Long id, int position, String text, boolean done, boolean earned) {
 
         public static StudySessionTaskDto from(StudySessionTask t) {
-            return new StudySessionTaskDto(t.getId(), t.getPosition(), t.getText(), t.getDoneAt() != null);
+            return new StudySessionTaskDto(t.getId(), t.getPosition(), t.getText(), t.getDoneAt() != null,
+                    t.getXpAwarded() > 0);
         }
     }
 
@@ -60,6 +65,7 @@ public class StudySessionDtos {
             double multiplier,
             List<StudySessionTaskDto> tasks,
             List<StudySessionBlockDto> blocks,
+            Instant userPausedAt,
             Instant serverNow) {
     }
 

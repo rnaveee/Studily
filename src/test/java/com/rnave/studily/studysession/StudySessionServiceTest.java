@@ -27,6 +27,8 @@ import com.rnave.studily.studysession.StudySessionDtos.StreakDayDto;
 import com.rnave.studily.studysession.StudySessionDtos.StreakWeekDto;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionDto;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionResult;
+import com.rnave.studily.studysession.StudySessionDtos.StudySessionTaskDto;
+import com.rnave.studily.studysession.StudySessionService.SweepTarget;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import com.rnave.studily.user.UserTimeZones;
@@ -205,6 +207,18 @@ class StudySessionServiceTest {
                 tasks.add(t);
             }
             return t;
+        });
+        doAnswer(inv -> {
+            tasks.remove(inv.<StudySessionTask>getArgument(0));
+            return null;
+        }).when(taskRepository).delete(any(StudySessionTask.class));
+        when(sessionRepository.findByStatusAndUserPausedAtBefore(any(), any())).thenAnswer(inv -> {
+            StudySessionStatus status = inv.getArgument(0);
+            Instant before = inv.getArgument(1);
+            return sessions.stream()
+                    .filter(x -> x.getStatus() == status && x.getUserPausedAt() != null
+                            && x.getUserPausedAt().isBefore(before))
+                    .toList();
         });
         when(taskRepository.findBySessionIdOrderByPosition(anyLong())).thenAnswer(inv -> tasks.stream()
                 .filter(t -> t.getSession().getId().equals(inv.getArgument(0)))
@@ -1524,5 +1538,296 @@ class StudySessionServiceTest {
 
         assertThat(week.broken()).isNull();
         assertThat(week.restoresLeft()).isEqualTo(2);
+    }
+
+    @Test
+    void pause_duringFocus_resumeShiftsTheBlockByThePause() {
+        StudySession s = startPomodoro(3);
+        StudySessionBlock first = block(s, 1);
+        at(min(10));
+
+        StudySessionDto paused = service.pause(s.getId());
+
+        assertThat(paused.userPausedAt()).isEqualTo(T0.plus(min(10)));
+        at(min(25));
+        StudySessionDto resumed = service.resume(s.getId());
+
+        assertThat(resumed.userPausedAt()).isNull();
+        assertThat(resumed.status()).isEqualTo(StudySessionStatus.ACTIVE);
+        assertThat(first.getStartedAt()).isEqualTo(T0.plus(min(15)));
+        assertThat(first.getDueAt()).isEqualTo(T0.plus(min(40)));
+        assertThat(resumed.checkinOpensAt()).isEqualTo(T0.plus(min(40)).minusSeconds(60));
+    }
+
+    @Test
+    void pause_twice_isIdempotent() {
+        StudySession s = startPomodoro(3);
+        at(min(5));
+        service.pause(s.getId());
+        at(min(8));
+
+        StudySessionDto again = service.pause(s.getId());
+
+        assertThat(again.userPausedAt()).isEqualTo(T0.plus(min(5)));
+    }
+
+    @Test
+    void pause_insideCheckinWindow_throwsConflict() {
+        StudySession s = startPomodoro(3);
+        at(min(24));
+
+        assertThatThrownBy(() -> service.pause(s.getId()))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Check in first");
+        assertThat(s.getUserPausedAt()).isNull();
+    }
+
+    @Test
+    void pause_missedCheckinHold_throwsConflict() {
+        StudySession s = startPomodoro(3);
+        s.setStatus(StudySessionStatus.PAUSED);
+        s.setPausedAt(T0.plus(min(30)));
+
+        assertThatThrownBy(() -> service.pause(s.getId())).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void pause_duringBreak_shiftsTheNextBlockStart() {
+        StudySession s = startPomodoro(3);
+        at(min(25));
+        service.checkin(s.getId());
+        StudySessionBlock second = block(s, 2);
+        assertThat(second.getStartedAt()).isEqualTo(T0.plus(min(30)));
+        at(min(27));
+        service.pause(s.getId());
+        at(min(37));
+
+        service.resume(s.getId());
+
+        assertThat(second.getStartedAt()).isEqualTo(T0.plus(min(40)));
+        assertThat(second.getDueAt()).isEqualTo(T0.plus(min(65)));
+    }
+
+    @Test
+    void checkin_whilePaused_throwsConflict() {
+        StudySession s = startPomodoro(3);
+        at(min(10));
+        service.pause(s.getId());
+        at(min(26));
+
+        assertThatThrownBy(() -> service.checkin(s.getId()))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Resume the session first");
+        assertThat(block(s, 1).getStatus()).isEqualTo(StudyBlockStatus.RUNNING);
+    }
+
+    @Test
+    void end_whilePaused_creditsOnlyTheMinutesBeforeThePause() {
+        StudySession s = startPomodoro(3);
+        StudySessionBlock first = block(s, 1);
+        at(min(15));
+        service.pause(s.getId());
+        at(min(29));
+
+        StudySessionResult result = service.end(s.getId());
+
+        assertThat(first.getStatus()).isEqualTo(StudyBlockStatus.PARTIAL);
+        assertThat(first.getCreditedMinutes()).isEqualTo(15);
+        assertThat(result.session().status()).isEqualTo(StudySessionStatus.ENDED);
+        assertThat(result.session().userPausedAt()).isNull();
+        assertThat(s.getEndedAt()).isEqualTo(T0.plus(min(29)));
+    }
+
+    @Test
+    void end_whilePausedDuringBreak_dropsTheUnstartedBlock() {
+        StudySession s = startPomodoro(3);
+        at(min(25));
+        service.checkin(s.getId());
+        at(min(27));
+        service.pause(s.getId());
+        at(min(50));
+
+        service.end(s.getId());
+
+        assertThat(blocks).filteredOn(b -> b.getSession() == s).hasSize(1);
+        assertThat(s.getCreditedMinutes()).isEqualTo(25);
+    }
+
+    @Test
+    void resume_pastTheUserPauseLimit_endsTheSessionAndThrowsConflict() {
+        StudySession s = startPomodoro(3);
+        at(min(12));
+        service.pause(s.getId());
+        at(min(43));
+
+        assertThatThrownBy(() -> service.resume(s.getId()))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("This session ended after 30 minutes paused");
+        assertThat(s.getStatus()).isEqualTo(StudySessionStatus.ENDED);
+        assertThat(s.getCreditedMinutes()).isEqualTo(12);
+    }
+
+    @Test
+    void resume_activeSessionNotPausedByUser_stillThrowsConflict() {
+        StudySession s = startPomodoro(3);
+        at(min(5));
+
+        assertThatThrownBy(() -> service.resume(s.getId()))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("This study session isn't paused");
+    }
+
+    @Test
+    void endStalePause_onlyAfterTheLimit() {
+        StudySession s = startPomodoro(3);
+        at(min(12));
+        service.pause(s.getId());
+
+        at(min(42));
+        assertThat(service.staleUserPauses()).isEmpty();
+        assertThat(service.endStalePause(1L, s.getId())).isFalse();
+        assertThat(s.getStatus()).isEqualTo(StudySessionStatus.ACTIVE);
+
+        at(min(42).plusSeconds(1));
+        assertThat(service.staleUserPauses()).extracting(SweepTarget::id).containsExactly(s.getId());
+        assertThat(service.endStalePause(1L, s.getId())).isTrue();
+        assertThat(s.getStatus()).isEqualTo(StudySessionStatus.ENDED);
+        assertThat(s.getCreditedMinutes()).isEqualTo(12);
+        assertThat(xp(XpSource.STUDY_PARTIAL)).isEqualTo(24);
+    }
+
+    @Test
+    void addTask_appendsAfterTheHighestPosition() {
+        StudySession s = startPomodoro(3, "Read", "Write");
+        service.deleteTask(s.getId(), task(s, 1).getId());
+
+        StudySessionDto dto = service.addTask(s.getId(), "  Review notes  ");
+
+        assertThat(dto.tasks()).extracting(StudySessionTaskDto::text).containsExactly("Read", "Review notes");
+        assertThat(dto.tasks()).extracting(StudySessionTaskDto::position).containsExactly(0, 1);
+        service.addTask(s.getId(), "Flashcards");
+        assertThat(task(s, 2).getText()).isEqualTo("Flashcards");
+    }
+
+    @Test
+    void addTask_toSessionStartedWithoutTasks_works() {
+        StudySession s = startPomodoro(3);
+
+        StudySessionDto dto = service.addTask(s.getId(), "Read");
+
+        assertThat(dto.tasks()).singleElement().satisfies(t -> {
+            assertThat(t.position()).isZero();
+            assertThat(t.done()).isFalse();
+            assertThat(t.earned()).isFalse();
+        });
+    }
+
+    @Test
+    void addTask_pastTenTasks_throwsBadRequest() {
+        StudySession s = startPomodoro(3, "1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
+
+        assertThatThrownBy(() -> service.addTask(s.getId(), "11")).isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void addTask_blankOrTooLong_throwsBadRequest() {
+        StudySession s = startPomodoro(3);
+
+        assertThatThrownBy(() -> service.addTask(s.getId(), "   ")).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.addTask(s.getId(), "x".repeat(201))).isInstanceOf(BadRequestException.class);
+        assertThat(tasks).isEmpty();
+    }
+
+    @Test
+    void addTask_finishedSession_throwsConflict() {
+        StudySession s = startPomodoro(3);
+        service.end(s.getId());
+
+        assertThatThrownBy(() -> service.addTask(s.getId(), "Read")).isInstanceOf(ConflictException.class);
+    }
+
+    @Test
+    void updateTask_renamesWithoutTouchingDone() {
+        StudySession s = startPomodoro(3, "Read");
+        StudySessionTask t = task(s, 0);
+
+        StudySessionResult result = service.updateTask(s.getId(), t.getId(), null, "  Read chapter 4 ");
+
+        assertThat(t.getText()).isEqualTo("Read chapter 4");
+        assertThat(t.getDoneAt()).isNull();
+        assertThat(result.delta().xpGained()).isZero();
+    }
+
+    @Test
+    void updateTask_renameAndTick_doesBoth() {
+        StudySession s = startPomodoro(3, "Read");
+        StudySessionTask t = task(s, 0);
+        at(min(6));
+
+        service.updateTask(s.getId(), t.getId(), true, "Read more");
+
+        assertThat(t.getText()).isEqualTo("Read more");
+        assertThat(t.getDoneAt()).isEqualTo(T0.plus(min(6)));
+    }
+
+    @Test
+    void updateTask_nothingToUpdate_throwsBadRequest() {
+        StudySession s = startPomodoro(3, "Read");
+
+        assertThatThrownBy(() -> service.updateTask(s.getId(), task(s, 0).getId(), null, null))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void updateTask_blankText_throwsBadRequest() {
+        StudySession s = startPomodoro(3, "Read");
+
+        assertThatThrownBy(() -> service.updateTask(s.getId(), task(s, 0).getId(), null, " "))
+                .isInstanceOf(BadRequestException.class);
+        assertThat(task(s, 0).getText()).isEqualTo("Read");
+    }
+
+    @Test
+    void deleteTask_thatEarnedXp_throwsConflict() {
+        StudySession s = startPomodoro(3, "Read");
+        StudySessionTask t = task(s, 0);
+        at(min(25));
+        service.checkin(s.getId());
+        at(min(26));
+        service.setTaskDone(s.getId(), t.getId(), true);
+        service.setTaskDone(s.getId(), t.getId(), false);
+
+        assertThatThrownBy(() -> service.deleteTask(s.getId(), t.getId()))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Tasks that earned XP can't be removed");
+        assertThat(tasks).contains(t);
+        assertThat(service.active()).get().satisfies(d -> assertThat(d.tasks()).singleElement()
+                .satisfies(x -> assertThat(x.earned()).isTrue()));
+    }
+
+    @Test
+    void deleteTask_unpaid_removesIt() {
+        StudySession s = startPomodoro(3, "Read", "Write");
+
+        StudySessionDto dto = service.deleteTask(s.getId(), task(s, 0).getId());
+
+        assertThat(dto.tasks()).extracting(StudySessionTaskDto::text).containsExactly("Write");
+    }
+
+    @Test
+    void addTask_afterFivePaidTasks_newTasksNeverPay() {
+        StudySession s = startPomodoro(3, "1", "2", "3", "4", "5");
+        at(min(25));
+        service.checkin(s.getId());
+        at(min(26));
+        for (int position = 0; position < 5; position++) {
+            service.setTaskDone(s.getId(), task(s, position).getId(), true);
+        }
+        service.addTask(s.getId(), "6");
+
+        StudySessionResult result = service.setTaskDone(s.getId(), task(s, 5).getId(), true);
+
+        assertThat(result.delta().xpGained()).isZero();
+        assertThat(xp(XpSource.STUDY_TASK)).isEqualTo(25);
     }
 }
