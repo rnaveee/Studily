@@ -25,6 +25,7 @@ import { useDeferredClose } from "../../lib/motion";
 import { useDoubleTap } from "../../lib/useDoubleTap";
 import { useLongPress, longPressJustFired } from "../../lib/useLongPress";
 import { isTouch } from "../../lib/isTouch";
+import { imagesFrom, pastedImages } from "../../lib/clipboardImages";
 import { firstLink, LinkPreview, Linkified } from "./linkify";
 import {
   appendMessageToCache,
@@ -295,17 +296,9 @@ export default function ConversationPage() {
 
   const [dragging, setDragging] = useState(false);
 
-  function imagesFrom(data: DataTransfer | null): File[] {
-    return [...(data?.items ?? [])]
-      .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
-      .map((item) => item.getAsFile())
-      .filter((f): f is File => f !== null);
-  }
-
   function handlePaste(e: React.ClipboardEvent) {
-    const images = imagesFrom(e.clipboardData);
+    const images = pastedImages(e);
     if (images.length === 0) return;
-    if (e.clipboardData.getData("text/plain").trim()) return;
     e.preventDefault();
     stageFiles(images);
   }

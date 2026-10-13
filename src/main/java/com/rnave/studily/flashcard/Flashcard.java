@@ -34,6 +34,12 @@ public class Flashcard {
     @Column(nullable = false, columnDefinition = "text")
     private String back;
 
+    @Column(name = "front_image_key", length = 32)
+    private String frontImageKey;
+
+    @Column(name = "back_image_key", length = 32)
+    private String backImageKey;
+
     @Column(nullable = false)
     private int position;
 

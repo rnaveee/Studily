@@ -17,7 +17,10 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
 
     private static final long WINDOW_MS = 60_000;
 
+    private static final String FLASHCARD_IMAGES = "/api/public/flashcard-images/";
+
     private final SlidingWindowRateLimiter limiter = new SlidingWindowRateLimiter(120, WINDOW_MS);
+    private final SlidingWindowRateLimiter imageLimiter = new SlidingWindowRateLimiter(600, WINDOW_MS);
 
     @Override
     protected void doFilterInternal(
@@ -31,7 +34,8 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        if (!limiter.tryConsume(rateLimitKey(request))) {
+        SlidingWindowRateLimiter bucket = uri.startsWith(FLASHCARD_IMAGES) ? imageLimiter : limiter;
+        if (!bucket.tryConsume(rateLimitKey(request))) {
             RateLimitResponses.reject(response, "Too many requests, please slow down.");
             return;
         }
@@ -58,5 +62,6 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
     @Scheduled(fixedRate = 10 * WINDOW_MS)
     void evictStale() {
         limiter.evictStale();
+        imageLimiter.evictStale();
     }
 }

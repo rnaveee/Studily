@@ -45,28 +45,11 @@ public class AttachmentProcessor {
     }
 
     public Processed process(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new BadRequestException("File is empty");
-        }
-        if (file.getSize() > MAX_BYTES) {
-            throw new BadRequestException("File must be smaller than 10MB");
-        }
+        String contentType = contentType(file);
         String filename = sanitizeFilename(file.getOriginalFilename());
-        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
-        byte[] bytes;
-        try {
-            bytes = file.getBytes();
-        } catch (IOException e) {
-            throw new BadRequestException("Could not read file");
-        }
-        if (contentType.equals(GIF_TYPE)) {
-            return processGif(filename, bytes);
-        }
-        if (contentType.equals(WEBP_TYPE)) {
-            return processWebp(filename, bytes);
-        }
-        if (IMAGE_TYPES.contains(contentType)) {
-            return processImage(filename, bytes);
+        byte[] bytes = bytes(file);
+        if (isImageType(contentType)) {
+            return processAnyImage(filename, contentType, bytes, MAX_IMAGE_DIMENSION);
         }
         String docType = DOC_TYPES_BY_EXTENSION.get(extension(filename));
         if (docType == null || contentType.startsWith("image/")) {
@@ -79,26 +62,66 @@ public class AttachmentProcessor {
         return new Processed(filename, docType, bytes, null, null);
     }
 
-    private Processed processGif(String filename, byte[] bytes) {
+    public Processed processImageOnly(MultipartFile file, int maxDimension) {
+        String contentType = contentType(file);
+        if (!isImageType(contentType)) {
+            throw new BadRequestException("Unsupported image type. Use a JPEG, PNG, WEBP or GIF.");
+        }
+        return processAnyImage(sanitizeFilename(file.getOriginalFilename()), contentType, bytes(file), maxDimension);
+    }
+
+    private static String contentType(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new BadRequestException("File is empty");
+        }
+        if (file.getSize() > MAX_BYTES) {
+            throw new BadRequestException("File must be smaller than 10MB");
+        }
+        return file.getContentType() == null ? "" : file.getContentType().toLowerCase(Locale.ROOT);
+    }
+
+    private static byte[] bytes(MultipartFile file) {
+        try {
+            return file.getBytes();
+        } catch (IOException e) {
+            throw new BadRequestException("Could not read file");
+        }
+    }
+
+    private static boolean isImageType(String contentType) {
+        return contentType.equals(GIF_TYPE) || contentType.equals(WEBP_TYPE) || IMAGE_TYPES.contains(contentType);
+    }
+
+    private Processed processAnyImage(String filename, String contentType, byte[] bytes, int maxDimension) {
+        if (contentType.equals(GIF_TYPE)) {
+            return processGif(filename, bytes, maxDimension);
+        }
+        if (contentType.equals(WEBP_TYPE)) {
+            return processWebp(filename, bytes, maxDimension);
+        }
+        return processImage(filename, bytes, maxDimension);
+    }
+
+    private Processed processGif(String filename, byte[] bytes, int maxDimension) {
         if (!startsWith(bytes, "GIF87a") && !startsWith(bytes, "GIF89a")) {
             throw new BadRequestException("This file doesn't look like a valid GIF");
         }
         int[] size = readDimensions(bytes);
-        if (Math.max(size[0], size[1]) > MAX_IMAGE_DIMENSION) {
+        if (Math.max(size[0], size[1]) > maxDimension) {
             throw new BadRequestException(
-                    "GIF dimensions are too large (max " + MAX_IMAGE_DIMENSION + "px per side)");
+                    "GIF dimensions are too large (max " + maxDimension + "px per side)");
         }
         return new Processed(filename, GIF_TYPE, bytes, size[0], size[1]);
     }
 
-    private Processed processWebp(String filename, byte[] bytes) {
+    private Processed processWebp(String filename, byte[] bytes, int maxDimension) {
         if (!startsWith(bytes, "RIFF") || bytes.length < 30 || !matchesAt(bytes, 8, "WEBP")) {
             throw new BadRequestException("This file doesn't look like a valid WEBP");
         }
         int[] size = webpDimensions(bytes);
-        if (Math.max(size[0], size[1]) > MAX_IMAGE_DIMENSION) {
+        if (Math.max(size[0], size[1]) > maxDimension) {
             throw new BadRequestException(
-                    "Image dimensions are too large (max " + MAX_IMAGE_DIMENSION + "px per side)");
+                    "Image dimensions are too large (max " + maxDimension + "px per side)");
         }
         return new Processed(filename, WEBP_TYPE, bytes, size[0], size[1]);
     }
@@ -141,7 +164,7 @@ public class AttachmentProcessor {
         return true;
     }
 
-    private Processed processImage(String filename, byte[] bytes) {
+    private Processed processImage(String filename, byte[] bytes, int maxDimension) {
         int[] source = readDimensions(bytes);
         if (Math.max(source[0], source[1]) > MAX_SOURCE_DIMENSION) {
             throw new BadRequestException(
@@ -150,9 +173,9 @@ public class AttachmentProcessor {
         BufferedImage image;
         try {
             image = Thumbnails.of(new ByteArrayInputStream(bytes)).scale(1.0).asBufferedImage();
-            if (Math.max(image.getWidth(), image.getHeight()) > MAX_IMAGE_DIMENSION) {
+            if (Math.max(image.getWidth(), image.getHeight()) > maxDimension) {
                 image = Thumbnails.of(image)
-                        .size(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION)
+                        .size(maxDimension, maxDimension)
                         .keepAspectRatio(true)
                         .asBufferedImage();
             }

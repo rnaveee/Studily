@@ -6,6 +6,7 @@ import { shuffled } from "./shuffle";
 import { readJson, writeJson } from "./studyStorage";
 import RunSummary from "./RunSummary";
 import { cardIdOf, useFlashcardRun } from "./useFlashcardRun";
+import { TileFace } from "./CardFace";
 import type { StudyCard } from "../../types";
 
 interface Props {
@@ -228,9 +229,7 @@ export default function SpeedMatch({ setId, cards, color, viewerKey, onDone }: P
                 <span className="text-[9px] font-semibold uppercase tracking-wider text-fg-3">
                   {t.side === "term" ? "Term" : "Definition"}
                 </span>
-                <span className={`mt-1 leading-snug text-fg whitespace-pre-wrap break-words ${tileTextClass(t.text)}`}>
-                  {t.text}
-                </span>
+                <TileFace text={t.text} image={t.image} textClassName={tileTextClass(t.text)} />
               </button>
             );
           })}

@@ -7,6 +7,8 @@ export interface GameCard {
   key: string;
   front: string;
   back: string;
+  frontImage: string | null;
+  backImage: string | null;
 }
 
 export interface Tile {
@@ -14,6 +16,7 @@ export interface Tile {
   pair: string;
   side: "term" | "definition";
   text: string;
+  image: string | null;
 }
 
 function norm(s: string): string {
@@ -25,12 +28,15 @@ export function playableCards(cards: StudyCard[]): GameCard[] {
   const backs = new Set<string>();
   const out: GameCard[] = [];
   cards.forEach((c, i) => {
-    const f = norm(c.front);
-    const b = norm(c.back);
-    if (!f || !b || fronts.has(f) || backs.has(b)) return;
+    const frontImage = c.frontImage ?? null;
+    const backImage = c.backImage ?? null;
+    if ((!norm(c.front) && !frontImage) || (!norm(c.back) && !backImage)) return;
+    const f = `${norm(c.front)}|${frontImage ?? ""}`;
+    const b = `${norm(c.back)}|${backImage ?? ""}`;
+    if (fronts.has(f) || backs.has(b)) return;
     fronts.add(f);
     backs.add(b);
-    out.push({ key: c.id != null ? String(c.id) : `i${i}`, front: c.front, back: c.back });
+    out.push({ key: c.id != null ? String(c.id) : `i${i}`, front: c.front, back: c.back, frontImage, backImage });
   });
   return out;
 }
@@ -38,8 +44,8 @@ export function playableCards(cards: StudyCard[]): GameCard[] {
 export function buildTiles(cards: GameCard[]): Tile[] {
   return shuffled(
     cards.flatMap((c) => [
-      { id: `${c.key}:t`, pair: c.key, side: "term" as const, text: c.front },
-      { id: `${c.key}:d`, pair: c.key, side: "definition" as const, text: c.back },
+      { id: `${c.key}:t`, pair: c.key, side: "term" as const, text: c.front, image: c.frontImage },
+      { id: `${c.key}:d`, pair: c.key, side: "definition" as const, text: c.back, image: c.backImage },
     ]),
   );
 }

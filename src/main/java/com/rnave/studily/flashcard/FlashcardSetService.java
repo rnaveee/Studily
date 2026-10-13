@@ -1,5 +1,6 @@
 package com.rnave.studily.flashcard;
 
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.course.Course;
@@ -24,9 +25,11 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class FlashcardSetService {
@@ -36,15 +39,17 @@ public class FlashcardSetService {
     private final CourseService courseService;
     private final FriendRequestRepository friendRequestRepository;
     private final Flairs flairs;
+    private final FlashcardImageRepository imageRepository;
 
     public FlashcardSetService(FlashcardSetRepository flashcardSetRepository, CurrentUser currentUser,
                                @Lazy CourseService courseService, FriendRequestRepository friendRequestRepository,
-                               Flairs flairs) {
+                               Flairs flairs, FlashcardImageRepository imageRepository) {
         this.flashcardSetRepository = flashcardSetRepository;
         this.currentUser = currentUser;
         this.courseService = courseService;
         this.friendRequestRepository = friendRequestRepository;
         this.flairs = flairs;
+        this.imageRepository = imageRepository;
     }
 
     @Transactional(readOnly = true)
@@ -135,6 +140,8 @@ public class FlashcardSetService {
             card.setSet(copy);
             card.setFront(c.getFront());
             card.setBack(c.getBack());
+            card.setFrontImageKey(c.getFrontImageKey());
+            card.setBackImageKey(c.getBackImageKey());
             card.setPosition(c.getPosition());
             copy.getCards().add(card);
         }
@@ -221,25 +228,57 @@ public class FlashcardSetService {
         }
 
         Map<Long, Flashcard> existing = new HashMap<>();
+        Set<String> knownImages = new HashSet<>();
         for (Flashcard c : set.getCards()) {
             if (c.getId() != null) existing.put(c.getId(), c);
+            if (c.getFrontImageKey() != null) knownImages.add(c.getFrontImageKey());
+            if (c.getBackImageKey() != null) knownImages.add(c.getBackImageKey());
         }
 
+        Set<String> newImages = new HashSet<>();
         set.getCards().clear();
         if (req.cards() != null) {
             int position = 0;
             for (FlashcardDto dto : req.cards()) {
+                String front = trimToEmpty(dto.front());
+                String back = trimToEmpty(dto.back());
+                String frontImage = trimToNull(dto.frontImage());
+                String backImage = trimToNull(dto.backImage());
+                if ((front.isEmpty() && frontImage == null) || (back.isEmpty() && backImage == null)) {
+                    throw new BadRequestException("Each side of a card needs text or an image");
+                }
+                for (String key : new String[] {frontImage, backImage}) {
+                    if (key != null && !knownImages.contains(key)) newImages.add(key);
+                }
                 Flashcard card = dto.id() != null ? existing.get(dto.id()) : null;
                 if (card == null) {
                     card = new Flashcard();
                     card.setSet(set);
                 }
-                card.setFront(dto.front().trim());
-                card.setBack(dto.back().trim());
+                card.setFront(front);
+                card.setBack(back);
+                card.setFrontImageKey(frontImage);
+                card.setBackImageKey(backImage);
                 card.setPosition(position++);
                 set.getCards().add(card);
             }
         }
+        requireOwnImages(newImages);
+    }
+
+    private void requireOwnImages(Set<String> keys) {
+        if (keys.isEmpty()) return;
+        Long me = currentUser.id();
+        long owned = imageRepository.findByImageKeyIn(keys).stream()
+                .filter(i -> me.equals(i.getOwnerId()))
+                .count();
+        if (owned != keys.size()) {
+            throw new BadRequestException("One of these images couldn't be found. Try adding it again.");
+        }
+    }
+
+    private static String trimToEmpty(String s) {
+        return s == null ? "" : s.trim();
     }
 
     private static String trimToNull(String s) {

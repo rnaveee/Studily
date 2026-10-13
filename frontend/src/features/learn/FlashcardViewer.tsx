@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight, Shuffle, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, Shuffle, X } from "lucide-react";
 import { toast } from "../../lib/toast";
 import { shuffled } from "./shuffle";
+import CardFace from "./CardFace";
 import type { StudyCard } from "../../types";
 
 interface Props {
   cards: StudyCard[];
   color: string;
   onDelete?: (index: number) => void;
+  onEdit?: (index: number) => void;
 }
 
-export default function FlashcardViewer({ cards, color, onDelete }: Props) {
+export default function FlashcardViewer({ cards, color, onDelete, onEdit }: Props) {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [order, setOrder] = useState<number[]>(() => cards.map((_, i) => i));
@@ -61,7 +63,10 @@ export default function FlashcardViewer({ cards, color, onDelete }: Props) {
           <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-fg-3">
             {flipped ? "Back" : "Front"} · tap to flip
           </div>
-          <div className="text-lg text-fg whitespace-pre-wrap break-words">{flipped ? card.back : card.front}</div>
+          <CardFace
+            text={flipped ? card.back : card.front}
+            image={flipped ? card.backImage : card.frontImage}
+          />
         </div>
       </button>
       <div className="flex items-center justify-between">
@@ -81,6 +86,15 @@ export default function FlashcardViewer({ cards, color, onDelete }: Props) {
           >
             <Shuffle size={14} />
           </button>
+          {onEdit && (
+            <button
+              onClick={() => onEdit(cardIndex)}
+              className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+              aria-label="Edit card"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
           {onDelete && (
             <button
               onClick={() => onDelete(cardIndex)}

@@ -13,6 +13,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -81,6 +83,21 @@ class GlobalRateLimitFilterTest {
 
         verify(blockedResponse).setStatus(429);
         verify(filterChain, never()).doFilter(request, blockedResponse);
+    }
+
+    @Test
+    void flashcardImages_useTheirOwnLargerBucket() throws Exception {
+        HttpServletRequest image = requestFor("/api/public/flashcard-images/abcdefghijklmnopqrstuv", "6.6.6.6");
+        HttpServletRequest api = requestFor("/api/courses", "6.6.6.6");
+
+        for (int i = 0; i < LIMIT_PER_WINDOW * 2; i++) {
+            filter.doFilterInternal(image, mock(HttpServletResponse.class), filterChain);
+        }
+        HttpServletResponse apiResponse = mock(HttpServletResponse.class);
+        filter.doFilterInternal(api, apiResponse, filterChain);
+
+        verify(filterChain, times(LIMIT_PER_WINDOW * 2)).doFilter(eq(image), any());
+        verify(filterChain).doFilter(api, apiResponse);
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.rnave.studily.flashcard;
 
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.course.Course;
@@ -32,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class FlashcardSetServiceTest {
@@ -40,6 +42,7 @@ class FlashcardSetServiceTest {
     private CurrentUser currentUser;
     private FriendRequestRepository friendRequestRepository;
     private FlairRepository flairRepository;
+    private FlashcardImageRepository imageRepository;
     private FlashcardSetService service;
 
     @BeforeEach
@@ -48,9 +51,11 @@ class FlashcardSetServiceTest {
         currentUser = mock(CurrentUser.class);
         friendRequestRepository = mock(FriendRequestRepository.class);
         flairRepository = mock(FlairRepository.class);
+        imageRepository = mock(FlashcardImageRepository.class);
         service = new FlashcardSetService(flashcardSetRepository, currentUser, mock(CourseService.class),
                 friendRequestRepository,
-                new Flairs(flairRepository, Clock.systemUTC(), "https://badges.studily.ca/flairs/v1"));
+                new Flairs(flairRepository, Clock.systemUTC(), "https://badges.studily.ca/flairs/v1"),
+                imageRepository);
         when(friendRequestRepository.findBetween(any(), any())).thenReturn(Optional.empty());
         when(currentUser.id()).thenReturn(1L);
         when(currentUser.maybe()).thenReturn(Optional.of(user(1L)));
@@ -165,8 +170,8 @@ class FlashcardSetServiceTest {
         card.setDueAt(due);
 
         service.update(10L, new FlashcardSetRequest("Title", null, null, List.of(
-                new FlashcardDto(100L, "edited front", "edited back", null, null, null, null),
-                new FlashcardDto(null, "brand new", "card", null, null, null, null)), null));
+                new FlashcardDto(100L, "edited front", "edited back", null, null, null, null, null, null),
+                new FlashcardDto(null, "brand new", "card", null, null, null, null, null, null)), null));
 
         assertThat(set.getCards()).hasSize(2);
         Flashcard kept = set.getCards().get(0);
@@ -187,7 +192,7 @@ class FlashcardSetServiceTest {
         FlashcardSet set = ownedSetWithCard(10L, 100L);
 
         service.update(10L, new FlashcardSetRequest("Title", null, null, List.of(
-                new FlashcardDto(31337L, "front", "back", null, null, null, null)), null));
+                new FlashcardDto(31337L, "front", "back", null, null, null, null, null, null)), null));
 
         assertThat(set.getCards()).hasSize(1);
         assertThat(set.getCards().get(0).getId()).isNull();
@@ -468,5 +473,83 @@ class FlashcardSetServiceTest {
         assertThat(service.publicPreview(21L)).isEmpty();
         assertThat(service.publicPreview(22L)).isEmpty();
         assertThat(service.publicPreview(99L)).isEmpty();
+    }
+
+    private static FlashcardImage image(String key, Long ownerId) {
+        FlashcardImage i = new FlashcardImage();
+        i.setImageKey(key);
+        i.setOwnerId(ownerId);
+        return i;
+    }
+
+    private static FlashcardDto card(Long id, String front, String back, String frontImage, String backImage) {
+        return new FlashcardDto(id, front, back, frontImage, backImage, null, null, null, null);
+    }
+
+    @Test
+    void update_imageOnlySide_isAllowed() {
+        FlashcardSet set = ownedSetWithCard(10L, 100L);
+        when(imageRepository.findByImageKeyIn(any())).thenReturn(List.of(image("abcdefghijklmnopqrstuv", 1L)));
+
+        service.update(10L, new FlashcardSetRequest("Title", null, null, List.of(
+                card(100L, "  ", "Mitochondria", "abcdefghijklmnopqrstuv", null)), null));
+
+        Flashcard saved = set.getCards().get(0);
+        assertThat(saved.getFront()).isEmpty();
+        assertThat(saved.getFrontImageKey()).isEqualTo("abcdefghijklmnopqrstuv");
+        assertThat(saved.getBack()).isEqualTo("Mitochondria");
+        assertThat(saved.getBackImageKey()).isNull();
+    }
+
+    @Test
+    void update_sideWithNeitherTextNorImage_throwsBadRequest() {
+        ownedSetWithCard(10L, 100L);
+
+        assertThatThrownBy(() -> service.update(10L, new FlashcardSetRequest("Title", null, null, List.of(
+                card(null, "front", " ", null, null)), null)))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void update_someoneElsesImage_throwsBadRequest() {
+        ownedSetWithCard(10L, 100L);
+        when(imageRepository.findByImageKeyIn(any())).thenReturn(List.of(image("abcdefghijklmnopqrstuv", 2L)));
+
+        assertThatThrownBy(() -> service.update(10L, new FlashcardSetRequest("Title", null, null, List.of(
+                card(null, "front", "back", "abcdefghijklmnopqrstuv", null)), null)))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void update_unknownImage_throwsBadRequest() {
+        ownedSetWithCard(10L, 100L);
+        when(imageRepository.findByImageKeyIn(any())).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.update(10L, new FlashcardSetRequest("Title", null, null, List.of(
+                card(null, "front", "back", null, "abcdefghijklmnopqrstuv")), null)))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void update_imageAlreadyInTheSet_isKeptEvenIfSomeoneElseUploadedIt() {
+        FlashcardSet set = ownedSetWithCard(10L, 100L);
+        set.getCards().get(0).setBackImageKey("copiedcopiedcopiedcopy");
+
+        service.update(10L, new FlashcardSetRequest("Title", null, null, List.of(
+                card(100L, "edited", "", null, "copiedcopiedcopiedcopy")), null));
+
+        assertThat(set.getCards().get(0).getBackImageKey()).isEqualTo("copiedcopiedcopiedcopy");
+        verifyNoInteractions(imageRepository);
+    }
+
+    @Test
+    void copy_keepsTheCardImages() {
+        FlashcardSet source = setOwnedBy(20L, 2L, FlashcardSetVisibility.PUBLIC);
+        source.getCards().get(0).setFrontImageKey("abcdefghijklmnopqrstuv");
+
+        FlashcardSetDto copy = service.copy(20L);
+
+        assertThat(copy.cards().get(0).frontImage()).isEqualTo("abcdefghijklmnopqrstuv");
+        assertThat(copy.cards().get(0).backImage()).isNull();
     }
 }

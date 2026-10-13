@@ -32,6 +32,35 @@ class AttachmentProcessorTest {
     }
 
     @Test
+    void processImageOnly_rejectsDocuments() {
+        MockMultipartFile file = new MockMultipartFile("file", "notes.pdf", "application/pdf",
+                "%PDF-1.4".getBytes(StandardCharsets.US_ASCII));
+
+        assertThatThrownBy(() -> processor.processImageOnly(file, 1200))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Unsupported image type");
+    }
+
+    @Test
+    void processImageOnly_downscalesToTheGivenDimension() throws IOException {
+        MockMultipartFile file = new MockMultipartFile("file", "photo.png", "image/png", pngBytes(2400, 1200));
+
+        AttachmentProcessor.Processed processed = processor.processImageOnly(file, 1200);
+
+        assertThat(processed.width()).isEqualTo(1200);
+        assertThat(processed.height()).isEqualTo(600);
+    }
+
+    @Test
+    void processImageOnly_gifOverTheGivenDimension_isRejected() throws IOException {
+        MockMultipartFile file = new MockMultipartFile("file", "wide.gif", "image/gif", gifBytes(1300, 10));
+
+        assertThatThrownBy(() -> processor.processImageOnly(file, 1200))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("1200px");
+    }
+
+    @Test
     void rejectsGifWithWrongMagicBytes() throws IOException {
         MockMultipartFile file = new MockMultipartFile("file", "fake.gif", "image/gif", pngBytes(10, 10));
 

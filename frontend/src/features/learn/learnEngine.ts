@@ -10,13 +10,23 @@ export interface LearnCard {
   key: string;
   front: string;
   back: string;
+  frontImage: string | null;
+  backImage: string | null;
+}
+
+type Side = "front" | "back";
+
+interface Prompted {
+  card: LearnCard;
+  prompt: string;
+  promptImage: string | null;
 }
 
 export type Question =
-  | { kind: "choice"; card: LearnCard; prompt: string; options: string[]; answer: string }
-  | { kind: "truefalse"; card: LearnCard; prompt: string; statement: string; isTrue: boolean; answer: string }
-  | { kind: "written"; card: LearnCard; prompt: string; answer: string }
-  | { kind: "recall"; card: LearnCard; prompt: string; answer: string };
+  | (Prompted & { kind: "choice"; options: string[]; answer: string })
+  | (Prompted & { kind: "truefalse"; statement: string; isTrue: boolean; answer: string })
+  | (Prompted & { kind: "written"; answer: string })
+  | (Prompted & { kind: "recall"; answer: string });
 
 export interface LearnProgress {
   levels: Record<string, Level>;
@@ -27,8 +37,34 @@ export type Verdict = "correct" | "close" | "wrong";
 
 export function learnCards(cards: StudyCard[]): LearnCard[] {
   return cards
-    .map((c, i) => ({ key: c.id != null ? String(c.id) : `i${i}`, front: c.front, back: c.back }))
-    .filter((c) => c.front.trim() && c.back.trim());
+    .map((c, i) => ({
+      key: c.id != null ? String(c.id) : `i${i}`,
+      front: c.front,
+      back: c.back,
+      frontImage: c.frontImage ?? null,
+      backImage: c.backImage ?? null,
+    }))
+    .filter(
+      (c) =>
+        (c.front.trim() || c.frontImage) &&
+        (c.back.trim() || c.backImage) &&
+        (c.front.trim() || c.back.trim()),
+    );
+}
+
+function textOf(card: LearnCard, side: Side): string {
+  return side === "front" ? card.front : card.back;
+}
+
+function imageOf(card: LearnCard, side: Side): string | null {
+  return side === "front" ? card.frontImage : card.backImage;
+}
+
+function answerSide(card: LearnCard, level: Level): Side {
+  if (!card.back.trim()) return "front";
+  if (!card.front.trim()) return "back";
+  if (level >= 1) return card.front.trim().length > card.back.trim().length ? "back" : "front";
+  return "back";
 }
 
 export function storageKey(viewerKey: string, setId: number): string {
@@ -78,39 +114,41 @@ function normText(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-function otherBacks(card: LearnCard, cards: LearnCard[]): string[] {
-  const own = normText(card.back);
-  const seen = new Set<string>([own]);
+function otherAnswers(card: LearnCard, side: Side, cards: LearnCard[]): string[] {
+  const seen = new Set<string>([normText(textOf(card, side))]);
   const out: string[] = [];
   for (const c of cards) {
-    const n = normText(c.back);
-    if (seen.has(n)) continue;
+    const text = textOf(c, side);
+    const n = normText(text);
+    if (!n || seen.has(n)) continue;
     seen.add(n);
-    out.push(c.back);
+    out.push(text);
   }
   return out;
 }
 
 export function buildQuestion(card: LearnCard, level: Level, cards: LearnCard[]): Question {
+  const side = answerSide(card, level);
+  const promptSide: Side = side === "back" ? "front" : "back";
+  const base = { card, prompt: textOf(card, promptSide), promptImage: imageOf(card, promptSide) };
+  const answer = textOf(card, side);
+
   if (level >= 1) {
-    const frontLonger = card.front.trim().length > card.back.trim().length;
-    const prompt = frontLonger ? card.front : card.back;
-    const answer = frontLonger ? card.back : card.front;
     if (normalizeAnswer(answer).length > LONG_ANSWER) {
-      return { kind: "recall", card, prompt, answer };
+      return { ...base, kind: "recall", answer };
     }
-    return { kind: "written", card, prompt, answer };
+    return { ...base, kind: "written", answer };
   }
 
-  const others = otherBacks(card, cards);
+  const others = otherAnswers(card, side, cards);
   if (others.length >= 3 && Math.random() >= 1 / 3) {
-    const options = shuffled([card.back, ...shuffled(others).slice(0, 3)]);
-    return { kind: "choice", card, prompt: card.front, options, answer: card.back };
+    const options = shuffled([answer, ...shuffled(others).slice(0, 3)]);
+    return { ...base, kind: "choice", options, answer };
   }
 
   const isTrue = others.length === 0 || Math.random() < 0.5;
-  const statement = isTrue ? card.back : shuffled(others)[0];
-  return { kind: "truefalse", card, prompt: card.front, statement, isTrue, answer: card.back };
+  const statement = isTrue ? answer : shuffled(others)[0];
+  return { ...base, kind: "truefalse", statement, isTrue, answer };
 }
 
 export function normalizeAnswer(s: string): string {

@@ -31,7 +31,8 @@ public class FlashcardRunDtos {
     public record CompleteRunRequest(@Valid @Size(max = 500) List<@NotNull CardResult> results) {
     }
 
-    public record RunCardDto(Long cardId, String front, String back, boolean correct) {
+    public record RunCardDto(Long cardId, String front, String back, String frontImage, String backImage,
+                             boolean correct) {
     }
 
     public record FlashcardRunResult(

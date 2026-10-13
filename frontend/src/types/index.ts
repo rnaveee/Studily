@@ -390,6 +390,8 @@ export interface Flashcard {
   id?: number;
   front: string;
   back: string;
+  frontImage?: string | null;
+  backImage?: string | null;
   dueAt?: string;
   intervalDays?: number;
   repetitions?: number;
@@ -430,6 +432,8 @@ export interface StudyCard {
   id?: number;
   front: string;
   back: string;
+  frontImage?: string | null;
+  backImage?: string | null;
 }
 
 export interface SetOwner {
@@ -963,6 +967,13 @@ export interface FlashcardRunResult {
   correctCount: number;
   xpAwarded: number;
   xpReason: XpReason;
-  cards: { cardId: number; front: string; back: string; correct: boolean }[];
+  cards: {
+    cardId: number;
+    front: string;
+    back: string;
+    frontImage?: string | null;
+    backImage?: string | null;
+    correct: boolean;
+  }[];
   delta: ProgressDelta;
 }

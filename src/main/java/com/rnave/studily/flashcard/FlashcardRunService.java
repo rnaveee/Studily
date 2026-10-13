@@ -152,7 +152,8 @@ public class FlashcardRunService {
         List<RunCardDto> summary = results.stream()
                 .map(r -> {
                     Flashcard card = cards.get(r.cardId());
-                    return new RunCardDto(card.getId(), card.getFront(), card.getBack(), r.correct());
+                    return new RunCardDto(card.getId(), card.getFront(), card.getBack(), card.getFrontImageKey(),
+                            card.getBackImageKey(), r.correct());
                 })
                 .toList();
         return new FlashcardRunResult(run.getId(), run.getMode(), cardCount, correctCount, granted,

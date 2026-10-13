@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { Plus, Share2 } from "lucide-react";
+import { ClipboardPaste, Plus, Share2 } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { useAuth, useRequireAuth } from "../../lib/auth";
 import BackButton from "../../components/BackButton";
@@ -13,6 +13,9 @@ import LearnMode from "./LearnMode";
 import MemoryGame from "./MemoryGame";
 import SpeedMatch from "./SpeedMatch";
 import ShareSetModal from "./ShareSetModal";
+import ImportCardsModal from "./ImportCardsModal";
+import CardEditor, { cardIsComplete, EMPTY_CARD, type CardDraft } from "./CardEditor";
+import Modal, { useModalClose } from "../../components/Modal";
 import SetModePicker, { useStudyMode } from "./SetModePicker";
 import { VisibilityBadge } from "./visibility";
 import type { Course, FlashcardSet, FlashcardSetRequest } from "../../types";
@@ -27,9 +30,11 @@ export default function FlashcardSetPage() {
   const requireAuth = useRequireAuth();
   const [mode, setMode] = useStudyMode();
 
-  const [front, setFront] = useState("");
-  const [back, setBack] = useState("");
+  const [draft, setDraft] = useState<CardDraft>(EMPTY_CARD);
+  const [draftUploading, setDraftUploading] = useState(false);
+  const [editing, setEditing] = useState<number | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const set = useQuery({
     queryKey: ["flashcards", "sets", setId],
@@ -75,23 +80,35 @@ export default function FlashcardSetPage() {
   const count = data.cards.length;
   const viewerKey = user ? String(user.id) : "guest";
 
-  function addCard(e: React.FormEvent) {
-    e.preventDefault();
-    if (!front.trim() || !back.trim()) return;
+  function addCard() {
+    if (!cardIsComplete(draft)) return;
     update.mutate({
       title: data.title,
       description: data.description,
       courseId: data.courseId,
-      cards: [...data.cards, { front: front.trim(), back: back.trim() }],
+      cards: [...data.cards, { ...draft, front: draft.front.trim(), back: draft.back.trim() }],
     });
-    setFront("");
-    setBack("");
+    setDraft(EMPTY_CARD);
+  }
+
+  function saveCard(index: number, card: CardDraft, onDone: () => void) {
+    update.mutate(
+      {
+        title: data.title,
+        description: data.description,
+        courseId: data.courseId,
+        cards: data.cards.map((c, i) =>
+          i === index ? { ...c, ...card, front: card.front.trim(), back: card.back.trim() } : c,
+        ),
+      },
+      { onSuccess: onDone },
+    );
   }
 
   async function deleteCard(actualIndex: number) {
     const ok = await confirm({
       title: "Delete this card?",
-      message: data.cards[actualIndex]?.front,
+      message: data.cards[actualIndex]?.front.trim() || "Image card",
       confirmLabel: "Delete card",
       danger: true,
     });
@@ -148,34 +165,42 @@ export default function FlashcardSetPage() {
 
       {mode === "flashcards" && (
         <>
-          <FlashcardViewer cards={data.cards} color={color} onDelete={deleteCard} />
-          <form onSubmit={addCard} className="card space-y-3 p-4">
+          <FlashcardViewer
+            cards={data.cards}
+            color={color}
+            onDelete={deleteCard}
+            onEdit={(i) => requireAuth(() => setEditing(i))}
+          />
+          <div className="card space-y-3 p-4">
             <h2 className="text-[12px] font-semibold uppercase tracking-wide text-fg-3">Add a card</h2>
-            <div>
-              <label className="field-label">Front</label>
-              <input
-                className="input"
-                value={front}
-                onChange={(e) => setFront(e.target.value)}
-                placeholder="Question or term"
-              />
-            </div>
-            <div>
-              <label className="field-label">Back</label>
-              <input
-                className="input"
-                value={back}
-                onChange={(e) => setBack(e.target.value)}
-                placeholder="Answer or definition"
-              />
-            </div>
-            <div className="flex justify-end">
-              <button type="submit" disabled={!front.trim() || !back.trim()} className="btn btn-primary">
-                <Plus size={13} />
-                Add card
-              </button>
-            </div>
-          </form>
+            <p className="text-[12px] text-fg-3">Paste or drop an image into either side, or tap the picture button.</p>
+            <CardEditor
+              value={draft}
+              onChange={setDraft}
+              onUploadingChange={setDraftUploading}
+              onSubmit={addCard}
+              footer={
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => requireAuth(() => setImporting(true))}
+                    className="btn btn-ghost"
+                  >
+                    <ClipboardPaste size={13} />
+                    Import from Quizlet
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!cardIsComplete(draft) || draftUploading}
+                    className="btn btn-primary"
+                  >
+                    <Plus size={13} />
+                    Add card
+                  </button>
+                </div>
+              }
+            />
+          </div>
         </>
       )}
 
@@ -220,6 +245,55 @@ export default function FlashcardSetPage() {
       )}
 
       {sharing && <ShareSetModal set={data} onClose={() => setSharing(false)} />}
+      {importing && <ImportCardsModal set={data} onClose={() => setImporting(false)} />}
+      {editing !== null && data.cards[editing] && (
+        <Modal onClose={() => setEditing(null)} title="Edit card" size="md">
+          <EditCardForm
+            card={{
+              front: data.cards[editing].front,
+              back: data.cards[editing].back,
+              frontImage: data.cards[editing].frontImage ?? null,
+              backImage: data.cards[editing].backImage ?? null,
+            }}
+            saving={update.isPending}
+            onSave={(card, done) => saveCard(editing, card, done)}
+          />
+        </Modal>
+      )}
     </div>
+  );
+}
+
+function EditCardForm({
+  card,
+  saving,
+  onSave,
+}: {
+  card: CardDraft;
+  saving: boolean;
+  onSave: (card: CardDraft, done: () => void) => void;
+}) {
+  const close = useModalClose();
+  const [value, setValue] = useState(card);
+  const [uploading, setUploading] = useState(false);
+
+  return (
+    <CardEditor
+      value={value}
+      onChange={setValue}
+      onUploadingChange={setUploading}
+      autoFocus
+      onSubmit={() => onSave(value, close)}
+      footer={
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={close} className="btn btn-ghost">
+            Cancel
+          </button>
+          <button type="submit" disabled={!cardIsComplete(value) || uploading || saving} className="btn btn-primary">
+            {saving ? "Saving…" : "Save card"}
+          </button>
+        </div>
+      }
+    />
   );
 }

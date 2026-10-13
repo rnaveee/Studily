@@ -156,7 +156,8 @@ class FlashcardRunServiceTest {
         ChestService chestService = new ChestService(chestRepository, progressService, badgeService, flairService,
                 currentUser, clock, random);
         FlashcardSetService setService = new FlashcardSetService(flashcardSetRepository, currentUser,
-                mock(CourseService.class), friendRequestRepository, mock(Flairs.class));
+                mock(CourseService.class), friendRequestRepository, mock(Flairs.class),
+                mock(FlashcardImageRepository.class));
         service = new FlashcardRunService(runRepository, setService, progressService, chestService, rateLimiter,
                 currentUser, clock, new ObjectMapper());
     }
@@ -310,8 +311,8 @@ class FlashcardRunServiceTest {
         FlashcardRunResult result = complete(run, Duration.ofSeconds(30), results(5, 4));
 
         assertThat(result.cards()).hasSize(5);
-        assertThat(result.cards().get(0)).isEqualTo(new RunCardDto(1001L, "front 1", "back 1", true));
-        assertThat(result.cards().get(4)).isEqualTo(new RunCardDto(1005L, "front 5", "back 5", false));
+        assertThat(result.cards().get(0)).isEqualTo(new RunCardDto(1001L, "front 1", "back 1", null, null, true));
+        assertThat(result.cards().get(4)).isEqualTo(new RunCardDto(1005L, "front 5", "back 5", null, null, false));
     }
 
     @Test

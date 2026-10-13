@@ -5,6 +5,7 @@ import type { GameCard, Tile } from "./gameRound";
 import { shuffled } from "./shuffle";
 import RunSummary from "./RunSummary";
 import { cardIdOf, useFlashcardRun } from "./useFlashcardRun";
+import { TileFace } from "./CardFace";
 import type { StudyCard } from "../../types";
 
 interface Props {
@@ -202,7 +203,7 @@ export default function MemoryGame({ setId, cards, color, onDone }: Props) {
                   key={t.id}
                   onClick={() => flip(t)}
                   className="flip-tile min-h-24 text-left"
-                  aria-label={faceUp ? t.text : "Hidden card"}
+                  aria-label={faceUp ? t.text.trim() || "Picture card" : "Hidden card"}
                 >
                   <div className={`flip-inner ${faceUp ? "is-flipped" : ""}`}>
                     <div
@@ -228,9 +229,7 @@ export default function MemoryGame({ setId, cards, color, onDone }: Props) {
                       <span className="text-[9px] font-semibold uppercase tracking-wider text-fg-3">
                         {t.side === "term" ? "Term" : "Definition"}
                       </span>
-                      <span className={`mt-1 leading-snug text-fg whitespace-pre-wrap break-words ${tileTextClass(t.text)}`}>
-                        {t.text}
-                      </span>
+                      <TileFace text={t.text} image={t.image} textClassName={tileTextClass(t.text)} />
                     </div>
                   </div>
                 </button>

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Check, Info, RotateCcw, Sparkles, Trophy, X } from "lucide-react";
 import { Skeleton } from "../../components/Skeleton";
+import { flashcardImageUrl } from "../../lib/flashcardImages";
 import type { FlashcardRunMode, FlashcardRunResult, XpReason } from "../../types";
 
 const LIST_PREVIEW = 8;
@@ -167,8 +168,8 @@ export default function RunSummary({
                   {c.correct ? <Check size={12} strokeWidth={3} /> : <X size={12} strokeWidth={3} />}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="whitespace-pre-wrap break-words text-[13px] font-medium text-fg">{c.front}</div>
-                  <div className="mt-0.5 whitespace-pre-wrap break-words text-[12px] text-fg-3">{c.back}</div>
+                  <SummarySide text={c.front} image={c.frontImage} className="text-[13px] font-medium text-fg" />
+                  <SummarySide text={c.back} image={c.backImage} className="mt-0.5 text-[12px] text-fg-3" />
                 </div>
               </li>
             ))}
@@ -185,6 +186,23 @@ export default function RunSummary({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function SummarySide({ text, image, className }: { text: string; image?: string | null; className: string }) {
+  return (
+    <div className={`flex items-start gap-2 ${className}`}>
+      {image && (
+        <img
+          src={flashcardImageUrl(image)}
+          alt={text.trim() || "Card image"}
+          loading="lazy"
+          decoding="async"
+          className="h-10 w-10 shrink-0 rounded-md object-cover"
+        />
+      )}
+      {text.trim() && <span className="min-w-0 whitespace-pre-wrap break-words">{text}</span>}
     </div>
   );
 }

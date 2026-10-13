@@ -16,15 +16,17 @@ public class FlashcardDtos {
 
     public record FlashcardDto(
             Long id,
-            @NotBlank @Size(max = 10000) String front,
-            @NotBlank @Size(max = 10000) String back,
+            @Size(max = 10000) String front,
+            @Size(max = 10000) String back,
+            @Size(max = 32) String frontImage,
+            @Size(max = 32) String backImage,
             Instant dueAt,
             Integer intervalDays,
             Integer repetitions,
             Double easeFactor) {
 
         public static FlashcardDto from(Flashcard c) {
-            return new FlashcardDto(c.getId(), c.getFront(), c.getBack(),
+            return new FlashcardDto(c.getId(), c.getFront(), c.getBack(), c.getFrontImageKey(), c.getBackImageKey(),
                     c.getDueAt(), c.getIntervalDays(), c.getRepetitions(), c.getEaseFactor());
         }
     }
@@ -83,10 +85,10 @@ public class FlashcardDtos {
         }
     }
 
-    public record SharedCardDto(Long id, String front, String back) {
+    public record SharedCardDto(Long id, String front, String back, String frontImage, String backImage) {
 
         public static SharedCardDto from(Flashcard c) {
-            return new SharedCardDto(c.getId(), c.getFront(), c.getBack());
+            return new SharedCardDto(c.getId(), c.getFront(), c.getBack(), c.getFrontImageKey(), c.getBackImageKey());
         }
     }
 

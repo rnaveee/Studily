@@ -15,6 +15,7 @@ import { readJson, removeKey, writeJson } from "./studyStorage";
 import type { StudyMode } from "./SetModePicker";
 import RunSummary from "./RunSummary";
 import { cardIdOf, useFlashcardRun } from "./useFlashcardRun";
+import CardFace from "./CardFace";
 import type { StudyCard } from "../../types";
 
 interface Props {
@@ -313,7 +314,9 @@ export default function LearnMode({ setId, cards, color, viewerKey, onSwitchMode
           {question.kind === "written" && "Type the answer"}
           {question.kind === "recall" && "Say the answer, then check"}
         </div>
-        <div className="text-lg text-fg whitespace-pre-wrap break-words">{question.prompt}</div>
+        <div>
+          <CardFace text={question.prompt} image={question.promptImage} imageClassName="max-h-64" />
+        </div>
 
         {question.kind === "choice" && (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

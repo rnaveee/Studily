@@ -6,6 +6,7 @@ import { toast } from "../../lib/toast";
 import { intervalLabel, isDue, nextIntervalDays } from "./sm2";
 import RunSummary from "./RunSummary";
 import { useFlashcardRun } from "./useFlashcardRun";
+import CardFace from "./CardFace";
 import type { Flashcard, ReviewGrade } from "../../types";
 
 const GRADES: { grade: ReviewGrade; label: string; explain: string; color: string }[] = [
@@ -137,7 +138,10 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
           <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-fg-3">
             {flipped ? "Back" : "Front · tap to reveal"}
           </div>
-          <div className="text-lg text-fg">{flipped ? card.back : card.front}</div>
+          <CardFace
+            text={flipped ? card.back : card.front}
+            image={flipped ? card.backImage : card.frontImage}
+          />
         </div>
       </button>
 
