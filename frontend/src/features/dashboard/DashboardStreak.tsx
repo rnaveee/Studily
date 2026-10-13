@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Skeleton } from "../../components/Skeleton";
-import StreakFlame from "../progress/StreakFlame";
+import StreakFlame, { flameTint } from "../progress/StreakFlame";
 import StreakRestoreModal from "../progress/StreakRestoreModal";
 import { useProgressEnabled, useStreakWeek } from "../progress/useProgress";
 import praise from "./streakPraise.json";
 import type { BrokenStreakDto, StreakWeekDto } from "../../types";
+
+const PANEL = "streak-tint press flex min-w-0 items-center gap-3 rounded-2xl py-2 pl-2.5 pr-4 text-left";
 
 const PRAISE_STYLE: React.CSSProperties = {
   color: "var(--orange)",
@@ -33,7 +35,7 @@ export default function DashboardStreak() {
   if (!enabled) return null;
   if (streak.isLoading) {
     return (
-      <div className="flex items-center gap-2.5" aria-hidden="true">
+      <div className={PANEL} style={flameTint(0)} aria-hidden="true">
         <Skeleton width={40} height={40} className="rounded-full" />
         <div className="space-y-1.5">
           <Skeleton width={96} height={14} />
@@ -60,7 +62,8 @@ function StreakSummary({ data, cheer }: { data: StreakWeekDto; cheer: string }) 
         <button
           type="button"
           onClick={() => setRestoring(broken)}
-          className="press -mx-2 flex min-w-0 items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-surface-hi"
+          className={PANEL}
+          style={flameTint(0)}
         >
           <StreakFlame streak={0} size={40} />
           <div className="min-w-0">
@@ -82,7 +85,8 @@ function StreakSummary({ data, cheer }: { data: StreakWeekDto; cheer: string }) 
     <>
       <Link
         to="/learn"
-        className="press -mx-2 flex min-w-0 items-center gap-2.5 rounded-xl px-2 py-1.5 transition-colors hover:bg-surface-hi"
+        className={PANEL}
+        style={flameTint(data.current)}
       >
         <StreakFlame streak={data.current} size={40} />
         <div className="min-w-0">

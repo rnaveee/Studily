@@ -870,6 +870,18 @@ textarea.input { resize: vertical; }
   100% { transform: translateY(-26px) scale(0.3); opacity: 0; }
 }
 
+.streak-tint {
+  border: 1px solid color-mix(in srgb, var(--tint) 32%, var(--line));
+  background: color-mix(in srgb, var(--tint) 9%, var(--surface));
+  box-shadow: var(--btn-shadow);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+a.streak-tint:hover,
+button.streak-tint:hover {
+  border-color: color-mix(in srgb, var(--tint) 48%, var(--line));
+  background: color-mix(in srgb, var(--tint) 15%, var(--surface));
+}
+
 .flair-ring,
 .flair-band,
 .flair-glow,

@@ -8,6 +8,18 @@ export function flameTier(streak: number): FlameTier {
   return "inferno";
 }
 
+const TINT: Record<FlameTier, string> = {
+  out: "var(--fg-3)",
+  kindle: "var(--flair-fire-4)",
+  ember: "var(--flair-fire-3)",
+  blaze: "var(--flair-fire-2)",
+  inferno: "var(--flame-blue-2)",
+};
+
+export function flameTint(streak: number): React.CSSProperties {
+  return { "--tint": TINT[flameTier(streak)] } as React.CSSProperties;
+}
+
 export function flameHeat(streak: number): number {
   if (streak <= 0) return 0;
   return Math.min(1, Math.log(streak + 1) / Math.log(101));

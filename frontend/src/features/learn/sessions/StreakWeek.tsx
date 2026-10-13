@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Check, RotateCcw, Zap } from "lucide-react";
 import { Skeleton } from "../../../components/Skeleton";
-import StreakFlame from "../../progress/StreakFlame";
+import StreakFlame, { flameTint } from "../../progress/StreakFlame";
 import StreakRestoreModal from "../../progress/StreakRestoreModal";
 import { QUALIFY_MINUTES, formatMultiplier } from "./sessionFormat";
 import type { BrokenStreakDto, StreakWeekDto } from "../../../types";
@@ -15,7 +15,7 @@ export default function StreakWeek({ data }: { data: StreakWeekDto }) {
   const [restoring, setRestoring] = useState<BrokenStreakDto | null>(null);
 
   return (
-    <div className="rounded-xl border border-line p-3.5" style={{ background: "var(--surface)" }}>
+    <div className="streak-tint rounded-xl p-3.5" style={flameTint(broken ? 0 : data.current)}>
       <div className="flex items-center gap-3">
         {broken ? (
           <button
@@ -134,7 +134,7 @@ export default function StreakWeek({ data }: { data: StreakWeekDto }) {
 
 export function StreakWeekSkeleton() {
   return (
-    <div className="rounded-xl border border-line p-3.5" aria-hidden="true">
+    <div className="streak-tint rounded-xl p-3.5" style={flameTint(0)} aria-hidden="true">
       <div className="flex items-center gap-3">
         <Skeleton width={56} height={56} className="rounded-full" />
         <div className="flex-1 space-y-2">
