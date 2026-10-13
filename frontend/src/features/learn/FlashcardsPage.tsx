@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Layers, Plus, Trash2 } from "lucide-react";
+import { ClipboardPaste, Layers, Plus, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
 import BackButton from "../../components/BackButton";
 import { useRequireAuth } from "../../lib/auth";
@@ -15,7 +15,7 @@ export default function FlashcardsPage() {
   const qc = useQueryClient();
   const requireAuth = useRequireAuth();
   const confirm = useConfirm();
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate] = useState<"blank" | "import" | null>(null);
 
   const sets = useQuery({
     queryKey: ["flashcards", "sets"],
@@ -42,10 +42,16 @@ export default function FlashcardsPage() {
             <p className="mt-1 text-[13px] text-fg-3">Create sets and study them.</p>
           </div>
         </div>
-        <button onClick={() => requireAuth(() => setShowCreate(true))} className="btn btn-primary">
-          <Plus size={13} />
-          Create
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => requireAuth(() => setShowCreate("import"))} className="btn btn-ghost">
+            <ClipboardPaste size={13} />
+            Import
+          </button>
+          <button onClick={() => requireAuth(() => setShowCreate("blank"))} className="btn btn-primary">
+            <Plus size={13} />
+            Create
+          </button>
+        </div>
       </div>
 
       {sets.isLoading ? (
@@ -118,7 +124,9 @@ export default function FlashcardsPage() {
         </div>
       )}
 
-      {showCreate && <NewFlashcardSetModal onClose={() => setShowCreate(false)} />}
+      {showCreate && (
+        <NewFlashcardSetModal importing={showCreate === "import"} onClose={() => setShowCreate(null)} />
+      )}
     </div>
   );
 }

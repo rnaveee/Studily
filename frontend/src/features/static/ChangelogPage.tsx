@@ -9,6 +9,13 @@ type Entry = {
 
 const ENTRIES: Entry[] = [
   {
+    version: 46,
+    date: "2026-10-13",
+    title: "Bring your Quizlet sets over",
+    description:
+      "You can move your flashcards from Quizlet to Studily without retyping them. In Quizlet, open your set, choose Export from the three-dot menu and tap Copy text. Then go to Flashcards, tap Import and paste it in. Studily works out which export options you picked, Tab or Comma and New line or Semicolon, and shows you every card it found before you save, so you can check the terms and definitions lined up properly. If a guess is ever wrong, flip the two switches to match what you picked in Quizlet and the preview updates straight away. Give the set a title and it's ready to study in every mode. You can also add cards from Quizlet to a set you already have: open the set and tap Import from Quizlet under Add a card. Any card that's already in the set is left out, so pasting the same export twice won't double anything up. A Studily set holds up to 500 cards, so a bigger Quizlet set is split evenly across numbered sets for you. Only the text comes across, not images.",
+  },
+  {
     version: 45,
     date: "2026-10-09",
     title: "A streak flame that grows",
