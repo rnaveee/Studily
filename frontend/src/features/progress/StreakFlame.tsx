@@ -8,6 +8,11 @@ export function flameTier(streak: number): FlameTier {
   return "inferno";
 }
 
+export function flameHeat(streak: number): number {
+  if (streak <= 0) return 0;
+  return Math.min(1, Math.log(streak + 1) / Math.log(101));
+}
+
 const OUTER =
   "M50 98 C26 98 10 82 10 61 C10 47 16 34 24 22 C26 31 31 37 37 40 C36 26 42 12 56 2 C55 16 62 24 71 33 C81 43 90 52 90 64 C90 84 73 98 50 98 Z";
 const MID =
@@ -48,6 +53,7 @@ interface TierLook {
   licks?: boolean;
   spark?: string;
   glow?: string;
+  glowCore?: string;
 }
 
 const LOOKS: Record<FlameTier, TierLook> = {
@@ -65,6 +71,8 @@ const LOOKS: Record<FlameTier, TierLook> = {
     logo: deepen(KINDLE_MID, EMBER_DEEP),
     scale: 0.82,
     speed: 1.3,
+    glow: fire("4"),
+    glowCore: fire("4"),
   },
   ember: {
     outer: fire("2"),
@@ -74,6 +82,8 @@ const LOOKS: Record<FlameTier, TierLook> = {
     scale: 0.91,
     speed: 1,
     licks: true,
+    glow: fire("3"),
+    glowCore: fire("4"),
   },
   blaze: {
     outer: fire("2"),
@@ -84,7 +94,8 @@ const LOOKS: Record<FlameTier, TierLook> = {
     speed: 0.85,
     licks: true,
     spark: fire("4"),
-    glow: fire("3"),
+    glow: fire("2"),
+    glowCore: fire("3"),
   },
   inferno: {
     outer: blue("1"),
@@ -96,6 +107,7 @@ const LOOKS: Record<FlameTier, TierLook> = {
     licks: true,
     spark: blue("3"),
     glow: blue("2"),
+    glowCore: blue("hot"),
   },
 };
 
@@ -113,6 +125,16 @@ export default function StreakFlame({
   const lit = tier !== "out";
   const sparks = look.spark && size >= 32;
   const lift = centered ? 48 * (look.scale - 1) : 0;
+  const heat = flameHeat(streak);
+  const halo = size * (1.15 + 0.65 * heat);
+  const shadows = look.glow
+    ? [
+        `drop-shadow(0 0 ${Math.max(1, size * (0.03 + 0.07 * heat))}px color-mix(in srgb, ${look.glow} ${Math.round(30 + 40 * heat)}%, transparent))`,
+        ...(tier === "inferno"
+          ? [`drop-shadow(0 0 ${Math.max(1, size * 0.03)}px color-mix(in srgb, ${look.glowCore} 70%, transparent))`]
+          : []),
+      ].join(" ")
+    : undefined;
 
   return (
     <span
@@ -120,17 +142,23 @@ export default function StreakFlame({
       className="relative inline-block shrink-0"
       style={{ width: size, height: size, "--sf-speed": look.speed } as React.CSSProperties}
     >
+      {look.glow && (
+        <span
+          className="sf-glow pointer-events-none absolute rounded-full"
+          style={{
+            width: halo,
+            height: halo,
+            left: (size - halo) / 2,
+            top: size * (0.62 + lift / 100) - halo / 2,
+            background: `radial-gradient(circle, color-mix(in srgb, ${look.glowCore} ${Math.round(28 + 34 * heat)}%, transparent) 0%, color-mix(in srgb, ${look.glow} ${Math.round(14 + 26 * heat)}%, transparent) 38%, transparent 68%)`,
+          }}
+        />
+      )}
       <svg
         viewBox="0 0 100 100"
         overflow="visible"
         className="absolute inset-0 h-full w-full"
-        style={
-          look.glow
-            ? {
-                filter: `drop-shadow(0 0 ${Math.max(2, size * 0.09)}px color-mix(in srgb, ${look.glow} 55%, transparent))`,
-              }
-            : undefined
-        }
+        style={shadows ? { filter: shadows } : undefined}
       >
         <g transform={lift ? `translate(0 ${lift})` : undefined}>
           <g transform={`translate(50 98) scale(${look.scale}) translate(-50 -98)`}>

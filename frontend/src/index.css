@@ -857,6 +857,13 @@ textarea.input { resize: vertical; }
   opacity: 0;
   animation: sf-rise calc(1.8s * var(--sf-speed, 1)) ease-out infinite;
 }
+.sf-glow {
+  animation: sf-glow calc(2.2s * var(--sf-speed, 1)) ease-in-out infinite alternate;
+}
+@keyframes sf-glow {
+  from { transform: scale(0.92); opacity: 0.78; }
+  to   { transform: scale(1.06); opacity: 1; }
+}
 @keyframes sf-rise {
   0%   { transform: translateY(0) scale(1); opacity: 0; }
   20%  { opacity: 1; }
@@ -956,7 +963,8 @@ textarea.input { resize: vertical; }
   .chest-shake { animation: none; }
   .checkin-pulse { animation: none; }
   .sf-layer,
-  .sf-lick { animation: none; }
+  .sf-lick,
+  .sf-glow { animation: none; }
   .sf-spark { animation: none; display: none; }
   .flair-spin,
   .flair-spin-rev,
