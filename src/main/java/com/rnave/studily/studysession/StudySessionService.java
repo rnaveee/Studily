@@ -55,7 +55,7 @@ public class StudySessionService {
     static final int MAX_TASKS = 10;
     static final int MAX_TASK_LENGTH = 200;
     static final Duration CHECKIN_EARLY = Duration.ofSeconds(60);
-    static final Duration CHECKIN_LATE = Duration.ofMinutes(5);
+    static final Duration CHECKIN_LATE = Duration.ofMinutes(10);
     static final Duration REPLAY_WINDOW = Duration.ofMinutes(2);
     static final Duration PAUSE_LIMIT = Duration.ofMinutes(30);
     static final Duration USER_PAUSE_LIMIT = Duration.ofMinutes(30);

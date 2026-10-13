@@ -89,7 +89,7 @@ const SLIDES: Slide[] = [
   {
     eyebrow: "Study sessions",
     title: "Study with a plan, earn as you go",
-    body: "Start a session at the top of the Study page. Pick Pomodoro (25-minute blocks with 5-minute breaks) or a timer from 30 minutes to 3 hours, and list what you want to get done. When a block ends, check in within 5 minutes to bank its XP, and we'll notify you when it's time. Miss a check-in and that block earns nothing and the session pauses, but you can resume within 30 minutes.",
+    body: "Start a session at the top of the Study page. Pick Pomodoro (25-minute blocks with 5-minute breaks) or a timer from 30 minutes to 3 hours, and list what you want to get done. When a block ends, check in within 10 minutes to bank its XP, and we'll notify you when it's time. Miss a check-in and that block earns nothing and the session pauses, but you can resume within 30 minutes.",
     visual: <CheckinVisual />,
   },
   {

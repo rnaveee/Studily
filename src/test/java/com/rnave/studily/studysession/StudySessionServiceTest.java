@@ -335,7 +335,7 @@ class StudySessionServiceTest {
             assertThat(b.dueAt()).isEqualTo(T0.plus(min(25)));
         });
         assertThat(dto.checkinOpensAt()).isEqualTo(T0.plus(min(25)).minusSeconds(60));
-        assertThat(dto.checkinClosesAt()).isEqualTo(T0.plus(min(30)));
+        assertThat(dto.checkinClosesAt()).isEqualTo(T0.plus(min(35)));
     }
 
     @Test
@@ -495,7 +495,17 @@ class StudySessionServiceTest {
     @Test
     void checkin_atLateEdge_creditsBlock() {
         StudySession s = startPomodoro(5);
-        at(min(30));
+        at(min(35));
+
+        service.checkin(s.getId());
+
+        assertThat(block(s, 1).getStatus()).isEqualTo(StudyBlockStatus.CONFIRMED);
+    }
+
+    @Test
+    void checkin_nineMinutesLate_stillCreditsBlock() {
+        StudySession s = startPomodoro(5);
+        at(min(34).plusSeconds(59));
 
         service.checkin(s.getId());
 
@@ -505,7 +515,7 @@ class StudySessionServiceTest {
     @Test
     void checkin_afterLateEdge_throwsExpired() {
         StudySession s = startPomodoro(5);
-        at(min(30).plusSeconds(1));
+        at(min(35).plusSeconds(1));
 
         assertThatThrownBy(() -> service.checkin(s.getId()))
                 .isInstanceOf(ConflictException.class)
@@ -663,11 +673,11 @@ class StudySessionServiceTest {
     @Test
     void checkin_lastBlockAfterMissedBlock_completesWithoutBonus() {
         StudySession s = startPomodoro(2);
-        at(min(30).plusSeconds(1));
+        at(min(35).plusSeconds(1));
         assertThat(service.missBlock(1L, block(s, 1).getId())).isTrue();
-        at(min(31));
+        at(min(36));
         service.resume(s.getId());
-        at(min(56));
+        at(min(61));
 
         service.checkin(s.getId());
 
@@ -681,11 +691,11 @@ class StudySessionServiceTest {
     void checkin_completingFiftyMinuteSessionWithMissedBlock_skipsBonusAndChestRoll() {
         when(random.nextDouble()).thenReturn(0.0);
         StudySession s = startPomodoro(2);
-        at(min(30).plusSeconds(1));
+        at(min(35).plusSeconds(1));
         service.missBlock(1L, block(s, 1).getId());
-        at(min(31));
+        at(min(36));
         service.resume(s.getId());
-        at(min(56));
+        at(min(61));
 
         StudySessionResult result = service.checkin(s.getId());
 
@@ -721,18 +731,18 @@ class StudySessionServiceTest {
     @Test
     void resume_afterMissedBlock_startsNextBlockNow() {
         StudySession s = startPomodoro(3);
-        at(min(30).plusSeconds(1));
+        at(min(35).plusSeconds(1));
         service.missBlock(1L, block(s, 1).getId());
         assertThat(s.getStatus()).isEqualTo(StudySessionStatus.PAUSED);
-        at(min(40));
+        at(min(45));
 
         StudySessionDto dto = service.resume(s.getId());
 
         assertThat(dto.status()).isEqualTo(StudySessionStatus.ACTIVE);
         assertThat(dto.currentBlock()).isEqualTo(2);
         assertThat(s.getPausedAt()).isNull();
-        assertThat(block(s, 2).getStartedAt()).isEqualTo(T0.plus(min(40)));
-        assertThat(block(s, 2).getDueAt()).isEqualTo(T0.plus(min(65)));
+        assertThat(block(s, 2).getStartedAt()).isEqualTo(T0.plus(min(45)));
+        assertThat(block(s, 2).getDueAt()).isEqualTo(T0.plus(min(70)));
     }
 
     @Test
@@ -929,9 +939,9 @@ class StudySessionServiceTest {
     @Test
     void end_pausedSession_endsWithoutXp() {
         StudySession s = startPomodoro(5);
-        at(min(30).plusSeconds(1));
+        at(min(35).plusSeconds(1));
         service.missBlock(1L, block(s, 1).getId());
-        at(min(35));
+        at(min(40));
 
         StudySessionResult result = service.end(s.getId());
 
@@ -1448,9 +1458,9 @@ class StudySessionServiceTest {
     @Test
     void resume_pausedMoreThanThirtyMinutes_expiresSessionAndThrowsConflict() {
         StudySession s = startPomodoro(3);
-        at(min(30).plusSeconds(1));
+        at(min(35).plusSeconds(1));
         service.missBlock(1L, block(s, 1).getId());
-        Instant late = T0.plus(min(60)).plusSeconds(2);
+        Instant late = T0.plus(min(65)).plusSeconds(2);
         at(late);
 
         assertThatThrownBy(() -> service.resume(s.getId()))
@@ -1464,9 +1474,9 @@ class StudySessionServiceTest {
     @Test
     void resume_pausedExactlyThirtyMinutes_resumes() {
         StudySession s = startPomodoro(3);
-        at(min(30).plusSeconds(1));
+        at(min(35).plusSeconds(1));
         service.missBlock(1L, block(s, 1).getId());
-        at(min(60).plusSeconds(1));
+        at(min(65).plusSeconds(1));
 
         assertThat(service.resume(s.getId()).status()).isEqualTo(StudySessionStatus.ACTIVE);
     }

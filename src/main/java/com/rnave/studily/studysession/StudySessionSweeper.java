@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 public class StudySessionSweeper {
 
     private static final Logger log = LoggerFactory.getLogger(StudySessionSweeper.class);
-    static final int PUSH_TTL_SECONDS = 300;
+    static final int PUSH_TTL_SECONDS = 600;
     static final String PUSH_TITLE = "Study session";
     static final String PUSH_BODY = "Block done! Check in to keep your XP.";
     static final String PUSH_URL = "/learn";

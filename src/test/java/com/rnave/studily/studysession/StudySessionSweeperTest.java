@@ -140,7 +140,7 @@ class StudySessionSweeperTest {
         sweeper.sweep();
 
         assertThat(b.getNotifiedAt()).isEqualTo(now);
-        verify(pushSender).sendToUser(1L, BLOCK_DONE, 300);
+        verify(pushSender).sendToUser(1L, BLOCK_DONE, 600);
 
         at(Duration.ofMinutes(25).plusSeconds(40));
         sweeper.sweep();
@@ -160,7 +160,7 @@ class StudySessionSweeperTest {
         sweeper.notifyDue();
         sweeper.notifyDue();
 
-        verify(pushSender, times(1)).sendToUser(1L, BLOCK_DONE, 300);
+        verify(pushSender, times(1)).sendToUser(1L, BLOCK_DONE, 600);
     }
 
     @Test
@@ -193,7 +193,7 @@ class StudySessionSweeperTest {
         StudySession s = session(10L, 3, StudySessionStatus.ACTIVE);
         StudySessionBlock b = block(20L, s, 1);
         b.setNotifiedAt(T0.plus(Duration.ofMinutes(25)));
-        at(Duration.ofMinutes(30).plusSeconds(1));
+        at(Duration.ofMinutes(35).plusSeconds(1));
 
         sweeper.sweep();
 
@@ -210,7 +210,7 @@ class StudySessionSweeperTest {
         StudySession s = session(10L, 3, StudySessionStatus.ACTIVE);
         StudySessionBlock b = block(20L, s, 1);
         b.setNotifiedAt(T0.plus(Duration.ofMinutes(25)));
-        at(Duration.ofMinutes(30));
+        at(Duration.ofMinutes(35));
 
         sweeper.sweep();
 
@@ -223,7 +223,7 @@ class StudySessionSweeperTest {
         StudySession s = session(10L, 2, StudySessionStatus.ACTIVE);
         s.setCurrentBlock(2);
         StudySessionBlock b = block(20L, s, 2);
-        at(Duration.ofMinutes(31));
+        at(Duration.ofMinutes(36));
 
         sweeper.sweep();
 
@@ -263,19 +263,19 @@ class StudySessionSweeperTest {
 
         at(Duration.ofMinutes(25).plusSeconds(5));
         sweeper.sweep();
-        at(Duration.ofMinutes(30).plusSeconds(5));
+        at(Duration.ofMinutes(35).plusSeconds(5));
         sweeper.sweep();
         assertThat(b.getStatus()).isEqualTo(StudyBlockStatus.MISSED);
         assertThat(s.getStatus()).isEqualTo(StudySessionStatus.PAUSED);
 
-        at(Duration.ofMinutes(60).plusSeconds(5));
+        at(Duration.ofMinutes(65).plusSeconds(5));
         sweeper.sweep();
         assertThat(s.getStatus()).isEqualTo(StudySessionStatus.PAUSED);
 
-        at(Duration.ofMinutes(60).plusSeconds(6));
+        at(Duration.ofMinutes(65).plusSeconds(6));
         sweeper.sweep();
         assertThat(s.getStatus()).isEqualTo(StudySessionStatus.EXPIRED);
-        verify(pushSender, times(1)).sendToUser(1L, BLOCK_DONE, 300);
+        verify(pushSender, times(1)).sendToUser(1L, BLOCK_DONE, 600);
     }
 
     @Test
@@ -293,7 +293,7 @@ class StudySessionSweeperTest {
         isolated.sweep();
 
         verify(service).missBlock(2L, 21L);
-        verify(pushSender).sendToUser(4L, BLOCK_DONE, 300);
+        verify(pushSender).sendToUser(4L, BLOCK_DONE, 600);
         verify(service).expire(5L, 40L);
     }
 
@@ -314,7 +314,7 @@ class StudySessionSweeperTest {
         StudySession s = session(10L, 3, StudySessionStatus.ACTIVE);
         s.setUserPausedAt(T0.plus(Duration.ofMinutes(10)));
         StudySessionBlock b = block(20L, s, 1);
-        at(Duration.ofMinutes(31));
+        at(Duration.ofMinutes(40));
 
         sweeper.markMissed();
         sweeper.notifyDue();

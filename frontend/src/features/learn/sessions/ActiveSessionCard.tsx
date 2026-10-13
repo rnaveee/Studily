@@ -46,7 +46,7 @@ export default function ActiveSessionCard({
   const startMs = running ? Date.parse(running.startedAt) : 0;
   const dueMs = running ? Date.parse(running.dueAt) : 0;
   const opensMs = session.checkinOpensAt ? Date.parse(session.checkinOpensAt) : dueMs - 60_000;
-  const closesMs = session.checkinClosesAt ? Date.parse(session.checkinClosesAt) : dueMs + 5 * 60_000;
+  const closesMs = session.checkinClosesAt ? Date.parse(session.checkinClosesAt) : dueMs + 10 * 60_000;
   const heldMs = running && session.userPausedAt ? Date.parse(session.userPausedAt) : null;
 
   let phase: Phase;

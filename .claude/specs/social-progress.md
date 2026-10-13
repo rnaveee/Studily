@@ -80,15 +80,15 @@ Lifecycle (server time is authoritative):
    - Tasks: 0–10, each 1–200 chars, trimmed, blanks dropped.
    - Only one `ACTIVE` or `PAUSED` session per user. A second start returns 409 `You already have a study session running`.
 2. **Check-in.**
-   - Accepted when `due_at − 60s ≤ now ≤ due_at + 5 min`.
+   - Accepted when `due_at − 60s ≤ now ≤ due_at + 10 min` (widened from 5 min by Ryan 2026-10-13, so a forgotten check-in has more room).
    - Earlier → 409 `This block isn't finished yet`. Later → the block was already marked MISSED by the sweeper → 409 `This block expired`.
    - Confirming credits `block_minutes` and grants STUDY_BLOCK XP.
    - If this was the last planned block: the session becomes `COMPLETED` and gets the STUDY_COMPLETE bonus.
    - Otherwise the next block starts with `started_at = now + break_minutes` and `due_at = started_at + block_minutes`.
    - Check-in is idempotent: confirming an already-confirmed block returns the current state with an empty delta. This holds for 2 minutes after the confirm (the request has no block index). A later retry during a break gets 409 `This block isn't finished yet`, and the UI simply refetches (lead decision 2026-10-08).
 3. **Sweeper** (`@Scheduled(fixedDelay = 30_000)`, DB-driven so it survives restarts):
-   - (a) For ACTIVE sessions whose current block has `due_at ≤ now` and `notified_at IS NULL`: sends a push and sets `notified_at`. Push: title `Study session`, body `Block done! Check in to keep your XP.`, url `/learn`. Use `WebPushSender.sendToUser(userId, PushPayload.of(...), 300)`.
-   - (b) For ACTIVE sessions where `now > due_at + 5 min`: block → `MISSED` (0 XP), session → `PAUSED`, `next_checkin_due_at = null`. If the missed block was the last planned block, the session goes straight to `EXPIRED` with `ended_at = now`, because there is nothing left to resume. A missed block uses up one planned block: resume starts block `current_block + 1`, so a session with a missed block can never earn STUDY_COMPLETE.
+   - (a) For ACTIVE sessions whose current block has `due_at ≤ now` and `notified_at IS NULL`: sends a push and sets `notified_at`. Push: title `Study session`, body `Block done! Check in to keep your XP.`, url `/learn`. Use `WebPushSender.sendToUser(userId, PushPayload.of(...), 600)`, a TTL that covers the whole check-in window.
+   - (b) For ACTIVE sessions where `now > due_at + 10 min`: block → `MISSED` (0 XP), session → `PAUSED`, `next_checkin_due_at = null`. If the missed block was the last planned block, the session goes straight to `EXPIRED` with `ended_at = now`, because there is nothing left to resume. A missed block uses up one planned block: resume starts block `current_block + 1`, so a session with a missed block can never earn STUDY_COMPLETE.
    - (c) For PAUSED sessions paused more than 30 min: → `EXPIRED`, `ended_at = now`.
    - (d) (V50) For ACTIVE sessions with `user_paused_at` more than 30 min ago: settle the running block as of `user_paused_at`, then → `ENDED`. Steps (a) and (b) skip sessions with `user_paused_at` set.
 4. **Resume** (PAUSED only): a new block starts now, and the session becomes ACTIVE.
