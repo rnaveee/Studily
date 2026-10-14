@@ -9,6 +9,7 @@ HERE = Path(__file__).resolve().parent
 SVG_DIR = HERE / "svg"
 PNG_DIR = HERE / "export" / "png"
 WEBP_DIR = HERE / "export" / "webp"
+PHOTO_DIR = HERE / "photos"
 CHROME = Path.home() / ".cache/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-linux64/chrome-headless-shell"
 
 OUT = "#1d1a33"
@@ -57,6 +58,13 @@ BADGES = [
     ("cosmetic_spark", "silver", "spark", "SPARK"),
     ("cosmetic_comet", "gold", "comet", "COMET"),
     ("cosmetic_crown", "ruby", "crown", "CROWN"),
+    ("cosmetic_warrior", "ruby", "warrior", "STUDY WARRIOR"),
+    ("cosmetic_doge", "gold", "photo_doge", "DOGE"),
+    ("cosmetic_mog", "obsidian", "photo_mog", "MOG"),
+    ("cosmetic_chad_nugget", "diamond", "photo_chad_nugget", "CHAD NUGGET"),
+    ("cosmetic_cope", "wood", "photo_cope", "COPE"),
+    ("cosmetic_son", "ruby", "photo_son", "SON"),
+    ("cosmetic_bruh", "bronze", "photo_bruh", "BRUH"),
 ]
 
 FACE = "M56 300 L256 150 L456 300 L256 450 Z"
@@ -315,10 +323,71 @@ def icon_crown():
     )
 
 
+def icon_warrior():
+    sheet = ("M154 112 L276 112 L314 150 L314 328 Q314 344 298 344 L154 344 "
+             "Q138 344 138 328 L138 128 Q138 112 154 112 Z")
+    pencil = ("M-140 -24 L78 -24 L146 0 L78 24 L-140 24 Q-152 24 -152 12 "
+              "L-152 -12 Q-152 -24 -140 -24 Z")
+    paper = (
+        '<g transform="rotate(-12 226 228)">'
+        f'<path d="{sheet}" fill="#FFFFFF"/>'
+        '<path d="M296 150 L314 150 L314 328 Q314 344 298 344 L296 344 Z" fill="#E4E2F4"/>'
+        '<path d="M170 124 L170 334" stroke="#FF8FA5" stroke-width="5"/>'
+        '<g stroke="#B9B2FF" stroke-width="7" stroke-linecap="round">'
+        '<path d="M188 240 L282 240"/><path d="M188 272 L282 272"/><path d="M188 304 L258 304"/>'
+        "</g>"
+        f'<text x="230" y="214" text-anchor="middle" font-family="Montserrat" font-weight="900" font-size="68" '
+        f'fill="#E22B4C" stroke="{OUT}" stroke-width="5" paint-order="stroke" stroke-linejoin="round">A+</text>'
+        f'<path d="{sheet}" fill="none" stroke="{OUT}" stroke-width="{SW}" stroke-linejoin="round"/>'
+        f'<path d="M276 112 L276 150 L314 150 Z" fill="#CFCBEA" stroke="{OUT}" stroke-width="8" stroke-linejoin="round"/>'
+        "</g>"
+    )
+    pen = (
+        '<g transform="translate(272 248) rotate(-42)">'
+        '<path d="M-118 -24 L-140 -24 Q-152 -24 -152 -12 L-152 12 Q-152 24 -140 24 L-118 24 Z" fill="#FF8FBA"/>'
+        '<path d="M-146 -10 L-146 10" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" opacity="0.6"/>'
+        '<rect x="-120" y="-24" width="30" height="48" fill="#CBD3DE"/>'
+        '<path d="M-111 -24 L-111 24 M-100 -24 L-100 24" stroke="#98A3B4" stroke-width="4"/>'
+        '<rect x="-90" y="-24" width="168" height="48" fill="#FFC83D"/>'
+        '<rect x="-90" y="-24" width="168" height="13" fill="#FFE066"/>'
+        '<rect x="-90" y="9" width="168" height="15" fill="#E9A10C"/>'
+        '<path d="M78 -24 L146 0 L78 24 Z" fill="#F4D7A8"/>'
+        '<path d="M78 -24 L88 -12 L78 0 L88 12 L78 24" fill="none" stroke="#D9B27A" stroke-width="4" stroke-linejoin="round"/>'
+        f'<path d="M122 -8.5 L146 0 L122 8.5 Z" fill="{OUT}"/>'
+        '<path d="M-78 -16 L64 -16" stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" opacity="0.55"/>'
+        f'<path d="{pencil}" fill="none" stroke="{OUT}" stroke-width="{SW}" stroke-linejoin="round"/>'
+        f'<rect x="-96" y="-52" width="18" height="104" rx="9" fill="#F7C531" stroke="{OUT}" stroke-width="8"/>'
+        '<path d="M-90 -40 L-90 -14" stroke="#FFF7C9" stroke-width="5" stroke-linecap="round"/>'
+        "</g>"
+    )
+    star = (
+        "M404 90 C410.2 105.8 410.2 105.8 426 112 C410.2 118.2 410.2 118.2 404 134 "
+        "C397.8 118.2 397.8 118.2 382 112 C397.8 105.8 397.8 105.8 404 90 Z"
+    )
+    return (
+        paper + pen
+        + f'<path d="{star}" fill="#FFFFFF" stroke="{OUT}" stroke-width="5" stroke-linejoin="round"/>'
+        + sparkle(354, 86, 11, "#FFE066")
+    )
+
+
+def photo(name, x, y, w):
+    path = PHOTO_DIR / f"{name}.png"
+    with Image.open(path) as img:
+        h = w * img.height / img.width
+    return f'<image href="../photos/{name}.png" x="{x}" y="{y}" width="{w}" height="{h:.1f}"/>'
+
+
 ICONS = {
     "arrow": icon_arrow, "brain": icon_brain, "cards": icon_cards, "people": icon_people,
     "bicep": icon_bicep, "double_bicep": icon_double_bicep, "spark": icon_spark,
-    "comet": icon_comet, "crown": icon_crown,
+    "comet": icon_comet, "crown": icon_crown, "warrior": icon_warrior,
+    "photo_doge": lambda: photo("cosmetic_doge", 127, 60, 258),
+    "photo_mog": lambda: photo("cosmetic_mog", 128, 66, 249),
+    "photo_chad_nugget": lambda: photo("cosmetic_chad_nugget", 140, 56, 233),
+    "photo_cope": lambda: photo("cosmetic_cope", 106, 92, 300),
+    "photo_son": lambda: photo("cosmetic_son", 114, 78, 284),
+    "photo_bruh": lambda: photo("cosmetic_bruh", 109, 96, 295),
 }
 
 

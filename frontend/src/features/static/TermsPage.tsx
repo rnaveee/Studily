@@ -3,7 +3,7 @@ import { Page, Section } from "./shell";
 
 export default function TermsPage() {
   return (
-    <Page title="Terms of Service" intro="Last updated July 3, 2026">
+    <Page title="Terms of Service" intro="Last updated October 14, 2026">
       <Section title="1. Accepting these terms">
         <p>
           By creating an account or using Studily, you agree to these Terms of Service and to the{" "}
@@ -59,6 +59,13 @@ export default function TermsPage() {
         <p>
           These terms may be updated as Studily grows; meaningful changes will be reflected on this
           page. Questions? Email{" "}
+          <a href="mailto:ryannave97@gmail.com" className="text-accent transition-colors hover:text-accent-2">
+            ryannave97@gmail.com
+          </a>
+          .
+        </p>
+        <p>
+          If you own content shown on Studily and want it removed, email us at{" "}
           <a href="mailto:ryannave97@gmail.com" className="text-accent transition-colors hover:text-accent-2">
             ryannave97@gmail.com
           </a>

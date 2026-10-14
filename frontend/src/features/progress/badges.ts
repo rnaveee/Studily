@@ -36,6 +36,8 @@ const BADGE_TIER: Record<string, number> = {
   friends_5: 1, friends_10: 2, friends_20: 3, friends_50: 4, schoolmates_10: 2,
   member_1m: 1, member_6m: 3, member_1y: 4, og: 6,
   cosmetic_spark: 2, cosmetic_comet: 3, cosmetic_crown: 5,
+  cosmetic_warrior: 5, cosmetic_doge: 3, cosmetic_mog: 6, cosmetic_chad_nugget: 4,
+  cosmetic_cope: 0, cosmetic_son: 5, cosmetic_bruh: 1,
 };
 
 const TIER_GLOW = ["wood", "bronze", "silver", "gold", "diamond", "ruby"];
