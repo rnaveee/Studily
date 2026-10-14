@@ -63,6 +63,12 @@ public class StudySession {
     private Instant userPausedAt;
 
     @Column(nullable = false)
+    private int coinsAwarded = 0;
+
+    @Column(nullable = false)
+    private int chestsAwarded = 0;
+
+    @Column(nullable = false)
     private LocalDate localDate;
 
     @Column(nullable = false)

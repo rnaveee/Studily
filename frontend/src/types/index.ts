@@ -791,9 +791,12 @@ export interface PublicProgressDto {
 
 export type ChestSource = "LEVEL" | "STREAK" | "SESSION" | "FLASHCARD";
 
+export type ChestTier = "WOOD" | "SILVER" | "GOLD" | "DIAMOND";
+
 export interface ChestDto {
   id: number;
   source: ChestSource;
+  tier: ChestTier;
   createdAt: string;
   openedAt: string | null;
   loot: { coins: number; xp: number; badge: BadgeDto | null; flair: FlairDto | null } | null;

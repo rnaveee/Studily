@@ -36,6 +36,10 @@ public class Chest {
     @Column(nullable = false, length = 24)
     private ChestSource source;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    private ChestTier tier = ChestTier.SILVER;
+
     @Column(nullable = false, length = 64)
     private String sourceRef;
 

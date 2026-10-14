@@ -14,23 +14,30 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.random.RandomGenerator;
 
 @Service
 public class ChestService {
 
-    static final int LOOT_COINS_MIN = 30;
-    static final int LOOT_COINS_MAX = 120;
-    static final double LOOT_XP_CHANCE = 0.4;
-    static final int LOOT_XP_MIN = 50;
-    static final int LOOT_XP_MAX = 150;
+    record LootTable(int coinsMin, int coinsMax, double xpChance, int xpMin, int xpMax, double badgeChance,
+                     double flairChance) {
+    }
+
+    static final Map<ChestTier, LootTable> LOOT = new EnumMap<>(Map.of(
+            ChestTier.WOOD, new LootTable(20, 50, 0.25, 25, 60, 0.02, 0.02),
+            ChestTier.SILVER, new LootTable(40, 100, 0.4, 50, 120, 0.04, 0.04),
+            ChestTier.GOLD, new LootTable(90, 180, 0.6, 80, 180, 0.07, 0.07),
+            ChestTier.DIAMOND, new LootTable(180, 350, 1.0, 120, 250, 0.12, 0.12)));
     static final int DAILY_DROP_LIMIT = 2;
-    static final double LOOT_BADGE_CHANCE = 0.05;
     static final int ALL_COSMETICS_OWNED_COINS = 100;
-    static final double LOOT_FLAIR_CHANCE = 0.05;
     static final int ALL_LOOT_FLAIRS_OWNED_COINS = 100;
+    static final double SESSION_BONUS_CHANCE = 0.4;
+    static final int SESSION_BONUS_FROM_BLOCK = 7;
 
     private final ChestRepository chestRepository;
     private final ProgressService progressService;
@@ -73,7 +80,7 @@ public class ChestService {
                 .orElseThrow(() -> new NotFoundException("Chest not found"));
         chest.setOpenedAt(now);
 
-        Loot loot = rollLoot(userId);
+        Loot loot = rollLoot(userId, chest.getTier());
         chest.setLootCoins(loot.coins());
         chest.setLootXp(loot.xp());
         chest.setLootBadge(loot.badge());
@@ -111,14 +118,56 @@ public class ChestService {
         return progressService.grantChest(delta, source, sourceRef, localDate);
     }
 
-    Loot rollLoot(Long userId) {
-        int coins = LOOT_COINS_MIN + random.nextInt(LOOT_COINS_MAX - LOOT_COINS_MIN + 1);
+    @Transactional
+    public List<Chest> grantSessionChests(ProgressDeltaBuilder delta, Long sessionId, int confirmedBlocks,
+                                          LocalDate localDate) {
+        List<ChestTier> tiers = sessionChestTiers(confirmedBlocks, random);
+        List<Chest> granted = new ArrayList<>();
+        for (int i = 0; i < tiers.size(); i++) {
+            progressService.grantChest(delta, ChestSource.SESSION, "session:" + sessionId + ":" + (i + 1), localDate,
+                    tiers.get(i)).ifPresent(granted::add);
+        }
+        return granted;
+    }
+
+    @Transactional(readOnly = true)
+    public List<ChestDto> sessionChests(Long userId, Long sessionId) {
+        return chestRepository.findByUserIdAndSourceAndSourceRefStartingWithOrderById(userId, ChestSource.SESSION,
+                        "session:" + sessionId + ":").stream()
+                .map(c -> ChestDto.of(c, null))
+                .toList();
+    }
+
+    static List<ChestTier> sessionChestTiers(int blocks, RandomGenerator random) {
+        List<ChestTier> tiers = new ArrayList<>();
+        if (blocks <= 0) {
+            return tiers;
+        }
+        ChestTier base = blocks >= 7 ? ChestTier.DIAMOND
+                : blocks >= 5 ? ChestTier.GOLD
+                : blocks >= 3 ? ChestTier.SILVER
+                : ChestTier.WOOD;
+        tiers.add(base);
+        if (blocks < SESSION_BONUS_FROM_BLOCK && blocks % 2 == 0 && random.nextDouble() < SESSION_BONUS_CHANCE) {
+            tiers.add(base.lower());
+        }
+        for (int block = SESSION_BONUS_FROM_BLOCK; block <= blocks; block++) {
+            if (random.nextDouble() < SESSION_BONUS_CHANCE) {
+                tiers.add(ChestTier.GOLD);
+            }
+        }
+        return tiers;
+    }
+
+    Loot rollLoot(Long userId, ChestTier tier) {
+        LootTable table = LOOT.get(tier);
+        int coins = table.coinsMin() + random.nextInt(table.coinsMax() - table.coinsMin() + 1);
         int xp = 0;
-        if (random.nextDouble() < LOOT_XP_CHANCE) {
-            xp = LOOT_XP_MIN + random.nextInt(LOOT_XP_MAX - LOOT_XP_MIN + 1);
+        if (random.nextDouble() < table.xpChance()) {
+            xp = table.xpMin() + random.nextInt(table.xpMax() - table.xpMin() + 1);
         }
         Badge badge = null;
-        if (random.nextDouble() < LOOT_BADGE_CHANCE) {
+        if (random.nextDouble() < table.badgeChance()) {
             List<Badge> candidates = badgeService.unownedCosmetics(userId);
             if (candidates.isEmpty()) {
                 coins += ALL_COSMETICS_OWNED_COINS;
@@ -127,7 +176,7 @@ public class ChestService {
             }
         }
         Flair flair = null;
-        if (random.nextDouble() < LOOT_FLAIR_CHANCE) {
+        if (random.nextDouble() < table.flairChance()) {
             List<Flair> candidates = flairService.unownedLootable(userId);
             if (candidates.isEmpty()) {
                 coins += ALL_LOOT_FLAIRS_OWNED_COINS;

@@ -62,7 +62,8 @@ public class ProgressDtos {
     public record LootDto(int coins, int xp, BadgeDto badge, FlairDto flair) {
     }
 
-    public record ChestDto(Long id, ChestSource source, Instant createdAt, Instant openedAt, LootDto loot) {
+    public record ChestDto(Long id, ChestSource source, ChestTier tier, Instant createdAt, Instant openedAt,
+                           LootDto loot) {
 
         public static ChestDto of(Chest c, BadgeDto lootBadge) {
             return of(c, lootBadge, null);
@@ -74,7 +75,7 @@ public class ProgressDtos {
                     c.getLootXp() == null ? 0 : c.getLootXp(),
                     lootBadge,
                     lootFlair);
-            return new ChestDto(c.getId(), c.getSource(), c.getCreatedAt(), c.getOpenedAt(), loot);
+            return new ChestDto(c.getId(), c.getSource(), c.getTier(), c.getCreatedAt(), c.getOpenedAt(), loot);
         }
     }
 

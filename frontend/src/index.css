@@ -103,9 +103,17 @@
   --flair-star:     #ffffff;
   --flair-shine:    rgb(255 255 255 / 0.78);
   --flair-shade:    rgb(10 8 30 / 0.22);
+  --chest-wood:     #a8683a;
+  --chest-silver:   #8794a8;
+  --chest-gold:     #d99a0b;
+  --chest-diamond:  #12a8cf;
 }
 
 .dark {
+  --chest-wood:     #c48552;
+  --chest-silver:   #c3ccd9;
+  --chest-gold:     #f5c242;
+  --chest-diamond:  #5ad8f5;
   --bg:         #08090e;
   --surface:    #131420;
   --surface-hi: #1c1d2a;

@@ -30,6 +30,10 @@ public class ProgressDeltaBuilder {
         return progress;
     }
 
+    public int coinsGainedSoFar() {
+        return progress.getCoins() - coinsBefore;
+    }
+
     public Long userId() {
         return progress.getUserId();
     }

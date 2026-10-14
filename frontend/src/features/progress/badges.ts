@@ -1,4 +1,4 @@
-import type { BadgeCategory, BadgeDto, ChestSource } from "../../types";
+import type { BadgeCategory, BadgeDto, ChestSource, ChestTier } from "../../types";
 
 export const CATEGORY_ORDER: BadgeCategory[] = ["LEVEL", "STUDY", "FLASHCARDS", "SOCIAL", "TENURE", "COSMETIC"];
 
@@ -74,6 +74,20 @@ export function formatAcquired(iso: string | null): string | null {
   if (!iso) return null;
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
+
+export const CHEST_TIER_LABEL: Record<ChestTier, string> = {
+  WOOD: "Wooden chest",
+  SILVER: "Silver chest",
+  GOLD: "Gold chest",
+  DIAMOND: "Diamond chest",
+};
+
+export const CHEST_TIER_COLOR: Record<ChestTier, string> = {
+  WOOD: "var(--chest-wood)",
+  SILVER: "var(--chest-silver)",
+  GOLD: "var(--chest-gold)",
+  DIAMOND: "var(--chest-diamond)",
+};
 
 export const CHEST_SOURCE_LABEL: Record<ChestSource, string> = {
   LEVEL: "Level-up reward",

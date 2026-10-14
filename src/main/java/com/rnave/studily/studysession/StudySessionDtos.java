@@ -1,6 +1,7 @@
 package com.rnave.studily.studysession;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.rnave.studily.progress.ProgressDtos.ChestDto;
 import com.rnave.studily.progress.ProgressDtos.ProgressDelta;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -83,6 +84,9 @@ public class StudySessionDtos {
     }
 
     public record StudySessionResult(StudySessionDto session, ProgressDelta delta) {
+    }
+
+    public record StudySessionRecap(StudySessionDto session, int coinsAwarded, List<ChestDto> chests) {
     }
 
     public record StreakDayDto(

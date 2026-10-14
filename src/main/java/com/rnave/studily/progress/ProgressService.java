@@ -151,6 +151,12 @@ public class ProgressService {
     @Transactional
     public Optional<Chest> grantChest(ProgressDeltaBuilder delta, ChestSource source, String sourceRef,
                                       LocalDate localDate) {
+        return grantChest(delta, source, sourceRef, localDate, ChestTier.defaultFor(source));
+    }
+
+    @Transactional
+    public Optional<Chest> grantChest(ProgressDeltaBuilder delta, ChestSource source, String sourceRef,
+                                      LocalDate localDate, ChestTier tier) {
         Long userId = delta.userId();
         if (chestRepository.existsByUserIdAndSourceAndSourceRef(userId, source, sourceRef)) {
             return Optional.empty();
@@ -159,6 +165,7 @@ public class ProgressService {
         chest.setUser(userRepository.getReferenceById(userId));
         chest.setSource(source);
         chest.setSourceRef(sourceRef);
+        chest.setTier(tier);
         chest.setLocalDate(localDate);
         chest.setCreatedAt(clock.instant());
         chestRepository.save(chest);

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Coins, Gift, PackageOpen, Sparkles } from "lucide-react";
+import { Check, Coins, Gift, Sparkles } from "lucide-react";
 import Avatar from "../../components/Avatar";
 import Modal, { useModalClose } from "../../components/Modal";
 import { api } from "../../lib/api";
@@ -8,7 +8,8 @@ import { useAuth } from "../../lib/auth";
 import { flairRef, RARITY_COLOR, RARITY_LABEL } from "../../lib/flairs";
 import { applyDelta } from "../../lib/progressDelta";
 import BadgeArt from "./BadgeArt";
-import { CHEST_SOURCE_LABEL } from "./badges";
+import { CHEST_SOURCE_LABEL, CHEST_TIER_COLOR, CHEST_TIER_LABEL } from "./badges";
+import ChestIcon from "./ChestIcon";
 import { useEquipFlair } from "./useProgress";
 import type { ChestDto, ChestOpenResult, FlairDto } from "../../types";
 
@@ -66,6 +67,7 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
   const loot = opened?.loot ?? null;
   const lootFlair = loot?.flair ?? null;
   const shaking = open.isPending;
+  const tierColor = CHEST_TIER_COLOR[chest.tier];
 
   return (
     <div className="flex flex-col items-center pb-1 pt-3 text-center">
@@ -86,36 +88,28 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
           <span
             aria-hidden
             className="level-glow absolute inset-0 rounded-full"
-            style={{ border: "3px solid color-mix(in srgb, var(--amber-vivid) 60%, transparent)" }}
+            style={{ border: `3px solid color-mix(in srgb, ${tierColor} 60%, transparent)` }}
           />
         )}
-        <span
+        <ChestIcon
           key={opened ? "open" : "closed"}
-          className={`relative flex h-28 w-28 items-center justify-center rounded-[28px] ${
-            opened ? "chest-reveal" : shaking ? "chest-shake" : ""
-          }`}
-          style={{
-            background: opened
-              ? "radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--amber-vivid) 30%, var(--surface)) 0%, var(--surface) 75%)"
-              : "radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--accent) 22%, var(--surface)) 0%, var(--surface) 75%)",
-            boxShadow: opened
-              ? "inset 0 0 0 2px color-mix(in srgb, var(--amber-vivid) 70%, transparent), 0 12px 32px -10px color-mix(in srgb, var(--amber-vivid) 60%, transparent)"
-              : "inset 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent), 0 12px 32px -10px color-mix(in srgb, var(--accent) 50%, transparent)",
-          }}
-        >
-          {opened ? (
-            <PackageOpen size={52} strokeWidth={1.5} style={{ color: "var(--amber-vivid)" }} />
-          ) : (
-            <Gift size={52} strokeWidth={1.5} className="text-accent" />
-          )}
-        </span>
+          tier={chest.tier}
+          opened={!!opened}
+          className={opened ? "chest-reveal" : shaking ? "chest-shake" : ""}
+        />
       </button>
 
-      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">
-        {CHEST_SOURCE_LABEL[chest.source]}
+      <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: tierColor }}>
+        {CHEST_TIER_LABEL[chest.tier]} · {CHEST_SOURCE_LABEL[chest.source]}
       </p>
       <h2 className="mt-1 text-[18px] font-semibold text-fg">
-        {opened ? (lootFlair ? "A rare find!" : "Here's what you got") : shaking ? "Opening…" : "You found a chest!"}
+        {opened
+          ? lootFlair
+            ? "A rare find!"
+            : "Here's what you got"
+          : shaking
+            ? "Opening…"
+            : `You found ${chest.tier === "WOOD" ? "a wooden" : `a ${chest.tier.toLowerCase()}`} chest!`}
       </h2>
       {!opened && !shaking && <p className="mt-1 text-[13px] text-fg-3">Tap it to see what's inside.</p>}
 

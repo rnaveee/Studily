@@ -386,16 +386,41 @@ Repository methods the backend relies on. Names are fixed; db-developer may add 
 ## 7. Coins, chests, shop
 
 - Coins only change inside a transaction that holds `findForUpdate` on `user_progress`, and every change writes a `coin_transactions` row.
+- Chest tiers (decided by Ryan 2026-10-13, V52 `chests.tier`): `WOOD < SILVER < GOLD < DIAMOND`. Chests that existed before V52 became SILVER.
 - Chest drops:
-  - **LEVEL**: every 5th level.
-  - **STREAK**: every time the streak reaches a multiple of 7.
-  - **SESSION**: **35%** chance when a session completes with `planned_minutes ≥ 50` **and every planned block was confirmed**, the same condition as STUDY_COMPLETE (lead decision 2026-10-08), max **2** SESSION chests per user per `local_date` (Ryan, 2026-10-08; was 20%, max 1). The limit is counted with `chests.local_date` = the session's `local_date`, never `created_at`. Source_ref `session:{id}`. LEVEL and STREAK chests store `local_date` as null, or the streak day for STREAK.
-  - **FLASHCARD**: see §5.
+  - **LEVEL**: every 5th level, **GOLD**.
+  - **STREAK**: every time the streak reaches a multiple of 7, **SILVER**.
+  - **SESSION** (decided by Ryan 2026-10-13; replaces the 35% drop): chests are counted from the session's **CONFIRMED** blocks whenever it closes (completed, ended, expired, or auto-ended after a pause). Partial and missed blocks don't count. Each bonus roll is a separate 40% chance.
+
+    | Confirmed blocks | Guaranteed | Bonus rolls |
+    |---|---|---|
+    | 1 | WOOD | none |
+    | 2 | WOOD | WOOD |
+    | 3 | SILVER | none |
+    | 4 | SILVER | WOOD |
+    | 5 | GOLD | none |
+    | 6 | GOLD | SILVER |
+    | 7 | DIAMOND | GOLD |
+    | 8 | DIAMOND | GOLD, GOLD |
+
+    - Only the first **3 sessions per user per `local_date`** that earn chests get them (`study_sessions.chests_awarded > 0`). Later sessions earn none.
+    - Each chest's source_ref is `session:{id}:{n}`, with `local_date` set to the session's `local_date`.
+    - `study_sessions.coins_awarded` adds up the level-up coins earned by the session's own requests.
+    - `GET /api/study-sessions/{id}/recap` returns `{session, coinsAwarded, chests}` for the end-of-session summary.
+  - **FLASHCARD**: see §5, **WOOD**.
+  - LEVEL and STREAK chests store `local_date` as null, or the streak day for STREAK.
 - Open: `markOpened` must return 1. If it returns 0 and the chest exists for this user, that's 409 `Chest already opened`; otherwise 404.
-- Loot is rolled at open time with one `SecureRandom`:
-  - Always: `coins = 30..120` inclusive.
-  - 40% chance: `xp = 50..150`.
-  - 5% chance: a random active COSMETIC badge the user doesn't own, source `CHEST`. If they own every cosmetic badge, they get +100 coins instead.
+- Loot is rolled at open time with one `SecureRandom`, from the chest's tier (Ryan, 2026-10-13; before that, every chest was 30–120 coins, 40% chance of 50–150 XP, 5% badge, 5% flair):
+
+  | Tier | Coins | XP | Cosmetic badge | Flair |
+  |---|---|---|---|---|
+  | WOOD | 20–50 | 25% chance of 25–60 | 2% | 2% |
+  | SILVER | 40–100 | 40% chance of 50–120 | 4% | 4% |
+  | GOLD | 90–180 | 60% chance of 80–180 | 7% | 7% |
+  | DIAMOND | 180–350 | always 120–250 | 12% | 12% |
+
+  - The badge is a random active COSMETIC badge the user doesn't own, source `CHEST`. If they own every cosmetic badge, they get +100 coins instead.
+  - The flair fallback works the same way.
   - Loot is stored on the chest row and applied in the same transaction. The XP grant uses the `CHEST` source with key `chest:{id}`.
 - Purchase checks, in this order:
   1. The badge exists and is active (404).
@@ -471,7 +496,8 @@ interface ProgressDto { level: number; xp: number; xpIntoLevel: number; xpForNex
   streak: StreakDto; featuredBadges: BadgeDto[]; badgeCount: number; badgeTotal: number; unopenedChests: number; }
 interface PublicProgressDto { userId: number; level: number; xp: number; xpIntoLevel: number; xpForNext: number;
   streakCurrent: number; featuredBadges: BadgeDto[]; badgeCount: number; badgeTotal: number; }
-interface ChestDto { id: number; source: "LEVEL" | "STREAK" | "SESSION" | "FLASHCARD"; createdAt: string;
+interface ChestDto { id: number; source: "LEVEL" | "STREAK" | "SESSION" | "FLASHCARD";
+  tier: "WOOD" | "SILVER" | "GOLD" | "DIAMOND"; createdAt: string;
   openedAt: string | null; loot: { coins: number; xp: number; badge: BadgeDto | null } | null; }
 interface ProgressDelta { xpGained: number; levelBefore: number; levelAfter: number; xp: number;
   xpIntoLevel: number; xpForNext: number; coinsGained: number; coins: number;
@@ -526,6 +552,7 @@ interface StreakWeekDto { current: number; best: number; multiplier: number; min
 | POST `/api/study-sessions/{id}/end` | | `StudySessionResult` | 404, 409 already finished |
 | GET `/api/study-sessions?page=0&size=20` | | `PageResponse<StudySessionSummaryDto>` (`{items, hasMore}`), newest first, size ≤ 50 | |
 | GET `/api/study-sessions/streak` | | `StreakWeekDto` | |
+| GET `/api/study-sessions/{id}/recap` | | `{session: StudySessionDto, coinsAwarded: number, chests: ChestDto[]}` | 404 |
 
 Flashcard run types:
 ```ts

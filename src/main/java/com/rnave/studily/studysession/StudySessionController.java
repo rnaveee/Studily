@@ -8,6 +8,7 @@ import com.rnave.studily.studysession.StudySessionDtos.StartSessionRequest;
 import com.rnave.studily.studysession.StudySessionDtos.StreakRestoreResult;
 import com.rnave.studily.studysession.StudySessionDtos.StreakWeekDto;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionDto;
+import com.rnave.studily.studysession.StudySessionDtos.StudySessionRecap;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionResult;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionSummaryDto;
 import com.rnave.studily.studysession.StudySessionDtos.TaskUpdateRequest;
@@ -97,6 +98,11 @@ public class StudySessionController {
     @DeleteMapping("/{id}/tasks/{taskId}")
     public StudySessionDto deleteTask(@PathVariable Long id, @PathVariable Long taskId) {
         return studySessionService.deleteTask(id, taskId);
+    }
+
+    @GetMapping("/{id}/recap")
+    public StudySessionRecap recap(@PathVariable Long id) {
+        return studySessionService.recap(id);
     }
 
     @PostMapping("/{id}/end")

@@ -27,4 +27,7 @@ public interface ChestRepository extends JpaRepository<Chest, Long> {
     long countByUserIdAndOpenedAtIsNull(Long userId);
 
     long countByUserIdAndSourceAndLocalDate(Long userId, ChestSource source, LocalDate d);
+
+    List<Chest> findByUserIdAndSourceAndSourceRefStartingWithOrderById(Long userId, ChestSource source,
+                                                                       String prefix);
 }

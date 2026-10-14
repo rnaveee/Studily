@@ -5,8 +5,8 @@ import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.config.PageResponse;
+import com.rnave.studily.progress.Chest;
 import com.rnave.studily.progress.ChestService;
-import com.rnave.studily.progress.ChestSource;
 import com.rnave.studily.progress.ProgressDeltaBuilder;
 import com.rnave.studily.progress.ProgressRateLimiter;
 import com.rnave.studily.progress.ProgressService;
@@ -19,6 +19,7 @@ import com.rnave.studily.studysession.StudySessionDtos.StreakDayDto;
 import com.rnave.studily.studysession.StudySessionDtos.StreakWeekDto;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionBlockDto;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionDto;
+import com.rnave.studily.studysession.StudySessionDtos.StudySessionRecap;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionResult;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionSummaryDto;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionTaskDto;
@@ -66,7 +67,7 @@ public class StudySessionService {
     static final BigDecimal HALF = new BigDecimal("0.5");
     static final int COMPLETE_BONUS = 40;
     static final int BONUS_MIN_PLANNED_MINUTES = 50;
-    static final double SESSION_CHEST_CHANCE = 0.35;
+    static final int CHEST_SESSIONS_PER_DAY = 3;
     static final int TASK_XP = 5;
     static final int TASK_XP_POSITIONS = 5;
     static final int MAX_PAID_TASKS_PER_DAY = 10;
@@ -189,6 +190,7 @@ public class StudySessionService {
             throw new ConflictException("This block isn't finished yet");
         }
         confirm(delta, user, session, block, now);
+        trackCoins(delta, session);
         return new StudySessionResult(toDto(session, now), progressService.finish(delta));
     }
 
@@ -224,6 +226,7 @@ public class StudySessionService {
         if (session.getStatus() == StudySessionStatus.ACTIVE && session.getUserPausedAt() != null) {
             if (session.getUserPausedAt().isBefore(now.minus(USER_PAUSE_LIMIT))) {
                 close(delta, session, now);
+                trackCoins(delta, session);
                 progressService.finish(delta);
                 throw new ConflictException("This session ended after 30 minutes paused");
             }
@@ -243,6 +246,8 @@ public class StudySessionService {
         if (session.getPausedAt() != null && session.getPausedAt().isBefore(now.minus(PAUSE_LIMIT))) {
             session.setStatus(StudySessionStatus.EXPIRED);
             session.setEndedAt(now);
+            awardOnClose(delta, session);
+            progressService.finish(delta);
             throw new ConflictException("This session expired");
         }
         if (session.getCurrentBlock() >= session.getPlannedBlocks()) {
@@ -328,6 +333,7 @@ public class StudySessionService {
         } else {
             task.setDoneAt(null);
         }
+        trackCoins(delta, session);
         return new StudySessionResult(toDto(session, now), progressService.finish(delta));
     }
 
@@ -341,7 +347,16 @@ public class StudySessionService {
         }
         Instant now = clock.instant();
         close(delta, session, now);
+        trackCoins(delta, session);
         return new StudySessionResult(toDto(session, now), progressService.finish(delta));
+    }
+
+    @Transactional(readOnly = true)
+    public StudySessionRecap recap(Long id) {
+        Long userId = currentUser.id();
+        StudySession session = requireOwned(id, userId);
+        return new StudySessionRecap(toDto(session, clock.instant()), session.getCoinsAwarded(),
+                chestService.sessionChests(userId, id));
     }
 
     @Transactional(readOnly = true)
@@ -428,13 +443,14 @@ public class StudySessionService {
             return false;
         }
         close(delta, session, now);
+        trackCoins(delta, session);
         progressService.finish(delta);
         return true;
     }
 
     @Transactional
     public boolean missBlock(Long userId, Long blockId) {
-        progressService.ensure(userId);
+        ProgressDeltaBuilder delta = progressService.begin(userId);
         StudySessionBlock block = blockRepository.findById(blockId).orElse(null);
         Instant now = clock.instant();
         if (block == null || block.getStatus() != StudyBlockStatus.RUNNING
@@ -449,6 +465,8 @@ public class StudySessionService {
         if (block.getBlockIndex() >= session.getPlannedBlocks()) {
             session.setStatus(StudySessionStatus.EXPIRED);
             session.setEndedAt(now);
+            awardOnClose(delta, session);
+            progressService.finish(delta);
         } else {
             session.setStatus(StudySessionStatus.PAUSED);
             session.setPausedAt(now);
@@ -475,7 +493,7 @@ public class StudySessionService {
 
     @Transactional
     public boolean expire(Long userId, Long sessionId) {
-        progressService.ensure(userId);
+        ProgressDeltaBuilder delta = progressService.begin(userId);
         StudySession session = sessionRepository.findByIdAndUserId(sessionId, userId).orElse(null);
         Instant now = clock.instant();
         if (session == null || session.getStatus() != StudySessionStatus.PAUSED || session.getPausedAt() == null
@@ -484,6 +502,8 @@ public class StudySessionService {
         }
         session.setStatus(StudySessionStatus.EXPIRED);
         session.setEndedAt(now);
+        awardOnClose(delta, session);
+        progressService.finish(delta);
         return true;
     }
 
@@ -573,6 +593,27 @@ public class StudySessionService {
         session.setStatus(StudySessionStatus.ENDED);
         session.setEndedAt(now);
         session.setUserPausedAt(null);
+        awardOnClose(delta, session);
+    }
+
+    private void awardOnClose(ProgressDeltaBuilder delta, StudySession session) {
+        if (session.getChestsAwarded() > 0) {
+            return;
+        }
+        int confirmed = (int) blockRepository.findBySessionIdOrderByBlockIndex(session.getId()).stream()
+                .filter(b -> b.getStatus() == StudyBlockStatus.CONFIRMED)
+                .count();
+        if (confirmed == 0 || sessionRepository.countByUserIdAndLocalDateAndChestsAwardedGreaterThan(
+                session.getUser().getId(), session.getLocalDate(), 0) >= CHEST_SESSIONS_PER_DAY) {
+            return;
+        }
+        List<Chest> chests = chestService.grantSessionChests(delta, session.getId(), confirmed,
+                session.getLocalDate());
+        session.setChestsAwarded(chests.size());
+    }
+
+    private static void trackCoins(ProgressDeltaBuilder delta, StudySession session) {
+        session.setCoinsAwarded(session.getCoinsAwarded() + delta.coinsGainedSoFar());
     }
 
     private List<String> cleanTasks(List<String> raw) {
@@ -642,6 +683,7 @@ public class StudySessionService {
     private void complete(ProgressDeltaBuilder delta, StudySession session, int minutesToday, Instant now) {
         session.setStatus(StudySessionStatus.COMPLETED);
         session.setEndedAt(now);
+        awardOnClose(delta, session);
         if (session.getPlannedMinutes() < BONUS_MIN_PLANNED_MINUTES) {
             return;
         }
@@ -655,8 +697,6 @@ public class StudySessionService {
                 scaled(COMPLETE_BONUS, session.getMultiplier(), dayFactor(minutesToday)),
                 "study-complete:" + session.getId(), session.getId());
         session.setXpAwarded(session.getXpAwarded() + granted);
-        chestService.maybeDrop(delta, ChestSource.SESSION, "session:" + session.getId(),
-                SESSION_CHEST_CHANCE, session.getLocalDate());
     }
 
     private void settleRunningBlock(ProgressDeltaBuilder delta, StudySession session, StudySessionBlock block,

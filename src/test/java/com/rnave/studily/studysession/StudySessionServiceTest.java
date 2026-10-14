@@ -9,6 +9,8 @@ import com.rnave.studily.progress.Chest;
 import com.rnave.studily.progress.ChestRepository;
 import com.rnave.studily.progress.ChestService;
 import com.rnave.studily.progress.ChestSource;
+import com.rnave.studily.progress.ChestTier;
+import com.rnave.studily.progress.ProgressDtos.ChestDto;
 import com.rnave.studily.progress.CoinTransactionRepository;
 import com.rnave.studily.progress.FlairService;
 import com.rnave.studily.progress.ProgressDeltaBuilder;
@@ -26,6 +28,7 @@ import com.rnave.studily.studysession.StudySessionDtos.StartSessionRequest;
 import com.rnave.studily.studysession.StudySessionDtos.StreakDayDto;
 import com.rnave.studily.studysession.StudySessionDtos.StreakWeekDto;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionDto;
+import com.rnave.studily.studysession.StudySessionDtos.StudySessionRecap;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionResult;
 import com.rnave.studily.studysession.StudySessionDtos.StudySessionTaskDto;
 import com.rnave.studily.studysession.StudySessionService.SweepTarget;
@@ -63,6 +66,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -105,6 +109,7 @@ class StudySessionServiceTest {
     private final List<Chest> chests = new ArrayList<>();
     private final Map<LocalDate, Integer> earlierMinutes = new HashMap<>();
     private final Map<LocalDate, Integer> earlierPaidTasks = new HashMap<>();
+    private final Map<LocalDate, Integer> earlierChestSessions = new HashMap<>();
     private User user;
     private UserProgress progress;
 
@@ -146,9 +151,26 @@ class StudySessionServiceTest {
             return e;
         });
         when(chestRepository.save(any(Chest.class))).thenAnswer(inv -> {
-            chests.add(inv.getArgument(0));
-            return inv.getArgument(0);
+            Chest c = inv.getArgument(0);
+            if (c.getId() == null) {
+                c.setId(ids.incrementAndGet());
+            }
+            chests.add(c);
+            return c;
         });
+        when(chestRepository.findByUserIdAndSourceAndSourceRefStartingWithOrderById(eq(1L), any(), anyString()))
+                .thenAnswer(inv -> chests.stream()
+                        .filter(c -> c.getSource() == inv.getArgument(1)
+                                && c.getSourceRef().startsWith(inv.<String>getArgument(2)))
+                        .toList());
+        when(sessionRepository.countByUserIdAndLocalDateAndChestsAwardedGreaterThan(eq(1L), any(LocalDate.class),
+                anyInt())).thenAnswer(inv -> {
+                    LocalDate day = inv.getArgument(1);
+                    int floor = inv.getArgument(2);
+                    return earlierChestSessions.getOrDefault(day, 0) + sessions.stream()
+                            .filter(x -> x.getLocalDate().equals(day) && x.getChestsAwarded() > floor)
+                            .count();
+                });
         when(badgeService.evaluate(anyLong())).thenReturn(List.of());
         when(random.nextDouble()).thenReturn(0.99);
 
@@ -667,7 +689,7 @@ class StudySessionServiceTest {
         assertThat(s.getStatus()).isEqualTo(StudySessionStatus.COMPLETED);
         assertThat(xp(XpSource.STUDY_COMPLETE)).isZero();
         verify(random, never()).nextDouble();
-        assertThat(chests).isEmpty();
+        assertThat(chests).singleElement().satisfies(c -> assertThat(c.getTier()).isEqualTo(ChestTier.WOOD));
     }
 
     @Test
@@ -688,7 +710,7 @@ class StudySessionServiceTest {
     }
 
     @Test
-    void checkin_completingFiftyMinuteSessionWithMissedBlock_skipsBonusAndChestRoll() {
+    void checkin_completingFiftyMinuteSessionWithMissedBlock_skipsBonusButPaysForTheCheckedInBlock() {
         when(random.nextDouble()).thenReturn(0.0);
         StudySession s = startPomodoro(2);
         at(min(35).plusSeconds(1));
@@ -704,12 +726,12 @@ class StudySessionServiceTest {
         assertThat(xp(XpSource.STUDY_COMPLETE)).isZero();
         verify(chestService, never()).maybeDrop(any(), any(), anyString(), anyDouble(), any());
         verify(random, never()).nextDouble();
-        assertThat(chests).isEmpty();
-        assertThat(result.delta().chests()).isEmpty();
+        assertThat(chests).singleElement().satisfies(c -> assertThat(c.getTier()).isEqualTo(ChestTier.WOOD));
+        assertThat(result.delta().chests()).hasSize(1);
     }
 
     @Test
-    void checkin_completingFullSessionPastSixHours_paysZeroBonusButStillRollsChest() {
+    void checkin_completingFullSessionPastSixHours_paysZeroBonusButStillPaysChests() {
         earlierMinutes.put(TODAY, 360);
         StudySession s = startPomodoro(2);
         at(min(25));
@@ -724,8 +746,7 @@ class StudySessionServiceTest {
         assertThat(result.delta().xpGained()).isZero();
         assertThat(s.getXpAwarded()).isZero();
         assertThat(s.getCreditedMinutes()).isEqualTo(50);
-        verify(chestService).maybeDrop(any(ProgressDeltaBuilder.class), eq(ChestSource.SESSION),
-                eq("session:" + s.getId()), eq(0.35), eq(TODAY));
+        assertThat(chests).singleElement().satisfies(c -> assertThat(c.getTier()).isEqualTo(ChestTier.WOOD));
     }
 
     @Test
@@ -1312,8 +1333,8 @@ class StudySessionServiceTest {
     }
 
     @Test
-    void checkin_completingFiftyMinuteSession_dropsSessionChestUnderThirtyFivePercent() {
-        when(random.nextDouble()).thenReturn(0.3499);
+    void checkin_completingTwoBlocks_paysWoodChestPlusFortyPercentBonusWood() {
+        when(random.nextDouble()).thenReturn(0.3999);
         StudySession s = startPomodoro(2);
         at(min(25));
         service.checkin(s.getId());
@@ -1321,17 +1342,20 @@ class StudySessionServiceTest {
 
         StudySessionResult result = service.checkin(s.getId());
 
-        assertThat(chests).singleElement().satisfies(c -> {
+        assertThat(chests).extracting(Chest::getTier).containsExactly(ChestTier.WOOD, ChestTier.WOOD);
+        assertThat(chests).extracting(Chest::getSourceRef)
+                .containsExactly("session:" + s.getId() + ":1", "session:" + s.getId() + ":2");
+        assertThat(chests).allSatisfy(c -> {
             assertThat(c.getSource()).isEqualTo(ChestSource.SESSION);
-            assertThat(c.getSourceRef()).isEqualTo("session:" + s.getId());
             assertThat(c.getLocalDate()).isEqualTo(TODAY);
         });
-        assertThat(result.delta().chests()).hasSize(1);
+        assertThat(s.getChestsAwarded()).isEqualTo(2);
+        assertThat(result.delta().chests()).hasSize(2);
     }
 
     @Test
-    void checkin_completingSessionWithRollAtThirtyFivePercent_dropsNothing() {
-        when(random.nextDouble()).thenReturn(0.35);
+    void checkin_bonusRollAtFortyPercent_paysOnlyTheGuaranteedChest() {
+        when(random.nextDouble()).thenReturn(0.4);
         StudySession s = startPomodoro(2);
         at(min(25));
         service.checkin(s.getId());
@@ -1340,30 +1364,40 @@ class StudySessionServiceTest {
         service.checkin(s.getId());
 
         verify(random).nextDouble();
-        assertThat(chests).isEmpty();
+        assertThat(chests).singleElement().satisfies(c -> assertThat(c.getTier()).isEqualTo(ChestTier.WOOD));
     }
 
     @Test
-    void checkin_twoSessionChestsAlreadyDroppedOnLocalDate_skipsRoll() {
-        when(random.nextDouble()).thenReturn(0.0);
-        when(chestRepository.countByUserIdAndSourceAndLocalDate(1L, ChestSource.SESSION, TODAY)).thenReturn(2L);
+    void checkin_threeChestSessionsAlreadyToday_paysNoChests() {
+        earlierChestSessions.put(TODAY, 3);
         StudySession s = startPomodoro(2);
         at(min(25));
         service.checkin(s.getId());
         at(min(55));
 
-        service.checkin(s.getId());
+        StudySessionResult result = service.checkin(s.getId());
 
         verify(random, never()).nextDouble();
         assertThat(chests).isEmpty();
+        assertThat(s.getChestsAwarded()).isZero();
+        assertThat(result.delta().chests()).isEmpty();
     }
 
     @Test
-    void checkin_sessionFinishingAfterLocalMidnight_limitsChestBySessionLocalDate() {
-        when(random.nextDouble()).thenReturn(0.0);
-        when(chestRepository.countByUserIdAndSourceAndCreatedAtBetween(anyLong(), any(), any(), any()))
-                .thenReturn(1L);
+    void checkin_twoChestSessionsAlreadyToday_stillPaysTheThird() {
+        earlierChestSessions.put(TODAY, 2);
+        StudySession s = startPomodoro(1);
+        at(min(25));
+
+        service.checkin(s.getId());
+
+        assertThat(chests).hasSize(1);
+    }
+
+    @Test
+    void checkin_sessionFinishingAfterLocalMidnight_capsChestsBySessionLocalDate() {
         Instant start = Instant.parse("2026-10-08T06:30:00Z");
+        earlierChestSessions.put(LocalDate.of(2026, 10, 8), 3);
         at(start);
         StudySession s = startPomodoro(2);
         at(start.plus(min(25)));
@@ -1373,9 +1407,89 @@ class StudySessionServiceTest {
         service.checkin(s.getId());
 
         assertThat(s.getLocalDate()).isEqualTo(TODAY);
-        verify(chestRepository).countByUserIdAndSourceAndLocalDate(1L, ChestSource.SESSION, TODAY);
+        verify(sessionRepository).countByUserIdAndLocalDateAndChestsAwardedGreaterThan(1L, TODAY, 0);
         assertThat(chests).filteredOn(c -> c.getSource() == ChestSource.SESSION).singleElement()
                 .satisfies(c -> assertThat(c.getLocalDate()).isEqualTo(TODAY));
+    }
+
+    @Test
+    void end_afterThreeCheckedInBlocks_paysASilverChest() {
+        StudySession s = startPomodoro(5);
+        at(min(25));
+        service.checkin(s.getId());
+        at(min(55));
+        service.checkin(s.getId());
+        at(min(85));
+        service.checkin(s.getId());
+        at(min(88));
+
+        StudySessionResult result = service.end(s.getId());
+
+        assertThat(s.getStatus()).isEqualTo(StudySessionStatus.ENDED);
+        assertThat(chests).singleElement().satisfies(c -> assertThat(c.getTier()).isEqualTo(ChestTier.SILVER));
+        assertThat(result.delta().chests()).extracting(ChestDto::tier).containsExactly(ChestTier.SILVER);
+    }
+
+    @Test
+    void end_withoutAnyCheckedInBlock_paysNoChests() {
+        StudySession s = startPomodoro(5);
+        at(min(15));
+
+        service.end(s.getId());
+
+        assertThat(block(s, 1).getStatus()).isEqualTo(StudyBlockStatus.PARTIAL);
+        assertThat(chests).isEmpty();
+        assertThat(s.getChestsAwarded()).isZero();
+    }
+
+    @Test
+    void missBlock_lastBlockExpiresSession_paysForTheCheckedInBlocks() {
+        StudySession s = startPomodoro(2);
+        at(min(25));
+        service.checkin(s.getId());
+        at(min(65).plusSeconds(1));
+
+        assertThat(service.missBlock(1L, block(s, 2).getId())).isTrue();
+
+        assertThat(s.getStatus()).isEqualTo(StudySessionStatus.EXPIRED);
+        assertThat(chests).singleElement().satisfies(c -> assertThat(c.getTier()).isEqualTo(ChestTier.WOOD));
+    }
+
+    @Test
+    void expire_pausedPastLimit_paysForTheCheckedInBlocks() {
+        StudySession s = startPomodoro(3);
+        at(min(25));
+        service.checkin(s.getId());
+        at(min(65).plusSeconds(1));
+        service.missBlock(1L, block(s, 2).getId());
+        assertThat(chests).isEmpty();
+        at(min(95).plusSeconds(2));
+
+        assertThat(service.expire(1L, s.getId())).isTrue();
+
+        assertThat(s.getStatus()).isEqualTo(StudySessionStatus.EXPIRED);
+        assertThat(chests).singleElement().satisfies(c -> assertThat(c.getTier()).isEqualTo(ChestTier.WOOD));
+    }
+
+    @Test
+    void recap_listsTheSessionsChestsAndLevelUpCoins() {
+        progress.setXp(480);
+        progress.setLevel(1);
+        StudySession s = startPomodoro(1);
+        at(min(25));
+        service.checkin(s.getId());
+
+        StudySessionRecap recap = service.recap(s.getId());
+
+        assertThat(recap.session().status()).isEqualTo(StudySessionStatus.COMPLETED);
+        assertThat(recap.session().xpAwarded()).isEqualTo(60);
+        assertThat(recap.coinsAwarded()).isEqualTo(30);
+        assertThat(recap.chests()).extracting(ChestDto::tier).containsExactly(ChestTier.WOOD);
+    }
+
+    @Test
+    void recap_unknownSession_throwsNotFound() {
+        assertThatThrownBy(() -> service.recap(999L)).isInstanceOf(NotFoundException.class);
     }
 
     @Test
