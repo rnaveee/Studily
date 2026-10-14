@@ -21,6 +21,7 @@ import DashboardPage from "./features/dashboard/DashboardPage";
 import CalendarPage from "./features/calendar/CalendarPage";
 import CoursesPage from "./features/courses/CoursesPage";
 import CourseAutoImportPage from "./features/courses/CourseAutoImportPage";
+import ScheduleImportPage from "./features/courses/ScheduleImportPage";
 import CourseDetailPage from "./features/courses/CourseDetailPage";
 import ProfilePage from "./features/profile/ProfilePage";
 import ProfileEditPage from "./features/profile/ProfileEditPage";
@@ -67,6 +68,7 @@ export default function App() {
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/courses" element={<CoursesPage />} />
         <Route path="/courses/new/auto" element={<CourseAutoImportPage />} />
+        <Route path="/courses/new/schedule" element={<ScheduleImportPage />} />
         <Route path="/courses/:id" element={<CourseDetailPage />} />
         <Route path="/messages" element={<VerifyGate><MessagesPage /></VerifyGate>} />
         <Route path="/messages/:id" element={<VerifyGate><ConversationPage /></VerifyGate>} />

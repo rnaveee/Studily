@@ -103,4 +103,37 @@ class ClaudeCourseParserTest {
         assertThat(new ExtractedInput("text", List.of(new ExtractedImage("image/png", new byte[]{1})))
                 .imagesOnly()).isFalse();
     }
+
+    @Test
+    void paramsFor_sonnetVision_setsMediumEffortWithoutAThinkingBudget() {
+        MessageCreateParams vision =
+                parser("sk-ant-test", true).paramsFor("claude-sonnet-5-5", true, imageInput(), "context");
+
+        assertThat(vision.model().asString()).isEqualTo("claude-sonnet-5-5");
+        assertThat(vision.thinking()).isEmpty();
+        assertThat(vision.outputConfig().flatMap(OutputConfig::effort)).contains(OutputConfig.Effort.MEDIUM);
+    }
+
+    @Test
+    void scheduleParamsFor_sendsTheScheduleSchemaAndPrompt() {
+        MessageCreateParams params =
+                parser("sk-ant-test", true).scheduleParamsFor("claude-sonnet-5-5", true, imageInput(), "context");
+
+        String schema = params.outputConfig().flatMap(OutputConfig::format).orElseThrow().toString();
+        assertThat(schema).contains("isSchedule", "courses", "color", "meetingBlocks");
+        assertThat(params.system().orElseThrow().toString()).contains("weekly class schedule");
+        assertThat(params.outputConfig().flatMap(OutputConfig::effort)).contains(OutputConfig.Effort.MEDIUM);
+    }
+
+    @Test
+    void supportsEffort_skipsHaikuFourFive() {
+        assertThat(ClaudeCourseParser.supportsEffort("claude-haiku-4-5")).isFalse();
+        assertThat(ClaudeCourseParser.supportsEffort("claude-sonnet-5-5")).isTrue();
+    }
+
+    @Test
+    void parseSchedule_refusesWhenDisabled() {
+        assertThatThrownBy(() -> parser("", true).parseSchedule(imageInput(), "context"))
+                .isInstanceOf(BadRequestException.class);
+    }
 }

@@ -156,7 +156,7 @@ handshake at `/ws` authenticates via the same JWT.
 | `APP_BASE_URL` | `http://localhost:5173` | Public URL used in email links |
 | `ANTHROPIC_API_KEY` | unset (automatic course creation disabled) | Anthropic API key for reading uploaded course outlines; billed per parse from Console credits |
 | `PARSE_ENABLED` | `true` | Kill switch for automatic course creation, independent of the key |
-| `PARSE_MODEL_TEXT` / `PARSE_MODEL_VISION` | `claude-sonnet-5` / `claude-haiku-4-5` | Models used for PDF/pasted text and for images |
+| `PARSE_MODEL_TEXT` / `PARSE_MODEL_VISION` | `claude-sonnet-5` / `claude-sonnet-5-5` | Models used for PDF/pasted text and for images (outlines and schedule screenshots) |
 | `BADGE_ASSET_BASE_URL` | `https://badges.studily.ca/badges/v4` | Where badge art is served from; bump the version folder to bust caches |
 | `PROGRESS_OG_CUTOFF` | `2026-10-11` | Accounts created before this date earn the OG badge |
 | `SENTRY_DSN` / `SENTRY_ENVIRONMENT` | unset / `development` | Backend error tracking |

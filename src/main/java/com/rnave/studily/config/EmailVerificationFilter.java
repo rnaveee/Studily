@@ -23,6 +23,7 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
 
     private static final List<String> LOCKED_PREFIXES = List.of("/api/friends", "/api/conversations");
     private static final String PARSE_PATH = "/api/courses/parse";
+    private static final String SCHEDULE_PARSE_PATH = "/api/courses/parse/schedule";
     private static final Pattern LOCKED_USER_PATHS = Pattern.compile("^/api/users/[^/]+/(progress|badges)/?$");
 
     private final UserRepository userRepository;
@@ -38,7 +39,7 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String uri = request.getRequestURI();
-        boolean locked = LOCKED_PREFIXES.stream().anyMatch(uri::startsWith) || uri.equals(PARSE_PATH)
+        boolean locked = LOCKED_PREFIXES.stream().anyMatch(uri::startsWith) || isParse(uri)
                 || LOCKED_USER_PATHS.matcher(uri).matches();
         if (!locked) {
             filterChain.doFilter(request, response);
@@ -51,7 +52,7 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
             if (!verified) {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 response.setContentType("application/json");
-                String message = uri.equals(PARSE_PATH) ? PARSE_MESSAGE : MESSAGE;
+                String message = isParse(uri) ? PARSE_MESSAGE : MESSAGE;
                 response.getWriter().write(
                         "{\"status\":403,\"error\":\"Forbidden\",\"code\":\"EMAIL_UNVERIFIED\","
                                 + "\"message\":\"" + message + "\"}");
@@ -59,5 +60,9 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
             }
         }
         filterChain.doFilter(request, response);
+    }
+
+    private static boolean isParse(String uri) {
+        return uri.equals(PARSE_PATH) || uri.equals(SCHEDULE_PARSE_PATH);
     }
 }

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
 import { api } from "../../lib/api";
 import BackButton from "../../components/BackButton";
 import { SkeletonCards } from "../../components/Skeleton";
@@ -47,7 +47,7 @@ export default function CoursesPage() {
           <BackButton fallback="/semesters" />
           <h1 className="text-xl font-semibold text-fg">Courses</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {semesters && semesters.length > 0 && (
             <select
               className="input w-auto"
@@ -60,6 +60,10 @@ export default function CoursesPage() {
               ))}
             </select>
           )}
+          <button onClick={() => requireAuth(() => navigate("/courses/new/schedule"))} className="btn btn-ghost">
+            <CalendarDays size={13} strokeWidth={2} />
+            Upload schedule
+          </button>
           <button onClick={() => requireAuth(() => setMode("chooser"))} className="btn btn-primary">
             <Plus size={13} strokeWidth={2} />
             New course

@@ -8,6 +8,7 @@ import com.rnave.studily.parse.CourseParseDtos.CourseDraftDto;
 import com.rnave.studily.parse.CourseParseDtos.ParseAccuracyDto;
 import com.rnave.studily.parse.CourseParseDtos.ParseAvailabilityDto;
 import com.rnave.studily.parse.CourseParseDtos.ParseFeedbackRequest;
+import com.rnave.studily.parse.CourseParseDtos.ScheduleDraftDto;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -82,6 +83,24 @@ public class CourseParseController {
                     "Too many automatic course requests from this network today. Add this one manually or try again tomorrow.");
         }
         return courseParseService.parse(files, text, semesterId, timeZone);
+    }
+
+    @PostMapping(value = "/schedule", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ScheduleDraftDto parseSchedule(
+            @RequestParam(value = "files", required = false) List<MultipartFile> files,
+            @RequestParam(value = "semesterId", required = false) Long semesterId,
+            @RequestParam(value = "timeZone", required = false) String timeZone,
+            HttpServletRequest request) {
+
+        if (!parseLimiter.tryConsume("user:" + currentUser.id())) {
+            throw new TooManyRequestsException(
+                    "You have reached today's limit for automatic course creation. Add your courses manually or try again tomorrow.");
+        }
+        if (!parseIpLimiter.tryConsume("ip:" + GlobalRateLimitFilter.clientIp(request))) {
+            throw new TooManyRequestsException(
+                    "Too many automatic course requests from this network today. Add your courses manually or try again tomorrow.");
+        }
+        return courseParseService.parseSchedule(files, semesterId, timeZone);
     }
 
     @Scheduled(fixedRate = 10 * PARSE_WINDOW_MS)

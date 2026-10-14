@@ -187,6 +187,19 @@ export interface CourseDraft {
   warnings: string[];
 }
 
+export interface ScheduleDraftCourse {
+  name?: string | null;
+  code?: string | null;
+  color?: string | null;
+  meetingBlocks: MeetingBlock[];
+}
+
+export interface ScheduleDraft {
+  parseId?: number | null;
+  courses: ScheduleDraftCourse[];
+  warnings: string[];
+}
+
 export interface AcademicItem {
   seriesId?: string | null;
   recurrenceRule?: string | null;

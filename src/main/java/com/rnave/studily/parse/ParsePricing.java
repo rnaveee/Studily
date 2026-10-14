@@ -5,7 +5,9 @@ import java.util.Map;
 public final class ParsePricing {
 
     private static final Map<String, double[]> USD_PER_MTOK = Map.of(
+            "claude-sonnet-5-5", new double[]{2.00, 10.00},
             "claude-sonnet-5", new double[]{2.00, 10.00},
+            "claude-haiku-5-5", new double[]{0.10, 0.50},
             "claude-haiku-4-5", new double[]{1.00, 5.00},
             "claude-opus-5", new double[]{5.00, 25.00});
 

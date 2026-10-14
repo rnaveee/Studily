@@ -59,7 +59,7 @@ final class CourseDraftSchema {
         return object(properties);
     }
 
-    private static Map<String, Object> block() {
+    static Map<String, Object> block() {
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("day", enumOf(
                 List.of("SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"),
@@ -100,7 +100,7 @@ final class CourseDraftSchema {
         return object(properties);
     }
 
-    private static Map<String, Object> object(Map<String, Object> properties) {
+    static Map<String, Object> object(Map<String, Object> properties) {
         Map<String, Object> schema = new LinkedHashMap<>();
         schema.put("type", "object");
         schema.put("properties", properties);
@@ -109,7 +109,7 @@ final class CourseDraftSchema {
         return schema;
     }
 
-    private static Map<String, Object> array(Map<String, Object> items, String description) {
+    static Map<String, Object> array(Map<String, Object> items, String description) {
         Map<String, Object> schema = new LinkedHashMap<>();
         schema.put("type", "array");
         schema.put("description", description);
@@ -117,7 +117,7 @@ final class CourseDraftSchema {
         return schema;
     }
 
-    private static Map<String, Object> nullable(String type, String description) {
+    static Map<String, Object> nullable(String type, String description) {
         Map<String, Object> schema = new LinkedHashMap<>();
         schema.put("type", List.of(type, "null"));
         schema.put("description", description);
@@ -132,7 +132,7 @@ final class CourseDraftSchema {
         return schema;
     }
 
-    private static Map<String, JsonValue> wrap(Map<String, Object> schema) {
+    static Map<String, JsonValue> wrap(Map<String, Object> schema) {
         Map<String, JsonValue> out = new LinkedHashMap<>();
         schema.forEach((key, value) -> out.put(key, JsonValue.from(value)));
         return out;

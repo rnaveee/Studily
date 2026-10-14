@@ -35,6 +35,19 @@ public class CourseParseDtos {
             List<String> warnings) {
     }
 
+    public record ScheduleCourseDto(
+            String name,
+            String code,
+            String color,
+            List<MeetingBlockDto> meetingBlocks) {
+    }
+
+    public record ScheduleDraftDto(
+            Long parseId,
+            List<ScheduleCourseDto> courses,
+            List<String> warnings) {
+    }
+
     public record ParseAvailabilityDto(boolean enabled, int monthlyLimit, int remaining, boolean paused) {
     }
 

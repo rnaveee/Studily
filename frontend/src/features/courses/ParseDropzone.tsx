@@ -13,9 +13,16 @@ interface Props {
   onChange: (files: File[]) => void;
   onError: (message: string | null) => void;
   compact?: boolean;
+  label?: string;
 }
 
-export default function ParseDropzone({ files, onChange, onError, compact }: Props) {
+export default function ParseDropzone({
+  files,
+  onChange,
+  onError,
+  compact,
+  label = "Drop your course outline here",
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -54,7 +61,7 @@ export default function ParseDropzone({ files, onChange, onError, compact }: Pro
         }}
       >
         {!compact && <Upload className="mx-auto mb-2 text-fg-3" size={24} strokeWidth={1.5} />}
-        <p className="text-[13px] text-fg-2">Drop your course outline here</p>
+        <p className="text-[13px] text-fg-2">{label}</p>
         <p className="mt-0.5 text-[11px] text-fg-3">
           PDF or image, up to {MAX_FILES} files and 8 MB total
         </p>

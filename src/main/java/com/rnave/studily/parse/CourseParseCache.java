@@ -36,10 +36,14 @@ public class CourseParseCache {
     }
 
     public Optional<CourseDraft> lookup(String key) {
+        return lookup(key, CourseDraft.class);
+    }
+
+    public <T> Optional<T> lookup(String key, Class<T> type) {
         try {
-            Optional<CourseDraft> hit = repository
+            Optional<T> hit = repository
                     .findByCacheKeyAndCreatedAtAfter(key, Instant.now().minus(MAX_AGE))
-                    .map(entry -> MAPPER.readValue(entry.getDraft(), CourseDraft.class));
+                    .map(entry -> MAPPER.readValue(entry.getDraft(), type));
             hit.ifPresent(draft -> repository.recordHit(key));
             return hit;
         } catch (RuntimeException e) {
@@ -48,7 +52,7 @@ public class CourseParseCache {
         }
     }
 
-    public void store(String key, CourseDraft draft, String model) {
+    public void store(String key, Object draft, String model) {
         try {
             CourseParseCacheEntry entry = new CourseParseCacheEntry();
             entry.setCacheKey(key);
@@ -61,8 +65,16 @@ public class CourseParseCache {
     }
 
     static String key(ExtractedInput input, Semester semester, ZoneId zone) {
+        return key("v" + ClaudeCourseParser.PROMPT_VERSION, input, semester, zone);
+    }
+
+    static String scheduleKey(ExtractedInput input, Semester semester, ZoneId zone) {
+        return key("schedule:v" + ClaudeCourseParser.SCHEDULE_PROMPT_VERSION, input, semester, zone);
+    }
+
+    private static String key(String version, ExtractedInput input, Semester semester, ZoneId zone) {
         MessageDigest digest = sha256();
-        update(digest, "v" + ClaudeCourseParser.PROMPT_VERSION);
+        update(digest, version);
         update(digest, zone.getId());
         if (semester != null) {
             update(digest, "semester:" + semester.getTerm() + ":" + semester.getYear()

@@ -11,7 +11,10 @@ import com.rnave.studily.parse.CourseParseDtos.CourseDraftDto;
 import com.rnave.studily.parse.CourseParseDtos.DraftCategoryDto;
 import com.rnave.studily.parse.CourseParseDtos.DraftItemDto;
 import com.rnave.studily.parse.CourseParseDtos.ParseAvailabilityDto;
+import com.rnave.studily.parse.CourseParseDtos.ScheduleCourseDto;
+import com.rnave.studily.parse.CourseParseDtos.ScheduleDraftDto;
 import com.rnave.studily.parse.ClaudeCourseParser.ParseOutcome;
+import com.rnave.studily.parse.ClaudeCourseParser.ScheduleOutcome;
 import com.rnave.studily.semester.Semester;
 import com.rnave.studily.semester.SemesterService;
 import org.slf4j.Logger;
@@ -31,6 +34,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Service
 public class CourseParseService {
@@ -43,8 +47,14 @@ public class CourseParseService {
     private static final int MAX_BLOCKS = 20;
     private static final int MAX_WARNINGS = 10;
     private static final int MAX_NAME = 255;
+    private static final int MAX_COURSES = 12;
+    private static final Pattern HEX_COLOR = Pattern.compile("#[0-9a-fA-F]{6}");
     private static final LocalTime PLACEHOLDER_START = LocalTime.of(9, 0);
     private static final LocalTime PLACEHOLDER_END = LocalTime.of(10, 0);
+    private static final String PLACEHOLDER_WARNING = "The outline never says what time this class runs, "
+            + "so the times below are a placeholder. Set them before saving.";
+    static final String NOT_A_SCHEDULE =
+            "This doesn't look like a class schedule, so no courses were found. Try a screenshot of your weekly timetable.";
     static final String NOT_AN_OUTLINE =
             "This doesn't look like a course outline, so nothing was filled in. Try the course's syllabus or add it manually.";
 
@@ -100,9 +110,76 @@ public class CourseParseService {
 
         limits.check();
         ParseOutcome outcome = parser.parse(input, context(semester, zone));
-        Long parseId = record(outcome);
+        Long parseId = record(outcome.model(), outcome.inputTokens(), outcome.outputTokens());
         cache.store(cacheKey, outcome.draft(), outcome.model());
         return present(parseId, outcome.draft());
+    }
+
+    public ScheduleDraftDto parseSchedule(List<MultipartFile> files, Long semesterId, String timeZone) {
+        ExtractedInput input = extractor.extract(files, null);
+        if (input.isEmpty()) {
+            throw new BadRequestException("Add a screenshot of your schedule first.");
+        }
+
+        Semester semester = semesterId == null ? null : semesterService.requireOwned(semesterId);
+        ZoneId zone = zoneOf(timeZone);
+        String cacheKey = CourseParseCache.scheduleKey(input, semester, zone);
+        Optional<ScheduleDraft> cached = cache.lookup(cacheKey, ScheduleDraft.class);
+        if (cached.isPresent()) {
+            return normalizeSchedule(null, cached.get());
+        }
+
+        limits.check();
+        ScheduleOutcome outcome = parser.parseSchedule(input, scheduleContext(semester, zone));
+        Long parseId = record(outcome.model(), outcome.inputTokens(), outcome.outputTokens());
+        cache.store(cacheKey, outcome.draft(), outcome.model());
+        return normalizeSchedule(parseId, outcome.draft());
+    }
+
+    private String scheduleContext(Semester semester, ZoneId zone) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Today's date is ").append(LocalDateTime.now(zone).toLocalDate())
+                .append(". The student's time zone is ").append(zone.getId()).append(".");
+        if (semester != null) {
+            sb.append(" These courses belong to the ").append(semester.getTerm())
+                    .append(' ').append(semester.getYear()).append(" semester.");
+        }
+        return sb.toString();
+    }
+
+    ScheduleDraftDto normalizeSchedule(Long parseId, ScheduleDraft draft) {
+        List<String> warnings = new ArrayList<>(clean(draft.warnings(), MAX_WARNINGS));
+        if (draft.notASchedule()) {
+            return new ScheduleDraftDto(parseId, List.of(), List.of(NOT_A_SCHEDULE));
+        }
+        List<ScheduleCourseDto> courses = new ArrayList<>();
+        Set<String> seen = new LinkedHashSet<>();
+        if (draft.courses() != null) {
+            for (ScheduleDraft.ScheduleCourse course : draft.courses()) {
+                if (course == null || courses.size() >= MAX_COURSES) {
+                    continue;
+                }
+                String name = trim(course.name(), MAX_NAME);
+                String code = trim(course.code(), MAX_NAME);
+                if (name == null && code == null) {
+                    continue;
+                }
+                String key = (code != null ? code : name).replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+                if (!seen.add(key)) {
+                    continue;
+                }
+                String color = course.color() == null ? null : course.color().strip();
+                if (color != null && !HEX_COLOR.matcher(color).matches()) {
+                    color = null;
+                }
+                courses.add(new ScheduleCourseDto(name, code, color == null ? null : color.toLowerCase(Locale.ROOT),
+                        blocks(course.meetingBlocks(), warnings)));
+            }
+        }
+        if (courses.isEmpty() && warnings.isEmpty()) {
+            warnings.add("No courses could be read from this schedule. Try a clearer screenshot or add them manually.");
+        }
+        return new ScheduleDraftDto(parseId, List.copyOf(courses), List.copyOf(warnings));
     }
 
     private CourseDraftDto present(Long parseId, CourseDraft draft) {
@@ -113,13 +190,13 @@ public class CourseParseService {
                 List.of(), List.of(), List.of(), List.of(NOT_AN_OUTLINE), false));
     }
 
-    private Long record(ParseOutcome outcome) {
+    private Long record(String model, long inputTokens, long outputTokens) {
         try {
             CourseParseUsage usage = new CourseParseUsage();
             usage.setUser(currentUser.entity());
-            usage.setModel(outcome.model());
-            usage.setInputTokens(outcome.inputTokens());
-            usage.setOutputTokens(outcome.outputTokens());
+            usage.setModel(model);
+            usage.setInputTokens(inputTokens);
+            usage.setOutputTokens(outputTokens);
             return usageRepository.save(usage).getId();
         } catch (RuntimeException e) {
             log.warn("Could not record course parse usage: {}", e.getMessage());
@@ -147,7 +224,7 @@ public class CourseParseService {
 
     private CourseDraftDto normalize(Long parseId, CourseDraft draft) {
         List<String> warnings = new ArrayList<>(clean(draft.warnings(), MAX_WARNINGS));
-        List<MeetingBlockDto> blocks = blocks(draft, warnings);
+        List<MeetingBlockDto> blocks = blocks(draft.meetingBlocks(), warnings);
         Map<String, DraftCategoryDto> categories = categories(draft, warnings);
         List<DraftItemDto> items = items(draft, categories, warnings);
 
@@ -203,8 +280,8 @@ public class CourseParseService {
                 : String.valueOf(rounded);
     }
 
-    private List<MeetingBlockDto> blocks(CourseDraft draft, List<String> warnings) {
-        if (draft.meetingBlocks() == null) {
+    private List<MeetingBlockDto> blocks(List<CourseDraft.DraftBlock> draftBlocks, List<String> warnings) {
+        if (draftBlocks == null) {
             return List.of();
         }
         List<MeetingBlockDto> out = new ArrayList<>();
@@ -212,7 +289,7 @@ public class CourseParseService {
         int dropped = 0;
         boolean needTimes = false;
 
-        for (CourseDraft.DraftBlock block : draft.meetingBlocks()) {
+        for (CourseDraft.DraftBlock block : draftBlocks) {
             if (block == null || out.size() >= MAX_BLOCKS) {
                 continue;
             }
@@ -242,9 +319,8 @@ public class CourseParseService {
             out.add(new MeetingBlockDto(null, day, kind, start, end, trim(block.location(), MAX_NAME)));
         }
 
-        if (needTimes && warnings.size() < MAX_WARNINGS) {
-            warnings.add("The outline never says what time this class runs, so the times below are "
-                    + "a placeholder. Set them before saving.");
+        if (needTimes && warnings.size() < MAX_WARNINGS && !warnings.contains(PLACEHOLDER_WARNING)) {
+            warnings.add(PLACEHOLDER_WARNING);
         }
         if (dropped > 0 && warnings.size() < MAX_WARNINGS) {
             warnings.add("Skipped " + dropped + " class time" + (dropped == 1 ? "" : "s")

@@ -8,6 +8,7 @@ import com.anthropic.models.messages.ImageBlockParam;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.OutputConfig;
+import com.anthropic.models.messages.StopReason;
 import com.anthropic.models.messages.TextBlockParam;
 import com.anthropic.models.messages.ThinkingConfigAdaptive;
 import com.rnave.studily.config.BadRequestException;
@@ -22,6 +23,7 @@ import tools.jackson.databind.json.JsonMapper;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.function.Supplier;
 
 @Component
 public class ClaudeCourseParser {
@@ -29,6 +31,7 @@ public class ClaudeCourseParser {
     private static final Logger log = LoggerFactory.getLogger(ClaudeCourseParser.class);
 
     static final int PROMPT_VERSION = 2;
+    static final int SCHEDULE_PROMPT_VERSION = 1;
     private static final long MAX_TOKENS = 16_000;
     private static final String UNREADABLE =
             "Could not read that document. Try again, or add the course manually.";
@@ -108,6 +111,28 @@ public class ClaudeCourseParser {
             Keep warnings short, specific and addressed to the student.
             """;
 
+    private static final String SCHEDULE_PROMPT = """
+            You read screenshots of a university student's weekly class schedule, such as a             timetable or week view from their school's registration system, and list every course             on it so the student can add them all to their planner at once.
+
+            Rules:
+
+            1. Only report what the schedule shows. Never invent a course, a meeting or a time.             Leave a field null rather than guessing, and add a warning explaining what was unclear.
+
+            2. Courses. Each distinct course code is one course, however many blocks it has.             "ENSC 220 LEC" and "ENSC 220 LAB" are the same course, ENSC 220, with two kinds of             meeting. Keep the code exactly as printed.
+
+            3. Meetings. Every block drawn on the grid is one meetingBlocks entry: its weekday from             the column heading, its kind from the label (LEC is LECTURE, LAB is LAB, TUT is             TUTORIAL; a block with no label is a LECTURE), and its start and end times read off             the time axis in 24-hour HH:mm. Blocks usually start and end on the hour or half hour;             a block filling the 1 pm row and most of the 2 pm row ends at the line it stops on,             not at the next label. Report a room only when one is printed on the block.
+
+            4. Names. When the schedule has a legend, timeline or list naming each course, match             it to the codes by colour or by order, and use that title as the name, such as             "Electric Circuits I". When nothing names a course, leave its name null.
+
+            5. Colour. Report the colour each course's blocks are drawn in as a hex value.
+
+            6. Dates. The dates in the column headings only show which week is on screen. They             are not the semester's start or end, and they never make a meeting a one-off.
+
+            7. Decide isSchedule first. If the image is not a class schedule at all, set it to             false and stop: return an empty courses list and one short warning, without             describing the image.
+
+            Keep warnings short, specific and addressed to the student.
+            """;
+
     private static final JsonMapper MAPPER = JsonMapper.builder()
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .build();
@@ -137,38 +162,58 @@ public class ClaudeCourseParser {
     }
 
     public ParseOutcome parse(ExtractedInput input, String context) {
+        boolean vision = input.imagesOnly();
+        String model = vision ? visionModel : textModel;
+        Reply reply = call("Course parse", model, () -> paramsFor(model, vision, input, context));
+        return new ParseOutcome(read(reply.json(), CourseDraft.class), model, reply.inputTokens(),
+                reply.outputTokens());
+    }
+
+    public ScheduleOutcome parseSchedule(ExtractedInput input, String context) {
+        boolean vision = input.imagesOnly();
+        String model = vision ? visionModel : textModel;
+        Reply reply = call("Schedule parse", model, () -> scheduleParamsFor(model, vision, input, context));
+        return new ScheduleOutcome(read(reply.json(), ScheduleDraft.class), model, reply.inputTokens(),
+                reply.outputTokens());
+    }
+
+    private record Reply(String json, long inputTokens, long outputTokens) {
+    }
+
+    private Reply call(String label, String model, Supplier<MessageCreateParams> params) {
         if (!enabled()) {
             throw new BadRequestException("Automatic course creation is not available right now.");
         }
 
-        boolean vision = input.imagesOnly();
-        String model = vision ? visionModel : textModel;
-
         Message response;
         try {
-            response = client().messages().create(paramsFor(model, vision, input, context));
+            response = client().messages().create(params.get());
         } catch (Exception e) {
-            log.warn("Course parse request failed: {}", e.getMessage());
+            log.warn("{} request failed: {}", label, e.getMessage());
             throw new BadRequestException(UNREADABLE);
         }
 
-        log.info("Course parse used model={} input={} output={}",
-                model, response.usage().inputTokens(), response.usage().outputTokens());
+        log.info("{} used model={} input={} output={}",
+                label, model, response.usage().inputTokens(), response.usage().outputTokens());
+
+        if (response.stopReason().filter(StopReason.REFUSAL::equals).isPresent()) {
+            log.warn("{} was refused by the model", label);
+            throw new BadRequestException(UNREADABLE);
+        }
 
         String json = response.content().stream()
                 .flatMap(block -> block.text().stream())
                 .map(text -> text.text())
                 .findFirst()
                 .orElseThrow(() -> new BadRequestException(UNREADABLE));
+        return new Reply(json, response.usage().inputTokens(), response.usage().outputTokens());
+    }
 
+    private static <T> T read(String json, Class<T> type) {
         try {
-            return new ParseOutcome(
-                    MAPPER.readValue(json, CourseDraft.class),
-                    model,
-                    response.usage().inputTokens(),
-                    response.usage().outputTokens());
+            return MAPPER.readValue(json, type);
         } catch (Exception e) {
-            log.warn("Course parse returned unreadable JSON: {}", e.getMessage());
+            log.warn("Parse returned unreadable JSON: {}", e.getMessage());
             throw new BadRequestException(UNREADABLE);
         }
     }
@@ -176,27 +221,48 @@ public class ClaudeCourseParser {
     public record ParseOutcome(CourseDraft draft, String model, long inputTokens, long outputTokens) {
     }
 
+    public record ScheduleOutcome(ScheduleDraft draft, String model, long inputTokens, long outputTokens) {
+    }
+
     MessageCreateParams paramsFor(String model, boolean vision, ExtractedInput input, String context) {
         OutputConfig.Builder outputConfig = OutputConfig.builder()
                 .format(CourseDraftSchema.format());
 
+        return build(model, vision, SYSTEM_PROMPT, outputConfig, blocks(input, context, "Extract the course details."));
+    }
+
+    MessageCreateParams scheduleParamsFor(String model, boolean vision, ExtractedInput input, String context) {
+        OutputConfig.Builder outputConfig = OutputConfig.builder()
+                .format(ScheduleDraftSchema.format());
+        return build(model, vision, SCHEDULE_PROMPT, outputConfig,
+                blocks(input, context, "List every course on this schedule."));
+    }
+
+    private MessageCreateParams build(String model, boolean vision, String system,
+                                      OutputConfig.Builder outputConfig, List<ContentBlockParam> blocks) {
         MessageCreateParams.Builder builder = MessageCreateParams.builder()
                 .model(model)
                 .maxTokens(MAX_TOKENS)
-                .system(SYSTEM_PROMPT);
+                .system(system);
 
         if (!vision) {
             builder = builder.thinking(ThinkingConfigAdaptive.builder().build());
+            outputConfig = outputConfig.effort(OutputConfig.Effort.MEDIUM);
+        } else if (supportsEffort(model)) {
             outputConfig = outputConfig.effort(OutputConfig.Effort.MEDIUM);
         }
 
         return builder
                 .outputConfig(outputConfig.build())
-                .addUserMessageOfBlockParams(blocks(input, context))
+                .addUserMessageOfBlockParams(blocks)
                 .build();
     }
 
-    private List<ContentBlockParam> blocks(ExtractedInput input, String context) {
+    static boolean supportsEffort(String model) {
+        return model != null && !model.startsWith("claude-haiku-4") && !model.startsWith("claude-sonnet-4-5");
+    }
+
+    private List<ContentBlockParam> blocks(ExtractedInput input, String context, String ask) {
         List<ContentBlockParam> blocks = new ArrayList<>();
         for (ExtractedImage image : input.images()) {
             blocks.add(ContentBlockParam.ofImage(ImageBlockParam.builder()
@@ -211,7 +277,7 @@ public class ClaudeCourseParser {
         if (input.text() != null && !input.text().isBlank()) {
             prompt.append("\n\nDocument text:\n\n").append(input.text());
         }
-        prompt.append("\n\nExtract the course details.");
+        prompt.append("\n\n").append(ask);
 
         blocks.add(ContentBlockParam.ofText(
                 TextBlockParam.builder().text(prompt.toString()).build()));

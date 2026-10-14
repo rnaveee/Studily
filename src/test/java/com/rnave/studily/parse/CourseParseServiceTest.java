@@ -7,6 +7,9 @@ import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.parse.ClaudeCourseParser.ParseOutcome;
+import com.rnave.studily.parse.ClaudeCourseParser.ScheduleOutcome;
+import com.rnave.studily.parse.CourseParseDtos.ScheduleDraftDto;
+import com.rnave.studily.parse.CourseParseDtos.ScheduleCourseDto;
 import com.rnave.studily.parse.CourseDraft.DraftBlock;
 import com.rnave.studily.parse.CourseDraft.DraftCategory;
 import com.rnave.studily.parse.CourseDraft.DraftItem;
@@ -414,5 +417,84 @@ class CourseParseServiceTest {
     private CourseDraft draftWithItems(DraftItem... items) {
         return new CourseDraft("Circuits", null, null, null,
                 List.of(), List.of(), Arrays.asList(items), List.of());
+    }
+
+    private ScheduleDraftDto runSchedule(ScheduleDraft draft) {
+        when(cache.lookup(anyString(), eq(ScheduleDraft.class))).thenReturn(Optional.empty());
+        when(parser.parseSchedule(any(), anyString()))
+                .thenReturn(new ScheduleOutcome(draft, "claude-sonnet-5-5", 1800, 700));
+        return service.parseSchedule(List.of(), null, ZONE);
+    }
+
+    private static ScheduleDraft.ScheduleCourse course(String name, String code, String color, DraftBlock... blocks) {
+        return new ScheduleDraft.ScheduleCourse(name, code, color, List.of(blocks));
+    }
+
+    @Test
+    void parseSchedule_mapsEveryCourseWithItsMeetings() {
+        ScheduleDraftDto dto = runSchedule(new ScheduleDraft(true, List.of(
+                course("Electric Circuits I", "ENSC 220", "#A8D5A2",
+                        new DraftBlock("TUE", "LECTURE", "13:00", "14:50", null),
+                        new DraftBlock("THU", "LECTURE", "13:00", "14:50", null),
+                        new DraftBlock("THU", "LAB", "15:00", "16:50", null)),
+                course("Graphical Communication for Engineering", "ENSC 204", "#f0a0a0",
+                        new DraftBlock("WED", "LECTURE", "17:00", "18:50", null)),
+                course("Software Design and Analysis for Engineers", "ENSC 251", "#fff3a0",
+                        new DraftBlock("MON", "LAB", "15:00", "16:50", null)),
+                course("Fundamentals of Digital Logic & Design", "ENSC 252", "#d0a0e0",
+                        new DraftBlock("MON", "LAB", "17:00", "18:50", null))),
+                List.of()));
+
+        assertThat(dto.courses()).extracting(ScheduleCourseDto::code)
+                .containsExactly("ENSC 220", "ENSC 204", "ENSC 251", "ENSC 252");
+        assertThat(dto.courses().get(0).name()).isEqualTo("Electric Circuits I");
+        assertThat(dto.courses().get(0).color()).isEqualTo("#a8d5a2");
+        assertThat(dto.courses().get(0).meetingBlocks()).hasSize(3);
+        assertThat(dto.courses().get(0).meetingBlocks().get(2).kind()).isEqualTo(MeetingKind.LAB);
+        assertThat(dto.courses().get(0).meetingBlocks().get(2).startTime()).isEqualTo(LocalTime.of(15, 0));
+        verify(usageRepository).save(any());
+        verify(limits).check();
+    }
+
+    @Test
+    void parseSchedule_dropsNamelessCoursesDuplicatesAndBadColours() {
+        ScheduleDraftDto dto = runSchedule(new ScheduleDraft(true, List.of(
+                course(null, "  ", "#123456"),
+                course("Circuits", "ENSC 220", "green"),
+                course("Circuits again", "ensc220", null)),
+                List.of()));
+
+        assertThat(dto.courses()).singleElement().satisfies(c -> {
+            assertThat(c.code()).isEqualTo("ENSC 220");
+            assertThat(c.color()).isNull();
+        });
+    }
+
+    @Test
+    void parseSchedule_notASchedule_returnsNoCoursesAndOneWarning() {
+        ScheduleDraftDto dto = runSchedule(new ScheduleDraft(false, List.of(course("x", "y", null)), List.of("a meme")));
+
+        assertThat(dto.courses()).isEmpty();
+        assertThat(dto.warnings()).containsExactly(CourseParseService.NOT_A_SCHEDULE);
+    }
+
+    @Test
+    void parseSchedule_cacheHit_skipsTheModelAndTheQuota() {
+        when(cache.lookup(anyString(), eq(ScheduleDraft.class))).thenReturn(Optional.of(
+                new ScheduleDraft(true, List.of(course("Circuits", "ENSC 220", null)), List.of())));
+
+        ScheduleDraftDto dto = service.parseSchedule(List.of(), null, ZONE);
+
+        assertThat(dto.courses()).hasSize(1);
+        assertThat(dto.parseId()).isNull();
+        verify(parser, never()).parseSchedule(any(), anyString());
+        verify(limits, never()).check();
+    }
+
+    @Test
+    void scheduleCacheKey_neverMatchesTheOutlineKey() {
+        ExtractedInput input = new ExtractedInput("", List.of());
+        assertThat(CourseParseCache.scheduleKey(input, null, java.time.ZoneId.of(ZONE)))
+                .isNotEqualTo(CourseParseCache.key(input, null, java.time.ZoneId.of(ZONE)));
     }
 }
