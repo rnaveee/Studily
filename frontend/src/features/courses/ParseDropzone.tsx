@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FileText, Image as ImageIcon, Upload, X } from "lucide-react";
 import { formatBytes } from "../../lib/format";
 
@@ -25,6 +25,8 @@ export default function ParseDropzone({
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
+  const [pasted, setPasted] = useState(false);
+  const addRef = useRef<(incoming: File[]) => void>(() => {});
 
   function addFiles(incoming: File[]) {
     onError(null);
@@ -41,6 +43,38 @@ export default function ParseDropzone({
     onChange(next);
   }
 
+  addRef.current = addFiles;
+
+  useEffect(() => {
+    function onPaste(e: ClipboardEvent) {
+      const data = e.clipboardData;
+      if (!data) return;
+      const target = e.target as HTMLElement | null;
+      const typing = !!target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      const incoming = [...data.items]
+        .filter((item) => item.kind === "file")
+        .map((item) => item.getAsFile())
+        .filter((f): f is File => f !== null);
+      if (incoming.length === 0) return;
+      if (typing && data.getData("text/plain").trim()) return;
+      e.preventDefault();
+      const stamp = new Date().toTimeString().slice(0, 8).replace(/:/g, "");
+      const named = incoming.map((file, i) => {
+        const generic = !file.name || /^image\.(png|jpe?g|webp)$/i.test(file.name);
+        if (!generic) return file;
+        const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1] || "png";
+        return new File([file], `Pasted image ${stamp}${incoming.length > 1 ? `-${i + 1}` : ""}.${ext}`, { type: file.type });
+      });
+      addRef.current(named);
+      setPasted(true);
+      window.setTimeout(() => setPasted(false), 900);
+    }
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, []);
+
+  const pasteKey = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘V" : "Ctrl+V";
+
   return (
     <div className="space-y-3">
       <div
@@ -56,14 +90,17 @@ export default function ParseDropzone({
         }}
         className={`rounded-lg border border-dashed text-center transition-colors ${compact ? "p-4" : "p-6"}`}
         style={{
-          borderColor: dragging ? "var(--accent)" : "var(--line)",
-          background: dragging ? "color-mix(in srgb, var(--accent) 8%, transparent)" : "transparent",
+          borderColor: dragging || pasted ? "var(--accent)" : "var(--line)",
+          background: dragging || pasted ? "color-mix(in srgb, var(--accent) 8%, transparent)" : "transparent",
         }}
       >
         {!compact && <Upload className="mx-auto mb-2 text-fg-3" size={24} strokeWidth={1.5} />}
         <p className="text-[13px] text-fg-2">{label}</p>
         <p className="mt-0.5 text-[11px] text-fg-3">
           PDF or image, up to {MAX_FILES} files and 8 MB total
+        </p>
+        <p className="mt-0.5 text-[11px] text-fg-3">
+          Copied a screenshot? Press <kbd className="rounded border border-line px-1 font-mono text-[10.5px]">{pasteKey}</kbd> to paste it.
         </p>
         <button
           type="button"
