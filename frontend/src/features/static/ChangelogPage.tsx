@@ -3,324 +3,56 @@ import { Page } from "./shell";
 type Entry = {
   version: number;
   date: string;
-  title: string;
-  description: string;
+  summary: string;
 };
 
 const ENTRIES: Entry[] = [
-  {
-    version: 46,
-    date: "2026-10-13",
-    title: "Bring your Quizlet sets over",
-    description:
-      "You can move your flashcards from Quizlet to Studily without retyping them. In Quizlet, open your set, choose Export from the three-dot menu and tap Copy text. Then go to Flashcards, tap Import and paste it in. Studily works out which export options you picked, Tab or Comma and New line or Semicolon, and shows you every card it found before you save, so you can check the terms and definitions lined up properly. If a guess is ever wrong, flip the two switches to match what you picked in Quizlet and the preview updates straight away. Give the set a title and it's ready to study in every mode. You can also add cards from Quizlet to a set you already have: open the set and tap Import from Quizlet under Add a card. Any card that's already in the set is left out, so pasting the same export twice won't double anything up. A Studily set holds up to 500 cards, so a bigger Quizlet set is split evenly across numbered sets for you. Only the text comes across, not images.",
-  },
-  {
-    version: 45,
-    date: "2026-10-09",
-    title: "A streak flame that grows",
-    description:
-      "Your study streak is a real flame now, with the Studily logo set into it, and it changes as your streak grows. It's a small orange flame for your first few days, gets bigger and redder with flickering side flames at 7 days, throws off sparks with a blue-hot core at 30, and burns completely blue once you pass 100 days, the same days you unlock the Ember, Blaze and Inferno rings. It flickers gently, and holds still if your device is set to reduce motion. With no streak, the flame shows in grey so you can see what you're working towards. Your streak now sits next to the greeting on your dashboard, with a line underneath that cheers you on once today's 15 minutes are in, or reminds you to study if they aren't yet. It's also on your profile and on the profiles of everyone else you visit, even at zero days.",
-  },
-  {
-    version: 44,
-    date: "2026-10-08",
-    title: "Profile flairs",
-    description:
-      "Your profile picture can wear a ring now. Flairs are rings drawn around your picture, and once you put one on, everyone sees it everywhere your picture shows up: friend lists, search, schoolmates, chats and group chats, the classmates on your courses, shared flashcard sets and your profile. There are eleven to collect, each with a rarity from Common up to Legendary, and the rarer ones glow. Six of them are in the shop, starting at 250 coins for Mint and Ocean and going up to 1,500 for Aurora. Tap your coins at the top of the screen and the shop now opens with a Flairs section above the cosmetic badges, and once you buy a ring you can put it on right there. Two rings, Prism and Galaxy, can't be bought at all. Every so often a chest has a ring inside, either one of those two or a shop ring you don't own yet, and opening it shows you a preview of your picture wearing it. If you have every ring a chest could give you, you get bonus coins instead. Then there are the fire rings, which you earn by studying: Ember for a 7-day study streak, Blaze for 30 days and Inferno for 100, each one fiercer than the last, and Studily tells you the moment you unlock one. They're yours for good once you reach them, even if your streak breaks later, and if your best streak already got there before today, they're already waiting in your collection. You wear one ring at a time. Go to Profile \u203a Badges \u203a Flairs, or tap Change flair on your profile card, to see your picture with your ring on, every ring you own, and what it takes to unlock the rest: a price, Found in chests, or the streak you need. Tap a ring you own to put it on, or take it off to go back to a plain picture. A few of the rings slowly spin or shimmer, but they hold still where your picture is small, like next to messages in a chat, and whenever your device is set to reduce motion. A ring never makes your picture any bigger, so nothing on the page shifts when you put one on or take it off.",
-  },
-  {
-    version: 43,
-    date: "2026-10-08",
-    title: "Level up while you study",
-    description:
-      "Studying on Studily now counts for something you can see. You earn XP from study sessions, finished flashcard runs and new friends, and it fills a level bar right in your profile card, next to your streak and your favourite badges. Every level up pays out coins, and your balance now sits beside the Studily logo at the top of the screen, one tap from the badge shop. Every fifth level comes with a chest too. Study sessions live at the top of the Study page: pick Pomodoro blocks of 25 minutes with 5-minute breaks or a straight timer from 30 minutes to 3 hours, jot down what you want to get done, and start. When a block ends, the Check in button lights up for five minutes, and Studily sends you a notification if you have them turned on. Checking in banks that block's XP, and finishing every block of a session that's 50 minutes or longer adds a bonus. Miss a check-in and that block earns nothing and the session pauses, so resume within half an hour to keep going. End a session early and you still get XP for a block you were at least ten minutes into, and ticking off your first few tasks earns a little extra. Study at least 15 minutes in a day to keep your streak alive. The week's circles on the Study page fill in as you go, and every day of streak adds 10% to your session XP, up to 1.5 times. After four hours of sessions in a day, blocks earn half XP, and after six they earn none, though that time still counts towards your streak and badges. Finishing a flashcard run in Study, Learn, Memory or Match now ends on a summary of what you got right and wrong and the XP it earned, with a bonus for 80% or better in Study and Learn. Sets need at least five cards to earn XP. Each day, the first rewarded run of a set earns full XP, the next one earns half, and after that the set is practice until tomorrow. A run that earns nothing doesn't use up your full-XP run, and the summary always tells you why you got less. Badges come from levels, friends and schoolmates, streaks, hours studied, flashcard runs and how long you've been on Studily, with one just for early members. Ones you haven't earned yet show as silhouettes that tell you how to get them, and you can pin your favourite three to your profile. Coins buy cosmetic badges in the shop. Chests turn up at every fifth level, every seven days of streak and sometimes after a long session or a big flashcard run, with coins inside, sometimes bonus XP, and once in a while a shop badge for free.",
-  },
-  {
-    version: 42,
-    date: "2026-10-02",
-    title: "Flashcards you'll actually want to open",
-    description:
-      "Every flashcard set now has five ways to study it. Flashcards is the flip-through you already know. Study is the spaced repetition review, and its buttons now say what they mean: Again for a card you didn't know, Hard for one you got with a struggle, Good for one you got after a moment, and Easy for one you knew instantly, each with when you'll see that card next. Learn walks you through the set with questions that get harder as you go: multiple choice and true or false while a card is new, then typing the answer from memory once it's familiar, with a check-in after every round showing how many cards you've mastered. It forgives small typos, lets you overrule it when you were right, and remembers where you left off on that device. Memory lays the cards face down so you can flip two at a time and match each term with its definition, and Match puts them all face up against the clock, with a second added for every wrong pair and your best time saved. Sets can be shared now too. From a set's Share button, keep it private, share it with just your friends, or make it public, then copy the link. Anyone who can open it sees it marked as a shared set with who made it, and can study it in every mode except Study. A public set doesn't even need an account. Save a copy to put it in your own sets, where you can edit it and track your progress, and your copy remembers whose set it came from. Shared sets show on your profile for the people allowed to see them, and a set link pasted in chat now turns into a card with its title, who made it and how many cards it has, opening right inside Studily. Shared outside Studily, a public set's link previews with its own title too.",
-  },
-  {
-    version: 41,
-    date: "2026-09-23",
-    title: "Ten automatic imports a month, and chat that behaves",
-    description:
-      "Automatic course creation now comes with ten imports a month, which covers a full course load with room for the extra lab schedules and updated syllabi that turn up mid-term. An import is one go at reading your documents, so an outline and a separate course calendar uploaded together count once. The import screens show how many you have left, and they reset on the 1st. If a classmate has already imported the exact same outline, you get the result instantly and it does not count against yours at all. Files that clearly are not a course outline are turned away straight off, with nothing used up. In chat, a long link or an unbroken string no longer stretches the conversation off the side of the screen — it wraps inside its bubble. Pasting a screenshot, dropping an image or picking a file no longer sends it the moment you let go: it waits above the message box with a preview so you can add a note, remove it, or change your mind before you hit send. And copying cells out of Excel, Word or Google Docs pastes the text you copied instead of quietly sending a picture of it.",
-  },
-  {
-    version: 40,
-    date: "2026-09-16",
-    title: "Pick your own weight colours, and stay signed in",
-    description:
-      "Every weight on a course still gets a colour picked for it, so you never have to think about it \u2014 but now you can change it. Editing a weight shows the palette with its current colour marked, and there is a custom swatch at the end if you want a shade that is not on offer. Creating one keeps a Pick for me chip selected by default, so nothing changes unless you want it to. Colours chosen while the outline reader is showing you a grading scheme are now the colours you actually get, instead of being reshuffled on save. Alongside that, exams have stopped being red and assignments green. That colouring fought with your own choices \u2014 make a weight red and your screen had red meaning two different things at once \u2014 so an item now simply takes the colour of the weight it counts towards, falling back to its course colour. Which one is an exam is still written on it. Separately, signing in should stick now. Sessions used to quietly expire after a day, so opening Studily on Monday after a weekend away meant signing in again; they now last a month and quietly renew whenever you open the app, so an ordinary week of use never ends at the login screen. Opening Studily with no signal, or while the server is still waking up, used to look exactly like being signed out \u2014 it now says it cannot reach us and offers a Retry, keeping you signed in. And typing your current password wrongly when changing it, or fumbling a code, no longer throws you out of the app entirely.",
-  },
-  {
-    version: 39,
-    date: "2026-09-14",
-    title: "Weights that match your grading scheme",
-    description:
-      "Course outlines hand you a grading scheme \u2014 Quizzes, Assignments and Labs 15%, Exam 1 25%, Project 10% \u2014 where one row covers a whole pile of work. Until now you had to do that arithmetic yourself and type a weight onto every single assignment. Every course page now has a Weights section holding those rows exactly as your outline prints them, each with a percentage and a colour. Put ten assignments under a row worth 15% and each one quietly counts for 1.5% of your final grade; add an eleventh and they all resplit on their own. A running total tells you when the scheme adds up to 100% and when it does not. The Assignment/Exam dropdown on an item has become one \u201cCounts as\u201d list holding Assignment and Exam plus every category you make \u2014 colour-coded down the item list and across the calendar. A category does not need a percentage: leave it blank and it is just a label like \u201cLab Assignment\u201d or \u201cGroup work\u201d, and those items keep whatever weight you give them individually. and the reader fills the whole thing in for you: hand it an outline and it comes back with the grading rows and every item already filed under the right one, for you to check before anything saves. Items you have already weighted yourself keep working exactly as they did. The course reader also takes pasted text now, so a grading scheme you copied off the course page is enough on its own \u2014 no file needed.",
-  },
-  {
-    version: 38,
-    date: "2026-09-11",
-    title: "Fix an exam or assignment you got wrong",
-    description:
-      "Until now an exam or assignment was fixed the moment you added it \u2014 a typo in the title or the wrong due date meant deleting it and starting again, and deleting happened the instant you tapped the cross, with nothing asked. Every item now has an edit button on the course page and in Due this week: change the title, swap an assignment to an exam, move the date, set a room, adjust the weight or mark where it has got to. Items that repeat ask whether you mean just that one or the whole series, and an edit made in one place shows up everywhere else straight away instead of the calendar staying out of date. Deleting now asks first. In chat, the three dots that used to sit on every message you sent are gone on phones \u2014 hold a message instead and the options come up from the bottom of the screen.",
-  },
-  {
-    version: 37,
-    date: "2026-09-10",
-    title: "Feed a course more documents as the semester goes",
-    description:
-      "Course outlines are rarely the whole story \u2014 the lab schedule shows up in week two, the syllabus gets revised, a handout lands with the project dates on it. Every course page now has Add from a document: drop the new file in and Studily reads it against the course you already have. It shows you what it found with anything already on the course ticked off and labelled, so you are only ever choosing between things that are actually new. Class times it has not seen and changes to the room, code or instructor are offered separately, and nothing is touched unless you tick it. The reader has also been taught to stop losing lab work: deliverables listed in an outline's Due column \u2014 Lab 1, Lab 2, Project \u2014 now come through as items dated from their own row, and anything it found but could not put a date on is handed to you with a blank date to fill in rather than quietly dropped.",
-  },
-  {
-    version: 36,
-    date: "2026-09-09",
-    title: "Tell us how the outline reader did",
-    description:
-      "After you save a course that was filled in automatically, Studily now asks one question: did it get everything right, was it close but needing a few fixes, or did it get it wrong? It is three taps and you can skip it. What comes back gets pooled and shown on the Automatic card when you add a course, so before you hand it your outline you can see how often it has actually worked for other students rather than taking our word for it. The number only appears once enough people have answered for it to mean anything.",
-  },
-  {
-    version: 35,
-    date: "2026-09-09",
-    title: "Notifications that arrive when they should",
-    description:
-      "Class reminders used to be timed against one fixed time zone, so if you were not on Eastern time they landed hours early — a reminder saying your class was in an hour when it was really in three. Studily now keeps track of the time zone your device is in and times every reminder against that. Class reminders have also moved closer in: instead of an hour ahead, you get one fifteen minutes before the class starts, which is about when it is useful. Message notifications were being held back whenever your phone still had a chat connection open in the background, which on a locked phone could mean waiting an hour to hear about a message. Studily now tells the difference between the app being open in front of you and the app merely being connected, so a message you are not there to see pushes straight through.",
-  },
-  {
-    version: 34,
-    date: "2026-09-08",
-    title: "A softer, deeper look",
-    description:
-      "Studily has been rebuilt on a new surface style. The dark theme moves to a deeper navy with a faint glow behind everything, cards pick up a soft edge of light along their top, and panels that float above the page \u2014 menus, dialogs, the bar along the bottom on your phone \u2014 are now frosted, so what's underneath shows through. Things you press feel like it: buttons sit slightly raised and sink when tapped, text fields are gently recessed, and switches press in when you turn them on. If you preferred how it looked before, Settings \u203a Preferences \u203a Classic look puts the old flat design back, and it still follows your light and dark setting.",
-  },
-  {
-    version: 33,
-    date: "2026-09-08",
-    title: "Build a course from your outline",
-    description:
-      "Adding a course now asks how you want to do it. Manual is the form you already know. Automatic (beta) lets you drop in your course outline as a PDF, a screenshot of the course page, or just pasted text, and it fills the form in for you \u2014 course name, code, instructor, room, weekly class times, and the assignments and exams from the schedule with their due dates and weights. It works out class times from a table of dates when the outline never spells the pattern out. Nothing saves until you have read it over: every field stays editable, you tick which deadlines to keep, and anything the reader was unsure about is flagged at the top. It gets things wrong sometimes, so give it a look before you hit save.",
-  },
-  {
-    version: 32,
-    date: "2026-09-06",
-    title: "Choose who sees your schedule, and share it as an image",
-    description:
-      "Settings now has a schedule visibility control: keep your semester schedule to friends the way it has always worked, open it up to everyone on Studily, or make it private so nobody but you can see it. Profiles also gained a List/Week switch, so you can read a schedule as a day-by-day list or as the same time-block grid your dashboard uses. And on your own profile you can now copy your schedule as an image or save it to your camera roll \u2014 a clean dark card with your name, school and semester on it.",
-  },
-  {
-    version: 31,
-    date: "2026-08-30",
-    title: "A guided setup checklist",
-    description:
-      "Setting up your first semester is now a checklist that keeps track of itself. It ticks off each step as you finish it, starts your semester in one tap with the usual dates filled in, and puts Canvas import right up front so one link can bring in your courses, assignments and exams together. Your dashboard shows how far along you are until it's done.",
-  },
-  {
-    version: 30,
-    date: "2026-08-19",
-    title: "Edit, delete, and clear messages",
-    description:
-      "Hover a message you sent and tap the three dots to edit or delete it — edits show up for everyone with an \"edited\" mark, and deletes remove the message from the chat for both sides. The menu in the chat header also lets you clear a whole conversation from your own view, leaving your friend's copy untouched.",
-  },
-  {
-    version: 29,
-    date: "2026-08-18",
-    title: "To-do list on your dashboard",
-    description:
-      "Your dashboard now has a to-do panel under the calendar showing the five tasks at the top of your list, including ones with no due date. Check anything off right from there, or jump to the full list.",
-  },
-  {
-    version: 28,
-    date: "2026-08-17",
-    title: "To-do list",
-    description:
-      "Track anything that isn't a graded item: tasks with their own categories, priority, due date, notes, and a checklist of steps. Tasks due this week show up on your dashboard alongside your coursework.",
-  },
-  {
-    version: 27,
-    date: "2026-08-11",
-    title: "Canvas import",
-    description:
-      "Import your Canvas calendar feed to pull assignments and due dates straight into your courses, without creating duplicates when you import again.",
-  },
-  {
-    version: 26,
-    date: "2026-08-11",
-    title: "Message likes",
-    description: "Double tap any message in a chat to like it.",
-  },
-  {
-    version: 25,
-    date: "2026-08-11",
-    title: "Repeating items",
-    description:
-      "Calendar events, assignments and exams can repeat on a schedule instead of being added one date at a time.",
-  },
-  {
-    version: 24,
-    date: "2026-08-11",
-    title: "Landing page and demo mode",
-    description:
-      "Added a public home page, and filled guest mode with a demo semester so you can try the app before signing up.",
-  },
-  {
-    version: 23,
-    date: "2026-08-07",
-    title: "Lectures, labs and tutorials",
-    description:
-      "Split class times into lectures, labs and tutorials, each with its own meeting times and location.",
-  },
-  {
-    version: 22,
-    date: "2026-08-07",
-    title: "Course locations",
-    description: "Added a location to courses and showed it everywhere a course appears.",
-  },
-  {
-    version: 21,
-    date: "2026-08-07",
-    title: "Google Calendar support",
-    description:
-      "Added Google Calendar support for .ics links, plus importing and exporting your Studily calendar as an .ics file.",
-  },
-  {
-    version: 20,
-    date: "2026-08-07",
-    title: "Grade tracking",
-    description:
-      "Record scores on assignments and exams, and see your running grade per course and per semester.",
-  },
-  {
-    version: 19,
-    date: "2026-08-06",
-    title: "Calendar categories",
-    description:
-      "Added your own colored categories for calendar events, and tapping a day now shows everything due on it.",
-  },
-  {
-    version: 18,
-    date: "2026-08-05",
-    title: "Periodic table",
-    description: "Added an interactive periodic table to the Learn tab.",
-  },
-  {
-    version: 17,
-    date: "2026-07-18",
-    title: "Shared course catalog",
-    description:
-      "Courses added by students are shared with their school, with fuzzy search over schools and course codes.",
-  },
-  {
-    version: 16,
-    date: "2026-07-18",
-    title: "Pomodoro timer",
-    description:
-      "Added a pomodoro timer that keeps running across the app, counts down in a banner, and notifies you when a phase ends.",
-  },
-  {
-    version: 15,
-    date: "2026-07-18",
-    title: "Guest mode",
-    description: "Browse the whole app read-only before making an account.",
-  },
-  {
-    version: 14,
-    date: "2026-07-17",
-    title: "Chat attachments",
-    description:
-      "Send images and documents in direct messages and group chats, and open images in a full-screen viewer.",
-  },
-  {
-    version: 13,
-    date: "2026-07-13",
-    title: "Account security",
-    description:
-      "Added email verification, password reset, password change, and account deletion.",
-  },
-  {
-    version: 12,
-    date: "2026-07-13",
-    title: "Push notifications",
-    description:
-      "Added push notifications for messages, classes, events and due dates, with a settings page to control them.",
-  },
-  {
-    version: 11,
-    date: "2026-07-11",
-    title: "Calendar events",
-    description:
-      "Added standalone calendar events, a detail and edit view, and adding one item across multiple dates.",
-  },
-  {
-    version: 10,
-    date: "2026-07-09",
-    title: "Schedules on profiles",
-    description: "Friends can see your current semester and weekly schedule on your profile.",
-  },
-  {
-    version: 9,
-    date: "2026-07-09",
-    title: "Real-time messaging",
-    description: "Messages now arrive instantly over a live connection instead of on a refresh.",
-  },
-  {
-    version: 8,
-    date: "2026-07-08",
-    title: "Spaced repetition",
-    description:
-      "Flashcards now use the SM-2 algorithm to schedule reviews for the cards you keep getting wrong.",
-  },
-  {
-    version: 7,
-    date: "2026-07-07",
-    title: "Profiles and user search",
-    description: "Added profile pages and search so you can find other students by name or username.",
-  },
-  {
-    version: 6,
-    date: "2026-07-05",
-    title: "Messaging",
-    description: "Added direct messages and group chats with your friends.",
-  },
-  {
-    version: 5,
-    date: "2026-07-05",
-    title: "Learn tab",
-    description: "Added the Learn tab with flashcard sets and an AI study chat.",
-  },
-  {
-    version: 4,
-    date: "2026-07-03",
-    title: "Friends and schoolmates",
-    description:
-      "Send friend requests, and see who else from your school is on Studily.",
-  },
-  {
-    version: 3,
-    date: "2026-07-03",
-    title: "Install as an app",
-    description:
-      "Studily can be installed to your home screen and opened like a native app.",
-  },
-  {
-    version: 2,
-    date: "2026-06-30",
-    title: "Weekly schedule",
-    description:
-      "Rebuilt the dashboard around a weekly grid with time-proportional class blocks and what is due this week.",
-  },
-  {
-    version: 1,
-    date: "2026-06-30",
-    title: "Studily launch",
-    description:
-      "The first version: courses with meeting times, assignments and exams with due dates, semesters, and a monthly calendar.",
-  },
+  { version: 46, date: "2026-10-13", summary: "Added Quizlet support." },
+  { version: 45, date: "2026-10-09", summary: "Updated the streak flame." },
+  { version: 44, date: "2026-10-08", summary: "Added profile flairs." },
+  { version: 43, date: "2026-10-08", summary: "Added XP, levels, badges, coins, chests and study sessions." },
+  { version: 42, date: "2026-10-02", summary: "Added new flashcard study modes and set sharing." },
+  { version: 41, date: "2026-09-23", summary: "Added ten automatic course imports a month and fixed chat bugs." },
+  { version: 40, date: "2026-09-16", summary: "Added custom weight colours and longer sign-ins." },
+  { version: 39, date: "2026-09-14", summary: "Added grade weights that match your grading scheme." },
+  { version: 38, date: "2026-09-11", summary: "Added editing for exams and assignments." },
+  { version: 37, date: "2026-09-10", summary: "Added more documents to automatic course creation." },
+  { version: 36, date: "2026-09-09", summary: "Added feedback for the course outline reader." },
+  { version: 35, date: "2026-09-09", summary: "Fixed notification timing across time zones." },
+  { version: 34, date: "2026-09-08", summary: "Refreshed the look of the app." },
+  { version: 33, date: "2026-09-08", summary: "Added automatic course creation from outlines." },
+  { version: 32, date: "2026-09-06", summary: "Added schedule visibility settings and schedule image sharing." },
+  { version: 31, date: "2026-08-30", summary: "Added a guided setup checklist." },
+  { version: 30, date: "2026-08-19", summary: "Added editing, deleting and clearing messages." },
+  { version: 29, date: "2026-08-18", summary: "Added the to-do list to the dashboard." },
+  { version: 28, date: "2026-08-17", summary: "Added a to-do list." },
+  { version: 27, date: "2026-08-11", summary: "Added Canvas import." },
+  { version: 26, date: "2026-08-11", summary: "Added message likes." },
+  { version: 25, date: "2026-08-11", summary: "Added repeating items." },
+  { version: 24, date: "2026-08-11", summary: "Added a landing page and demo mode." },
+  { version: 23, date: "2026-08-07", summary: "Added lectures, labs and tutorials." },
+  { version: 22, date: "2026-08-07", summary: "Added course locations." },
+  { version: 21, date: "2026-08-07", summary: "Added Google Calendar support." },
+  { version: 20, date: "2026-08-07", summary: "Added grade tracking." },
+  { version: 19, date: "2026-08-06", summary: "Added calendar categories." },
+  { version: 18, date: "2026-08-05", summary: "Added a periodic table." },
+  { version: 17, date: "2026-07-18", summary: "Added a shared course catalog." },
+  { version: 16, date: "2026-07-18", summary: "Added a Pomodoro timer." },
+  { version: 15, date: "2026-07-18", summary: "Added guest mode." },
+  { version: 14, date: "2026-07-17", summary: "Added chat attachments." },
+  { version: 13, date: "2026-07-13", summary: "Added account security settings." },
+  { version: 12, date: "2026-07-13", summary: "Added push notifications." },
+  { version: 11, date: "2026-07-11", summary: "Added calendar events." },
+  { version: 10, date: "2026-07-09", summary: "Added schedules to profiles." },
+  { version: 9, date: "2026-07-09", summary: "Added real-time messaging." },
+  { version: 8, date: "2026-07-08", summary: "Added spaced repetition for flashcards." },
+  { version: 7, date: "2026-07-07", summary: "Added profiles and user search." },
+  { version: 6, date: "2026-07-05", summary: "Added messaging." },
+  { version: 5, date: "2026-07-05", summary: "Added the Learn tab." },
+  { version: 4, date: "2026-07-03", summary: "Added friends and schoolmates." },
+  { version: 3, date: "2026-07-03", summary: "Added installing Studily as an app." },
+  { version: 2, date: "2026-06-30", summary: "Added the weekly schedule." },
+  { version: 1, date: "2026-06-30", summary: "Launched Studily." },
 ];
 
 function formatDate(iso: string) {
@@ -335,16 +67,12 @@ function formatDate(iso: string) {
 export default function ChangelogPage() {
   return (
     <Page title="Changelog" intro="Everything that's been added to Studily, newest first.">
-      <ol className="space-y-3">
+      <ol className="space-y-2">
         {ENTRIES.map((entry) => (
-          <li key={entry.version} className="card p-5">
-            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span className="text-[13px] font-semibold text-accent">v{entry.version}</span>
-              <span className="text-fg-3">-</span>
-              <h2 className="text-[15px] font-semibold text-fg">{entry.title}</h2>
-              <span className="ml-auto text-[12px] text-fg-3">{formatDate(entry.date)}</span>
-            </div>
-            <p className="mt-1 text-[13px] leading-relaxed text-fg-2">{entry.description}</p>
+          <li key={entry.version} className="card flex items-baseline gap-3 px-5 py-3.5">
+            <span className="w-9 shrink-0 text-[13px] font-semibold tabular-nums text-accent">v{entry.version}</span>
+            <p className="min-w-0 flex-1 text-[14px] text-fg">{entry.summary}</p>
+            <span className="shrink-0 text-[12px] text-fg-3">{formatDate(entry.date)}</span>
           </li>
         ))}
       </ol>
