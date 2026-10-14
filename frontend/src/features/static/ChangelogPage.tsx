@@ -7,6 +7,10 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
+  { version: 50, date: "2026-10-14", summary: "Added a welcome tour and a free diamond chest." },
+  { version: 49, date: "2026-10-14", summary: "Added schedule screenshot import." },
+  { version: 48, date: "2026-10-14", summary: "Added chest tiers, session summaries and a 10-minute check-in." },
+  { version: 47, date: "2026-10-14", summary: "Added flashcard images, session pausing and editable session tasks." },
   { version: 46, date: "2026-10-13", summary: "Added Quizlet support." },
   { version: 45, date: "2026-10-09", summary: "Updated the streak flame." },
   { version: 44, date: "2026-10-08", summary: "Added profile flairs." },
