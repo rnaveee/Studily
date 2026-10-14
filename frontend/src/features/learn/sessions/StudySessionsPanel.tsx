@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, Play } from "lucide-react";
 import { Skeleton } from "../../../components/Skeleton";
+import { releaseProgressMoments } from "../../../lib/progressDelta";
 import { unlockAudio } from "../../../lib/ringtones";
 import StreakFlame from "../../progress/StreakFlame";
 import { useActiveSession, useProgressEnabled, useSessionHistory, useStreakWeek } from "../../progress/useProgress";
@@ -9,7 +10,7 @@ import ActiveSessionCard from "./ActiveSessionCard";
 import SessionHistoryList from "./SessionHistoryList";
 import StartSessionModal from "./StartSessionModal";
 import StreakWeek, { StreakWeekSkeleton } from "./StreakWeek";
-import UnfinishedTasksModal from "./UnfinishedTasksModal";
+import SessionSummaryModal from "./SessionSummaryModal";
 import type { StudySessionDto } from "../../../types";
 
 export default function StudySessionsPanel() {
@@ -60,7 +61,7 @@ function PanelBody() {
   const streak = useStreakWeek();
   const history = useSessionHistory();
   const [starting, setStarting] = useState(false);
-  const [unfinished, setUnfinished] = useState<string[] | null>(null);
+  const [summaryId, setSummaryId] = useState<number | null>(null);
   const last = useRef<StudySessionDto | null>(null);
 
   useEffect(() => {
@@ -69,11 +70,12 @@ function PanelBody() {
       return;
     }
     if (active.data === null && last.current) {
-      const left = last.current.tasks.filter((t) => !t.done).map((t) => t.text);
+      setSummaryId(last.current.id);
       last.current = null;
-      if (left.length > 0) setUnfinished(left);
     }
   }, [active.data]);
+
+  useEffect(() => () => releaseProgressMoments(), []);
 
   const recent = (history.data?.pages[0]?.items ?? []).filter(
     (s) => s.status !== "ACTIVE" && s.status !== "PAUSED",
@@ -146,7 +148,7 @@ function PanelBody() {
       </div>
 
       {starting && <StartSessionModal onClose={() => setStarting(false)} />}
-      {unfinished && <UnfinishedTasksModal tasks={unfinished} onClose={() => setUnfinished(null)} />}
+      {summaryId !== null && <SessionSummaryModal sessionId={summaryId} onClose={() => setSummaryId(null)} />}
     </div>
   );
 }

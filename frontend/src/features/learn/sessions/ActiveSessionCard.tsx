@@ -7,9 +7,8 @@ import { useConfirm } from "../../../lib/confirm";
 import { formatTime } from "../../../lib/format";
 import { useFullscreen } from "../../../lib/fullscreen";
 import { formatMs, pomodoro, pomodoroColor } from "../../../lib/pomodoro";
-import { applyDelta } from "../../../lib/progressDelta";
+import { applyDelta, holdProgressMoments } from "../../../lib/progressDelta";
 import { playRingtone } from "../../../lib/ringtones";
-import { toast } from "../../../lib/toast";
 import { progressKeys } from "../../progress/useProgress";
 import { formatMultiplier, MODE_LABEL } from "./sessionFormat";
 import type { StudySessionDto, StudySessionResult, StudySessionTaskDto } from "../../../types";
@@ -94,10 +93,11 @@ export default function ActiveSessionCard({
   function settle(result: StudySessionResult) {
     const s = result.session;
     const open = s.status === "ACTIVE" || s.status === "PAUSED";
+    if (!open) holdProgressMoments();
     qc.setQueryData(progressKeys.activeSession, open ? s : null);
     qc.invalidateQueries({ queryKey: progressKeys.streak });
     qc.invalidateQueries({ queryKey: progressKeys.history });
-    applyDelta(result.delta, qc);
+    applyDelta(result.delta, qc, { toastXp: open });
     return s;
   }
 
@@ -105,10 +105,7 @@ export default function ActiveSessionCard({
 
   const checkin = useMutation({
     mutationFn: () => api.post<StudySessionResult>(`/study-sessions/${session.id}/checkin`),
-    onSuccess: (r) => {
-      const s = settle(r);
-      if (s.status === "COMPLETED") toast.success("Session complete. Great work!");
-    },
+    onSuccess: settle,
     onError: refresh,
   });
 
@@ -126,10 +123,7 @@ export default function ActiveSessionCard({
 
   const end = useMutation({
     mutationFn: () => api.post<StudySessionResult>(`/study-sessions/${session.id}/end`),
-    onSuccess: (r) => {
-      settle(r);
-      toast.info("Study session ended");
-    },
+    onSuccess: settle,
     onError: refresh,
   });
 

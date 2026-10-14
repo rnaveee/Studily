@@ -9,6 +9,7 @@ export type ProgressMoment =
 type Listener = (moment: ProgressMoment) => void;
 
 const listeners = new Set<Listener>();
+let held: ProgressMoment[] | null = null;
 
 export function onProgressMoment(listener: Listener): () => void {
   listeners.add(listener);
@@ -18,7 +19,21 @@ export function onProgressMoment(listener: Listener): () => void {
 }
 
 function emit(moment: ProgressMoment) {
+  if (held) {
+    held.push(moment);
+    return;
+  }
   listeners.forEach((l) => l(moment));
+}
+
+export function holdProgressMoments() {
+  if (!held) held = [];
+}
+
+export function releaseProgressMoments() {
+  const queued = held;
+  held = null;
+  queued?.forEach(emit);
 }
 
 export function offerChests(chests: ChestDto[]) {

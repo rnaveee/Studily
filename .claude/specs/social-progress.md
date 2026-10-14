@@ -646,7 +646,11 @@ The card is built from `features/learn/sessions/`:
   - Paused state with a Resume button, task checkboxes (PATCH), and an End session button with confirm.
   - (2026-10-13) A Pause button during focus and break. While paused, the ring freezes and shows when the session will end on its own, and the main button becomes Resume. The missed-check-in hold is labelled "On hold".
   - (2026-10-13) Tasks can be edited inline: tap the text to rename it, X removes it (hidden once it earned XP), and an add row sits at the bottom.
-  - (2026-10-13) When an open session closes with unticked tasks, `StudySessionsPanel` shows "You have unfinished work" with "I'm okay" and "Do it". "Do it" adds each task to the main todo list (`POST /api/todos`, MEDIUM priority).
+  - (2026-10-13) Whenever an open session closes (completed, ended, expired), `StudySessionsPanel` opens `SessionSummaryModal`, which reads `GET /study-sessions/{id}/recap`. It has three slides:
+    1. A random line from `sessionCheers.json`, plus the time studied and the blocks checked in.
+    2. XP, coins and tier-coloured chests, or the reason there are none.
+    3. Only when tasks are left unticked: "You have unfinished work", with "I'm okay" and "Do it". "Do it" adds each task to the main todo list (`POST /api/todos`, MEDIUM priority).
+  - While a session is closing, `holdProgressMoments()` holds the level-up and chest pop-ups. The summary releases them when it closes, then offers its unopened chests.
   - Do **not** drive the existing pomodoro store; the backend sends the block-end push.
 - **`StreakWeek`**: seven circles labelled `Su M Tu W Th F Sa`, lit when `qualified`, with today ringed. Next to them, the Studily logo (`/studily-3a.svg`) with a flame animation when `current > 0` (grey when 0), the streak count, and a `×1.3` multiplier chip.
 - **`SessionHistoryList`** and **`SessionHistoryPage`** (`/learn/sessions`): infinite "Load more" on `PageResponse`. Rows show date, mode, credited minutes, XP, tasks done/total and a status chip.

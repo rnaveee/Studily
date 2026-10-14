@@ -919,6 +919,12 @@ export interface StudySessionResult {
   delta: ProgressDelta;
 }
 
+export interface StudySessionRecap {
+  session: StudySessionDto;
+  coinsAwarded: number;
+  chests: ChestDto[];
+}
+
 export interface StartStudySessionRequest {
   mode: StudySessionMode;
   blocks?: number;
