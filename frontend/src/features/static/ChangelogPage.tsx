@@ -7,6 +7,7 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
+  { version: 52, date: "2026-10-14", summary: "Added 12 new profile flairs and gave the streak flairs real flames." },
   { version: 51, date: "2026-10-14", summary: "Added new chest art." },
   { version: 50, date: "2026-10-14", summary: "Added a welcome tour and a free diamond chest." },
   { version: 49, date: "2026-10-14", summary: "Added schedule screenshot import." },

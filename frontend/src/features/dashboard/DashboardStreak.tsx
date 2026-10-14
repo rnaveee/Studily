@@ -88,7 +88,7 @@ function StreakSummary({ data, cheer }: { data: StreakWeekDto; cheer: string }) 
         className={PANEL}
         style={flameTint(data.current)}
       >
-        <StreakFlame streak={data.current} size={40} />
+        <StreakFlame streak={data.current} size={40} centered />
         <div className="min-w-0">
           <p className={`text-[15px] font-bold leading-tight tabular-nums ${data.current > 0 ? "text-fg" : "text-fg-2"}`}>
             {data.current}-day streak

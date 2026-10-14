@@ -34,7 +34,7 @@ export default function StreakWeek({ data }: { data: StreakWeekDto }) {
           </button>
         ) : (
           <>
-            <StreakFlame streak={data.current} size={56} />
+            <StreakFlame streak={data.current} size={56} centered />
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-1.5">
                 <span className="text-[24px] font-bold leading-none tabular-nums text-fg">{data.current}</span>

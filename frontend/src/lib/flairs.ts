@@ -53,9 +53,6 @@ function stars(points: [number, number, number][]): string {
     .join(", ");
 }
 
-const FIRE_TONGUES = (hot: number, every: number) =>
-  `repeating-conic-gradient(${mix("fire-hot", hot)} 0deg, ${mix("fire-4", hot - 10)} 3deg, transparent 9deg, transparent ${every}deg)`;
-
 export const FLAIR_RINGS: Record<string, FlairRing> = {
   ring_mint: {
     layers: [
@@ -187,43 +184,6 @@ export const FLAIR_RINGS: Record<string, FlairRing> = {
     ],
     glowAnim: "pulse",
     glowSeconds: 4,
-  },
-  ring_ember: {
-    layers: [
-      {
-        background: `conic-gradient(from 180deg, ${v("fire-1")}, ${v("fire-2")} 22%, ${v("fire-3")} 42%, ${v("fire-4")} 50%, ${v("fire-3")} 58%, ${v("fire-2")} 78%, ${v("fire-1")})`,
-      },
-      { background: innerEdge(mix("fire-4", 55)) },
-    ],
-  },
-  ring_blaze: {
-    layers: [
-      {
-        background: `repeating-conic-gradient(${v("fire-2")} 0deg, ${v("fire-3")} 40deg, ${v("fire-4")} 70deg, ${v("fire-3")} 100deg, ${v("fire-2")} 140deg, ${v("fire-2")} 180deg)`,
-        spin: 6,
-      },
-      { background: FIRE_TONGUES(75, 36), spin: -4, blur: 1, opacity: 0.6, detail: true },
-      { background: innerEdge(mix("fire-4", 70)) },
-    ],
-    glow: [{ color: mix("fire-3", 70), blur: 0.17 }],
-    glowAnim: "pulse",
-    glowSeconds: 1.8,
-  },
-  ring_inferno: {
-    layers: [
-      {
-        background: `repeating-conic-gradient(${v("fire-1")} 0deg, ${v("fire-2")} 10deg, ${v("fire-3")} 22deg, ${v("fire-4")} 32deg, ${v("fire-hot")} 38deg, ${v("fire-4")} 44deg, ${v("fire-3")} 56deg, ${v("fire-2")} 80deg, ${v("fire-1")} 120deg)`,
-        spin: 3.4,
-      },
-      { background: FIRE_TONGUES(90, 24), spin: -2.3, blur: 1, opacity: 0.75, detail: true },
-      { background: innerEdge(mix("fire-hot", 92), 83, 88, 95) },
-    ],
-    glow: [
-      { color: mix("fire-3", 80), blur: 0.18, spread: 0.02 },
-      { color: mix("fire-2", 50), blur: 0.38 },
-    ],
-    glowAnim: "flicker",
-    glowSeconds: 1.3,
   },
 };
 
