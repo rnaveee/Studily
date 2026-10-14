@@ -1,6 +1,7 @@
 package com.rnave.studily.auth;
 
 import com.rnave.studily.admin.AdminGuard;
+import com.rnave.studily.auth.AuthDtos.AuthResponse;
 import com.rnave.studily.auth.AuthDtos.LoginRequest;
 import com.rnave.studily.auth.AuthDtos.SignupRequest;
 import com.rnave.studily.config.ConflictException;
@@ -8,6 +9,7 @@ import com.rnave.studily.config.JwtService;
 import com.rnave.studily.config.LoginRateLimiter;
 import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.config.UnauthorizedException;
+import com.rnave.studily.flashcard.WelcomeFlashcards;
 import com.rnave.studily.progress.FlairRepository;
 import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
@@ -23,7 +25,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class AuthServiceTest {
@@ -37,6 +41,8 @@ class AuthServiceTest {
     private AdminGuard adminGuard;
     private AuthService authService;
 
+    private WelcomeFlashcards welcomeFlashcards;
+
     @BeforeEach
     void setUp() {
         userRepository = mock(UserRepository.class);
@@ -46,10 +52,12 @@ class AuthServiceTest {
         authEmailService = mock(AuthEmailService.class);
         accountTokenService = mock(AccountTokenService.class);
         adminGuard = mock(AdminGuard.class);
+        welcomeFlashcards = mock(WelcomeFlashcards.class);
         when(loginRateLimiter.tryConsume(anyString())).thenReturn(true);
         authService = new AuthService(userRepository, passwordEncoder, jwtService, loginRateLimiter,
                 authEmailService, accountTokenService, adminGuard,
-                new Flairs(mock(FlairRepository.class), Clock.systemUTC(), "https://badges.studily.ca/flairs/v1"));
+                new Flairs(mock(FlairRepository.class), Clock.systemUTC(), "https://badges.studily.ca/flairs/v1"),
+                welcomeFlashcards);
     }
 
     @Test
@@ -207,5 +215,21 @@ class AuthServiceTest {
 
         assertThatThrownBy(() -> authService.login(new LoginRequest("me@example.com", "wrong")))
                 .isInstanceOf(UnauthorizedException.class);
+    }
+
+    @Test
+    void signup_createsTheWelcomeFlashcardSet() {
+        SignupRequest req = new SignupRequest("fresh@example.com", "freshuser", "password123", "Fresh", null);
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            u.setId(9L);
+            return u;
+        });
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+
+        AuthResponse response = authService.signup(req);
+
+        verify(welcomeFlashcards).create(argThat(u -> u.getId() == 9L));
+        assertThat(response.user().welcomed()).isFalse();
     }
 }

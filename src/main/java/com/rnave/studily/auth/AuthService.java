@@ -10,6 +10,7 @@ import com.rnave.studily.config.JwtService;
 import com.rnave.studily.config.LoginRateLimiter;
 import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.config.UnauthorizedException;
+import com.rnave.studily.flashcard.WelcomeFlashcards;
 import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserDto;
@@ -29,10 +30,12 @@ public class AuthService {
     private final AccountTokenService accountTokenService;
     private final AdminGuard adminGuard;
     private final Flairs flairs;
+    private final WelcomeFlashcards welcomeFlashcards;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
                        LoginRateLimiter loginRateLimiter, AuthEmailService authEmailService,
-                       AccountTokenService accountTokenService, AdminGuard adminGuard, Flairs flairs) {
+                       AccountTokenService accountTokenService, AdminGuard adminGuard, Flairs flairs,
+                       WelcomeFlashcards welcomeFlashcards) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -41,6 +44,7 @@ public class AuthService {
         this.accountTokenService = accountTokenService;
         this.adminGuard = adminGuard;
         this.flairs = flairs;
+        this.welcomeFlashcards = welcomeFlashcards;
     }
 
     @Transactional
@@ -61,6 +65,7 @@ public class AuthService {
         user.setSchool(req.school() == null ? null : req.school().trim());
         user.setSchoolKey(MatchKeys.schoolKey(user.getSchool()));
         user = userRepository.save(user);
+        welcomeFlashcards.create(user);
         try {
             authEmailService.sendVerification(user);
         } catch (RuntimeException ignored) {

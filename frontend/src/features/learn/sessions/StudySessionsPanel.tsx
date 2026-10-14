@@ -18,6 +18,7 @@ export default function StudySessionsPanel() {
 
   return (
     <section
+      data-tour="study-sessions"
       className="card card-raised px-4 pb-5 pt-6 sm:px-7 sm:pb-7 sm:pt-8"
       aria-labelledby="study-sessions-title"
       style={{

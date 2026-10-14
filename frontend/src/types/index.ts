@@ -78,6 +78,7 @@ export interface User {
   flair?: FlairRef | null;
   emailVerified: boolean;
   admin?: boolean;
+  welcomed?: boolean;
   createdAt: string;
 }
 
@@ -802,7 +803,7 @@ export interface PublicProgressDto {
   badgeTotal: number;
 }
 
-export type ChestSource = "LEVEL" | "STREAK" | "SESSION" | "FLASHCARD";
+export type ChestSource = "LEVEL" | "STREAK" | "SESSION" | "FLASHCARD" | "WELCOME";
 
 export type ChestTier = "WOOD" | "SILVER" | "GOLD" | "DIAMOND";
 

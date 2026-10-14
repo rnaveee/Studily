@@ -15,6 +15,7 @@ public enum ChestTier {
             case LEVEL -> GOLD;
             case STREAK -> SILVER;
             case SESSION, FLASHCARD -> WOOD;
+            case WELCOME -> DIAMOND;
         };
     }
 }

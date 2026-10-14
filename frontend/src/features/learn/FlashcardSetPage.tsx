@@ -183,6 +183,7 @@ export default function FlashcardSetPage() {
                 <div className="flex items-center justify-between gap-2">
                   <button
                     type="button"
+                    data-tour="quizlet-import"
                     onClick={() => requireAuth(() => setImporting(true))}
                     className="btn btn-ghost"
                   >

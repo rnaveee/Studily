@@ -79,7 +79,7 @@ export default function FriendsPage() {
   return (
     <div className="space-y-6 stagger-children">
       {user && (
-        <div className="card flex items-center gap-2.5 p-2.5">
+        <div className="card flex items-center gap-2.5 p-2.5" data-tour="friend-link">
           <button onClick={copyInviteLink} className="btn btn-soft shrink-0">
             {copied ? <Check size={13} /> : <Link2 size={13} />}
             {copied ? "Copied" : "Copy friend link"}
@@ -97,6 +97,7 @@ export default function FriendsPage() {
 
       <Link
         to="/friends/schoolmates"
+        data-tour="schoolmates"
         className="card flex items-center gap-3 p-4 transition-colors hover:bg-surface-hi"
       >
         <span

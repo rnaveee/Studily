@@ -20,6 +20,8 @@ import Avatar from "./Avatar";
 import Banners from "./Banners";
 import ProgressWhatsNew from "../features/progress/ProgressWhatsNew";
 import ProgressHost from "../features/progress/ProgressHost";
+import WelcomeTour from "../features/welcome/WelcomeTour";
+import { useWelcomeTourStep } from "../lib/welcomeTour";
 import CoinBalance from "../features/progress/CoinBalance";
 import MobileFooter from "./MobileFooter";
 import ViewportDebug from "./ViewportDebug";
@@ -66,6 +68,11 @@ export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const tourStep = useWelcomeTourStep();
+
+  useEffect(() => {
+    if (user && user.welcomed === false && tourStep === null) navigate("/welcome", { replace: true });
+  }, [user, tourStep, navigate]);
   const typing = useTypingInField();
   useKeyboardViewport();
   const outletRef = useRef<HTMLDivElement>(null);
@@ -157,6 +164,7 @@ export default function Layout() {
               key={to}
               to={to}
               end={end}
+              data-tour={to === "/learn" ? "nav-study" : undefined}
               className={({ isActive }) =>
                 [
                   "relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors duration-150 select-none",
@@ -313,6 +321,7 @@ export default function Layout() {
       </div>
       {debug && <ViewportDebug />}
       <ProgressHost />
+      <WelcomeTour />
     </div>
   );
 }

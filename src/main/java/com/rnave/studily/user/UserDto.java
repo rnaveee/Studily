@@ -16,12 +16,13 @@ public record UserDto(
         FlairRef flair,
         boolean emailVerified,
         boolean admin,
+        boolean welcomed,
         Instant createdAt) {
 
     public static UserDto from(User u, boolean admin, Flairs flairs) {
         return new UserDto(
                 u.getId(), u.getEmail(), u.getUsername(), u.getName(), u.getSchool(),
                 u.getSchoolId(), u.getYear(), u.getMajor(), u.getBio(), AvatarUrls.of(u), flairs.refOf(u),
-                u.isEmailVerified(), admin, u.getCreatedAt());
+                u.isEmailVerified(), admin, u.getWelcomedAt() != null, u.getCreatedAt());
     }
 }

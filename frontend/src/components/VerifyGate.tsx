@@ -2,11 +2,12 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { MailWarning } from "lucide-react";
 import { useAuth } from "../lib/auth";
+import { welcomeTour } from "../lib/welcomeTour";
 
 export default function VerifyGate({ children }: { children: ReactNode }) {
   const { user } = useAuth();
 
-  if (!user || user.emailVerified) return <>{children}</>;
+  if (!user || user.emailVerified || welcomeTour.active()) return <>{children}</>;
 
   return (
     <div className="stagger-children">

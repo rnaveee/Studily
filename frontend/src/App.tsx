@@ -16,6 +16,7 @@ import VerifyEmailPage from "./features/auth/VerifyEmailPage";
 import VerifyGate from "./components/VerifyGate";
 import HomeRoute from "./features/landing/HomeRoute";
 import OnboardingPage from "./features/onboarding/OnboardingPage";
+import WelcomePage from "./features/welcome/WelcomePage";
 import ProfileSetupPage from "./features/onboarding/ProfileSetupPage";
 import DashboardPage from "./features/dashboard/DashboardPage";
 import CalendarPage from "./features/calendar/CalendarPage";
@@ -55,6 +56,14 @@ export default function App() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route
+        path="/welcome"
+        element={
+          <ProtectedRoute>
+            <WelcomePage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         element={
           <ProtectedRoute>

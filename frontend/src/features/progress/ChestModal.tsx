@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, Coins, Gift, Sparkles } from "lucide-react";
 import Avatar from "../../components/Avatar";
@@ -6,6 +6,7 @@ import Modal, { useModalClose } from "../../components/Modal";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { flairRef, RARITY_COLOR, RARITY_LABEL } from "../../lib/flairs";
+import { markAnnounced } from "../../lib/chestAnnounce";
 import { applyDelta } from "../../lib/progressDelta";
 import BadgeArt from "./BadgeArt";
 import { CHEST_SOURCE_LABEL, CHEST_TIER_COLOR, CHEST_TIER_LABEL } from "./badges";
@@ -57,6 +58,10 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
     },
   });
 
+  useEffect(() => {
+    if (chest) markAnnounced([chest.id]);
+  }, [chest]);
+
   function next() {
     setOpened(null);
     setIndex((i) => i + 1);
@@ -91,12 +96,30 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
             style={{ border: `3px solid color-mix(in srgb, ${tierColor} 60%, transparent)` }}
           />
         )}
-        <ChestIcon
-          key={opened ? "open" : "closed"}
-          tier={chest.tier}
-          opened={!!opened}
-          className={opened ? "chest-reveal" : shaking ? "chest-shake" : ""}
-        />
+        {!opened && !shaking && (
+          <span key={`burst-${chest.id}`} aria-hidden className="pointer-events-none absolute inset-0">
+            {Array.from({ length: 10 }, (_, i) => (
+              <span
+                key={i}
+                className="chest-burst absolute left-1/2 top-1/2 h-2 w-2 rounded-full"
+                style={
+                  {
+                    background: tierColor,
+                    "--burst-angle": `${i * 36}deg`,
+                    animationDelay: `${0.35 + (i % 3) * 0.04}s`,
+                  } as React.CSSProperties
+                }
+              />
+            ))}
+          </span>
+        )}
+        <span
+          key={opened ? `open-${chest.id}` : `closed-${chest.id}`}
+          className={`relative inline-flex overflow-hidden rounded-[28px] ${opened ? "chest-reveal" : shaking ? "chest-shake" : "chest-drop"}`}
+        >
+          <ChestIcon tier={chest.tier} opened={!!opened} />
+          {!opened && <span aria-hidden className="chest-shine pointer-events-none absolute inset-0" />}
+        </span>
       </button>
 
       <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: tierColor }}>
@@ -109,7 +132,7 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
             : "Here's what you got"
           : shaking
             ? "Opening…"
-            : `You found ${chest.tier === "WOOD" ? "a wooden" : `a ${chest.tier.toLowerCase()}`} chest!`}
+            : `You just got a ${CHEST_TIER_LABEL[chest.tier]}!`}
       </h2>
       {!opened && !shaking && <p className="mt-1 text-[13px] text-fg-3">Tap it to see what's inside.</p>}
 
@@ -156,7 +179,7 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
         ) : (
           <>
             <button onClick={close} disabled={shaking} className="btn btn-ghost btn-lg flex-1" style={{ minHeight: 44 }}>
-              Later
+              Open later
             </button>
             <button
               onClick={() => open.mutate(chest.id)}
@@ -166,7 +189,7 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
               autoFocus
             >
               <Gift size={15} />
-              Open
+              Open now
             </button>
           </>
         )}

@@ -52,6 +52,7 @@ export default function MobileFooter({
             key={to}
             to={to}
             end={end}
+            data-tour={to === "/learn" ? "nav-study" : undefined}
             className={({ isActive }) =>
               [
                 "press flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors",

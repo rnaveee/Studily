@@ -12,11 +12,13 @@ export default function ProfileForm({
   savingLabel,
   onSaved,
   secondaryAction,
+  highlightSchool = false,
 }: {
   submitLabel: string;
   savingLabel: string;
   onSaved: () => void;
   secondaryAction?: ReactNode;
+  highlightSchool?: boolean;
 }) {
   const { user, setUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -129,9 +131,16 @@ export default function ProfileForm({
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div>
+          <div
+            className={highlightSchool ? "school-highlight col-span-2 rounded-xl p-3" : undefined}
+          >
             <label className="field-label">School</label>
             <input className="input" placeholder="e.g. Simon Fraser" value={form.school} onChange={set("school")} />
+            {highlightSchool && (
+              <p className="mt-1.5 text-[12px] font-medium text-accent">
+                🎓 Add your school to find classmates who are already on Studily.
+              </p>
+            )}
           </div>
           <div>
             <label className="field-label">School ID</label>

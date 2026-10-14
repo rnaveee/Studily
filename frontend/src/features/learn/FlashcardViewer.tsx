@@ -53,7 +53,7 @@ export default function FlashcardViewer({ cards, color, onDelete, onEdit }: Prop
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-tour="flashcard-viewer">
       <button
         onClick={() => setFlipped((f) => !f)}
         className="card flex min-h-48 w-full items-center justify-center p-8 text-center transition-colors hover:bg-surface-hi"

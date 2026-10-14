@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { onProgressMoment, type ProgressMoment } from "../../lib/progressDelta";
+import { api } from "../../lib/api";
+import { wasAnnounced } from "../../lib/chestAnnounce";
+import { offerChests, onProgressMoment, type ProgressMoment } from "../../lib/progressDelta";
+import { useWelcomeTourStep } from "../../lib/welcomeTour";
+import { useProgressEnabled } from "./useProgress";
 import ChestModal from "./ChestModal";
 import LevelUpModal from "./LevelUpModal";
+import type { ChestDto } from "../../types";
 
 interface Queued {
   id: number;
@@ -33,6 +38,19 @@ export default function ProgressHost() {
       }),
     [],
   );
+
+  const enabled = useProgressEnabled();
+  const touring = useWelcomeTourStep() !== null;
+  const checked = useRef(false);
+
+  useEffect(() => {
+    if (!enabled || touring || checked.current) return;
+    checked.current = true;
+    api
+      .get<ChestDto[]>("/chests")
+      .then((chests) => offerChests(chests.filter((c) => c.source === "WELCOME" && !wasAnnounced(c.id))))
+      .catch(() => {});
+  }, [enabled, touring]);
 
   const current = queue[0];
   if (!current) return null;

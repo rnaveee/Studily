@@ -815,6 +815,39 @@ textarea.input { resize: vertical; }
   80%      { transform: rotate(3deg) scale(1.04); }
 }
 .chest-shake  { animation: chest-shake 0.5s ease-in-out infinite; }
+@keyframes chest-drop {
+  0%   { transform: translateY(-46px) scale(0.6); opacity: 0; }
+  55%  { transform: translateY(6px) scale(1.06); opacity: 1; }
+  75%  { transform: translateY(-3px) scale(0.98); }
+  100% { transform: translateY(0) scale(1); }
+}
+.chest-drop { animation: chest-drop 0.7s cubic-bezier(0.34, 1.32, 0.64, 1) both; }
+@keyframes chest-shine {
+  0%, 35% { transform: translateX(-120%) skewX(-18deg); }
+  70%, 100% { transform: translateX(160%) skewX(-18deg); }
+}
+.chest-shine {
+  background: linear-gradient(90deg, transparent 0%, rgb(255 255 255 / 0.55) 50%, transparent 100%);
+  width: 45%;
+  animation: chest-shine 2.6s ease-in-out 0.6s infinite;
+}
+@keyframes chest-burst {
+  0%   { transform: translate(-50%, -50%) rotate(var(--burst-angle)) translateY(0) scale(1); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translate(-50%, -50%) rotate(var(--burst-angle)) translateY(-78px) scale(0.2); opacity: 0; }
+}
+.chest-burst { opacity: 0; animation: chest-burst 0.8s ease-out both; }
+.school-highlight {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent),
+              0 0 22px -4px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+@keyframes tour-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--accent), 0 0 0 6px color-mix(in srgb, var(--accent) 30%, transparent); }
+  50%      { box-shadow: 0 0 0 2px var(--accent), 0 0 0 12px color-mix(in srgb, var(--accent) 0%, transparent); }
+}
+.tour-ring { animation: tour-pulse 1.8s ease-in-out infinite; }
+.tour-card { animation: level-pop 0.35s cubic-bezier(0.34, 1.32, 0.64, 1) both; }
 .chest-reveal { animation: level-pop 0.5s cubic-bezier(0.34, 1.32, 0.64, 1) both; }
 
 @keyframes checkin-pulse {
@@ -981,6 +1014,11 @@ button.streak-tint:hover {
   .chest-reveal { animation: none; opacity: 1; transform: none; }
   .level-glow { animation: none; opacity: 0; }
   .chest-shake { animation: none; }
+  .chest-drop,
+  .tour-card { animation: none; }
+  .chest-shine,
+  .chest-burst { animation: none; display: none; }
+  .tour-ring { animation: none; box-shadow: 0 0 0 2px var(--accent); }
   .checkin-pulse { animation: none; }
   .sf-layer,
   .sf-lick,

@@ -72,6 +72,8 @@ public class User {
 
     private Instant lastActiveAt;
 
+    private Instant welcomedAt;
+
     @Column(name = "equipped_flair_code", length = 48)
     private String equippedFlairCode;
 }
