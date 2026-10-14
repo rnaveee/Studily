@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Chest</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: {{px}}; height: {{px}}; display: block">
+<svg class="{{svgClass}}" viewBox="0 0 512 512" width="100%" height="100%" role="img" aria-label="{{label}}" style="display: block; overflow: visible">
+<defs>
+<linearGradient id="gB{{uid}}" x1="0" y1="0" x2="1" y2="0.3"><stop offset="0" stop-color="{{c.L}}"></stop><stop offset="0.5" stop-color="{{c.B}}"></stop><stop offset="1" stop-color="{{c.D}}"></stop></linearGradient>
+<linearGradient id="gL{{uid}}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="{{c.L}}"></stop><stop offset="0.5" stop-color="{{c.B}}"></stop><stop offset="1" stop-color="{{c.D}}"></stop></linearGradient>
+<linearGradient id="gI{{uid}}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="{{c.B}}"></stop><stop offset="1" stop-color="{{c.X}}"></stop></linearGradient>
+<linearGradient id="gT{{uid}}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="{{c.tL}}"></stop><stop offset="0.5" stop-color="{{c.tB}}"></stop><stop offset="1" stop-color="{{c.tD}}"></stop></linearGradient>
+<linearGradient id="gR{{uid}}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF5A6E"></stop><stop offset="0.17" stop-color="#FF9F43"></stop><stop offset="0.33" stop-color="#FFE066"></stop><stop offset="0.5" stop-color="#4CD964"></stop><stop offset="0.67" stop-color="#4CB8F0"></stop><stop offset="0.83" stop-color="#8E7CFF"></stop><stop offset="1" stop-color="#E05CFF"></stop></linearGradient>
+<radialGradient id="gG{{uid}}" gradientUnits="userSpaceOnUse" cx="256" cy="230" r="270"><stop offset="0" stop-color="{{c.glow}}" stop-opacity="0.95"></stop><stop offset="0.45" stop-color="{{c.glow}}" stop-opacity="0.45"></stop><stop offset="1" stop-color="{{c.glow}}" stop-opacity="0"></stop></radialGradient>
+<clipPath id="cB{{uid}}"><path d="M84 250 L428 250 L428 428 Q428 448 408 448 L104 448 Q84 448 84 428 Z"></path></clipPath>
+<clipPath id="cL{{uid}}"><path d="M74 262 L74 196 C74 128 150 94 256 94 C362 94 438 128 438 196 L438 262 Z"></path></clipPath>
+<clipPath id="cO{{uid}}"><path d="M102 218 L410 218 L446 112 C440 76 360 50 256 50 C152 50 72 76 66 112 Z"></path></clipPath>
+</defs>
+
+<g class="{{rootClass}}">
+<ellipse cx="256" cy="460" rx="178" ry="20" fill="#1d1a33" opacity="0.18"></ellipse>
+
+<g display="{{openDisp}}">
+<path class="ch-rays" fill="url(#gG{{uid}})" d="M256 230 L219 -67 L292 -67 Z M256 230 L401 -32 L460 10 Z M256 230 L527 103 L550 172 Z M256 230 L550 287 L527 356 Z M256 230 L460 449 L401 492 Z M256 230 L292 527 L219 527 Z M256 230 L110 492 L51 449 Z M256 230 L-15 356 L-38 287 Z M256 230 L-38 172 L-15 103 Z M256 230 L51 10 L110 -32 Z"></path>
+<circle class="ch-pulse" cx="256" cy="200" r="190" fill="url(#gG{{uid}})"></circle>
+<circle class="ch-burst" cx="256" cy="230" r="150" fill="none" stroke="{{c.glow}}" stroke-width="14"></circle>
+
+<g class="ch-lid">
+<path d="M102 218 L410 218 L446 112 C440 76 360 50 256 50 C152 50 72 76 66 112 Z" fill="url(#gI{{uid}})"></path>
+<g clip-path="url(#cO{{uid}})">
+<path d="M120 208 L392 208 L422 122 C412 98 340 80 256 80 C172 80 100 98 90 122 Z" fill="{{c.in}}" opacity="0.35"></path>
+<path d="M136 40 L176 40 L176 218 L136 218 Z" fill="url(#gT{{uid}})" stroke="#1d1a33" stroke-width="8" stroke-linejoin="round"></path>
+<path d="M336 40 L376 40 L376 218 L336 218 Z" fill="url(#gT{{uid}})" stroke="#1d1a33" stroke-width="8" stroke-linejoin="round"></path>
+</g>
+<path d="M102 218 L410 218 L446 112 C440 76 360 50 256 50 C152 50 72 76 66 112 Z" fill="none" stroke="#1d1a33" stroke-width="10" stroke-linejoin="round"></path>
+<path d="M94 198 L418 198 L412 218 L100 218 Z" fill="url(#gT{{uid}})" stroke="#1d1a33" stroke-width="10" stroke-linejoin="round"></path>
+</g>
+
+<path d="M84 252 L428 252 L410 214 L102 214 Z" fill="{{c.in}}" stroke="#1d1a33" stroke-width="10" stroke-linejoin="round"></path>
+
+<g class="ch-float f1"><g transform="translate(196 214)">
+<circle r="24" fill="#F7C531" stroke="#1d1a33" stroke-width="7"></circle>
+<circle r="12" fill="none" stroke="#D49A10" stroke-width="5"></circle>
+<path d="M-13 -8 C-9 -14 -3 -17 4 -17" fill="none" stroke="#FFF7C9" stroke-width="5" stroke-linecap="round"></path>
+</g></g>
+<g class="ch-float f2"><g transform="translate(306 206)">
+<circle r="22" fill="#F7C531" stroke="#1d1a33" stroke-width="7"></circle>
+<circle r="11" fill="none" stroke="#D49A10" stroke-width="5"></circle>
+<path d="M-12 -7 C-8 -13 -3 -15 3 -15" fill="none" stroke="#FFF7C9" stroke-width="5" stroke-linecap="round"></path>
+</g></g>
+<g class="ch-float f3"><g transform="translate(252 200)">
+<path d="M0 -24 L18 -4 L0 24 L-18 -4 Z" fill="{{gemFill}}" stroke="#1d1a33" stroke-width="6" stroke-linejoin="round"></path>
+<path d="M-18 -4 L18 -4 M0 -24 L-6 -4 L0 24 M0 -24 L6 -4" fill="none" stroke="#1d1a33" stroke-width="3" stroke-linejoin="round" opacity="0.45"></path>
+<path d="M-8 -12 L-2 -18" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"></path>
+</g></g>
+<g class="ch-float f4"><g transform="translate(150 196)">
+<circle r="16" fill="#F7C531" stroke="#1d1a33" stroke-width="6"></circle>
+<circle r="7" fill="none" stroke="#D49A10" stroke-width="4"></circle>
+</g></g>
+
+<ellipse class="ch-pulse" cx="256" cy="240" rx="128" ry="13" fill="{{c.glow}}"></ellipse>
+</g>
+
+<path d="M84 250 L428 250 L428 428 Q428 448 408 448 L104 448 Q84 448 84 428 Z" fill="url(#gB{{uid}})"></path>
+<g clip-path="url(#cB{{uid}})">
+<g display="{{t.wood}}">
+<path d="M84 316 L428 316 M84 382 L428 382" stroke="{{c.X}}" stroke-width="6" opacity="0.6"></path>
+<path d="M190 290 C220 280 250 298 290 286 M196 352 C236 340 268 360 318 346 M186 418 C222 406 262 424 302 412" fill="none" stroke="{{c.D}}" stroke-width="5" stroke-linecap="round" opacity="0.55"></path>
+<ellipse cx="226" cy="350" rx="11" ry="6" fill="none" stroke="{{c.X}}" stroke-width="4" opacity="0.5"></ellipse>
+</g>
+<g display="{{t.metal}}">
+<path d="M190 448 L262 250 L300 250 L228 448 Z" fill="{{c.H}}" opacity="0.5"></path>
+<path d="M250 448 L322 250 L338 250 L266 448 Z" fill="{{c.H}}" opacity="0.35"></path>
+</g>
+<g display="{{t.silver}}">
+<path d="M84 338 L428 338 L428 362 L84 362 Z" fill="{{c.D}}" stroke="#1d1a33" stroke-width="6"></path>
+<circle cx="112" cy="350" r="6" fill="{{c.H}}" stroke="#1d1a33" stroke-width="3"></circle>
+<circle cx="222" cy="350" r="6" fill="{{c.H}}" stroke="#1d1a33" stroke-width="3"></circle>
+<circle cx="290" cy="350" r="6" fill="{{c.H}}" stroke="#1d1a33" stroke-width="3"></circle>
+<circle cx="400" cy="350" r="6" fill="{{c.H}}" stroke="#1d1a33" stroke-width="3"></circle>
+</g>
+<g display="{{t.gold}}">
+<path d="M256 404 C236 378 200 386 206 412 C210 430 234 428 232 412 M256 404 C276 378 312 386 306 412 C302 430 278 428 280 412" fill="none" stroke="{{c.X}}" stroke-width="6" stroke-linecap="round" opacity="0.6"></path>
+<circle cx="256" cy="404" r="7" fill="{{c.H}}" stroke="#1d1a33" stroke-width="4"></circle>
+</g>
+<g display="{{t.diamond}}">
+<path d="M84 250 L170 349 L256 250 Z" fill="#FFFFFF" opacity="0.4"></path>
+<path d="M342 349 L428 250 L428 448 Z" fill="{{c.D}}" opacity="0.45"></path>
+<path d="M256 448 L342 349 L428 448 Z" fill="#FFFFFF" opacity="0.25"></path>
+<path d="M84 250 L170 349 L84 448 M170 349 L256 250 M170 349 L256 448 M256 250 L342 349 L256 448 M342 349 L428 250 M342 349 L428 448" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round" opacity="0.75"></path>
+</g>
+<path d="M84 420 L428 420 L428 448 L84 448 Z" fill="{{c.X}}"></path>
+<path d="M84 420 L428 420" stroke="#1d1a33" stroke-width="6"></path>
+</g>
+<path d="M102 292 L102 400" stroke="{{c.H}}" stroke-width="10" stroke-linecap="round" opacity="0.65"></path>
+<path d="M84 250 L428 250 L428 428 Q428 448 408 448 L104 448 Q84 448 84 428 Z" fill="none" stroke="#1d1a33" stroke-width="10" stroke-linejoin="round"></path>
+
+<path d="M136 250 L176 250 L176 448 L136 448 Z" fill="url(#gT{{uid}})" stroke="#1d1a33" stroke-width="8" stroke-linejoin="round"></path>
+<path d="M336 250 L376 250 L376 448 L336 448 Z" fill="url(#gT{{uid}})" stroke="#1d1a33" stroke-width="8" stroke-linejoin="round"></path>
+<path d="M146 290 L146 404 M346 290 L346 404" stroke="{{c.tH}}" stroke-width="5" stroke-linecap="round" opacity="0.7"></path>
+<circle cx="156" cy="420" r="7" fill="{{c.tH}}" stroke="#1d1a33" stroke-width="4"></circle>
+<circle cx="356" cy="420" r="7" fill="{{c.tH}}" stroke="#1d1a33" stroke-width="4"></circle>
+<path d="M84 398 L122 398 L122 448 L104 448 Q84 448 84 428 Z" fill="url(#gT{{uid}})" stroke="#1d1a33" stroke-width="8" stroke-linejoin="round"></path>
+<path d="M428 398 L390 398 L390 448 L408 448 Q428 448 428 428 Z" fill="url(#gT{{uid}})" stroke="#1d1a33" stroke-width="8" stroke-linejoin="round"></path>
+<circle cx="103" cy="422" r="6" fill="{{c.tH}}" stroke="#1d1a33" stroke-width="4"></circle>
+<circle cx="409" cy="422" r="6" fill="{{c.tH}}" stroke="#1d1a33" stroke-width="4"></circle>
+
+<g display="{{openDisp}}">
+<path d="M84 250 L428 250 L428 272 L84 272 Z" fill="url(#gT{{uid}})" stroke="#1d1a33" stroke-width="9" stroke-linejoin="round"></path>
+<path d="M232 262 L280 262 L280 296 C280 308 268 316 256 318 C244 316 232 308 232 296 Z" fill="url(#gT{{uid}})" stroke="#1d1a33" stroke-width="8" stroke-linejoin="round"></path>
+<circle cx="256" cy="290" r="8" fill="{{gemFill}}" stroke="#1d1a33" stroke-width="5"></circle>
+</g>
+
+<g display="{{closedDisp}}">
+<path d="M74 262 L74 196 C74 128 150 94 256 94 C362 94 438 128 438 196 L438 262 Z" fill="url(#gL{{uid}})"></path>
+<g clip-path="url(#cL{{uid}})">
+<g display="{{t.wood}}">
+<path d="M74 206 C110 168 180 152 256 152 C332 152 402 168 438 206" fill="none" stroke="{{c.X}}" stroke-width="6" opacity="0.6"></path>
+<path d="M196 186 C226 176 260 194 298 182 M204 124 C232 116 262 128 292 120" fill="none" stroke="{{c.D}}" stroke-width="5" stroke-linecap="round" opacity="0.55"></path>
+</g>
+<g display="{{t.metal}}">
+<path d="M196 262 L248 94 L284 94 L232 262 Z" fill="{{c.H}}" opacity="0.5"></path>
+<path d="M250 262 L302 94 L316 94 L264 262 Z" fill="{{c.H}}" opacity="0.35"></path>
+</g>
+<g display="{{t.gold}}">
+<path d="M256 186 C240 164 210 170 214 192 C217 206 234 204 233 194 M256 186 C272 164 302 170 298 192 C295 206 278 204 279 194" fill="none" stroke="{{c.X}}" stroke-width="6" stroke-linecap="round" opacity="0.6"></path>
+</g>
+<g display="{{t.diamond}}">
+<path d="M140 110 L206 262 L74 262 Z" fill="#FFFFFF" opacity="0.35"></path>
+<path d="M338 262 L404 118 L438 200 L438 262 Z" fill="{{c.D}}" opacity="0.45"></path>
+<path d="M74 262 L140 110 L206 262 L272 96 L338 262 L404 118 M140 110 L272 96" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linejoin="round" opacity="0.75"></path>
+</g>
+<path d="M136 80 L176 80 L176 262 L136 262 Z" fill="url(#gT{{uid}})" stroke="#1d1a33" stroke-width="8" stroke-linejoin="round"></path>
+<path d="M336 80 L376 80 L376 262 L336 262 Z" fill="url(#gT{{uid}})" stroke="#1d1a33" stroke-width="8" stroke-linejoin="round"></path>
+<path class="ch-glint" d="M60 70 L100 70 L56 280 L16 280 Z" fill="#FFFFFF" opacity="0.55"></path>
+</g>
+<path d="M96 216 C96 180 108 156 124 142" fill="none" stroke="{{c.H}}" stroke-width="12" stroke-linecap="round" opacity="0.8"></path>
+<path d="M196 116 C212 110 226 107 240 106" fill="none" stroke="{{c.H}}" stroke-width="10" stroke-linecap="round" opacity="0.7"></path>
+<path d="M74 262 L74 196 C74 128 150 94 256 94 C362 94 438 128 438 196 L438 262 Z" fill="none" stroke="#1d1a33" stroke-width="10" stroke-linejoin="round"></path>
+<path d="M70 232 L442 232 L442 264 L70 264 Z" fill="url(#gT{{uid}})" stroke="#1d1a33" stroke-width="10" stroke-linejoin="round"></path>
+<path d="M82 242 L230 242" stroke="{{c.tH}}" stroke-width="5" stroke-linecap="round" opacity="0.7"></path>
+<circle cx="96" cy="248" r="6" fill="{{c.tH}}" stroke="#1d1a33" stroke-width="4"></circle>
+<circle cx="416" cy="248" r="6" fill="{{c.tH}}" stroke="#1d1a33" stroke-width="4"></circle>
+
+<path d="M220 214 L292 214 L292 280 C292 308 276 324 256 334 C236 324 220 308 220 280 Z" fill="url(#gT{{uid}})" stroke="#1d1a33" stroke-width="10" stroke-linejoin="round"></path>
+<path d="M232 228 L232 278" stroke="{{c.tH}}" stroke-width="5" stroke-linecap="round" opacity="0.8"></path>
+<g display="{{keyDisp}}">
+<circle cx="256" cy="262" r="12" fill="#1d1a33"></circle>
+<path d="M249 268 L263 268 L268 300 L244 300 Z" fill="#1d1a33"></path>
+</g>
+<g display="{{gemDisp}}">
+<path d="M256 236 L282 266 L256 310 L230 266 Z" fill="{{gemFill}}" stroke="#1d1a33" stroke-width="7" stroke-linejoin="round"></path>
+<path d="M230 266 L282 266 M256 236 L248 266 L256 310 M256 236 L264 266" fill="none" stroke="#1d1a33" stroke-width="3" stroke-linejoin="round" opacity="0.4"></path>
+<path d="M244 258 L252 248" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round"></path>
+</g>
+</g>
+
+<g display="{{sp1}}" transform="translate(452 128)"><path class="ch-tw" d="M0 -24 C2 -8 8 -2 24 0 C8 2 2 8 0 24 C-2 8 -8 2 -24 0 C-8 -2 -2 -8 0 -24 Z" fill="#FFFFFF" stroke="#1d1a33" stroke-width="4" stroke-linejoin="round"></path></g>
+<g display="{{sp2}}" transform="translate(58 188) scale(0.75)"><path class="ch-tw d1" d="M0 -24 C2 -8 8 -2 24 0 C8 2 2 8 0 24 C-2 8 -8 2 -24 0 C-8 -2 -2 -8 0 -24 Z" fill="#FFFFFF" stroke="#1d1a33" stroke-width="5" stroke-linejoin="round"></path></g>
+<g display="{{sp3}}" transform="translate(470 336) scale(0.6)"><path class="ch-tw d2" d="M0 -24 C2 -8 8 -2 24 0 C8 2 2 8 0 24 C-2 8 -8 2 -24 0 C-8 -2 -2 -8 0 -24 Z" fill="#FFFFFF" stroke="#1d1a33" stroke-width="6" stroke-linejoin="round"></path></g>
+<g display="{{sp4}}" transform="translate(44 362) scale(0.55)"><path class="ch-tw d3" d="M0 -24 C2 -8 8 -2 24 0 C8 2 2 8 0 24 C-2 8 -8 2 -24 0 C-8 -2 -2 -8 0 -24 Z" fill="#FFFFFF" stroke="#1d1a33" stroke-width="7" stroke-linejoin="round"></path></g>
+</g>
+</svg>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"tier":{"editor":"enum","options":["WOOD","SILVER","GOLD","DIAMOND"],"default":"GOLD"},"state":{"editor":"enum","options":["closed","shaking","open"],"default":"closed"},"size":{"editor":"int","min":40,"max":1024,"default":512},"animate":{"editor":"boolean","default":true},"$preview":{"width":512,"height":512}}'>
+const CHEST_TIERS = {
+  WOOD: { name: 'Wooden chest', L: '#C99A66', B: '#A26F40', D: '#7A4F2A', X: '#573619', H: '#E2C29A', tL: '#A8A4BE', tB: '#77738F', tD: '#504C68', tH: '#D6D3E6', in: '#2E1C0C', glow: '#FFD27A', gem: '#4CB8F0', sparkles: 0 },
+  SILVER: { name: 'Silver chest', L: '#F4F7FB', B: '#CBD3DE', D: '#98A3B4', X: '#677285', H: '#FFFFFF', tL: '#8FB0D6', tB: '#5D7FA8', tD: '#3E5C82', tH: '#C7DAF0', in: '#232A3A', glow: '#CDEBFF', gem: '#4CB8F0', sparkles: 1 },
+  GOLD: { name: 'Gold chest', L: '#FFE57F', B: '#F7C531', D: '#D49A10', X: '#9C6A04', H: '#FFF7C9', tL: '#9C8CFF', tB: '#6F5CE0', tD: '#4E3DB8', tH: '#C9C0FF', in: '#3A2600', glow: '#FFE27A', gem: '#E22B4C', sparkles: 3 },
+  DIAMOND: { name: 'Diamond chest', L: '#E6FBFF', B: '#A3E8FF', D: '#5EC6EC', X: '#2B8FC2', H: '#FFFFFF', tL: '#FFFFFF', tB: '#DCE6F2', tD: '#AFC0D6', tH: '#FFFFFF', in: '#0F4F73', glow: '#9FF0FF', gem: null, sparkles: 4 }
+};
+class Component extends DCLogic {
+  renderVals() {
+    if (!this._uid) this._uid = 'c' + Math.random().toString(36).slice(2, 9);
+    const uid = this._uid;
+    const tier = CHEST_TIERS[this.props.tier] ? this.props.tier : 'GOLD';
+    const c = CHEST_TIERS[tier];
+    const state = this.props.state === 'open' || this.props.state === 'shaking' ? this.props.state : 'closed';
+    const animate = this.props.animate !== false && this.props.animate !== 'false';
+    const size = Number(this.props.size) || 512;
+    const on = (b) => (b ? 'inline' : 'none');
+    const open = state === 'open';
+    return {
+      uid,
+      c,
+      px: size + 'px',
+      label: c.name + (open ? ', open' : ', closed'),
+      svgClass: 'ch-svg' + (animate ? '' : ' ch-still'),
+      rootClass: state === 'shaking' ? 'ch-shake' : open ? 'ch-pop' : 'ch-bob',
+      openDisp: on(open),
+      closedDisp: on(!open),
+      keyDisp: on(tier === 'WOOD'),
+      gemDisp: on(tier !== 'WOOD'),
+      gemFill: c.gem || 'url(#gR' + uid + ')',
+      t: {
+        wood: on(tier === 'WOOD'),
+        metal: on(tier !== 'WOOD' && tier !== 'DIAMOND'),
+        silver: on(tier === 'SILVER'),
+        gold: on(tier === 'GOLD'),
+        diamond: on(tier === 'DIAMOND')
+      },
+      sp1: on(c.sparkles >= 1),
+      sp2: on(c.sparkles >= 2),
+      sp3: on(c.sparkles >= 3),
+      sp4: on(c.sparkles >= 4)
+    };
+  }
+}
+</script>
+</body>
+</html>

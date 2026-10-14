@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Open chests</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;900&amp;display=swap">
+<style>
+body{margin:0}
+@keyframes ch-bob { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
+@keyframes ch-shake { 0%, 100% { transform: rotate(0deg) } 15% { transform: rotate(-6deg) translateY(-4px) } 30% { transform: rotate(6deg) } 45% { transform: rotate(-5deg) translateY(-6px) } 60% { transform: rotate(5deg) } 75% { transform: rotate(-3deg) } 90% { transform: rotate(2deg) } }
+@keyframes ch-pop { 0% { transform: scale(0.86) } 55% { transform: scale(1.07) } 100% { transform: scale(1) } }
+@keyframes ch-glint { 0%, 50% { transform: translateX(-120px) } 85%, 100% { transform: translateX(560px) } }
+@keyframes ch-tw { 0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0.35 } 50% { transform: scale(1) rotate(45deg); opacity: 1 } }
+@keyframes ch-rays { to { transform: rotate(360deg) } }
+@keyframes ch-pulse { 0%, 100% { opacity: 0.65 } 50% { opacity: 1 } }
+@keyframes ch-lid { 0% { transform: scaleY(0.15) translateY(60px) } 55% { transform: scaleY(1.12) } 78% { transform: scaleY(0.95) } 100% { transform: scaleY(1) } }
+@keyframes ch-float { 0% { transform: translateY(30px) scale(0.5); opacity: 0 } 20% { opacity: 1 } 75% { opacity: 1 } 100% { transform: translateY(-120px) scale(1); opacity: 0 } }
+@keyframes ch-burst { 0% { transform: scale(0.2); opacity: 0.9 } 100% { transform: scale(1.7); opacity: 0 } }
+.ch-bob { animation: ch-bob 2.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100% }
+.ch-shake { animation: ch-shake 0.65s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100% }
+.ch-pop { animation: ch-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both; transform-box: fill-box; transform-origin: 50% 100% }
+.ch-glint { animation: ch-glint 3.8s ease-in-out infinite }
+.ch-tw { animation: ch-tw 2s ease-in-out infinite; transform-box: fill-box; transform-origin: center }
+.ch-tw.d1 { animation-delay: 0.5s }
+.ch-tw.d2 { animation-delay: 1s }
+.ch-tw.d3 { animation-delay: 1.5s }
+.ch-rays { animation: ch-rays 16s linear infinite; transform-box: view-box; transform-origin: 256px 230px }
+.ch-pulse { animation: ch-pulse 1.8s ease-in-out infinite }
+.ch-lid { animation: ch-lid 0.55s cubic-bezier(0.2, 1.3, 0.4, 1) both; transform-box: view-box; transform-origin: 256px 218px }
+.ch-float { animation: ch-float 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center }
+.ch-float.f2 { animation-delay: 0.6s }
+.ch-float.f3 { animation-delay: 1.2s }
+.ch-float.f4 { animation-delay: 1.8s }
+.ch-burst { animation: ch-burst 0.7s ease-out both; transform-box: view-box; transform-origin: 256px 230px }
+.ch-still * { animation: none !important }
+@media (prefers-reduced-motion: reduce) { .ch-svg * { animation: none !important } }
+</style>
+</helmet>
+<div style="width: 1440px; height: 520px; box-sizing: border-box; padding: 56px 64px 48px; background: {{bg}}; font-family: Montserrat, sans-serif; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; align-items: end">
+<sc-for list="{{tiers}}" as="item" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 10px">
+<dc-import name="Chest" tier="{{item.tier}}" state="open" size="300" animate="{{animate}}" hint-size="300px,300px"></dc-import>
+<div style="font-weight: 900; font-size: 26px; color: {{fg}}; margin-top: 8px">{{item.name}}</div>
+<div style="font-weight: 600; font-size: 15px; color: {{fg2}}">{{item.from}}</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark":{"editor":"boolean","default":false},"animate":{"editor":"boolean","default":true},"$preview":{"width":1440,"height":520}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const dark = !!this.props.dark;
+    return {
+      animate: this.props.animate !== false,
+      bg: dark ? '#131420' : '#eef0f7',
+      fg: dark ? '#e4e4f0' : '#0e0e1a',
+      fg2: dark ? '#8c8ea6' : '#56566f',
+      tiers: [
+        { tier: 'WOOD', name: 'Wooden chest', from: 'Study sessions · flashcard runs' },
+        { tier: 'SILVER', name: 'Silver chest', from: 'Streaks' },
+        { tier: 'GOLD', name: 'Gold chest', from: 'Level ups' },
+        { tier: 'DIAMOND', name: 'Diamond chest', from: 'Welcome gift' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

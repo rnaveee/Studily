@@ -14,8 +14,6 @@ import ChestIcon from "./ChestIcon";
 import { useEquipFlair } from "./useProgress";
 import type { ChestDto, ChestOpenResult, FlairDto } from "../../types";
 
-const MIN_SHAKE_MS = 650;
-
 export default function ChestModal({ chests, onClose }: { chests: ChestDto[]; onClose: () => void }) {
   return (
     <Modal onClose={onClose} size="sm">
@@ -33,13 +31,7 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
   const remaining = chests.length - index - 1;
 
   const open = useMutation({
-    mutationFn: async (id: number) => {
-      const [res] = await Promise.all([
-        api.post<ChestOpenResult>(`/chests/${id}/open`),
-        new Promise((r) => setTimeout(r, MIN_SHAKE_MS)),
-      ]);
-      return res;
-    },
+    mutationFn: (id: number) => api.post<ChestOpenResult>(`/chests/${id}/open`),
     onSuccess: (res) => {
       setOpened(res.chest);
       const lootBadge = res.chest.loot?.badge;
@@ -72,6 +64,7 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
   const loot = opened?.loot ?? null;
   const lootFlair = loot?.flair ?? null;
   const shaking = open.isPending;
+  const showOpen = !!opened || shaking;
   const tierColor = CHEST_TIER_COLOR[chest.tier];
 
   return (
@@ -89,14 +82,14 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
         aria-label={opened ? "Chest opened" : "Open chest"}
         className="relative flex h-32 w-32 items-center justify-center rounded-full disabled:cursor-default"
       >
-        {opened && (
+        {showOpen && (
           <span
             aria-hidden
             className="level-glow absolute inset-0 rounded-full"
             style={{ border: `3px solid color-mix(in srgb, ${tierColor} 60%, transparent)` }}
           />
         )}
-        {!opened && !shaking && (
+        {!showOpen && (
           <span key={`burst-${chest.id}`} aria-hidden className="pointer-events-none absolute inset-0">
             {Array.from({ length: 10 }, (_, i) => (
               <span
@@ -114,11 +107,10 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
           </span>
         )}
         <span
-          key={opened ? `open-${chest.id}` : `closed-${chest.id}`}
-          className={`relative inline-flex overflow-hidden rounded-[28px] ${opened ? "chest-reveal" : shaking ? "chest-shake" : "chest-drop"}`}
+          key={showOpen ? `open-${chest.id}` : `closed-${chest.id}`}
+          className={`relative inline-flex ${showOpen ? "chest-reveal" : "chest-drop"}`}
         >
-          <ChestIcon tier={chest.tier} opened={!!opened} />
-          {!opened && <span aria-hidden className="chest-shine pointer-events-none absolute inset-0" />}
+          <ChestIcon tier={chest.tier} opened={showOpen} />
         </span>
       </button>
 
@@ -135,6 +127,13 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
             : `You just got a ${CHEST_TIER_LABEL[chest.tier]}!`}
       </h2>
       {!opened && !shaking && <p className="mt-1 text-[13px] text-fg-3">Tap it to see what's inside.</p>}
+
+      {shaking && (
+        <ul aria-hidden className="mt-4 w-full space-y-2">
+          <li className="skeleton h-[52px] rounded-xl" />
+          <li className="skeleton h-[52px] rounded-xl" />
+        </ul>
+      )}
 
       {opened && (
         <ul className="mt-4 w-full space-y-2 stagger-children">
