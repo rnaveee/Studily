@@ -14,6 +14,8 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
 
     Optional<Todo> findByIdAndUserId(Long id, Long userId);
 
+    List<Todo> findByUserIdAndCompletedAtIsNotNull(Long userId);
+
     List<Todo> findByUserIdAndCompletedAtIsNullAndDueAtBetweenOrderByDueAtAsc(
             Long userId, Instant from, Instant to);
 }

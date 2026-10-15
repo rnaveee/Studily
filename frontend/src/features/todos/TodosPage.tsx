@@ -41,6 +41,13 @@ export default function TodosPage() {
     onSuccess: invalidate,
   });
 
+  const clearCompleted = useMutation({
+    mutationFn: () => api.del("/todos/completed"),
+    onSuccess: invalidate,
+  });
+
+  const completedCount = todos.data?.filter((t) => t.completed).length ?? 0;
+
   const toggleChecklistItem = useMutation({
     mutationFn: ({ todo, index }: { todo: Todo; index: number }) =>
       api.put<Todo>(`/todos/${todo.id}`, {
@@ -73,6 +80,17 @@ export default function TodosPage() {
     if (ok) remove.mutate(todo.id);
   }
 
+  async function handleClearCompleted() {
+    const ok = await confirm({
+      title: "Clear completed items?",
+      message: `${completedCount} completed ${completedCount === 1 ? "task is" : "tasks are"} removed for good.`,
+      confirmLabel: "Yes",
+      cancelLabel: "No",
+      danger: true,
+    });
+    if (ok) clearCompleted.mutate();
+  }
+
   function openNew() {
     setEditing(null);
     setShowModal(true);
@@ -95,10 +113,20 @@ export default function TodosPage() {
             </p>
           </div>
         </div>
-        <button onClick={() => requireAuth(openNew)} className="btn btn-primary">
-          <Plus size={13} />
-          New task
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => requireAuth(handleClearCompleted)}
+            disabled={completedCount === 0 || clearCompleted.isPending}
+            className="btn btn-ghost"
+          >
+            <Trash2 size={13} />
+            Clear completed
+          </button>
+          <button onClick={() => requireAuth(openNew)} className="btn btn-primary">
+            <Plus size={13} />
+            New task
+          </button>
+        </div>
       </div>
 
       {todos.isLoading ? (

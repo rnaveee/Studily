@@ -5,6 +5,7 @@ interface ConfirmOptions {
   title: string;
   message?: string;
   confirmLabel?: string;
+  cancelLabel?: string;
   danger?: boolean;
 }
 
@@ -21,10 +22,12 @@ export function useConfirm() {
 function ConfirmButtons({
   danger,
   confirmLabel,
+  cancelLabel,
   onPick,
 }: {
   danger?: boolean;
   confirmLabel?: string;
+  cancelLabel?: string;
   onPick: (ok: boolean) => void;
 }) {
   const close = useModalClose();
@@ -39,7 +42,7 @@ function ConfirmButtons({
         className="btn btn-ghost"
         autoFocus
       >
-        Cancel
+        {cancelLabel ?? "Cancel"}
       </button>
       <button
         onClick={() => {
@@ -88,6 +91,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             <ConfirmButtons
               danger={state.danger}
               confirmLabel={state.confirmLabel}
+              cancelLabel={state.cancelLabel}
               onPick={(ok) => {
                 answer.current = ok;
               }}

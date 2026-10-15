@@ -72,6 +72,11 @@ public class TodoService {
     }
 
     @Transactional
+    public void deleteCompleted() {
+        todoRepository.deleteAll(todoRepository.findByUserIdAndCompletedAtIsNotNull(currentUser.id()));
+    }
+
+    @Transactional
     public TodoDto setCompleted(Long id, boolean completed) {
         Todo todo = requireOwned(id);
         todo.setCompletedAt(completed ? Instant.now() : null);

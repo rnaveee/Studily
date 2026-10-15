@@ -48,6 +48,12 @@ public class TodoController {
         return todoService.update(id, req);
     }
 
+    @DeleteMapping("/completed")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteCompleted() {
+        todoService.deleteCompleted();
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id) {

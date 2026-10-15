@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class TodoServiceTest {
@@ -52,6 +53,18 @@ class TodoServiceTest {
 
     private static TodoRequest request(List<TodoChecklistItemDto> checklist) {
         return new TodoRequest("Calc homework", null, TodoPriority.MEDIUM, null, null, checklist);
+    }
+
+    @Test
+    void deleteCompleted_deletesOnlyTheCallersCompletedTodos() {
+        Todo done = new Todo();
+        done.setTitle("Read chapter 4");
+        done.setCompletedAt(Instant.now());
+        when(todoRepository.findByUserIdAndCompletedAtIsNotNull(1L)).thenReturn(List.of(done));
+
+        service.deleteCompleted();
+
+        verify(todoRepository).deleteAll(List.of(done));
     }
 
     @Test
