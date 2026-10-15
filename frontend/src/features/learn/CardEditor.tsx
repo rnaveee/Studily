@@ -20,7 +20,12 @@ export interface CardDraft {
 
 export const EMPTY_CARD: CardDraft = { front: "", back: "", frontImage: null, backImage: null };
 
-export function cardIsComplete(c: CardDraft): boolean {
+export function cardIsComplete(c: {
+  front: string;
+  back: string;
+  frontImage?: string | null;
+  backImage?: string | null;
+}): boolean {
   return (!!c.front.trim() || !!c.frontImage) && (!!c.back.trim() || !!c.backImage);
 }
 
@@ -87,7 +92,7 @@ export default function CardEditor({
   );
 }
 
-function SideField({
+export function SideField({
   label,
   placeholder,
   text,

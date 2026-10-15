@@ -13,7 +13,11 @@ const TIGHT_COMMA = /,(?!\s)/;
 const TIGHT_SEMICOLONS = /;(?!\s)/g;
 
 function normalize(raw: string) {
-  return raw.replace(/^﻿/, "").replace(/\r\n?/g, "\n").trim();
+  return raw.replace(/^﻿/, "").replace(/\r\n?/g, "\n").replace(/^[^\S\t]+|[^\S\t]+$/g, "");
+}
+
+function hasContent(row: string) {
+  return row.trim() !== "" || row.includes("\t");
 }
 
 function countMatches(text: string, pattern: RegExp) {
@@ -23,7 +27,7 @@ function countMatches(text: string, pattern: RegExp) {
 export function detectFormat(raw: string): QuizletFormat {
   const text = normalize(raw);
   const term: TermSep = text.includes("\t") ? "tab" : "comma";
-  const lines = text.split("\n").filter((l) => l.trim()).length;
+  const lines = text.split("\n").filter(hasContent).length;
   const tightSemicolons = countMatches(text, TIGHT_SEMICOLONS);
   const tabs = countMatches(text, /\t/g);
   const semicolon =
@@ -87,7 +91,7 @@ export function parseQuizlet(raw: string, format: QuizletFormat): ParseResult {
     pairs = splitTabSemicolon(text);
   } else {
     const newline = format.row === "newline";
-    const rows = (newline ? text.split("\n") : text.split(TIGHT_SEMICOLONS)).filter((r) => r.trim());
+    const rows = (newline ? text.split("\n") : text.split(TIGHT_SEMICOLONS)).filter(hasContent);
     const cut = format.term === "tab" ? cutTab : commaCutter(rows);
     pairs = joinRows(rows, cut, newline ? "\n" : ";");
   }
@@ -97,7 +101,7 @@ export function parseQuizlet(raw: string, format: QuizletFormat): ParseResult {
   for (const [rawFront, rawBack] of pairs) {
     const front = rawFront.trim();
     const back = rawBack.trim();
-    if (!front || !back || front.length > MAX_SIDE_LENGTH || back.length > MAX_SIDE_LENGTH) skipped++;
+    if ((!front && !back) || front.length > MAX_SIDE_LENGTH || back.length > MAX_SIDE_LENGTH) skipped++;
     else cards.push({ front, back });
   }
   return { cards, skipped };

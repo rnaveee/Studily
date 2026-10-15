@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, Navigate, useParams } from "react-router-dom";
-import { ClipboardPaste, Plus, Share2 } from "lucide-react";
+import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
+import { ClipboardPaste, ImageOff, Plus, Share2 } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { useAuth, useRequireAuth } from "../../lib/auth";
 import BackButton from "../../components/BackButton";
@@ -14,11 +14,12 @@ import MemoryGame from "./MemoryGame";
 import SpeedMatch from "./SpeedMatch";
 import ShareSetModal from "./ShareSetModal";
 import ImportCardsModal from "./ImportCardsModal";
+import MissingImagesModal from "./MissingImagesModal";
 import CardEditor, { cardIsComplete, EMPTY_CARD, type CardDraft } from "./CardEditor";
 import Modal, { useModalClose } from "../../components/Modal";
 import SetModePicker, { useStudyMode } from "./SetModePicker";
 import { VisibilityBadge } from "./visibility";
-import type { Course, FlashcardSet, FlashcardSetRequest } from "../../types";
+import type { Course, Flashcard, FlashcardSet, FlashcardSetRequest } from "../../types";
 import { SkeletonList } from "../../components/Skeleton";
 
 export default function FlashcardSetPage() {
@@ -35,6 +36,10 @@ export default function FlashcardSetPage() {
   const [editing, setEditing] = useState<number | null>(null);
   const [sharing, setSharing] = useState(false);
   const [importing, setImporting] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const addImagesOnOpen = !!(location.state as { addImages?: boolean } | null)?.addImages;
+  const [filling, setFilling] = useState(addImagesOnOpen);
 
   const set = useQuery({
     queryKey: ["flashcards", "sets", setId],
@@ -53,6 +58,15 @@ export default function FlashcardSetPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["flashcards"] }),
     onError: () => toast.error("Couldn't save that change"),
   });
+
+  useEffect(() => {
+    if (addImagesOnOpen) navigate(location.pathname + location.search, { replace: true, state: null });
+  }, [addImagesOnOpen, location.pathname, location.search, navigate]);
+
+  const studyable = useMemo(() => {
+    const cards = set.data?.cards ?? [];
+    return cards.every(cardIsComplete) ? cards : cards.filter(cardIsComplete);
+  }, [set.data]);
 
   if (set.isLoading) {
     return (
@@ -78,6 +92,7 @@ export default function FlashcardSetPage() {
   const course = courses.data?.find((c) => c.id === data.courseId);
   const color = course?.color ?? "var(--accent)";
   const count = data.cards.length;
+  const missing = count - studyable.length;
   const viewerKey = user ? String(user.id) : "guest";
 
   function addCard() {
@@ -102,6 +117,16 @@ export default function FlashcardSetPage() {
         ),
       },
       { onSuccess: onDone },
+    );
+  }
+
+  function saveFilled(cards: Flashcard[] | null) {
+    setFilling(false);
+    if (!cards) return;
+    const updated = cards.filter(cardIsComplete).length - studyable.length;
+    update.mutate(
+      { title: data.title, description: data.description, courseId: data.courseId, cards },
+      { onSuccess: () => toast.success(`Updated ${updated} ${updated === 1 ? "card" : "cards"}`) },
     );
   }
 
@@ -161,6 +186,23 @@ export default function FlashcardSetPage() {
         </button>
       </div>
 
+      {missing > 0 && (
+        <div className="card flex flex-wrap items-center gap-3 p-4">
+          <ImageOff size={18} className="shrink-0 text-yellow" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[14px] font-medium text-fg">
+              {missing} {missing === 1 ? "card needs" : "cards need"} an image
+            </p>
+            <p className="mt-0.5 text-[12px] text-fg-3">
+              {missing === 1 ? "It's" : "They're"} left out of studying until you add {missing === 1 ? "it" : "them"}.
+            </p>
+          </div>
+          <button onClick={() => requireAuth(() => setFilling(true))} className="btn btn-primary shrink-0">
+            Add images
+          </button>
+        </div>
+      )}
+
       <SetModePicker mode={mode} onChange={setMode} color={color} dueCount={data.dueCount} />
 
       {mode === "flashcards" && (
@@ -206,14 +248,18 @@ export default function FlashcardSetPage() {
       )}
 
       {mode === "study" &&
-        (count === 0 ? (
+        (studyable.length === 0 ? (
           <div className="card p-10 text-center">
-            <p className="text-sm text-fg-3">Add some cards first, then come back to study them.</p>
+            <p className="text-sm text-fg-3">
+              {count === 0
+                ? "Add some cards first, then come back to study them."
+                : "Add the missing images first, then come back to study these cards."}
+            </p>
           </div>
         ) : (
           <StudySession
             setId={data.id}
-            cards={data.cards}
+            cards={studyable}
             color={color}
             onExit={() => setMode("flashcards")}
           />
@@ -223,7 +269,7 @@ export default function FlashcardSetPage() {
         <LearnMode
           key={data.id}
           setId={data.id}
-          cards={data.cards}
+          cards={studyable}
           color={color}
           viewerKey={viewerKey}
           onSwitchMode={setMode}
@@ -231,14 +277,14 @@ export default function FlashcardSetPage() {
       )}
 
       {mode === "memory" && (
-        <MemoryGame key={data.id} setId={data.id} cards={data.cards} color={color} onDone={() => setMode("flashcards")} />
+        <MemoryGame key={data.id} setId={data.id} cards={studyable} color={color} onDone={() => setMode("flashcards")} />
       )}
 
       {mode === "match" && (
         <SpeedMatch
           key={data.id}
           setId={data.id}
-          cards={data.cards}
+          cards={studyable}
           color={color}
           viewerKey={viewerKey}
           onDone={() => setMode("flashcards")}
@@ -246,7 +292,14 @@ export default function FlashcardSetPage() {
       )}
 
       {sharing && <ShareSetModal set={data} onClose={() => setSharing(false)} />}
-      {importing && <ImportCardsModal set={data} onClose={() => setImporting(false)} />}
+      {importing && (
+        <ImportCardsModal
+          set={data}
+          onClose={() => setImporting(false)}
+          onAdded={(needImages) => needImages > 0 && setFilling(true)}
+        />
+      )}
+      {filling && missing > 0 && <MissingImagesModal cards={data.cards} onClose={saveFilled} />}
       {editing !== null && data.cards[editing] && (
         <Modal onClose={() => setEditing(null)} title="Edit card" size="md">
           <EditCardForm

@@ -55,7 +55,7 @@ public class FlashcardDtos {
                     s.getDescription(),
                     s.getVisibility(),
                     s.getCreatedAt(),
-                    s.getCards().stream().filter(c -> !c.getDueAt().isAfter(now)).count(),
+                    s.getCards().stream().filter(c -> !c.needsImage() && !c.getDueAt().isAfter(now)).count(),
                     copiedFrom,
                     s.getCards().stream().map(FlashcardDto::from).toList());
         }
@@ -104,16 +104,17 @@ public class FlashcardDtos {
             List<SharedCardDto> cards) {
 
         public static SharedFlashcardSetDto from(FlashcardSet s, boolean viewerIsOwner, Flairs flairs) {
+            List<SharedCardDto> cards = s.completeCards().stream().map(SharedCardDto::from).toList();
             return new SharedFlashcardSetDto(
                     s.getId(),
                     s.getTitle(),
                     s.getDescription(),
                     s.getVisibility(),
                     s.getCreatedAt(),
-                    s.getCards().size(),
+                    cards.size(),
                     SetOwnerDto.from(s.getUser(), flairs),
                     viewerIsOwner,
-                    s.getCards().stream().map(SharedCardDto::from).toList());
+                    cards);
         }
     }
 
@@ -122,7 +123,7 @@ public class FlashcardDtos {
 
         public static FlashcardSetSummaryDto from(FlashcardSet s) {
             return new FlashcardSetSummaryDto(s.getId(), s.getTitle(), s.getDescription(),
-                    s.getVisibility(), s.getCards().size(), s.getCreatedAt());
+                    s.getVisibility(), s.completeCards().size(), s.getCreatedAt());
         }
     }
 

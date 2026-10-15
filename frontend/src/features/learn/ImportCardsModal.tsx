@@ -17,7 +17,15 @@ function plural(n: number, word: string) {
   return `${n} ${n === 1 ? word : `${word}s`}`;
 }
 
-export default function ImportCardsModal({ set, onClose }: { set: FlashcardSet; onClose: () => void }) {
+export default function ImportCardsModal({
+  set,
+  onClose,
+  onAdded,
+}: {
+  set: FlashcardSet;
+  onClose: () => void;
+  onAdded?: (needImages: number) => void;
+}) {
   const qc = useQueryClient();
   const [parsed, setParsed] = useState<ParseResult>(NO_CARDS);
 
@@ -32,7 +40,12 @@ export default function ImportCardsModal({ set, onClose }: { set: FlashcardSet; 
     onSuccess: (updated, req) => {
       qc.setQueryData(["flashcards", "sets", set.id], updated);
       qc.invalidateQueries({ queryKey: ["flashcards"] });
-      toast.success(`Added ${plural(req.cards.length - set.cards.length, "card")}`);
+      const added = req.cards.slice(set.cards.length);
+      const needImages = added.filter((card) => !card.front || !card.back).length;
+      toast.success(
+        `Added ${plural(added.length, "card")}${needImages > 0 ? `. ${needImages} ${needImages === 1 ? "needs" : "need"} an image` : ""}`,
+      );
+      onAdded?.(needImages);
       onClose();
     },
     onError: () => toast.error("Couldn't add those cards"),

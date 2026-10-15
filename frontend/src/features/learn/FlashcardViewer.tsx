@@ -63,10 +63,14 @@ export default function FlashcardViewer({ cards, color, onDelete, onEdit }: Prop
           <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-fg-3">
             {flipped ? "Back" : "Front"} · tap to flip
           </div>
-          <CardFace
-            text={flipped ? card.back : card.front}
-            image={flipped ? card.backImage : card.frontImage}
-          />
+          {(flipped ? card.back : card.front).trim() || (flipped ? card.backImage : card.frontImage) ? (
+            <CardFace
+              text={flipped ? card.back : card.front}
+              image={flipped ? card.backImage : card.frontImage}
+            />
+          ) : (
+            <p className="text-sm text-fg-3">This side needs an image. Tap the pencil below to add it.</p>
+          )}
         </div>
       </button>
       <div className="flex items-center justify-between">

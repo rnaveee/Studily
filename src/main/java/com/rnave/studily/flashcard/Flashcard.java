@@ -56,4 +56,12 @@ public class Flashcard {
     private Instant dueAt = Instant.now();
 
     private Instant lastReviewedAt;
+
+    public boolean needsImage() {
+        return sideIsEmpty(front, frontImageKey) || sideIsEmpty(back, backImageKey);
+    }
+
+    private static boolean sideIsEmpty(String text, String imageKey) {
+        return (text == null || text.isBlank()) && imageKey == null;
+    }
 }

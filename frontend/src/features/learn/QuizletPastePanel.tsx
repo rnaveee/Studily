@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ImageOff } from "lucide-react";
 import SegmentedToggle from "../../components/SegmentedToggle";
 import {
   detectFormat,
@@ -23,7 +23,7 @@ const ROW_OPTIONS: { value: RowSep; label: string }[] = [
 const STEPS = [
   "In Quizlet, open your set, tap the three-dot menu and choose Export.",
   "Pick Tab or Comma, and New line or Semicolon, then tap Copy text.",
-  "Paste it below. Only the text comes across, not images.",
+  "Paste it below. Images don't come across, so a side that was only an image is marked for you to add it after.",
 ];
 
 const PREVIEW_LIMIT = 200;
@@ -54,6 +54,7 @@ export default function QuizletPastePanel({
 
   const hasText = text.trim().length > 0;
   const count = result.cards.length;
+  const missing = result.cards.filter((card) => !card.front || !card.back).length;
 
   return (
     <div className="space-y-4">
@@ -115,8 +116,9 @@ export default function QuizletPastePanel({
                 {count} {count === 1 ? "card" : "cards"}
               </span>{" "}
               found
+              {missing > 0 && ` · ${missing} ${missing === 1 ? "needs" : "need"} an image`}
               {result.skipped > 0 &&
-                ` · ${result.skipped} skipped because a side was empty or too long`}
+                ` · ${result.skipped} skipped because ${result.skipped === 1 ? "it had" : "they had"} no text or ran too long`}
             </p>
 
             {notices.length > 0 && (
@@ -140,8 +142,8 @@ export default function QuizletPastePanel({
                   >
                     <span className="w-6 shrink-0 pt-px text-right text-[11px] tabular-nums text-fg-3">{i + 1}</span>
                     <div className="min-w-0 flex-1 break-words">
-                      <div className="whitespace-pre-line font-medium text-fg">{card.front}</div>
-                      <div className="mt-0.5 whitespace-pre-line text-fg-2">{card.back}</div>
+                      <div className="whitespace-pre-line font-medium text-fg">{card.front || <NeedsImage />}</div>
+                      <div className="mt-0.5 whitespace-pre-line text-fg-2">{card.back || <NeedsImage />}</div>
                     </div>
                   </li>
                 ))}
@@ -158,5 +160,14 @@ export default function QuizletPastePanel({
         </>
       )}
     </div>
+  );
+}
+
+function NeedsImage() {
+  return (
+    <span className="badge badge-yellow">
+      <ImageOff size={11} />
+      Needs an image
+    </span>
   );
 }

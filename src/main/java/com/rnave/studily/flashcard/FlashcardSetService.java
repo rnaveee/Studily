@@ -115,7 +115,7 @@ public class FlashcardSetService {
                 .map(s -> {
                     Course course = s.getCourse();
                     return new SetPagePreview(s.getId(), s.getTitle(), s.getDescription(), s.getUser().getName(),
-                            s.getUser().getUsername(), s.getCards().size(),
+                            s.getUser().getUsername(), s.completeCards().size(),
                             course != null ? course.getCode() : null,
                             course != null ? course.getName() : null,
                             course != null ? course.getColor() : null);
@@ -131,18 +131,20 @@ public class FlashcardSetService {
         copy.setTitle(source.getTitle());
         copy.setDescription(source.getDescription());
         copy.setVisibility(FlashcardSetVisibility.PRIVATE);
-        if (!source.getUser().getId().equals(me.getId())) {
+        boolean own = source.getUser().getId().equals(me.getId());
+        if (!own) {
             copy.setCopiedFromSet(source);
             copy.setCopiedFromUser(source.getUser());
         }
-        for (Flashcard c : source.getCards()) {
+        int position = 0;
+        for (Flashcard c : own ? source.getCards() : source.completeCards()) {
             Flashcard card = new Flashcard();
             card.setSet(copy);
             card.setFront(c.getFront());
             card.setBack(c.getBack());
             card.setFrontImageKey(c.getFrontImageKey());
             card.setBackImageKey(c.getBackImageKey());
-            card.setPosition(c.getPosition());
+            card.setPosition(position++);
             copy.getCards().add(card);
         }
         return ownerDto(flashcardSetRepository.save(copy));
@@ -244,8 +246,8 @@ public class FlashcardSetService {
                 String back = trimToEmpty(dto.back());
                 String frontImage = trimToNull(dto.frontImage());
                 String backImage = trimToNull(dto.backImage());
-                if ((front.isEmpty() && frontImage == null) || (back.isEmpty() && backImage == null)) {
-                    throw new BadRequestException("Each side of a card needs text or an image");
+                if (front.isEmpty() && frontImage == null && back.isEmpty() && backImage == null) {
+                    throw new BadRequestException("Each card needs text or an image");
                 }
                 for (String key : new String[] {frontImage, backImage}) {
                     if (key != null && !knownImages.contains(key)) newImages.add(key);

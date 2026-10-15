@@ -5,6 +5,7 @@ import { ClipboardPaste } from "lucide-react";
 import Modal from "../../components/Modal";
 import SegmentedToggle from "../../components/SegmentedToggle";
 import { VISIBILITY_HINT, VISIBILITY_OPTIONS } from "./visibility";
+import { cardIsComplete } from "./CardEditor";
 import QuizletPastePanel from "./QuizletPastePanel";
 import { MAX_CARDS_PER_SET, splitIntoSets, type ParseResult } from "./quizletImport";
 import { api } from "../../lib/api";
@@ -75,7 +76,9 @@ export default function NewFlashcardSetModal({
       }
       qc.invalidateQueries({ queryKey: ["flashcards"] });
       onClose();
-      navigate(`/learn/flashcards/${created[0].id}`);
+      navigate(`/learn/flashcards/${created[0].id}`, {
+        state: { addImages: !created[0].cards.every(cardIsComplete) },
+      });
     },
     onError: () => toast.error("Couldn't create the set"),
   });

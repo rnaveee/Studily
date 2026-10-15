@@ -65,4 +65,8 @@ public class FlashcardSet {
     @OneToMany(mappedBy = "set", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("position asc")
     private List<Flashcard> cards = new ArrayList<>();
+
+    public List<Flashcard> completeCards() {
+        return cards.stream().filter(c -> !c.needsImage()).toList();
+    }
 }

@@ -502,12 +502,81 @@ class FlashcardSetServiceTest {
     }
 
     @Test
-    void update_sideWithNeitherTextNorImage_throwsBadRequest() {
+    void update_oneEmptySide_isKeptAndNeedsImage() {
+        FlashcardSet set = ownedSetWithCard(10L, 100L);
+
+        service.update(10L, new FlashcardSetRequest("Title", null, null, List.of(
+                card(null, "front", " ", null, null)), null));
+
+        Flashcard saved = set.getCards().get(0);
+        assertThat(saved.getFront()).isEqualTo("front");
+        assertThat(saved.getBack()).isEmpty();
+        assertThat(saved.needsImage()).isTrue();
+    }
+
+    @Test
+    void update_bothSidesEmpty_throwsBadRequest() {
         ownedSetWithCard(10L, 100L);
 
         assertThatThrownBy(() -> service.update(10L, new FlashcardSetRequest("Title", null, null, List.of(
-                card(null, "front", " ", null, null)), null)))
+                card(null, " ", "", null, null)), null)))
                 .isInstanceOf(BadRequestException.class);
+    }
+
+    private static Flashcard cardNeedingImage(FlashcardSet set) {
+        Flashcard card = new Flashcard();
+        card.setId(501L);
+        card.setSet(set);
+        card.setFront("Label the heart");
+        card.setBack("");
+        card.setPosition(1);
+        set.getCards().add(card);
+        return card;
+    }
+
+    @Test
+    void get_cardNeedingImage_isNotCountedAsDue() {
+        FlashcardSet set = setOwnedBy(20L, 1L, FlashcardSetVisibility.PRIVATE);
+        when(flashcardSetRepository.findByIdAndUserId(20L, 1L)).thenReturn(Optional.of(set));
+        set.getCards().get(0).setDueAt(Instant.now().minusSeconds(60));
+        cardNeedingImage(set);
+
+        FlashcardSetDto dto = service.get(20L);
+
+        assertThat(dto.cards()).hasSize(2);
+        assertThat(dto.dueCount()).isEqualTo(1);
+    }
+
+    @Test
+    void shared_cardNeedingImage_isHiddenFromViewers() {
+        FlashcardSet set = setOwnedBy(20L, 2L, FlashcardSetVisibility.PUBLIC);
+        cardNeedingImage(set);
+
+        SharedFlashcardSetDto dto = service.shared(20L);
+
+        assertThat(dto.cardCount()).isEqualTo(1);
+        assertThat(dto.cards()).extracting(c -> c.front()).containsExactly("Mitochondria");
+        assertThat(service.publicPreview(20L)).hasValueSatisfying(p -> assertThat(p.cardCount()).isEqualTo(1));
+    }
+
+    @Test
+    void copy_someoneElsesSet_leavesOutCardsNeedingImage() {
+        FlashcardSet set = setOwnedBy(20L, 2L, FlashcardSetVisibility.PUBLIC);
+        cardNeedingImage(set);
+
+        FlashcardSetDto copy = service.copy(20L);
+
+        assertThat(copy.cards()).extracting(FlashcardDto::front).containsExactly("Mitochondria");
+    }
+
+    @Test
+    void copy_ownSet_keepsCardsNeedingImage() {
+        FlashcardSet set = setOwnedBy(20L, 1L, FlashcardSetVisibility.PRIVATE);
+        cardNeedingImage(set);
+
+        FlashcardSetDto copy = service.copy(20L);
+
+        assertThat(copy.cards()).extracting(FlashcardDto::front).containsExactly("Mitochondria", "Label the heart");
     }
 
     @Test
