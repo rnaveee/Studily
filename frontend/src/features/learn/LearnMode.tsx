@@ -148,20 +148,25 @@ export default function LearnMode({ setId, cards, color, viewerKey, onSwitchMode
   function pickChoice(option: string) {
     if (!question || question.kind !== "choice" || feedback) return;
     const correct = option === question.answer;
-    setFeedback({ correct, picked: option, auto: correct });
+    setFeedback({ correct, picked: option, auto: correct && !question.answerImage });
   }
 
   function pickTrueFalse(value: boolean) {
     if (!question || question.kind !== "truefalse" || feedback) return;
     const correct = value === question.isTrue;
-    setFeedback({ correct, picked: value, auto: correct });
+    setFeedback({ correct, picked: value, auto: correct && !question.answerImage });
   }
 
   function submitWritten(e?: React.FormEvent) {
     e?.preventDefault();
     if (!question || question.kind !== "written" || feedback) return;
     const verdict = gradeWritten(typed, question.answer);
-    setFeedback({ correct: verdict !== "wrong", verdict, typed, auto: verdict === "correct" });
+    setFeedback({
+      correct: verdict !== "wrong",
+      verdict,
+      typed,
+      auto: verdict === "correct" && !question.answerImage,
+    });
   }
 
   function dontKnow() {
@@ -405,8 +410,14 @@ export default function LearnMode({ setId, cards, color, viewerKey, onSwitchMode
         {question.kind === "recall" && (
           revealed ? (
             <div className="space-y-3">
-              <div className="rounded-lg bg-surface-hi px-3 py-2.5 text-[14px] text-fg whitespace-pre-wrap break-words">
-                {question.answer}
+              <div className="rounded-lg bg-surface-hi px-3 py-2.5">
+                <CardFace
+                  text={question.answer}
+                  image={question.answerImage}
+                  imageClassName="max-h-48"
+                  textClassName="text-[14px] text-fg"
+                  zoomable
+                />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={() => advance(false)} className="btn btn-ghost justify-center">
@@ -476,10 +487,24 @@ function FeedbackPanel({
           Watch the spelling: <span className="font-medium text-fg whitespace-pre-wrap break-words">{question.answer}</span>
         </p>
       )}
-      {!feedback.correct && question.kind !== "choice" && (
+      {!feedback.correct && question.kind !== "choice" && !question.answerImage && (
         <p className="text-[13px] text-fg-2">
           Correct answer: <span className="font-medium text-fg whitespace-pre-wrap break-words">{question.answer}</span>
         </p>
+      )}
+      {question.answerImage && (
+        <div className="rounded-lg bg-surface px-3 py-2.5">
+          <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-fg-3">
+            {feedback.correct ? "Other side of the card" : "Correct answer"}
+          </div>
+          <CardFace
+            text={question.answer}
+            image={question.answerImage}
+            imageClassName="max-h-48"
+            textClassName="text-[14px] font-medium text-fg"
+            zoomable
+          />
+        </div>
       )}
       {!feedback.correct && feedback.typed && (
         <p className="text-[12px] text-fg-3">You wrote: {feedback.typed}</p>

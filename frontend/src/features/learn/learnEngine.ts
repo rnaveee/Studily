@@ -20,6 +20,7 @@ interface Prompted {
   card: LearnCard;
   prompt: string;
   promptImage: string | null;
+  answerImage: string | null;
 }
 
 export type Question =
@@ -134,7 +135,12 @@ function otherAnswers(card: LearnCard, side: Side, cards: LearnCard[]): string[]
 export function buildQuestion(card: LearnCard, level: Level, cards: LearnCard[]): Question {
   const side = answerSide(card, level);
   const promptSide: Side = side === "back" ? "front" : "back";
-  const base = { card, prompt: textOf(card, promptSide), promptImage: imageOf(card, promptSide) };
+  const base = {
+    card,
+    prompt: textOf(card, promptSide),
+    promptImage: imageOf(card, promptSide),
+    answerImage: imageOf(card, side),
+  };
   const answer = textOf(card, side);
 
   if (level >= 1) {
