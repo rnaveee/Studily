@@ -141,6 +141,7 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
           <CardFace
             text={flipped ? card.back : card.front}
             image={flipped ? card.backImage : card.frontImage}
+            zoomable
           />
         </div>
       </button>

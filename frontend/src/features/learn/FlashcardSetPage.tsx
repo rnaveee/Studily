@@ -208,8 +208,11 @@ export default function FlashcardSetPage() {
       {mode === "flashcards" && (
         <>
           <FlashcardViewer
+            key={data.id}
             cards={data.cards}
             color={color}
+            setId={data.id}
+            viewerKey={viewerKey}
             onDelete={deleteCard}
             onEdit={(i) => requireAuth(() => setEditing(i))}
           />

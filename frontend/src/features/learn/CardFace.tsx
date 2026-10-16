@@ -1,3 +1,5 @@
+import { useState } from "react";
+import Lightbox from "../../components/Lightbox";
 import { flashcardImageUrl } from "../../lib/flashcardImages";
 
 export default function CardFace({
@@ -5,25 +7,39 @@ export default function CardFace({
   image,
   imageClassName = "max-h-56",
   textClassName = "text-lg text-fg",
+  zoomable = false,
 }: {
   text: string;
   image?: string | null;
   imageClassName?: string;
   textClassName?: string;
+  zoomable?: boolean;
 }) {
+  const [zoomed, setZoomed] = useState(false);
   const body = text.trim();
+  const alt = body || "Card image";
   return (
     <>
       {image && (
         <img
           src={flashcardImageUrl(image)}
-          alt={body || "Card image"}
+          alt={alt}
           loading="lazy"
           decoding="async"
           draggable={false}
-          className={`mx-auto block max-w-full rounded-lg object-contain ${imageClassName}`}
+          onClick={
+            zoomable
+              ? (e) => {
+                  e.stopPropagation();
+                  setZoomed(true);
+                }
+              : undefined
+          }
+          title={zoomable ? "Tap to enlarge" : undefined}
+          className={`mx-auto block max-w-full rounded-lg object-contain ${zoomable ? "cursor-zoom-in" : ""} ${imageClassName}`}
         />
       )}
+      {zoomed && image && <Lightbox url={flashcardImageUrl(image)} alt={alt} onClose={() => setZoomed(false)} />}
       {body && <div className={`whitespace-pre-wrap break-words ${image ? "mt-3" : ""} ${textClassName}`}>{text}</div>}
     </>
   );

@@ -35,10 +35,14 @@ export interface LearnProgress {
 
 export type Verdict = "correct" | "close" | "wrong";
 
+export function cardKey(card: StudyCard, index: number): string {
+  return card.id != null ? String(card.id) : `i${index}`;
+}
+
 export function learnCards(cards: StudyCard[]): LearnCard[] {
   return cards
     .map((c, i) => ({
-      key: c.id != null ? String(c.id) : `i${i}`,
+      key: cardKey(c, i),
       front: c.front,
       back: c.back,
       frontImage: c.frontImage ?? null,
@@ -98,8 +102,8 @@ export function pickRound(
   lastAsked: Record<string, number>,
 ): string[] {
   const pool = cards
-    .map((c, i) => ({ key: c.key, level: levels[c.key] ?? 0, seen: lastAsked[c.key] ?? -1, i }))
-    .sort((a, b) => a.seen - b.seen || a.i - b.i);
+    .map((c) => ({ key: c.key, level: levels[c.key] ?? 0, seen: lastAsked[c.key] ?? -1, r: Math.random() }))
+    .sort((a, b) => a.seen - b.seen || a.r - b.r);
   const familiar = pool.filter((c) => c.level === 1);
   const fresh = pool.filter((c) => c.level === 0);
   const recallSlots = Math.min(familiar.length, Math.ceil(LEARN_ROUND_SIZE / 2));

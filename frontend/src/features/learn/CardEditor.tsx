@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { ApiError } from "../../lib/api";
 import { useRequireAuth } from "../../lib/auth";
@@ -17,6 +17,8 @@ export interface CardDraft {
   frontImage: string | null;
   backImage: string | null;
 }
+
+const SIDE_MAX_HEIGHT = 220;
 
 export const EMPTY_CARD: CardDraft = { front: "", back: "", frontImage: null, backImage: null };
 
@@ -115,7 +117,17 @@ export function SideField({
 }) {
   const requireAuth = useRequireAuth();
   const fileRef = useRef<HTMLInputElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
   const [dragging, setDragging] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const height = Math.min(el.scrollHeight + el.offsetHeight - el.clientHeight, SIDE_MAX_HEIGHT);
+    el.style.height = `${height}px`;
+    el.style.overflowY = el.scrollHeight > el.clientHeight ? "auto" : "hidden";
+  }, [text]);
 
   async function upload(file: File) {
     if (file.size > MAX_FLASHCARD_IMAGE_BYTES) {
@@ -157,12 +169,21 @@ export function SideField({
       style={dragging ? { boxShadow: "0 0 0 2px var(--accent)" } : undefined}
     >
       <label className="field-label">{label}</label>
-      <div className="flex items-center gap-2">
-        <input
+      <div className="flex items-start gap-2">
+        <textarea
+          ref={textRef}
           className="input"
+          rows={1}
+          style={{ resize: "none" }}
           value={text}
           autoFocus={autoFocus}
           onChange={(e) => onText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+              e.preventDefault();
+              e.currentTarget.form?.requestSubmit();
+            }
+          }}
           onPaste={(e) => {
             const files = pastedImages(e);
             if (files.length === 0) return;

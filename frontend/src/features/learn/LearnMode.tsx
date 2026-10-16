@@ -315,7 +315,7 @@ export default function LearnMode({ setId, cards, color, viewerKey, onSwitchMode
           {question.kind === "recall" && "Say the answer, then check"}
         </div>
         <div>
-          <CardFace text={question.prompt} image={question.promptImage} imageClassName="max-h-64" />
+          <CardFace text={question.prompt} image={question.promptImage} imageClassName="max-h-64" zoomable />
         </div>
 
         {question.kind === "choice" && (
@@ -473,7 +473,7 @@ function FeedbackPanel({
       </div>
       {feedback.verdict === "close" && (
         <p className="text-[13px] text-fg-2">
-          Watch the spelling: <span className="font-medium text-fg">{question.answer}</span>
+          Watch the spelling: <span className="font-medium text-fg whitespace-pre-wrap break-words">{question.answer}</span>
         </p>
       )}
       {!feedback.correct && question.kind !== "choice" && (

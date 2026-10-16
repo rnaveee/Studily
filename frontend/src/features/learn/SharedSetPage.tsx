@@ -149,7 +149,9 @@ export default function SharedSetPage() {
 
       <SetModePicker mode={mode} onChange={setMode} color={COLOR} studyLocked />
 
-      {mode === "flashcards" && <FlashcardViewer cards={data.cards} color={COLOR} />}
+      {mode === "flashcards" && (
+        <FlashcardViewer key={data.id} cards={data.cards} color={COLOR} setId={data.id} viewerKey={viewerKey} />
+      )}
 
       {mode === "study" && (
         <div className="card p-10 text-center">
