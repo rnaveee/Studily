@@ -6,9 +6,8 @@ import { api } from "../../../lib/api";
 import { useConfirm } from "../../../lib/confirm";
 import { formatTime } from "../../../lib/format";
 import { useFullscreen } from "../../../lib/fullscreen";
-import { formatMs, pomodoro, pomodoroColor } from "../../../lib/pomodoro";
+import { formatMs, pomodoroColor } from "../../../lib/pomodoro";
 import { applyDelta, holdProgressMoments } from "../../../lib/progressDelta";
-import { playRingtone } from "../../../lib/ringtones";
 import { progressKeys } from "../../progress/useProgress";
 import { formatMultiplier, MODE_LABEL } from "./sessionFormat";
 import type { StudySessionDto, StudySessionResult, StudySessionTaskDto } from "../../../types";
@@ -56,17 +55,6 @@ export default function ActiveSessionCard({
   else if (now <= dueMs) phase = "checkin";
   else if (now <= closesMs) phase = "late";
   else phase = "expired";
-
-  const prevNow = useRef(now);
-  const chimed = useRef<number | null>(null);
-  useEffect(() => {
-    if (running && heldMs === null && prevNow.current < dueMs && now >= dueMs && chimed.current !== running.index) {
-      chimed.current = running.index;
-      const p = pomodoro.getState();
-      playRingtone(p.ringtone, p.volume);
-    }
-    prevNow.current = now;
-  }, [now, running, dueMs, heldMs]);
 
   useEffect(() => {
     if (phase !== "expired") return;

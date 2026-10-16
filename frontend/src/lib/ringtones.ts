@@ -31,10 +31,14 @@ function context(): AudioContext | null {
   return ctx;
 }
 
+export function audioUnlocked(): boolean {
+  return ctx?.state === "running";
+}
+
 export function unlockAudio() {
   const ac = context();
   if (!ac) return;
-  if (ac.state === "suspended") ac.resume().catch(() => {});
+  if (ac.state !== "running") ac.resume().catch(() => {});
   try {
     const buffer = ac.createBuffer(1, 1, 22050);
     const src = ac.createBufferSource();
@@ -165,6 +169,6 @@ export function playRingtone(id: RingtoneId, volume: number) {
       }
     }, 6000);
   };
-  if (ac.state === "suspended") ac.resume().then(run).catch(() => {});
+  if (ac.state !== "running") ac.resume().then(run).catch(() => {});
   else run();
 }
