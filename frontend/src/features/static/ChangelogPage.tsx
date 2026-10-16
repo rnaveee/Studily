@@ -7,6 +7,9 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
+  { version: 56, date: "2026-10-15", summary: "Fixed copying messages and link previews in chats." },
+  { version: 55, date: "2026-10-15", summary: "Flashcards can now have more than one line, and tapping a card image enlarges it." },
+  { version: 54, date: "2026-10-15", summary: "Added progress tracking to flashcards." },
   { version: 53, date: "2026-10-14", summary: "Added seven new cosmetic badges to the shop." },
   { version: 52, date: "2026-10-14", summary: "Added 12 new profile flairs and gave the streak flairs real flames." },
   { version: 51, date: "2026-10-14", summary: "Added new chest art." },
