@@ -3,6 +3,7 @@ import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   Check,
+  Copy,
   FileText,
   Heart,
   ImagePlus,
@@ -793,6 +794,7 @@ function MessageBubble({
   const [sheetOpen, setSheetOpen] = useState(false);
   const canHold = mine && isTouch;
   const hold = useLongPress(canHold ? () => setSheetOpen(true) : null);
+  const selectable = canHold ? "select-none" : "select-text";
   const [menuSide, setMenuSide] = useState<"left" | "right">("left");
   const dotsRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -863,15 +865,12 @@ function MessageBubble({
           className={`flex min-w-0 flex-col ${mine ? "items-end" : "items-start"} ${
             message.likeCount > 0 ? "pb-1.5" : ""
           }`}
-          role="button"
-          tabIndex={-1}
-          aria-label={canHold ? "Double tap to like, hold for options" : "Double tap to like"}
         >
           {message.attachment ? (
             <AttachmentBubble message={message} mine={mine} />
           ) : jumbo ? (
             <div
-              className="min-w-0 select-none py-0.5 leading-none"
+              className={`min-w-0 ${selectable} py-0.5 leading-none`}
               style={{ fontSize: jumbo, lineHeight: 1.15 }}
             >
               {message.body}
@@ -879,7 +878,7 @@ function MessageBubble({
             </div>
           ) : (
             <div
-              className={`select-none whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[13px] [overflow-wrap:anywhere] ${mine ? "text-accent-fg" : "text-fg"}`}
+              className={`${selectable} whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[13px] [overflow-wrap:anywhere] ${mine ? "text-accent-fg" : "text-fg"}`}
               style={{ background: mine ? "var(--accent)" : "var(--surface-hi)" }}
             >
               <Linkified body={message.body} mine={mine} />
@@ -935,6 +934,19 @@ function MessageBubble({
                   type="button"
                   onClick={() => {
                     onCloseMenu();
+                    copyMessage(message.body);
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-fg transition-colors hover:bg-surface-hi"
+                >
+                  <Copy size={13} />
+                  Copy text
+                </button>
+              )}
+              {!message.attachment && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onCloseMenu();
                     onStartEdit();
                   }}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-fg transition-colors hover:bg-surface-hi"
@@ -971,6 +983,15 @@ function MessageBubble({
   );
 }
 
+async function copyMessage(body: string) {
+  try {
+    await navigator.clipboard.writeText(body);
+    toast.success("Copied");
+  } catch {
+    toast.error("Couldn't copy that message.");
+  }
+}
+
 function MessageActionsSheet({
   message,
   onClose,
@@ -989,6 +1010,19 @@ function MessageActionsSheet({
   return (
     <Modal onClose={onClose} closeRef={closeRef} title={preview} variant="sheet" padded={false}>
       <div className="flex flex-col py-1">
+        {!message.attachment && (
+          <button
+            type="button"
+            onClick={() => {
+              dismiss();
+              copyMessage(message.body);
+            }}
+            className="flex w-full items-center gap-3 px-5 py-3.5 text-left text-[14px] text-fg transition-colors hover:bg-surface-hi"
+          >
+            <Copy size={15} />
+            Copy text
+          </button>
+        )}
         {!message.attachment && (
           <button
             type="button"

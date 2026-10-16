@@ -30,11 +30,15 @@ public class PublicUrlFetcher {
     }
 
     public Response get(URI start, String accept, int maxBytes, Duration timeout) {
+        return get(start, accept, maxBytes, timeout, USER_AGENT);
+    }
+
+    public Response get(URI start, String accept, int maxBytes, Duration timeout, String userAgent) {
         URI uri = requireHttp(start);
 
         for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
             requirePublicHost(uri);
-            HttpResponse<InputStream> response = send(uri, accept, timeout);
+            HttpResponse<InputStream> response = send(uri, accept, timeout, userAgent);
             int status = response.statusCode();
 
             if (status >= 300 && status < 400) {
@@ -86,11 +90,11 @@ public class PublicUrlFetcher {
         return uri;
     }
 
-    private HttpResponse<InputStream> send(URI uri, String accept, Duration timeout) {
+    private HttpResponse<InputStream> send(URI uri, String accept, Duration timeout, String userAgent) {
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .timeout(timeout)
                 .header("Accept", accept)
-                .header("User-Agent", USER_AGENT)
+                .header("User-Agent", userAgent)
                 .GET()
                 .build();
         try {

@@ -1,6 +1,7 @@
 package com.rnave.studily.linkpreview;
 
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.ObjectMapper;
 
 import java.net.URI;
 
@@ -89,5 +90,47 @@ class LinkPreviewParserTest {
                 "<meta property=\"og:title\" content=\"Tom &amp; Jerry &#8212; Cartoons\">", BASE);
 
         assertThat(meta.title()).isEqualTo("Tom & Jerry — Cartoons");
+    }
+
+    @Test
+    void parse_flagsWhetherSocialTagsWereFound() {
+        LinkPreviewParser.Meta og = LinkPreviewParser.parse(
+                "<meta property=\"og:title\" content=\"A\">", BASE);
+        LinkPreviewParser.Meta twitter = LinkPreviewParser.parse(
+                "<meta name=\"Twitter:Card\" content=\"summary\"><title>A</title>", BASE);
+        LinkPreviewParser.Meta plain = LinkPreviewParser.parse(
+                "<title>Client Challenge</title>", BASE);
+
+        assertThat(og.social()).isTrue();
+        assertThat(twitter.social()).isTrue();
+        assertThat(plain.social()).isFalse();
+        assertThat(plain.description()).isNull();
+    }
+
+    @Test
+    void parseOembed_mapsTitleAuthorProviderAndThumbnail() {
+        URI video = URI.create("https://www.youtube.com/watch?v=abc");
+        LinkPreviewParser.Meta meta = LinkPreviewParser.parseOembed(new ObjectMapper().readTree("""
+                {"title":"Never Gonna Give You Up","author_name":"Rick Astley","provider_name":"YouTube",
+                 "thumbnail_url":"https://i.ytimg.com/vi/abc/hqdefault.jpg","width":200}
+                """), video);
+
+        assertThat(meta.title()).isEqualTo("Never Gonna Give You Up");
+        assertThat(meta.description()).isEqualTo("Rick Astley");
+        assertThat(meta.siteName()).isEqualTo("YouTube");
+        assertThat(meta.imageUrl()).isEqualTo("https://i.ytimg.com/vi/abc/hqdefault.jpg");
+        assertThat(meta.social()).isTrue();
+    }
+
+    @Test
+    void parseOembed_prefersDescriptionAndFallsBackToHost() {
+        URI clip = URI.create("https://vimeo.com/1");
+        LinkPreviewParser.Meta meta = LinkPreviewParser.parseOembed(new ObjectMapper().readTree("""
+                {"title":"Clip","description":"About the clip","author_name":"Someone","thumbnail_url":7}
+                """), clip);
+
+        assertThat(meta.description()).isEqualTo("About the clip");
+        assertThat(meta.siteName()).isEqualTo("vimeo.com");
+        assertThat(meta.imageUrl()).isNull();
     }
 }

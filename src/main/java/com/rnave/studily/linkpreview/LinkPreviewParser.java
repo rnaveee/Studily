@@ -3,6 +3,7 @@ package com.rnave.studily.linkpreview;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import tools.jackson.databind.JsonNode;
 
 import java.net.URI;
 import java.util.HashMap;
@@ -15,7 +16,7 @@ public final class LinkPreviewParser {
     private static final int DESCRIPTION_MAX = 300;
     private static final int SITE_MAX = 80;
 
-    public record Meta(String title, String description, String siteName, String imageUrl) {
+    public record Meta(String title, String description, String siteName, String imageUrl, boolean social) {
     }
 
     private LinkPreviewParser() {
@@ -27,11 +28,14 @@ public final class LinkPreviewParser {
 
     public static Meta parse(Document doc, URI base) {
         Map<String, String> meta = new HashMap<>();
+        boolean social = false;
         for (Element el : doc.select("meta[content]")) {
             String key = el.hasAttr("property") ? el.attr("property") : el.attr("name");
             String content = el.attr("content");
             if (key.isBlank() || content.isBlank()) continue;
-            meta.putIfAbsent(key.trim().toLowerCase(Locale.ROOT), content);
+            String normalized = key.trim().toLowerCase(Locale.ROOT);
+            social |= normalized.startsWith("og:") || normalized.startsWith("twitter:");
+            meta.putIfAbsent(normalized, content);
         }
 
         String title = first(meta.get("og:title"), meta.get("twitter:title"), doc.title());
@@ -45,7 +49,20 @@ public final class LinkPreviewParser {
                 meta.get("twitter:image:src"));
 
         return new Meta(clip(title, TITLE_MAX), clip(description, DESCRIPTION_MAX), clip(site, SITE_MAX),
-                absolute(base, image));
+                absolute(base, image), social);
+    }
+
+    public static Meta parseOembed(JsonNode json, URI base) {
+        String title = text(json, "title");
+        String description = first(text(json, "description"), text(json, "author_name"));
+        String site = first(text(json, "provider_name"), host(base));
+        return new Meta(clip(title, TITLE_MAX), clip(description, DESCRIPTION_MAX), clip(site, SITE_MAX),
+                absolute(base, text(json, "thumbnail_url")), true);
+    }
+
+    private static String text(JsonNode json, String field) {
+        JsonNode node = json.path(field);
+        return node.isString() ? node.asString() : null;
     }
 
     static String host(URI uri) {

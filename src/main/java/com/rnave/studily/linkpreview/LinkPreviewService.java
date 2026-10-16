@@ -2,10 +2,12 @@ package com.rnave.studily.linkpreview;
 
 import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.PublicUrlFetcher;
+import com.rnave.studily.config.WebpSize;
 import net.coobird.thumbnailator.Thumbnails;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -16,7 +18,9 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.Collections;
@@ -25,6 +29,7 @@ import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -34,6 +39,8 @@ public class LinkPreviewService {
     private static final int URL_MAX = 2048;
     private static final int HTML_MAX_BYTES = 1024 * 1024;
     private static final int IMAGE_MAX_BYTES = 3 * 1024 * 1024;
+    private static final int OEMBED_MAX_BYTES = 64 * 1024;
+    private static final int WEBP_PASSTHROUGH_BYTES = 150 * 1024;
     private static final long IMAGE_MAX_PIXELS = 40_000_000L;
     private static final int IMAGE_MIN_SIDE = 48;
     private static final int THUMB_SIDE = 480;
@@ -42,11 +49,21 @@ public class LinkPreviewService {
     private static final long MISS_TTL_MS = Duration.ofMinutes(30).toMillis();
     private static final int CACHE_SIZE = 500;
     private static final Pattern CHARSET = Pattern.compile("charset=\"?([\\w.:-]+)", Pattern.CASE_INSENSITIVE);
+    private static final String USER_AGENT =
+            "Mozilla/5.0 (compatible; Studily/1.0; +https://studily.ca) facebookexternalhit/1.1 Twitterbot/1.0";
+    private static final String IMAGE_ACCEPT = "image/jpeg, image/png;q=0.9, image/gif;q=0.8, image/webp;q=0.5";
+    private static final Set<String> YOUTUBE_HOSTS =
+            Set.of("youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be");
+    private static final Map<String, String> OEMBED_ENDPOINTS = Map.of(
+            "tiktok.com", "https://www.tiktok.com/oembed?url=",
+            "open.spotify.com", "https://open.spotify.com/oembed?url=",
+            "vimeo.com", "https://vimeo.com/api/oembed.json?url=");
 
     private record Cached(LinkPreviewDto preview, long expiresAt) {
     }
 
     private final PublicUrlFetcher fetcher;
+    private final ObjectMapper objectMapper;
     private final Map<String, Cached> cache = Collections.synchronizedMap(
             new LinkedHashMap<>(64, 0.75f, true) {
                 @Override
@@ -55,8 +72,9 @@ public class LinkPreviewService {
                 }
             });
 
-    public LinkPreviewService(PublicUrlFetcher fetcher) {
+    public LinkPreviewService(PublicUrlFetcher fetcher, ObjectMapper objectMapper) {
         this.fetcher = fetcher;
+        this.objectMapper = objectMapper;
     }
 
     public Optional<LinkPreviewDto> preview(String rawUrl) {
@@ -83,8 +101,45 @@ public class LinkPreviewService {
     }
 
     private LinkPreviewDto build(URI uri) {
+        LinkPreviewParser.Meta meta = oembed(uri);
+        if (meta == null) {
+            meta = page(uri);
+        }
+        if (meta == null || (meta.title() == null && meta.description() == null)) {
+            return null;
+        }
+
+        String image = meta.imageUrl() == null ? null : thumbnail(meta.imageUrl());
+        return new LinkPreviewDto(uri.toString(), meta.siteName(), meta.title(), meta.description(), image);
+    }
+
+    static String oembedEndpoint(URI uri) {
+        String host = LinkPreviewParser.host(uri);
+        if (host == null) return null;
+        host = host.toLowerCase(Locale.ROOT);
+        if (YOUTUBE_HOSTS.contains(host)) return "https://www.youtube.com/oembed?format=json&url=";
+        String bare = host.startsWith("m.") ? host.substring(2) : host;
+        return OEMBED_ENDPOINTS.get(bare);
+    }
+
+    private LinkPreviewParser.Meta oembed(URI uri) {
+        String endpoint = oembedEndpoint(uri);
+        if (endpoint == null) return null;
+        try {
+            URI api = URI.create(endpoint + URLEncoder.encode(uri.toString(), StandardCharsets.UTF_8));
+            PublicUrlFetcher.Response response =
+                    fetcher.get(api, "application/json", OEMBED_MAX_BYTES, TIMEOUT, USER_AGENT);
+            if (response.truncated()) return null;
+            LinkPreviewParser.Meta meta = LinkPreviewParser.parseOembed(objectMapper.readTree(response.body()), uri);
+            return meta.title() == null ? null : meta;
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    private LinkPreviewParser.Meta page(URI uri) {
         PublicUrlFetcher.Response page = fetcher.get(
-                uri, "text/html, application/xhtml+xml;q=0.9, */*;q=0.1", HTML_MAX_BYTES, TIMEOUT);
+                uri, "text/html, application/xhtml+xml;q=0.9, */*;q=0.1", HTML_MAX_BYTES, TIMEOUT, USER_AGENT);
         String contentType = page.contentType().toLowerCase(Locale.ROOT);
         if (!contentType.contains("html")) {
             return null;
@@ -97,12 +152,7 @@ public class LinkPreviewService {
             return null;
         }
         LinkPreviewParser.Meta meta = LinkPreviewParser.parse(doc, page.uri());
-        if (meta.title() == null && meta.description() == null) {
-            return null;
-        }
-
-        String image = meta.imageUrl() == null ? null : thumbnail(meta.imageUrl());
-        return new LinkPreviewDto(uri.toString(), meta.siteName(), meta.title(), meta.description(), image);
+        return meta.social() || meta.description() != null ? meta : null;
     }
 
     private String charset(String contentType) {
@@ -118,12 +168,19 @@ public class LinkPreviewService {
     private String thumbnail(String imageUrl) {
         try {
             PublicUrlFetcher.Response response = fetcher.get(
-                    URI.create(imageUrl), "image/avif, image/webp, image/*;q=0.9", IMAGE_MAX_BYTES, TIMEOUT);
+                    URI.create(imageUrl), IMAGE_ACCEPT, IMAGE_MAX_BYTES, TIMEOUT, USER_AGENT);
             String type = response.contentType().toLowerCase(Locale.ROOT);
             if (response.truncated() || type.contains("svg") || type.contains("html")) {
                 return null;
             }
             byte[] bytes = response.body();
+            int[] webp = WebpSize.of(bytes);
+            if (webp != null) {
+                if (bytes.length > WEBP_PASSTHROUGH_BYTES || Math.min(webp[0], webp[1]) < IMAGE_MIN_SIDE) {
+                    return null;
+                }
+                return "data:image/webp;base64," + Base64.getEncoder().encodeToString(bytes);
+            }
             int[] size = dimensions(bytes);
             if (size == null || (long) size[0] * size[1] > IMAGE_MAX_PIXELS
                     || Math.min(size[0], size[1]) < IMAGE_MIN_SIDE) {

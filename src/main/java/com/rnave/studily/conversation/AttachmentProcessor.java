@@ -1,6 +1,7 @@
 package com.rnave.studily.conversation;
 
 import com.rnave.studily.config.BadRequestException;
+import com.rnave.studily.config.WebpSize;
 import net.coobird.thumbnailator.Thumbnails;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -115,53 +116,15 @@ public class AttachmentProcessor {
     }
 
     private Processed processWebp(String filename, byte[] bytes, int maxDimension) {
-        if (!startsWith(bytes, "RIFF") || bytes.length < 30 || !matchesAt(bytes, 8, "WEBP")) {
+        int[] size = WebpSize.of(bytes);
+        if (size == null) {
             throw new BadRequestException("This file doesn't look like a valid WEBP");
         }
-        int[] size = webpDimensions(bytes);
         if (Math.max(size[0], size[1]) > maxDimension) {
             throw new BadRequestException(
                     "Image dimensions are too large (max " + maxDimension + "px per side)");
         }
         return new Processed(filename, WEBP_TYPE, bytes, size[0], size[1]);
-    }
-
-    private static int[] webpDimensions(byte[] b) {
-        if (matchesAt(b, 12, "VP8X")) {
-            return new int[] {u24(b, 24) + 1, u24(b, 27) + 1};
-        }
-        if (matchesAt(b, 12, "VP8L")) {
-            int bits = u8(b, 21) | (u8(b, 22) << 8) | (u8(b, 23) << 16) | (u8(b, 24) << 24);
-            return new int[] {(bits & 0x3FFF) + 1, ((bits >> 14) & 0x3FFF) + 1};
-        }
-        if (matchesAt(b, 12, "VP8 ")) {
-            return new int[] {
-                ((u8(b, 27) << 8) | u8(b, 26)) & 0x3FFF,
-                ((u8(b, 29) << 8) | u8(b, 28)) & 0x3FFF,
-            };
-        }
-        throw new BadRequestException("This file doesn't look like a valid WEBP");
-    }
-
-    private static int u8(byte[] b, int i) {
-        return b[i] & 0xFF;
-    }
-
-    private static int u24(byte[] b, int i) {
-        return u8(b, i) | (u8(b, i + 1) << 8) | (u8(b, i + 2) << 16);
-    }
-
-    private static boolean matchesAt(byte[] bytes, int offset, String text) {
-        byte[] p = text.getBytes(StandardCharsets.US_ASCII);
-        if (bytes.length < offset + p.length) {
-            return false;
-        }
-        for (int i = 0; i < p.length; i++) {
-            if (bytes[offset + i] != p[i]) {
-                return false;
-            }
-        }
-        return true;
     }
 
     private Processed processImage(String filename, byte[] bytes, int maxDimension) {

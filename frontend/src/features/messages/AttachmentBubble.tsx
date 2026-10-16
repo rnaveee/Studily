@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, X } from "lucide-react";
+import { FileText } from "lucide-react";
+import Lightbox from "../../components/Lightbox";
 import { api } from "../../lib/api";
 import { formatBytes } from "../../lib/format";
 import { toast } from "../../lib/toast";
@@ -71,35 +71,6 @@ function ImageBubble({ message }: { message: Message }) {
         </div>
       )}
     </div>
-  );
-}
-
-function Lightbox({ url, alt, onClose }: { url: string; alt: string; onClose: () => void }) {
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[95] flex items-center justify-center animate-in"
-      style={{ background: "rgba(0,0,0,0.88)" }}
-      onClick={onClose}
-    >
-      <img src={url} alt={alt} className="max-h-full max-w-full object-contain" />
-      <button
-        onClick={onClose}
-        className="absolute right-3 rounded-full p-2 text-white transition-colors hover:bg-white/15"
-        style={{ top: "calc(env(safe-area-inset-top, 0px) + 12px)" }}
-        aria-label="Close"
-      >
-        <X size={18} />
-      </button>
-    </div>,
-    document.body,
   );
 }
 

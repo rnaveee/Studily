@@ -5,7 +5,12 @@ import { Layers } from "lucide-react";
 import { api } from "../../lib/api";
 import type { SharedFlashcardSet } from "../../types";
 
-const URL_RE = /\b(?:https?:\/\/|www\.)[^\s<>"'`]+/gi;
+const TLDS = "com|org|net|edu|gov|ca|io|co|ai|app|dev|ly|gg|tv|uk|info|xyz|fm|link|page|site";
+const URL_RE = new RegExp(
+  "\\b(?:https?:\\/\\/|www\\.)[^\\s<>\"'`]+" +
+    `|(?<![@\\w.-])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+(?:${TLDS})(?![\\w@-])(?:[/?#][^\\s<>"'\`]*)?`,
+  "gi",
+);
 const TRAILING = /[.,!?;:'"*_~]+$/;
 
 interface LinkPart {
@@ -22,7 +27,7 @@ function trimLink(raw: string): string {
 }
 
 function toHref(text: string): string | null {
-  const candidate = /^www\./i.test(text) ? `https://${text}` : text;
+  const candidate = /^https?:\/\//i.test(text) ? text : `https://${text}`;
   try {
     const url = new URL(candidate);
     return url.protocol === "http:" || url.protocol === "https:" ? url.href : null;
