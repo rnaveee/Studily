@@ -35,8 +35,8 @@ class CourseParseLimitsTest {
         UserTimeZones zones = mock(UserTimeZones.class);
         when(zones.zoneFor(any())).thenReturn(ZoneId.of("America/Vancouver"));
         when(zones.fallback()).thenReturn(ZoneId.of("America/Toronto"));
-        when(usage.spendSince(any())).thenReturn(List.of());
-        limits = new CourseParseLimits(usage, currentUser, zones, 10, 5.0, "");
+        when(usage.spendSince(any(), any())).thenReturn(List.of());
+        limits = new CourseParseLimits(usage, currentUser, zones, 10, 5.0, 100.0, "");
     }
 
     @Test
@@ -47,11 +47,11 @@ class CourseParseLimitsTest {
         UserTimeZones zones = mock(UserTimeZones.class);
         when(zones.zoneFor(any())).thenReturn(ZoneId.of("UTC"));
         Instant resetAt = Instant.now().minusSeconds(60);
-        when(usage.countByUserIdAndCreatedAtGreaterThanEqual(7L, resetAt)).thenReturn(0L);
-        when(usage.countByUserIdAndCreatedAtGreaterThanEqual(eq(7L), argThat(
+        when(usage.countByUserIdAndFeatureAndSucceededTrueAndCreatedAtGreaterThanEqual(7L, AiFeature.COURSE, resetAt)).thenReturn(0L);
+        when(usage.countByUserIdAndFeatureAndSucceededTrueAndCreatedAtGreaterThanEqual(eq(7L), eq(AiFeature.COURSE), argThat(
                 since -> !since.equals(resetAt)))).thenReturn(10L);
 
-        CourseParseLimits reset = new CourseParseLimits(usage, currentUser, zones, 10, 5.0, resetAt.toString());
+        CourseParseLimits reset = new CourseParseLimits(usage, currentUser, zones, 10, 5.0, 100.0, resetAt.toString());
 
         assertThat(reset.remaining()).isEqualTo(10);
     }
@@ -66,11 +66,11 @@ class CourseParseLimitsTest {
 
     @Test
     void check_allowsTheTenthImportAndBlocksTheEleventh() {
-        when(usage.countByUserIdAndCreatedAtGreaterThanEqual(eq(7L), any())).thenReturn(9L);
+        when(usage.countByUserIdAndFeatureAndSucceededTrueAndCreatedAtGreaterThanEqual(eq(7L), eq(AiFeature.COURSE), any())).thenReturn(9L);
         assertThat(limits.remaining()).isEqualTo(1);
         assertThatNoException().isThrownBy(limits::check);
 
-        when(usage.countByUserIdAndCreatedAtGreaterThanEqual(eq(7L), any())).thenReturn(10L);
+        when(usage.countByUserIdAndFeatureAndSucceededTrueAndCreatedAtGreaterThanEqual(eq(7L), eq(AiFeature.COURSE), any())).thenReturn(10L);
         assertThat(limits.remaining()).isZero();
         assertThatThrownBy(limits::check)
                 .isInstanceOf(TooManyRequestsException.class)
@@ -79,13 +79,42 @@ class CourseParseLimitsTest {
 
     @Test
     void check_pausesEveryoneOnceTodaysSpendReachesTheBudget() {
-        when(usage.spendSince(any())).thenReturn(List.of(spend("claude-sonnet-5", 1_000_000, 300_000)));
+        when(usage.spendSince(any(), eq(AiFeature.COURSE)))
+                .thenReturn(List.of(spend("claude-sonnet-5", 1_000_000, 300_000)));
 
         assertThat(limits.spentToday()).isEqualTo(5.0);
         assertThat(limits.paused()).isTrue();
         assertThatThrownBy(limits::check)
                 .isInstanceOf(TooManyRequestsException.class)
                 .hasMessageContaining("paused");
+    }
+
+    @Test
+    void check_pausesUntilTheFirstOnceThisMonthsSpendReachesTheMonthlyBudget() {
+        CurrentUser currentUser = mock(CurrentUser.class);
+        when(currentUser.id()).thenReturn(7L);
+        when(currentUser.entity()).thenReturn(new User());
+        UserTimeZones zones = mock(UserTimeZones.class);
+        when(zones.zoneFor(any())).thenReturn(ZoneId.of("UTC"));
+        when(zones.fallback()).thenReturn(ZoneId.of("UTC"));
+        when(usage.spendSince(any(), eq(AiFeature.COURSE)))
+                .thenReturn(List.of(spend("claude-sonnet-5", 500_000, 100_000)));
+        CourseParseLimits monthly = new CourseParseLimits(usage, currentUser, zones, 10, 50.0, 2.0, "");
+
+        assertThat(monthly.spentThisMonth()).isEqualTo(2.0);
+        assertThat(monthly.paused()).isTrue();
+        assertThatThrownBy(monthly::check)
+                .isInstanceOf(TooManyRequestsException.class)
+                .hasMessageContaining("until the 1st");
+    }
+
+    @Test
+    void spend_onlyCountsCourseUsage() {
+        when(usage.spendSince(any(), eq(AiFeature.FLASHCARDS)))
+                .thenReturn(List.of(spend("claude-haiku-5-5", 90_000_000, 10_000_000)));
+
+        assertThat(limits.spentToday()).isZero();
+        assertThat(limits.paused()).isFalse();
     }
 
     private static CourseParseUsageRepository.ModelSpend spend(String model, long in, long out) {

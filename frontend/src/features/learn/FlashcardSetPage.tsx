@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ClipboardPaste, ImageOff, Plus, Share2 } from "lucide-react";
+import { ClipboardPaste, FileText, ImageOff, Plus, Share2 } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { useAuth, useRequireAuth } from "../../lib/auth";
 import BackButton from "../../components/BackButton";
@@ -14,6 +14,7 @@ import MemoryGame from "./MemoryGame";
 import SpeedMatch from "./SpeedMatch";
 import ShareSetModal from "./ShareSetModal";
 import ImportCardsModal from "./ImportCardsModal";
+import GenerateCardsModal from "./GenerateCardsModal";
 import MissingImagesModal from "./MissingImagesModal";
 import CardEditor, { cardIsComplete, EMPTY_CARD, type CardDraft } from "./CardEditor";
 import Modal, { useModalClose } from "../../components/Modal";
@@ -36,6 +37,7 @@ export default function FlashcardSetPage() {
   const [editing, setEditing] = useState<number | null>(null);
   const [sharing, setSharing] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const addImagesOnOpen = !!(location.state as { addImages?: boolean } | null)?.addImages;
@@ -225,16 +227,26 @@ export default function FlashcardSetPage() {
               onUploadingChange={setDraftUploading}
               onSubmit={addCard}
               footer={
-                <div className="flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    data-tour="quizlet-import"
-                    onClick={() => requireAuth(() => setImporting(true))}
-                    className="btn btn-ghost"
-                  >
-                    <ClipboardPaste size={13} />
-                    Import from Quizlet
-                  </button>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => requireAuth(() => setGenerating(true))}
+                      className="btn btn-ghost"
+                    >
+                      <FileText size={13} />
+                      From a document
+                    </button>
+                    <button
+                      type="button"
+                      data-tour="quizlet-import"
+                      onClick={() => requireAuth(() => setImporting(true))}
+                      className="btn btn-ghost"
+                    >
+                      <ClipboardPaste size={13} />
+                      Import from Quizlet
+                    </button>
+                  </div>
                   <button
                     type="submit"
                     disabled={!cardIsComplete(draft) || draftUploading}
@@ -302,6 +314,7 @@ export default function FlashcardSetPage() {
           onAdded={(needImages) => needImages > 0 && setFilling(true)}
         />
       )}
+      {generating && <GenerateCardsModal set={data} onClose={() => setGenerating(false)} />}
       {filling && missing > 0 && <MissingImagesModal cards={data.cards} onClose={saveFilled} />}
       {editing !== null && data.cards[editing] && (
         <Modal onClose={() => setEditing(null)} title="Edit card" size="md">

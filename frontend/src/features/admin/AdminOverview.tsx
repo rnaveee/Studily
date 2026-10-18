@@ -87,7 +87,7 @@ export default function AdminOverview() {
       {spendQ.data && (
         <section>
           <h2 className="mb-2 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
-            Course parsing spend
+            AI spend
           </h2>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <Stat
@@ -112,6 +112,34 @@ export default function AdminOverview() {
               )}
             />
           </div>
+          {spendQ.data.budgets.length > 0 && (
+            <div className="card mt-3 space-y-3 p-4">
+              <h3 className="text-[12px] font-medium text-fg-2">Budgets this month</h3>
+              {spendQ.data.budgets.map((b) => {
+                const pct = b.monthlyBudget > 0 ? Math.min(1, b.usdMonth / b.monthlyBudget) : 0;
+                return (
+                  <div key={b.feature}>
+                    <div className="flex items-baseline justify-between gap-3 text-[12px]">
+                      <span className="truncate text-fg-2">{b.label}</span>
+                      <span className="shrink-0 text-fg tabular-nums">
+                        {usd(b.usdMonth)} <span className="text-fg-3">of {usd(b.monthlyBudget)}</span>
+                      </span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full" style={{ background: "var(--surface-hi)" }}>
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${pct * 100}%`, background: pct >= 0.9 ? "var(--red)" : "var(--accent)" }}
+                      />
+                    </div>
+                    <p className="mt-1 text-[11px] text-fg-3 tabular-nums">
+                      {b.usesThisMonth} {b.usesThisMonth === 1 ? "use" : "uses"} this month · today {usd(b.usdToday)} of{" "}
+                      {usd(b.dailyBudget)}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           {spendQ.data.topSpenders7d.length > 0 && (
             <div className="card mt-3 p-4">
               <h3 className="text-[12px] font-medium text-fg-2">Heaviest users this week</h3>

@@ -7,7 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-final class CourseDraftSchema {
+public final class CourseDraftSchema {
 
     private CourseDraftSchema() {
     }
@@ -100,7 +100,7 @@ final class CourseDraftSchema {
         return object(properties);
     }
 
-    static Map<String, Object> object(Map<String, Object> properties) {
+    public static Map<String, Object> object(Map<String, Object> properties) {
         Map<String, Object> schema = new LinkedHashMap<>();
         schema.put("type", "object");
         schema.put("properties", properties);
@@ -109,7 +109,7 @@ final class CourseDraftSchema {
         return schema;
     }
 
-    static Map<String, Object> array(Map<String, Object> items, String description) {
+    public static Map<String, Object> array(Map<String, Object> items, String description) {
         Map<String, Object> schema = new LinkedHashMap<>();
         schema.put("type", "array");
         schema.put("description", description);
@@ -117,7 +117,7 @@ final class CourseDraftSchema {
         return schema;
     }
 
-    static Map<String, Object> nullable(String type, String description) {
+    public static Map<String, Object> nullable(String type, String description) {
         Map<String, Object> schema = new LinkedHashMap<>();
         schema.put("type", List.of(type, "null"));
         schema.put("description", description);
@@ -132,7 +132,7 @@ final class CourseDraftSchema {
         return schema;
     }
 
-    static Map<String, JsonValue> wrap(Map<String, Object> schema) {
+    public static Map<String, JsonValue> wrap(Map<String, Object> schema) {
         Map<String, JsonValue> out = new LinkedHashMap<>();
         schema.forEach((key, value) -> out.put(key, JsonValue.from(value)));
         return out;

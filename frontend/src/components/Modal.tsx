@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, type MutableRefObject, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, type MutableRefObject, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useDeferredClose } from "../lib/motion";
@@ -27,6 +27,7 @@ export default function Modal({
   showClose = true,
   padded = true,
   closeRef,
+  beforeClose,
 }: {
   onClose: () => void;
   title?: ReactNode;
@@ -38,8 +39,23 @@ export default function Modal({
   showClose?: boolean;
   padded?: boolean;
   closeRef?: MutableRefObject<(() => void) | null>;
+  beforeClose?: () => boolean | Promise<boolean>;
 }) {
   const { closing, close } = useDeferredClose(onClose, 170);
+  const asking = useRef(false);
+
+  const requestClose = useCallback(async () => {
+    if (beforeClose) {
+      if (asking.current) return;
+      asking.current = true;
+      try {
+        if (!(await beforeClose())) return;
+      } finally {
+        asking.current = false;
+      }
+    }
+    close();
+  }, [beforeClose, close]);
 
   useEffect(() => {
     if (!closeRef) return;
@@ -51,11 +67,11 @@ export default function Modal({
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") requestClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [close]);
+  }, [requestClose]);
 
   const sheet = variant === "sheet";
   const panelAnim = closing
@@ -78,7 +94,7 @@ export default function Modal({
         }}
       >
         <div
-          className={`glass flex w-full ${WIDTH[size]} flex-col ${panelAnim} ${
+          className={`glass relative flex w-full ${WIDTH[size]} flex-col ${panelAnim} ${
             sheet ? "mt-auto rounded-b-none sm:m-auto sm:rounded-b-2xl" : "m-auto"
           }`}
           style={
@@ -99,7 +115,7 @@ export default function Modal({
               {showClose && (
               <button
                 type="button"
-                onClick={close}
+                onClick={requestClose}
                 className="-mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
                 aria-label="Close"
               >
@@ -109,9 +125,20 @@ export default function Modal({
             </div>
           )}
 
+          {!title && showClose && (
+            <button
+              type="button"
+              onClick={requestClose}
+              className="absolute right-3 top-3 z-10 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+              aria-label="Close"
+            >
+              <X size={14} />
+            </button>
+          )}
+
           <div
             className={`flex min-h-0 flex-col ${
-              padded ? `gap-4 p-5 ${title ? "pt-4" : ""}` : ""
+              padded ? `gap-4 p-5 ${title ? "pt-4" : showClose ? "pt-10" : ""}` : ""
             } ${bodyClassName}`}
           >
             {children}

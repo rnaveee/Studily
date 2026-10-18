@@ -171,6 +171,34 @@ export interface ParseAvailability {
   paused: boolean;
 }
 
+export interface GenAvailability {
+  enabled: boolean;
+  monthlyLimit: number;
+  remaining: number;
+  paused: boolean;
+  maxFiles: number;
+  maxFileBytes: number;
+  maxTotalBytes: number;
+}
+
+export interface GeneratedCard {
+  front: string;
+  back: string;
+  frontImage: string | null;
+  backImage: string | null;
+  sourcePage: number | null;
+  sourceLabel: string | null;
+  sourceFile: string | null;
+  duplicate: boolean;
+}
+
+export interface GeneratedDeck {
+  title: string;
+  cards: GeneratedCard[];
+  warnings: string[];
+  remaining: number;
+}
+
 export interface ParseAccuracy {
   successRate: number | null;
   sampleSize: number;
@@ -635,6 +663,16 @@ export interface AdminParseSpender {
   usd: number;
 }
 
+export interface AdminFeatureBudget {
+  feature: string;
+  label: string;
+  usesThisMonth: number;
+  usdToday: number;
+  dailyBudget: number;
+  usdMonth: number;
+  monthlyBudget: number;
+}
+
 export interface AdminParseSpend {
   parsesToday: number;
   parses7d: number;
@@ -643,6 +681,7 @@ export interface AdminParseSpend {
   usd7d: number;
   usdTotal: number;
   topSpenders7d: AdminParseSpender[];
+  budgets: AdminFeatureBudget[];
 }
 
 export interface AdminGrowthPoint {

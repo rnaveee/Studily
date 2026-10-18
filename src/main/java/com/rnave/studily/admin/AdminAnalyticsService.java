@@ -2,6 +2,7 @@ package com.rnave.studily.admin;
 
 import com.rnave.studily.admin.AdminDtos.ActivityMetrics;
 import com.rnave.studily.admin.AdminDtos.ContentMetric;
+import com.rnave.studily.admin.AdminDtos.FeatureBudget;
 import com.rnave.studily.admin.AdminDtos.Funnel;
 import com.rnave.studily.admin.AdminDtos.GrowthPoint;
 import com.rnave.studily.admin.AdminDtos.Overview;
@@ -10,13 +11,17 @@ import com.rnave.studily.admin.AdminDtos.ParseSpender;
 import com.rnave.studily.admin.AdminDtos.RecentUser;
 import com.rnave.studily.admin.AdminDtos.SchoolCount;
 import com.rnave.studily.admin.AdminDtos.UserMetrics;
+import com.rnave.studily.parse.AiBudget;
 import com.rnave.studily.parse.ParsePricing;
+import com.rnave.studily.user.UserTimeZones;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,8 +46,22 @@ public class AdminAnalyticsService {
             new ContentSource("Push subscriptions", "push_subscriptions", "created_at"));
 
     private final JdbcTemplate jdbc;
+    private final UserTimeZones timeZones;
+    private final double courseDailyBudget;
+    private final double courseMonthlyBudget;
+    private final double flashcardsDailyBudget;
+    private final double flashcardsMonthlyBudget;
 
-    public AdminAnalyticsService(JdbcTemplate jdbc) {
+    public AdminAnalyticsService(JdbcTemplate jdbc, UserTimeZones timeZones,
+                                 @Value("${app.parse.daily-budget-usd}") double courseDailyBudget,
+                                 @Value("${app.parse.monthly-budget-usd}") double courseMonthlyBudget,
+                                 @Value("${app.flashcards.gen.daily-budget-usd}") double flashcardsDailyBudget,
+                                 @Value("${app.flashcards.gen.monthly-budget-usd}") double flashcardsMonthlyBudget) {
+        this.timeZones = timeZones;
+        this.courseDailyBudget = courseDailyBudget;
+        this.courseMonthlyBudget = courseMonthlyBudget;
+        this.flashcardsDailyBudget = flashcardsDailyBudget;
+        this.flashcardsMonthlyBudget = flashcardsMonthlyBudget;
         this.jdbc = jdbc;
     }
 
@@ -200,9 +219,10 @@ public class AdminAnalyticsService {
 
     public ParseSpend parseSpend() {
         List<Row> rows = jdbc.query("""
-                SELECT model, input_tokens, output_tokens, created_at
+                SELECT feature, model, input_tokens, output_tokens, created_at
                 FROM course_parse_usage
                 """, (rs, i) -> new Row(
+                rs.getString("feature"),
                 rs.getString("model"),
                 rs.getLong("input_tokens"),
                 rs.getLong("output_tokens"),
@@ -241,10 +261,27 @@ public class AdminAnalyticsService {
                 .limit(10)
                 .toList();
 
-        return new ParseSpend(today, week, rows.size(), usdToday, usdWeek, usdTotal, top);
+        Instant dayStart = AiBudget.dayStart(timeZones.fallback());
+        Instant monthStart = AiBudget.monthStart(ZonedDateTime.now(timeZones.fallback()));
+        List<FeatureBudget> budgets = List.of(
+                budget(rows, "COURSE", "Course outlines and schedules", dayStart, monthStart,
+                        courseDailyBudget, courseMonthlyBudget),
+                budget(rows, "FLASHCARDS", "Flashcards from documents", dayStart, monthStart,
+                        flashcardsDailyBudget, flashcardsMonthlyBudget));
+
+        return new ParseSpend(today, week, rows.size(), usdToday, usdWeek, usdTotal, top, budgets);
     }
 
-    private record Row(String model, long inputTokens, long outputTokens, Instant at) {
+    private static FeatureBudget budget(List<Row> rows, String feature, String label, Instant dayStart,
+                                        Instant monthStart, double dailyBudget, double monthlyBudget) {
+        List<Row> mine = rows.stream().filter(r -> feature.equals(r.feature())).toList();
+        double usdToday = mine.stream().filter(r -> !r.at().isBefore(dayStart)).mapToDouble(Row::usd).sum();
+        double usdMonth = mine.stream().filter(r -> !r.at().isBefore(monthStart)).mapToDouble(Row::usd).sum();
+        long uses = mine.stream().filter(r -> !r.at().isBefore(monthStart)).count();
+        return new FeatureBudget(feature, label, uses, usdToday, dailyBudget, usdMonth, monthlyBudget);
+    }
+
+    private record Row(String feature, String model, long inputTokens, long outputTokens, Instant at) {
         double usd() {
             return ParsePricing.usd(model, inputTokens, outputTokens);
         }

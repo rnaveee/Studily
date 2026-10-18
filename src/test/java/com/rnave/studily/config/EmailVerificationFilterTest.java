@@ -92,6 +92,32 @@ class EmailVerificationFilterTest {
     }
 
     @Test
+    void flashcardGeneration_isBlockedForUnverifiedUsersWithItsOwnMessage() throws Exception {
+        authenticateAs(false);
+        for (String path : new String[] {"/api/flashcard-sets/generate", "/api/flashcard-sets/42/generate"}) {
+            HttpServletResponse response = mock(HttpServletResponse.class);
+            StringWriter body = new StringWriter();
+            when(response.getWriter()).thenReturn(new PrintWriter(body));
+
+            filter.doFilter(requestFor(path), response, filterChain);
+
+            verify(response).setStatus(HttpServletResponse.SC_FORBIDDEN);
+            assertThat(body.toString()).contains(EmailVerificationFilter.GENERATE_MESSAGE);
+        }
+        verify(filterChain, never()).doFilter(any(), any());
+    }
+
+    @Test
+    void flashcardGenerationAvailabilityAndOrdinarySetEndpoints_stayOpen() throws Exception {
+        authenticateAs(false);
+
+        filter.doFilter(requestFor("/api/flashcard-sets/generate/enabled"), mock(HttpServletResponse.class), filterChain);
+        filter.doFilter(requestFor("/api/flashcard-sets/42"), mock(HttpServletResponse.class), filterChain);
+
+        verify(filterChain, times(2)).doFilter(any(), any());
+    }
+
+    @Test
     void ordinaryCourseEndpoints_areNotGated() throws Exception {
         authenticateAs(false);
 

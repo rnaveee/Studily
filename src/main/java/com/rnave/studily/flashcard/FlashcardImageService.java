@@ -53,8 +53,15 @@ public class FlashcardImageService {
 
     @Transactional
     public FlashcardImageDto upload(MultipartFile file) {
-        Long userId = currentUser.id();
-        Processed processed = processor.processImageOnly(file, MAX_DIMENSION);
+        return save(currentUser.id(), processor.processImageOnly(file, MAX_DIMENSION));
+    }
+
+    @Transactional
+    public FlashcardImageDto storeGenerated(Long userId, String contentType, byte[] bytes) {
+        return save(userId, processor.processBytes(contentType, bytes, MAX_DIMENSION));
+    }
+
+    private FlashcardImageDto save(Long userId, Processed processed) {
         byte[] data = processed.data();
         if (data.length > MAX_STORED_BYTES) {
             throw new BadRequestException("That image is too large. Try one under 4MB.");

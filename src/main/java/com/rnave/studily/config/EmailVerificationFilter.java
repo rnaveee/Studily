@@ -20,10 +20,12 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
 
     static final String MESSAGE = "Verify your email to use messaging and friends";
     static final String PARSE_MESSAGE = "Verify your email to build a course from an outline";
+    static final String GENERATE_MESSAGE = "Verify your email to make flashcards from documents";
 
     private static final List<String> LOCKED_PREFIXES = List.of("/api/friends", "/api/conversations");
     private static final String PARSE_PATH = "/api/courses/parse";
     private static final String SCHEDULE_PARSE_PATH = "/api/courses/parse/schedule";
+    private static final Pattern GENERATE_PATHS = Pattern.compile("^/api/flashcard-sets(/\\d+)?/generate/?$");
     private static final Pattern LOCKED_USER_PATHS = Pattern.compile("^/api/users/[^/]+/(progress|badges)/?$");
 
     private final UserRepository userRepository;
@@ -39,7 +41,8 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String uri = request.getRequestURI();
-        boolean locked = LOCKED_PREFIXES.stream().anyMatch(uri::startsWith) || isParse(uri)
+        boolean generate = GENERATE_PATHS.matcher(uri).matches();
+        boolean locked = LOCKED_PREFIXES.stream().anyMatch(uri::startsWith) || isParse(uri) || generate
                 || LOCKED_USER_PATHS.matcher(uri).matches();
         if (!locked) {
             filterChain.doFilter(request, response);
@@ -52,7 +55,7 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
             if (!verified) {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 response.setContentType("application/json");
-                String message = isParse(uri) ? PARSE_MESSAGE : MESSAGE;
+                String message = isParse(uri) ? PARSE_MESSAGE : generate ? GENERATE_MESSAGE : MESSAGE;
                 response.getWriter().write(
                         "{\"status\":403,\"error\":\"Forbidden\",\"code\":\"EMAIL_UNVERIFIED\","
                                 + "\"message\":\"" + message + "\"}");

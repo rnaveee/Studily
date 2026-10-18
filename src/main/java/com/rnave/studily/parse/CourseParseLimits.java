@@ -18,6 +18,7 @@ public class CourseParseLimits {
     private final UserTimeZones timeZones;
     private final int monthlyLimit;
     private final double dailyBudgetUsd;
+    private final double monthlyBudgetUsd;
     private final Instant quotaResetAt;
 
     public CourseParseLimits(CourseParseUsageRepository usageRepository,
@@ -25,12 +26,14 @@ public class CourseParseLimits {
                              UserTimeZones timeZones,
                              @Value("${app.parse.monthly-limit}") int monthlyLimit,
                              @Value("${app.parse.daily-budget-usd}") double dailyBudgetUsd,
+                             @Value("${app.parse.monthly-budget-usd}") double monthlyBudgetUsd,
                              @Value("${app.parse.quota-reset-at:}") String quotaResetAt) {
         this.usageRepository = usageRepository;
         this.currentUser = currentUser;
         this.timeZones = timeZones;
         this.monthlyLimit = monthlyLimit;
         this.dailyBudgetUsd = dailyBudgetUsd;
+        this.monthlyBudgetUsd = monthlyBudgetUsd;
         this.quotaResetAt = quotaResetAt == null || quotaResetAt.isBlank()
                 ? Instant.EPOCH
                 : Instant.parse(quotaResetAt.strip());
@@ -44,16 +47,21 @@ public class CourseParseLimits {
         ZoneId zone = timeZones.zoneFor(currentUser.entity());
         Instant monthStart = monthStart(ZonedDateTime.now(zone));
         Instant since = quotaResetAt.isAfter(monthStart) ? quotaResetAt : monthStart;
-        long used = usageRepository.countByUserIdAndCreatedAtGreaterThanEqual(currentUser.id(), since);
+        long used = usageRepository.countByUserIdAndFeatureAndSucceededTrueAndCreatedAtGreaterThanEqual(
+                currentUser.id(), AiFeature.COURSE, since);
         return (int) Math.max(0, monthlyLimit - used);
     }
 
     public boolean paused() {
-        return spentToday() >= dailyBudgetUsd;
+        return spentToday() >= dailyBudgetUsd || spentThisMonth() >= monthlyBudgetUsd;
     }
 
     public void check() {
-        if (paused()) {
+        if (spentThisMonth() >= monthlyBudgetUsd) {
+            throw new TooManyRequestsException(
+                    "Automatic course creation is paused until the 1st. Add this course manually for now.");
+        }
+        if (spentToday() >= dailyBudgetUsd) {
             throw new TooManyRequestsException(
                     "Automatic course creation is paused for today. Add this course manually or try again tomorrow.");
         }
@@ -65,16 +73,15 @@ public class CourseParseLimits {
     }
 
     double spentToday() {
-        Instant since = ZonedDateTime.now(timeZones.fallback()).toLocalDate()
-                .atStartOfDay(timeZones.fallback()).toInstant();
-        return usageRepository.spendSince(since).stream()
-                .mapToDouble(s -> ParsePricing.usd(s.getModel(),
-                        s.getInputTokens() == null ? 0 : s.getInputTokens(),
-                        s.getOutputTokens() == null ? 0 : s.getOutputTokens()))
-                .sum();
+        return AiBudget.usd(usageRepository.spendSince(AiBudget.dayStart(timeZones.fallback()), AiFeature.COURSE));
+    }
+
+    double spentThisMonth() {
+        Instant since = monthStart(ZonedDateTime.now(timeZones.fallback()));
+        return AiBudget.usd(usageRepository.spendSince(since, AiFeature.COURSE));
     }
 
     static Instant monthStart(ZonedDateTime now) {
-        return now.toLocalDate().withDayOfMonth(1).atStartOfDay(now.getZone()).toInstant();
+        return AiBudget.monthStart(now);
     }
 }

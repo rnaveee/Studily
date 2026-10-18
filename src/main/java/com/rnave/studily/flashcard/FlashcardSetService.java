@@ -74,6 +74,11 @@ public class FlashcardSetService {
                 .orElseThrow(() -> new NotFoundException("Flashcard set not found"));
     }
 
+    @Transactional(readOnly = true)
+    public List<String> ownedCardFronts(Long id) {
+        return requireOwned(id).getCards().stream().map(Flashcard::getFront).toList();
+    }
+
     @Transactional
     public FlashcardSetDto create(FlashcardSetRequest req) {
         FlashcardSet set = new FlashcardSet();

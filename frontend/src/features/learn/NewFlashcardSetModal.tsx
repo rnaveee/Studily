@@ -1,16 +1,27 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { ClipboardPaste } from "lucide-react";
+import { ClipboardPaste, FileText } from "lucide-react";
 import Modal from "../../components/Modal";
 import SegmentedToggle from "../../components/SegmentedToggle";
 import { VISIBILITY_HINT, VISIBILITY_OPTIONS } from "./visibility";
 import { cardIsComplete } from "./CardEditor";
 import QuizletPastePanel from "./QuizletPastePanel";
+import DocumentGenerator from "./DocumentGenerator";
+import GeneratedCardsReview from "./GeneratedCardsReview";
+import { useConfirm } from "../../lib/confirm";
 import { MAX_CARDS_PER_SET, splitIntoSets, type ParseResult } from "./quizletImport";
 import { api } from "../../lib/api";
 import { toast } from "../../lib/toast";
-import type { Course, FlashcardSet, FlashcardSetRequest, FlashcardSetVisibility, Semester } from "../../types";
+import type {
+  Course,
+  Flashcard,
+  FlashcardSet,
+  FlashcardSetRequest,
+  FlashcardSetVisibility,
+  GeneratedDeck,
+  Semester,
+} from "../../types";
 
 const NO_CARDS: ParseResult = { cards: [], skipped: 0 };
 const MAX_TITLE_LENGTH = 255;
@@ -24,6 +35,9 @@ export default function NewFlashcardSetModal({
 }) {
   const [title, setTitle] = useState("");
   const [importing, setImporting] = useState(startImporting);
+  const [fromDocs, setFromDocs] = useState(false);
+  const [deck, setDeck] = useState<GeneratedDeck | null>(null);
+  const confirmDialog = useConfirm();
   const [parsed, setParsed] = useState<ParseResult>(NO_CARDS);
   const [description, setDescription] = useState("");
   const [courseId, setCourseId] = useState<number | "">("");
@@ -99,6 +113,67 @@ export default function NewFlashcardSetModal({
     });
   }
 
+  function createFromDeck(chosen: Flashcard[]) {
+    if (!deck || create.isPending) return;
+    create.mutate({
+      title: (title.trim() || deck.title).slice(0, MAX_TITLE_LENGTH),
+      description: description.trim() || null,
+      courseId: courseId === "" ? null : courseId,
+      cards: chosen,
+      visibility,
+    });
+  }
+
+  async function confirmDiscard(): Promise<boolean> {
+    if (!deck || create.isPending || create.isSuccess) return true;
+    return confirmDialog({
+      title: `Discard ${deck.cards.length} generated ${deck.cards.length === 1 ? "card" : "cards"}?`,
+      message: "They won't be saved. Uploading the same file again later won't use another document.",
+      confirmLabel: "Discard",
+      danger: true,
+    });
+  }
+
+  if (deck) {
+    return (
+      <Modal
+        onClose={onClose}
+        size="xl"
+        variant="sheet"
+        beforeClose={confirmDiscard}
+        title={
+          <div>
+            <h2 className="text-[15px] font-semibold text-fg">Check your cards</h2>
+            <p className="mt-1 text-[13px] text-fg-2">Edit or untick anything before the set is made.</p>
+          </div>
+        }
+      >
+        <GeneratedCardsReview
+          deck={deck}
+          room={MAX_CARDS_PER_SET}
+          saving={create.isPending}
+          confirmLabel={(n) => `Create set with ${n} ${n === 1 ? "card" : "cards"}`}
+          onConfirm={createFromDeck}
+          onBack={async () => {
+            if (await confirmDiscard()) setDeck(null);
+          }}
+          header={
+            <div>
+              <label className="field-label">Title</label>
+              <input
+                className="input"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={deck.title}
+                maxLength={MAX_TITLE_LENGTH}
+              />
+            </div>
+          }
+        />
+      </Modal>
+    );
+  }
+
   const createLabel =
     setCount > 1
       ? `Create ${setCount} sets`
@@ -109,16 +184,18 @@ export default function NewFlashcardSetModal({
   return (
     <Modal
       onClose={onClose}
-      size={importing ? "lg" : "sm"}
+      size={importing || fromDocs ? "lg" : "sm"}
       title={
         <div>
           <h2 className="text-[15px] font-semibold text-fg">
-            {importing ? "Import from Quizlet" : "New flashcard set"}
+            {importing ? "Import from Quizlet" : fromDocs ? "Make cards from documents" : "New flashcard set"}
           </h2>
           <p className="mt-1 text-[13px] text-fg-2">
             {importing
               ? "Paste your Quizlet export and give the new set a title."
-              : "Give it a title and, optionally, a course."}
+              : fromDocs
+                ? "Upload lecture slides or notes and we'll write the cards. You check them before anything is saved."
+                : "Give it a title and, optionally, a course."}
           </p>
         </div>
       }
@@ -130,7 +207,7 @@ export default function NewFlashcardSetModal({
             className="input"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Bio 101 midterm"
+            placeholder={fromDocs ? "Leave blank to use one from your file" : "e.g. Bio 101 midterm"}
             maxLength={MAX_TITLE_LENGTH}
             autoFocus
           />
@@ -182,7 +259,29 @@ export default function NewFlashcardSetModal({
           </p>
         </div>
 
-        {importing ? (
+        {fromDocs ? (
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="field-label" style={{ marginBottom: 0 }}>
+                Documents
+              </span>
+              <button
+                type="button"
+                onClick={() => setFromDocs(false)}
+                className="text-[12px] text-fg-3 transition-colors hover:text-fg"
+              >
+                Start empty instead
+              </button>
+            </div>
+            <DocumentGenerator
+              onGenerated={(generated) => {
+                setDeck(generated);
+                if (!title.trim()) setTitle(generated.title.slice(0, MAX_TITLE_LENGTH));
+              }}
+              onCancel={onClose}
+            />
+          </div>
+        ) : importing ? (
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
               <span className="field-label" style={{ marginBottom: 0 }}>
@@ -208,24 +307,36 @@ export default function NewFlashcardSetModal({
             />
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setImporting(true)}
-            className="flex items-center gap-1.5 self-start text-[13px] font-medium text-accent hover:underline"
-          >
-            <ClipboardPaste size={13} />
-            Import cards from Quizlet
-          </button>
+          <div className="flex flex-col items-start gap-2">
+            <button
+              type="button"
+              onClick={() => setFromDocs(true)}
+              className="flex items-center gap-1.5 text-[13px] font-medium text-accent hover:underline"
+            >
+              <FileText size={13} />
+              Make cards from slides or notes
+            </button>
+            <button
+              type="button"
+              onClick={() => setImporting(true)}
+              className="flex items-center gap-1.5 text-[13px] font-medium text-accent hover:underline"
+            >
+              <ClipboardPaste size={13} />
+              Import cards from Quizlet
+            </button>
+          </div>
         )}
 
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="btn btn-ghost">
-            Cancel
-          </button>
-          <button onClick={handleCreate} disabled={!canCreate} className="btn btn-primary">
-            {createLabel}
-          </button>
-        </div>
+        {!fromDocs && (
+          <div className="flex justify-end gap-2">
+            <button onClick={onClose} className="btn btn-ghost">
+              Cancel
+            </button>
+            <button onClick={handleCreate} disabled={!canCreate} className="btn btn-primary">
+              {createLabel}
+            </button>
+          </div>
+        )}
     </Modal>
   );
 }

@@ -82,7 +82,12 @@ public final class AdminDtos {
             double usdToday,
             double usd7d,
             double usdTotal,
-            List<ParseSpender> topSpenders7d) {
+            List<ParseSpender> topSpenders7d,
+            List<FeatureBudget> budgets) {
+    }
+
+    public record FeatureBudget(String feature, String label, long usesThisMonth, double usdToday,
+                                double dailyBudget, double usdMonth, double monthlyBudget) {
     }
 
     public record ParseSpender(String username, long parses, double usd) {

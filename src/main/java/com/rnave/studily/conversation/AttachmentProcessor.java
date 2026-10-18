@@ -71,6 +71,17 @@ public class AttachmentProcessor {
         return processAnyImage(sanitizeFilename(file.getOriginalFilename()), contentType, bytes(file), maxDimension);
     }
 
+    public Processed processBytes(String contentType, byte[] bytes, int maxDimension) {
+        String type = contentType == null ? "" : contentType.toLowerCase(Locale.ROOT);
+        if (!isImageType(type)) {
+            throw new BadRequestException("Unsupported image type. Use a JPEG, PNG, WEBP or GIF.");
+        }
+        if (bytes == null || bytes.length == 0 || bytes.length > MAX_BYTES) {
+            throw new BadRequestException("Could not read image");
+        }
+        return processAnyImage("card", type, bytes, maxDimension);
+    }
+
     private static String contentType(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("File is empty");
