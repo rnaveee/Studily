@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, Maximize2, Minimize2, Pause, Play, RotateCcw, SkipForward, Volume1, Volume2, VolumeX } from "lucide-react";
+import { Maximize2, Minimize2, Pause, Play, RotateCcw, SkipForward } from "lucide-react";
 import {
   formatMs,
   phaseDurationMs,
@@ -12,8 +12,9 @@ import {
 } from "../../lib/pomodoro";
 import { formatTime } from "../../lib/format";
 import { useFullscreen } from "../../lib/fullscreen";
-import { playRingtone, RINGTONES, unlockAudio } from "../../lib/ringtones";
+import { playRingtone } from "../../lib/ringtones";
 import BackButton from "../../components/BackButton";
+import { RingtoneGrid, VolumeSlider } from "../../components/RingtonePicker";
 import SegmentedToggle from "../../components/SegmentedToggle";
 
 const PRESETS = [
@@ -265,74 +266,22 @@ function DurationsCard({ s }: { s: PomodoroState }) {
 }
 
 function SoundCard({ s }: { s: PomodoroState }) {
-  const VolumeIcon = s.volume === 0 ? VolumeX : s.volume < 0.5 ? Volume1 : Volume2;
-
   return (
     <div className="card p-5">
       <h2 className="mb-3 text-[12px] font-semibold uppercase tracking-wider text-fg-3">
         Sound when time is up
       </h2>
-      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Ringtone">
-        {RINGTONES.map((r) => {
-          const active = s.ringtone === r.id;
-          return (
-            <button
-              key={r.id}
-              role="radio"
-              aria-checked={active}
-              onClick={() => {
-                pomodoro.setRingtone(r.id);
-                unlockAudio();
-                playRingtone(r.id, s.volume);
-              }}
-              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors ${
-                active ? "" : "border-line hover:bg-surface-hi"
-              }`}
-              style={
-                active
-                  ? {
-                      borderColor: "var(--accent)",
-                      background: "color-mix(in srgb, var(--accent) 10%, transparent)",
-                    }
-                  : undefined
-              }
-            >
-              <span className="min-w-0 flex-1">
-                <span className={`block text-[13px] font-medium ${active ? "text-accent" : "text-fg"}`}>
-                  {r.label}
-                </span>
-                <span className="block truncate text-[11px] text-fg-3">{r.description}</span>
-              </span>
-              {active ? (
-                <Check size={14} className="shrink-0 text-accent" />
-              ) : r.id !== "none" ? (
-                <Play size={12} className="shrink-0 text-fg-3" />
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mt-4 flex items-center gap-3">
-        <VolumeIcon size={16} className="shrink-0 text-fg-3" />
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.05}
-          value={s.volume}
-          aria-label="Volume"
+      <RingtoneGrid value={s.ringtone} volume={s.volume} onSelect={pomodoro.setRingtone} />
+      <div className="mt-4">
+        <VolumeSlider
+          volume={s.volume}
           disabled={s.ringtone === "none"}
-          onChange={(e) => pomodoro.setVolume(Number(e.target.value))}
-          onPointerUp={() => {
-            unlockAudio();
+          onChange={pomodoro.setVolume}
+          onPreview={() => {
             const now = pomodoro.getState();
             playRingtone(now.ringtone, now.volume);
           }}
-          className="h-1.5 flex-1 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
-          style={{ accentColor: "var(--accent)" }}
         />
-        <span className="w-9 text-right text-[12px] tabular-nums text-fg-3">{Math.round(s.volume * 100)}%</span>
       </div>
     </div>
   );

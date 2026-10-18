@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Clock, Coffee, Maximize2, Minimize2, Pause, Play, Plus, Square, X, Zap } from "lucide-react";
+import { Check, Clock, Coffee, Maximize2, Minimize2, Pause, Play, Plus, Settings, Square, X, Zap } from "lucide-react";
 import { api } from "../../../lib/api";
 import { useConfirm } from "../../../lib/confirm";
 import { formatTime } from "../../../lib/format";
@@ -9,6 +9,7 @@ import { useFullscreen } from "../../../lib/fullscreen";
 import { formatMs, pomodoroColor } from "../../../lib/pomodoro";
 import { applyDelta, holdProgressMoments } from "../../../lib/progressDelta";
 import { progressKeys } from "../../progress/useProgress";
+import SessionSettingsModal from "./SessionSettingsModal";
 import { formatMultiplier, MODE_LABEL } from "./sessionFormat";
 import type { StudySessionDto, StudySessionResult, StudySessionTaskDto } from "../../../types";
 
@@ -30,6 +31,7 @@ export default function ActiveSessionCard({
   const qc = useQueryClient();
   const confirm = useConfirm();
   const [expanded, setExpanded] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const skew = Date.parse(session.serverNow) - receivedAt;
   const [now, setNow] = useState(() => Date.now() + skew);
 
@@ -232,6 +234,7 @@ export default function ActiveSessionCard({
       onPause={() => pause.mutate()}
       onResume={() => resume.mutate()}
       onEnd={endSession}
+      onSettings={() => setSettingsOpen(true)}
     />
   );
   const tasks = (
@@ -287,6 +290,10 @@ export default function ActiveSessionCard({
             </div>
           </div>
         </FullscreenSession>
+      )}
+
+      {settingsOpen && (
+        <SessionSettingsModal mode={session.mode} tasks={tasks} onClose={() => setSettingsOpen(false)} />
       )}
     </div>
   );
@@ -346,6 +353,7 @@ function SessionActions({
   onPause,
   onResume,
   onEnd,
+  onSettings,
 }: {
   phase: Phase;
   busy: boolean;
@@ -356,6 +364,7 @@ function SessionActions({
   onPause: () => void;
   onResume: () => void;
   onEnd: () => void;
+  onSettings: () => void;
 }) {
   const canPause = phase === "focus" || phase === "break";
   return (
@@ -435,14 +444,24 @@ function SessionActions({
         ) : (
           <span />
         )}
-        <button
-          onClick={onEnd}
-          disabled={busy}
-          className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
-        >
-          <Square size={12} />
-          End session
-        </button>
+        <span className="flex items-center">
+          <button
+            onClick={onSettings}
+            aria-label="Session settings"
+            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+          >
+            <Settings size={13} />
+            Settings
+          </button>
+          <button
+            onClick={onEnd}
+            disabled={busy}
+            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
+          >
+            <Square size={12} />
+            End session
+          </button>
+        </span>
       </div>
     </>
   );

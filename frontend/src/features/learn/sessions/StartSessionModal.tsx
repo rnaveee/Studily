@@ -1,11 +1,13 @@
 import { useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Circle, Info, Minus, Play, Plus, X } from "lucide-react";
+import { Bell, ChevronDown, Circle, Info, Minus, Play, Plus, X } from "lucide-react";
 import Modal, { useModalClose } from "../../../components/Modal";
 import SegmentedToggle from "../../../components/SegmentedToggle";
 import { api, ApiError } from "../../../lib/api";
-import { unlockAudio } from "../../../lib/ringtones";
+import { ringtoneLabel, unlockAudio } from "../../../lib/ringtones";
+import { useSessionSounds } from "../../../lib/sessionSounds";
 import { progressKeys } from "../../progress/useProgress";
+import AlarmSoundsEditor from "./AlarmSoundsEditor";
 import { formatMinutes } from "./sessionFormat";
 import type { StartStudySessionRequest, StudySessionDto, StudySessionMode } from "../../../types";
 
@@ -38,6 +40,8 @@ function StartForm() {
   const [minutes, setMinutes] = useState(120);
   const [tasks, setTasks] = useState<{ id: number; text: string }[]>([]);
   const [draft, setDraft] = useState("");
+  const [soundsOpen, setSoundsOpen] = useState(false);
+  const sounds = useSessionSounds();
   const draftRef = useRef<HTMLInputElement>(null);
   const nextId = useRef(0);
 
@@ -225,6 +229,27 @@ function StartForm() {
           )}
         </ul>
         {full && <p className="text-[11.5px] text-fg-3">That's the max of {MAX_TASKS} tasks.</p>}
+      </section>
+
+      <section className="space-y-2.5">
+        <button
+          type="button"
+          onClick={() => setSoundsOpen((o) => !o)}
+          aria-expanded={soundsOpen}
+          className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface-hi"
+        >
+          <Bell size={14} className="shrink-0 text-fg-3" />
+          <span className="text-[13px] font-semibold text-fg">Alarm sounds</span>
+          <span className="ml-auto truncate text-[12px] text-fg-3">
+            {ringtoneLabel(sounds.focusEnd)} · {ringtoneLabel(sounds.breakEnd)}
+          </span>
+          <ChevronDown
+            size={15}
+            className="shrink-0 text-fg-3 transition-transform"
+            style={{ transform: soundsOpen ? "rotate(180deg)" : undefined }}
+          />
+        </button>
+        {soundsOpen && <AlarmSoundsEditor mode={mode} />}
       </section>
 
       <p

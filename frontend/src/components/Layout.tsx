@@ -20,7 +20,7 @@ import Avatar from "./Avatar";
 import Banners from "./Banners";
 import ProgressWhatsNew from "../features/progress/ProgressWhatsNew";
 import ProgressHost from "../features/progress/ProgressHost";
-import CheckinChime from "../features/learn/sessions/CheckinChime";
+import SessionChime from "../features/learn/sessions/SessionChime";
 import WelcomeTour from "../features/welcome/WelcomeTour";
 import { useWelcomeTourStep } from "../lib/welcomeTour";
 import CoinBalance from "../features/progress/CoinBalance";
@@ -322,7 +322,7 @@ export default function Layout() {
       </div>
       {debug && <ViewportDebug />}
       <ProgressHost />
-      <CheckinChime />
+      <SessionChime />
       <WelcomeTour />
     </div>
   );
