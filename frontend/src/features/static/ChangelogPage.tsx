@@ -7,6 +7,7 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
+  { version: 57, date: "2026-10-18", summary: "Added making flashcards from your slides and notes." },
   { version: 56, date: "2026-10-15", summary: "Fixed copying messages and link previews in chats." },
   { version: 55, date: "2026-10-15", summary: "Flashcards can now have more than one line, and tapping a card image enlarges it." },
   { version: 54, date: "2026-10-15", summary: "Added progress tracking to flashcards." },
