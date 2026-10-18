@@ -13,7 +13,14 @@ export type FlairArtKind =
   | "laurel"
   | "arcs"
   | "rainbow"
-  | "clover";
+  | "clover"
+  | "amethyst"
+  | "firefly"
+  | "pumpkin"
+  | "comet"
+  | "candy"
+  | "pixel"
+  | "gem";
 
 export interface ArtItem {
   d: string;
@@ -59,6 +66,13 @@ export const ART_KINDS: Record<string, FlairArtKind> = {
   ring_arcs: "arcs",
   ring_rainbow: "rainbow",
   ring_clover: "clover",
+  ring_amethyst: "amethyst",
+  ring_firefly: "firefly",
+  ring_pumpkin: "pumpkin",
+  ring_comet: "comet",
+  ring_candy: "candy",
+  ring_pixel: "pixel",
+  ring_gem: "gem",
 };
 
 export function flairArtKind(code: string | null | undefined): FlairArtKind | null {
@@ -86,6 +100,9 @@ const star = (s: number, k: number) => {
   const q = f(k * s);
   return `M0 ${-s}Q${q} ${-q} ${s} 0Q${q} ${q} 0 ${s}Q${-q} ${q} ${-s} 0Q${-q} ${-q} 0 ${-s}Z`;
 };
+
+const seg = (r1: number, r2: number, a1: number, a2: number, sk: number) =>
+  `M${pt(pol(r2, a1 + sk))}A${r2} ${r2} 0 0 1 ${pt(pol(r2, a2 + sk))}L${pt(pol(r1, a2))}A${r1} ${r1} 0 0 0 ${pt(pol(r1, a1))}Z`;
 
 const F2 = "#e3261d";
 const F3 = "#ff7a18";
@@ -604,6 +621,256 @@ export function buildFlairArt(kind: FlairArtKind, small: boolean, still: boolean
       }),
     );
     front = [layer(clovers, 70), layer(dust, -35)];
+  } else if (kind === "amethyst") {
+    stops = ["#e6d4ff", "#b583ff", "#7a3fd1", "#b583ff"];
+    glow = { r: 110, color: "#b583ff", op: 0.45, dur: 2.6 };
+    const AS: Pt[] = [
+      [8, 98],
+      [38, 111],
+      [68, 96],
+      [98, 108],
+      [128, 99],
+      [158, 112],
+      [188, 97],
+      [218, 109],
+      [248, 98],
+      [278, 111],
+      [308, 96],
+      [338, 108],
+    ];
+    const AZ = [7, 4.5, 5.5, 7.5, 4.5, 6, 5, 7, 4.5, 6, 5.5, 4.5];
+    const ac = ["#ffffff", "#dcc6ff", "#c3a0ff"];
+    front = [
+      layer([item({ d: circle(86), stroke: "#ffffff", sw: 2.5, dash: "28 600", op: 0.9 })], 4.5),
+      layer(
+        AS.map((s, i) =>
+          item({
+            d: star(AZ[i], 0.2),
+            fill: ac[i % 3],
+            tf: `translate(${pt(pol(s[1], s[0]))})`,
+            sv: "0.3;1.15;0.3",
+            ov: "0.2;1;0.2",
+            dur: f(1.5 + (i % 4) * 0.3),
+            begin: f(-i * 0.37),
+          }),
+        ),
+        120,
+      ),
+    ];
+  } else if (kind === "firefly") {
+    stops = ["#4c8a52", "#24552f", "#12331c", "#2f6a3a"];
+    glow = { r: 112, color: "#c8f04a", op: 0.3, dur: 2.8 };
+    const FF: Pt[] = [
+      [15, 104],
+      [52, 117],
+      [95, 99],
+      [133, 112],
+      [172, 103],
+      [210, 119],
+      [250, 100],
+      [290, 113],
+      [330, 107],
+    ];
+    const flies: ArtItem[][] = [[], []];
+    FF.forEach((p, i) => {
+      const tf = `translate(${pt(pol(p[1], p[0]))})`;
+      const sv = "0.6;1.25;0.6";
+      const dur = f(1.8 + (i % 4) * 0.45);
+      const begin = f(-i * 0.53);
+      flies[i % 2].push(item({ d: circle(7), fill: "#c8f04a", op: 0.35, tf, sv, ov: "0.05;0.45;0.05", dur, begin }));
+      flies[i % 2].push(item({ d: circle(2.6), fill: "#f6ffb0", tf, sv, ov: "0.15;1;0.15", dur, begin }));
+    });
+    front = [layer(flies[0], -48), layer(flies[1], -75)];
+  } else if (kind === "pumpkin") {
+    stops = ["#ffb347", "#ff7a18", "#8a3fd1", "#5a2391"];
+    glow = { r: 114, color: "#ff8a1f", op: 0.5, dur: 0.9 };
+    const BODY = "M0 -8C7 -8 10 -4 10 1C10 6 6 9 0 9C-6 9 -10 6 -10 1C-10 -4 -7 -8 0 -8Z";
+    const RIDGE = "M-4 -7.5C-6.5 -2 -6.5 4 -4 8.6M4 -7.5C6.5 -2 6.5 4 4 8.6";
+    const STEM = "M-1.3 -7.6L-1 -12L1.8 -12.6L1.3 -7.6Z";
+    const FACE =
+      "M-6.5 -2L-3.5 -5.5L-1.5 -1.5ZM6.5 -2L3.5 -5.5L1.5 -1.5ZM-6.5 2.5L-3.5 4.2L0 2.6L3.5 4.2L6.5 2.5L4.5 6.2L0 7.2L-4.5 6.2Z";
+    const BAT =
+      "M0 -1.5C-1.5 -3.5 -4 -4.5 -6.5 -3.5C-8.5 -5.5 -11.5 -5.5 -13.5 -2.5C-11.5 -2.5 -10.5 -0.5 -10.5 1.5C-8.5 -0.5 -6.5 -0.5 -4.5 0.5C-3.5 -0.5 -1.5 0.5 0 3C1.5 0.5 3.5 -0.5 4.5 0.5C6.5 -0.5 8.5 -0.5 10.5 1.5C10.5 -0.5 11.5 -2.5 13.5 -2.5C11.5 -5.5 8.5 -5.5 6.5 -3.5C4 -4.5 1.5 -3.5 0 -1.5Z";
+    const lanterns: ArtItem[] = [];
+    [45, 135, 225, 315].forEach((a, i) => {
+      const tf = `translate(${pt(pol(92, a))}) scale(1.15)`;
+      lanterns.push(item({ d: BODY, fill: "#f07a12", stroke: "#b84e0a", sw: 0.8, tf }));
+      lanterns.push(item({ d: RIDGE, stroke: "#c95a0c", sw: 0.8, tf }));
+      lanterns.push(item({ d: STEM, fill: "#4f7a2a", tf }));
+      lanterns.push(item({ d: FACE, fill: "#fff2a8", tf, ov: "0.55;1;0.7;1;0.55", dur: f(0.7 + i * 0.13), begin: f(-i * 0.3) }));
+    });
+    const bats = [10, 130, 250].map((a, i) =>
+      item({
+        d: BAT,
+        fill: "#2b1846",
+        stroke: "#c9a3ff",
+        sw: 0.7,
+        tf: `translate(${pt(pol(114, a))}) rotate(${a}) scale(0.85)`,
+        sv: "1 1;0.4 1.1;1 1",
+        dur: f(0.5 + i * 0.07),
+        begin: f(-i * 0.2),
+      }),
+    );
+    front = [layer(lanterns), layer(bats, 14)];
+  } else if (kind === "comet") {
+    stops = ["#f0f9ff", "#a8dcff", "#4f93e3", "#a8dcff"];
+    glow = { r: 108, color: "#a8dcff", op: 0.35, dur: 3 };
+    const tail = (r: number, a: number, len: number, w: number) => {
+      const k = 1 / Math.cos((len * Math.PI) / 360);
+      const m = a - len / 2;
+      return `M${pt(pol(r + w, a))}Q${pt(pol((r + w / 2) * k, m))} ${pt(pol(r, a - len))}Q${pt(pol((r - w / 2) * k, m))} ${pt(pol(r - w, a))}Z`;
+    };
+    const comets: ArtItem[] = [];
+    ([
+      [20, 102],
+      [140, 110],
+      [260, 98],
+    ] as Pt[]).forEach(([a, r], i) => {
+      const tf = `translate(${pt(pol(r, a))})`;
+      comets.push(item({ d: tail(r, a, 60, 3), fill: "#bfe6ff", op: 0.3 }));
+      comets.push(item({ d: tail(r, a, 32, 3.2), fill: "#e6f6ff", op: 0.75 }));
+      comets.push(item({ d: circle(7), fill: "#bfe6ff", op: 0.35, tf, sv: "1;1.3;1", ov: "0.25;0.5;0.25", dur: 1.4, begin: f(-i * 0.4) }));
+      comets.push(item({ d: circle(3.6), fill: "#ffffff", tf }));
+    });
+    const SP: Pt[] = [
+      [35, 120],
+      [80, 117],
+      [118, 123],
+      [165, 118],
+      [205, 121],
+      [240, 116],
+      [295, 122],
+      [345, 118],
+    ];
+    const specks = SP.map((s, i) =>
+      item({
+        d: star(2.6, 0.25),
+        fill: "#e6f4ff",
+        tf: `translate(${pt(pol(s[1], s[0]))})`,
+        op: 0.6,
+        ov: "0.15;0.75;0.15",
+        dur: f(2 + i * 0.3),
+        begin: f(-i * 0.7),
+      }),
+    );
+    front = [layer(specks), layer(comets, 7)];
+  } else if (kind === "candy") {
+    stops = ["#ffc2dc", "#ff7eb6", "#ff5fa2", "#ff7eb6"];
+    glow = { r: 106, color: "#ff9ec9", op: 0.3, dur: 3 };
+    let white = "";
+    let mint = "";
+    for (let i = 0; i < 36; i++) {
+      const a = i * 10;
+      if (i % 3 === 0) white += seg(81, 91, a, a + 10, 6);
+      else if (i % 3 === 1) mint += seg(81, 91, a, a + 10, 6);
+    }
+    const SWIRL = "M0 0A1.5 1.5 0 0 1 3 0A3 3 0 0 1 -3 0A4.5 4.5 0 0 1 6 0A6 6 0 0 1 -6 0";
+    const lc = ["#ff5fa2", "#3fcfa4", "#ff8fc4", "#5ad9b5"];
+    const pops: ArtItem[] = [];
+    [45, 135, 225, 315].forEach((a, i) => {
+      const tf = `translate(${pt(pol(107, a))}) rotate(${a})`;
+      pops.push(item({ d: "M0 7L0 16", stroke: "#ffffff", sw: 2.4, tf }));
+      pops.push(item({ d: circle(8), fill: lc[i], stroke: "#ffffff", sw: 1, tf }));
+      pops.push(item({ d: SWIRL, stroke: "#ffffff", sw: 1.6, op: 0.95, tf }));
+    });
+    const spc = ["#ffd23f", "#5aa8ff", "#ff5a5a", "#8ff0d0", "#ffffff", "#c084fc"];
+    const sprinkles: ArtItem[] = [];
+    for (let i = 0; i < 14; i++) {
+      const a = (i * 360) / 14 + 12;
+      const r = 97 + (i % 3) * 9;
+      sprinkles.push(
+        item({
+          d: "M-2.6 0L2.6 0",
+          stroke: spc[i % 6],
+          sw: 2.2,
+          tf: `translate(${pt(pol(r, a))}) rotate(${(i * 67) % 180})`,
+          ov: "0.55;1;0.55",
+          dur: f(1.8 + (i % 4) * 0.35),
+          begin: f(-i * 0.4),
+        }),
+      );
+    }
+    front = [
+      layer([item({ d: white, fill: "#ffffff" }), item({ d: mint, fill: "#8ff0d0" })], 30),
+      layer(sprinkles),
+      layer(pops, -40),
+    ];
+  } else if (kind === "pixel") {
+    stops = ["#2c1a52", "#1b1036", "#120a26", "#1b1036"];
+    glow = { r: 112, color: "#39ff88", op: 0.35, dur: 1.4 };
+    const SQ = "M-4.5 -4.5H4.5V4.5H-4.5Z";
+    const PLUS = "M-1.5 -4.5H1.5V-1.5H4.5V1.5H1.5V4.5H-1.5V1.5H-4.5V-1.5H-1.5Z";
+    const n = 28;
+    const blocks: ArtItem[] = [];
+    for (let i = 0; i < n; i++) {
+      blocks.push(
+        item({
+          d: SQ,
+          fill: i % 2 ? "#ff3fd8" : "#39ff88",
+          tf: `translate(${pt(pol(86, (i * 360) / n))})`,
+          ov: "0.25;1;0.25",
+          dur: 2.8,
+          begin: f(i * 0.1 - 2.8),
+        }),
+      );
+    }
+    const bits = (
+      [
+        [22, 112],
+        [82, 116],
+        [142, 111],
+        [202, 117],
+        [262, 112],
+        [322, 116],
+      ] as Pt[]
+    ).map((s, i) =>
+      item({
+        d: PLUS,
+        fill: i % 2 ? "#39ff88" : "#ff3fd8",
+        tf: `translate(${pt(pol(s[1], s[0]))})`,
+        sv: "0.6;1;0.6",
+        ov: "0;1;0",
+        dur: 1.6,
+        begin: f(-i * 0.27),
+      }),
+    );
+    front = [layer(blocks), layer(bits)];
+  } else if (kind === "gem") {
+    stops = ["#ffffff", "#c4f5ff", "#5fd0ee", "#c4f5ff"];
+    glow = { r: 110, color: "#7fe8ff", op: 0.4, dur: 2.6 };
+    let facets = "";
+    let cuts = "";
+    for (let i = 0; i < 16; i++) {
+      const a = i * 22.5;
+      if (i % 2 === 0) facets += seg(81, 91, a, a + 22.5, 0);
+      cuts += `M${pt(pol(81, a))}L${pt(pol(91, a + 4))}`;
+    }
+    const GEM = "M0 -10L6.5 0L0 10L-6.5 0Z";
+    const GEMF = "M0 -10L2.2 0L0 10L-2.2 0Z";
+    const gems: ArtItem[] = [];
+    const glints: ArtItem[] = [];
+    for (let i = 0; i < 8; i++) {
+      const a = i * 45 + 22.5;
+      const tf = `translate(${pt(pol(93, a))}) rotate(${a})`;
+      gems.push(item({ d: GEM, fill: "#dcf8ff", stroke: "#3fb8dc", sw: 0.9, tf }));
+      gems.push(item({ d: GEMF, fill: "#ffffff", op: 0.85, tf }));
+      gems.push(item({ d: "M-6.5 0L6.5 0", stroke: "#8fdff2", sw: 0.7, tf }));
+      glints.push(
+        item({
+          d: star(6, 0.15),
+          fill: "#ffffff",
+          tf: `translate(${pt(pol(104, a + 7))})`,
+          sv: "0.2;0.2;1.2;0.2;0.2",
+          ov: "0;0;1;0;0",
+          dur: 4,
+          begin: f(i * 0.5 - 4),
+        }),
+      );
+    }
+    front = [
+      layer([item({ d: facets, fill: "#ffffff", op: 0.4 }), item({ d: cuts, stroke: "#ffffff", sw: 0.8, op: 0.8 })]),
+      layer([...gems, ...glints], 60),
+    ];
   }
 
   const ring = [item({ d: circle(86), stroke: `url(#rg-${kind})`, sw: 10 })];
