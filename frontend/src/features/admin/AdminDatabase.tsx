@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Play, Table2, Trash2 } from "lucide-react";
+import { Download, Play, Table2, Trash2, X } from "lucide-react";
 import { api, ApiError, getAdminToken, getToken } from "../../lib/api";
 import { toast } from "../../lib/toast";
 import { useConfirm } from "../../lib/confirm";
@@ -308,12 +308,22 @@ function RowEditor({
       style={{ background: "var(--scrim)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
     >
       <div className="card max-h-[85vh] w-full max-w-lg overflow-y-auto p-5 animate-in">
-        <h2 className="text-[15px] font-semibold text-fg">
-          <span className="font-mono">{table}</span>
-          <span className="ml-2 text-[12px] font-normal text-fg-3">
-            {primaryKey} = {id}
-          </span>
-        </h2>
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="text-[15px] font-semibold text-fg">
+            <span className="font-mono">{table}</span>
+            <span className="ml-2 text-[12px] font-normal text-fg-3">
+              {primaryKey} = {id}
+            </span>
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="-mr-1 -mt-1 shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+            aria-label="Close"
+          >
+            <X size={14} />
+          </button>
+        </div>
 
         <div className="mt-4 space-y-3">
           {columns.map((column) => (

@@ -71,22 +71,29 @@ function RestoreBody({ broken, restoresLeft }: { broken: BrokenStreakDto; restor
           <button onClick={close} className="btn btn-primary min-h-[44px] w-full">
             Done
           </button>
-        ) : snapshot.restoresLeft >= cost ? (
-          <button
-            onClick={() => restore.mutate()}
-            disabled={restore.isPending}
-            className="btn btn-primary min-h-[44px] w-full"
-          >
-            {restore.isPending ? "Restoring…" : "Restore my streak"}
-          </button>
         ) : (
-          <button
-            disabled
-            className="btn min-h-[44px] w-full"
-            style={{ background: "var(--surface-hi)", color: "var(--fg-3)", opacity: 1 }}
-          >
-            {snapshot.restoresLeft === 0 ? "No more restores" : "Not enough restores"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={close} disabled={restore.isPending} className="btn btn-ghost min-h-[44px] flex-1">
+              End my streak
+            </button>
+            {snapshot.restoresLeft >= cost ? (
+              <button
+                onClick={() => restore.mutate()}
+                disabled={restore.isPending}
+                className="btn btn-primary min-h-[44px] flex-1"
+              >
+                {restore.isPending ? "Restoring…" : "Restore my streak"}
+              </button>
+            ) : (
+              <button
+                disabled
+                className="btn min-h-[44px] flex-1"
+                style={{ background: "var(--surface-hi)", color: "var(--fg-3)", opacity: 1 }}
+              >
+                {snapshot.restoresLeft === 0 ? "No more restores" : "Not enough restores"}
+              </button>
+            )}
+          </div>
         )}
         {error && <p className="mt-2 text-[12.5px] text-red">{error}</p>}
       </div>
