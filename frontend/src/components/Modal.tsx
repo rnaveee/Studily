@@ -28,6 +28,8 @@ export default function Modal({
   padded = true,
   closeRef,
   beforeClose,
+  above,
+  dismissOnBackdrop = false,
 }: {
   onClose: () => void;
   title?: ReactNode;
@@ -40,6 +42,8 @@ export default function Modal({
   padded?: boolean;
   closeRef?: MutableRefObject<(() => void) | null>;
   beforeClose?: () => boolean | Promise<boolean>;
+  above?: ReactNode;
+  dismissOnBackdrop?: boolean;
 }) {
   const { closing, close } = useDeferredClose(onClose, 170);
   const asking = useRef(false);
@@ -92,6 +96,13 @@ export default function Modal({
           WebkitBackdropFilter: "blur(var(--scrim-blur))",
           height: "var(--app-height, 100%)",
         }}
+        onClick={
+          dismissOnBackdrop
+            ? (e) => {
+                if (e.target === e.currentTarget) requestClose();
+              }
+            : undefined
+        }
       >
         <div
           className={`glass relative flex w-full ${WIDTH[size]} flex-col ${panelAnim} ${
@@ -105,6 +116,11 @@ export default function Modal({
             window.setTimeout(() => el.scrollIntoView({ block: "center", behavior: "smooth" }), 350);
           }}
         >
+          {above && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-full mb-3 flex flex-col px-4">
+              {above}
+            </div>
+          )}
           {title && (
             <div className="flex items-start justify-between gap-3 px-5 pt-5">
               {typeof title === "string" ? (

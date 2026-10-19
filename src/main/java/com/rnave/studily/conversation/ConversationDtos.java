@@ -40,18 +40,31 @@ public class ConversationDtos {
             Instant createdAt,
             Instant editedAt,
             int likeCount,
-            boolean likedByMe) {
+            boolean likedByMe,
+            ReplyDto replyTo) {
 
-        public static MessageDto from(Message m, Flairs flairs) {
-            return from(m, 0, false, flairs);
+        public static MessageDto from(Message m, ReplyDto replyTo, Flairs flairs) {
+            return from(m, 0, false, replyTo, flairs);
         }
 
-        public static MessageDto from(Message m, int likeCount, boolean likedByMe, Flairs flairs) {
+        public static MessageDto from(Message m, int likeCount, boolean likedByMe, ReplyDto replyTo, Flairs flairs) {
             return new MessageDto(
                     m.getId(), m.getConversation().getId(),
                     PublicUserDto.from(m.getSender(), flairs), m.getBody(),
                     AttachmentDto.from(m), m.getCreatedAt(), m.getEditedAt(),
-                    likeCount, likedByMe);
+                    likeCount, likedByMe, replyTo);
+        }
+    }
+
+    public record ReplyDto(
+            Long id,
+            Long senderId,
+            String senderName,
+            String body,
+            boolean deleted) {
+
+        public static ReplyDto deleted(Long id) {
+            return new ReplyDto(id, null, null, null, true);
         }
     }
 
@@ -89,7 +102,7 @@ public class ConversationDtos {
             @NotEmpty @Size(max = 100) List<Long> memberIds) {
     }
 
-    public record SendMessageRequest(@NotBlank @Size(max = 5000) String body) {
+    public record SendMessageRequest(@NotBlank @Size(max = 5000) String body, Long replyToId) {
     }
 
     public record EditMessageRequest(@NotBlank @Size(max = 5000) String body) {

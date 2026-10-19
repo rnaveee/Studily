@@ -57,6 +57,9 @@ public class Message {
     @Column(name = "edited_at")
     private Instant editedAt;
 
+    @Column(name = "reply_to_message_id")
+    private Long replyToMessageId;
+
     public boolean hasAttachment() {
         return attachmentFilename != null;
     }

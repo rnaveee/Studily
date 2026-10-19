@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   Check,
   Copy,
+  CornerUpLeft,
   FileText,
   Heart,
   ImagePlus,
@@ -11,6 +12,7 @@ import {
   MoreVertical,
   Paperclip,
   Pencil,
+  Reply,
   Send,
   Trash2,
   Users2,
@@ -42,7 +44,7 @@ import BackButton, { useGoBack } from "../../components/BackButton";
 import Avatar from "../../components/Avatar";
 import Modal from "../../components/Modal";
 import AttachmentBubble from "./AttachmentBubble";
-import type { Conversation, Message, MessageLike, Page, PublicUser } from "../../types";
+import type { Conversation, Message, MessageLike, MessageReply, Page, PublicUser } from "../../types";
 
 const DOC_ACCEPT = ".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.csv,.md";
 const INITIAL_PAGE_SIZE = 10;
@@ -70,6 +72,24 @@ function jumboSize(body: string): number | null {
   const count = emojiCount(body);
   if (count === 0 || count > MAX_JUMBO_EMOJI) return null;
   return count === 1 ? 44 : count === 2 ? 36 : 30;
+}
+
+function previewOf(m: Message): string {
+  if (!m.attachment) return m.body;
+  return m.attachment.image ? "📷 Photo" : `📄 ${m.attachment.filename}`;
+}
+
+function jumpToMessage(id: number) {
+  const el = document.querySelector<HTMLElement>(`[data-message-id="${id}"]`);
+  if (!el) {
+    toast.info("That message is further up the chat.");
+    return;
+  }
+  el.scrollIntoView({ block: "center", behavior: "smooth" });
+  el.animate(
+    [{ transform: "scale(1)" }, { transform: "scale(1.06)" }, { transform: "scale(1)" }],
+    { duration: 600, delay: 350, easing: "ease-out" },
+  );
 }
 
 function hourKey(iso: string): string {
@@ -102,6 +122,8 @@ export default function ConversationPage() {
   const [showMembers, setShowMembers] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [openMenu, setOpenMenu] = useState<number | "header" | null>(null);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const confirm = useConfirm();
   const goBack = useGoBack("/messages");
   const { closing, close } = useDeferredClose(goBack, 220);
@@ -144,6 +166,20 @@ export default function ConversationPage() {
     }
     return [...byId.values()].sort((a, b) => a.id - b.id);
   }, [messages.data, convId]);
+
+  useEffect(() => {
+    setReplyTo(null);
+  }, [convId]);
+
+  useEffect(() => {
+    if (replyTo && messages.data && !thread.some((m) => m.id === replyTo.id)) setReplyTo(null);
+  }, [thread, replyTo, messages.data]);
+
+  function startReply(m: Message) {
+    setEditingId(null);
+    setReplyTo(m);
+    inputRef.current?.focus();
+  }
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -218,14 +254,15 @@ export default function ConversationPage() {
   });
 
   const send = useMutation({
-    mutationFn: (body: string) =>
-      api.post<Message>(`/conversations/${convId}/messages`, { body }),
+    mutationFn: ({ body, reply }: { body: string; reply: Message | null }) =>
+      api.post<Message>(`/conversations/${convId}/messages`, { body, replyToId: reply?.id ?? null }),
     onSuccess: (m) => {
       appendMessageToCache(m);
       invalidateConversationLists();
     },
-    onError: (_err, body) => {
+    onError: (_err, { body, reply }) => {
       setDraft((current) => (current ? current : body));
+      if (reply) setReplyTo((current) => current ?? reply);
     },
   });
 
@@ -282,17 +319,20 @@ export default function ConversationPage() {
     const body = draft.trim();
     if ((!body && staged.length === 0) || send.isPending || uploading) return;
     const items = staged;
+    const reply = replyTo;
     setDraft("");
     setStaged([]);
+    setReplyTo(null);
     if (items.length > 0) {
-      const failed = await uploadStaged(items);
+      const failed = await uploadStaged(items, body ? null : (reply?.id ?? null));
       if (failed.length > 0) {
         setStaged((current) => [...failed, ...current]);
         if (body) setDraft((current) => (current ? current : body));
+        if (reply) setReplyTo((current) => current ?? reply);
         return;
       }
     }
-    if (body && !ws.sendChat(convId, body)) send.mutate(body);
+    if (body && !ws.sendChat(convId, body, reply?.id)) send.mutate({ body, reply });
   }
 
   const [dragging, setDragging] = useState(false);
@@ -312,13 +352,14 @@ export default function ConversationPage() {
     stageFiles(images);
   }
 
-  async function uploadStaged(items: Staged[]): Promise<Staged[]> {
+  async function uploadStaged(items: Staged[], replyToId: number | null): Promise<Staged[]> {
     setUploading(true);
     let sent = 0;
     try {
       for (const item of items) {
         const fd = new FormData();
         fd.append("file", item.file);
+        if (replyToId && sent === 0) fd.append("replyToId", String(replyToId));
         const m = await api.post<Message>(`/conversations/${convId}/attachments`, fd);
         appendMessageToCache(m);
         if (item.url) URL.revokeObjectURL(item.url);
@@ -571,6 +612,7 @@ export default function ConversationPage() {
                       }
                       onCloseMenu={() => setOpenMenu(null)}
                       onLike={() => like.mutate(m.id)}
+                      onReply={() => startReply(m)}
                       onStartEdit={() => setEditingId(m.id)}
                       onCancelEdit={() => setEditingId(null)}
                       onSubmitEdit={(body) => editMessage.mutate({ messageId: m.id, body })}
@@ -604,6 +646,32 @@ export default function ConversationPage() {
           paddingBottom: "var(--composer-pb, calc(env(safe-area-inset-bottom, 0px) + 12px))",
         }}
       >
+        {replyTo && (
+          <div
+            className="flex items-center gap-2.5 rounded-xl py-2 pl-3 pr-1.5 animate-fade"
+            style={{
+              background: "color-mix(in srgb, var(--surface-hi) 86%, black)",
+              boxShadow: "inset 0 1px 4px rgb(0 0 0 / 0.14)",
+            }}
+          >
+            <CornerUpLeft size={15} className="shrink-0 text-fg-2" />
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-semibold text-fg-2">
+                Replying to {replyTo.sender.id === user?.id ? "yourself" : replyTo.sender.name}
+              </div>
+              <div className="truncate text-[12.5px] text-fg-3">{previewOf(replyTo)}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReplyTo(null)}
+              onPointerDown={(e) => e.preventDefault()}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-fg-3 transition-colors hover:bg-surface hover:text-fg"
+              aria-label="Cancel reply"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
         {staged.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-1 pr-2 pt-1.5 animate-fade">
             {staged.map((s) => (
@@ -680,14 +748,17 @@ export default function ConversationPage() {
             <Paperclip size={15} />
           </button>
           <input
+            ref={inputRef}
             className="input"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onPaste={handlePaste}
             onKeyDown={(e) => {
-              if (e.key === "Escape" && staged.length > 0) clearStaged();
+              if (e.key !== "Escape") return;
+              if (replyTo) setReplyTo(null);
+              else if (staged.length > 0) clearStaged();
             }}
-            placeholder="Type a message…"
+            placeholder={replyTo ? "Replying to this message…" : "Type a message…"}
             enterKeyHint="send"
           />
           <button
@@ -773,6 +844,7 @@ function MessageBubble({
   onToggleMenu,
   onCloseMenu,
   onLike,
+  onReply,
   onStartEdit,
   onCancelEdit,
   onSubmitEdit,
@@ -785,6 +857,7 @@ function MessageBubble({
   onToggleMenu: () => void;
   onCloseMenu: () => void;
   onLike: () => void;
+  onReply: () => void;
   onStartEdit: () => void;
   onCancelEdit: () => void;
   onSubmitEdit: (body: string) => void;
@@ -792,9 +865,8 @@ function MessageBubble({
 }) {
   const tap = useDoubleTap(onLike);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const canHold = mine && isTouch;
-  const hold = useLongPress(canHold ? () => setSheetOpen(true) : null);
-  const selectable = canHold ? "select-none" : "select-text";
+  const hold = useLongPress(isTouch ? () => setSheetOpen(true) : null);
+  const selectable = isTouch ? "select-none" : "select-text";
   const [menuSide, setMenuSide] = useState<"left" | "right">("left");
   const dotsRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -813,12 +885,16 @@ function MessageBubble({
     if (!menuOpen || !menu || !dots) return;
     const width = menu.offsetWidth;
     const rect = dots.getBoundingClientRect();
-    const fitsLeft = rect.left - MENU_GAP - width >= MENU_GAP;
-    const fitsRight = rect.right + MENU_GAP + width <= window.innerWidth - MENU_GAP;
-    if (fitsLeft) setMenuSide("left");
-    else if (fitsRight) setMenuSide("right");
+    const fits = {
+      left: rect.left - MENU_GAP - width >= MENU_GAP,
+      right: rect.right + MENU_GAP + width <= window.innerWidth - MENU_GAP,
+    };
+    const preferred = mine ? "left" : "right";
+    const fallback = mine ? "right" : "left";
+    if (fits[preferred]) setMenuSide(preferred);
+    else if (fits[fallback]) setMenuSide(fallback);
     else setMenuSide(rect.left > window.innerWidth - rect.right ? "left" : "right");
-  }, [menuOpen]);
+  }, [menuOpen, mine]);
 
   if (editing) {
     return (
@@ -855,42 +931,54 @@ function MessageBubble({
     <span className="ml-1.5 text-[10px] opacity-60">edited</span>
   ) : null;
 
+  const content = message.attachment ? (
+    <AttachmentBubble message={message} mine={mine} />
+  ) : jumbo ? (
+    <div
+      className={`min-w-0 ${selectable} py-0.5 leading-none`}
+      style={{ fontSize: jumbo, lineHeight: 1.15 }}
+    >
+      {message.body}
+      {edited}
+    </div>
+  ) : (
+    <div
+      className={`${selectable} whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[13px] [overflow-wrap:anywhere] ${mine ? "text-accent-fg" : "text-fg"}`}
+      style={{ background: mine ? "var(--accent)" : "var(--surface-hi)" }}
+    >
+      <Linkified body={message.body} mine={mine} />
+      {edited}
+    </div>
+  );
+
+  const actions = { mine, onReply, onLike, onStartEdit, onDelete };
+
   return (
     <div className={`group/msg flex min-w-0 items-center gap-0.5 ${mine ? "flex-row-reverse" : ""}`}>
       <div className="relative min-w-0">
         <div
           {...tap}
           {...hold}
+          data-message-id={message.id}
           style={{ ...tap.style, ...hold.style }}
           className={`flex min-w-0 flex-col ${mine ? "items-end" : "items-start"} ${
-            message.likeCount > 0 ? "pb-1.5" : ""
+            message.likeCount > 0 ? "pb-3" : ""
           }`}
         >
-          {message.attachment ? (
-            <AttachmentBubble message={message} mine={mine} />
-          ) : jumbo ? (
-            <div
-              className={`min-w-0 ${selectable} py-0.5 leading-none`}
-              style={{ fontSize: jumbo, lineHeight: 1.15 }}
-            >
-              {message.body}
-              {edited}
-            </div>
+          {message.replyTo ? (
+            <>
+              <ReplyQuote reply={message.replyTo} mine={mine} />
+              <div className="relative min-w-0 max-w-full">{content}</div>
+            </>
           ) : (
-            <div
-              className={`${selectable} whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-[13px] [overflow-wrap:anywhere] ${mine ? "text-accent-fg" : "text-fg"}`}
-              style={{ background: mine ? "var(--accent)" : "var(--surface-hi)" }}
-            >
-              <Linkified body={message.body} mine={mine} />
-              {edited}
-            </div>
+            content
           )}
           {!message.attachment && link && <LinkPreview url={link} mine={mine} />}
         </div>
 
         {message.likeCount > 0 && (
           <span
-            className={`absolute -bottom-1 flex items-center gap-0.5 rounded-full px-1.5 py-[1px] text-[10px] font-medium animate-fade ${
+            className={`absolute -bottom-1 flex items-center gap-1 rounded-full px-2 py-0.5 text-[12px] font-semibold animate-fade ${
               mine ? "left-0" : "right-0"
             }`}
             style={{
@@ -899,13 +987,13 @@ function MessageBubble({
               color: liked ? "var(--red)" : "var(--fg-3)",
             }}
           >
-            <Heart size={9} strokeWidth={2.5} fill={liked ? "var(--red)" : "none"} />
+            <Heart size={13} strokeWidth={2.4} fill={liked ? "var(--red)" : "none"} />
             {message.likeCount > 1 && message.likeCount}
           </span>
         )}
       </div>
 
-      {mine && !isTouch && (
+      {!isTouch && (
         <div className="relative shrink-0">
           <button
             type="button"
@@ -924,62 +1012,53 @@ function MessageBubble({
           {menuOpen && (
             <div
               ref={menuRef}
-              className={`popover absolute top-1/2 z-50 w-40 -translate-y-1/2 overflow-hidden py-1 animate-in ${
+              className={`popover absolute top-1/2 z-50 w-44 -translate-y-1/2 overflow-hidden py-1 animate-in ${
                 menuSide === "left" ? "right-full mr-1" : "left-full ml-1"
               }`}
               onClick={(e) => e.stopPropagation()}
             >
-              {!message.attachment && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onCloseMenu();
-                    copyMessage(message.body);
-                  }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-fg transition-colors hover:bg-surface-hi"
-                >
-                  <Copy size={13} />
-                  Copy text
-                </button>
-              )}
-              {!message.attachment && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onCloseMenu();
-                    onStartEdit();
-                  }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-fg transition-colors hover:bg-surface-hi"
-                >
-                  <Pencil size={13} />
-                  Edit message
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => {
-                  onCloseMenu();
-                  onDelete();
-                }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-red transition-colors hover:bg-surface-hi"
-              >
-                <Trash2 size={13} />
-                Delete message
-              </button>
+              <MessageActions message={message} {...actions} onPick={onCloseMenu} compact />
             </div>
           )}
         </div>
       )}
 
       {sheetOpen && (
-        <MessageActionsSheet
-          message={message}
-          onClose={() => setSheetOpen(false)}
-          onStartEdit={onStartEdit}
-          onDelete={onDelete}
-        />
+        <MessageActionsSheet message={message} {...actions} onClose={() => setSheetOpen(false)} />
       )}
     </div>
+  );
+}
+
+function ReplyQuote({ reply, mine }: { reply: MessageReply; mine: boolean }) {
+  const { user } = useAuth();
+  const who = reply.deleted ? null : reply.senderId === user?.id ? "You" : reply.senderName;
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        if (!reply.deleted) jumpToMessage(reply.id);
+      }}
+      className="relative -mb-2.5 flex min-w-0 max-w-full items-start gap-1.5 rounded-2xl px-3 pb-4 pt-1.5 text-left text-[12px] leading-snug"
+      style={{
+        background: mine
+          ? "color-mix(in srgb, var(--accent) 55%, black)"
+          : "color-mix(in srgb, var(--surface-hi) 80%, black)",
+        color: mine ? "var(--accent-fg)" : "var(--fg-2)",
+        opacity: 0.7,
+        boxShadow: "inset 0 1px 8px rgb(0 0 0 / 0.28)",
+      }}
+      aria-label={reply.deleted ? "Original message was deleted" : `Go to the message from ${who ?? "them"}`}
+    >
+      <CornerUpLeft size={12} className="mt-[3px] shrink-0" />
+      <span className="min-w-0">
+        {who && <span className="block text-[11px] font-semibold">{who}</span>}
+        <span className={`line-clamp-2 [overflow-wrap:anywhere] ${reply.deleted ? "italic" : ""}`}>
+          {reply.deleted ? "Original message was deleted" : reply.body}
+        </span>
+      </span>
+    </button>
   );
 }
 
@@ -992,62 +1071,161 @@ async function copyMessage(body: string) {
   }
 }
 
+function MessageActions({
+  message,
+  mine,
+  onReply,
+  onLike,
+  onStartEdit,
+  onDelete,
+  onPick,
+  compact = false,
+}: {
+  message: Message;
+  mine: boolean;
+  onReply: () => void;
+  onLike: () => void;
+  onStartEdit: () => void;
+  onDelete: () => void;
+  onPick: () => void;
+  compact?: boolean;
+}) {
+  const liked = message.likedByMe;
+  const size = compact ? 13 : 15;
+  const row = compact
+    ? "flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] transition-colors hover:bg-surface-hi"
+    : "flex w-full items-center gap-3 px-5 py-3.5 text-left text-[14px] transition-colors hover:bg-surface-hi";
+  const pick = (action: () => void) => () => {
+    onPick();
+    action();
+  };
+
+  return (
+    <>
+      <button type="button" onClick={pick(onReply)} className={`${row} text-fg`}>
+        <Reply size={size} />
+        Reply
+      </button>
+      <button type="button" onClick={pick(onLike)} className={`${row} text-fg`}>
+        <Heart
+          size={size}
+          fill={liked ? "var(--red)" : "none"}
+          style={liked ? { color: "var(--red)" } : undefined}
+        />
+        {liked ? "Unlike message" : "Like this message"}
+      </button>
+      {!message.attachment && (
+        <button type="button" onClick={pick(() => copyMessage(message.body))} className={`${row} text-fg`}>
+          <Copy size={size} />
+          Copy text
+        </button>
+      )}
+      {mine && !message.attachment && (
+        <button type="button" onClick={pick(onStartEdit)} className={`${row} text-fg`}>
+          <Pencil size={size} />
+          Edit message
+        </button>
+      )}
+      {mine && (
+        <button type="button" onClick={pick(onDelete)} className={`${row} text-red`}>
+          <Trash2 size={size} />
+          Delete message
+        </button>
+      )}
+    </>
+  );
+}
+
 function MessageActionsSheet({
   message,
+  mine,
   onClose,
+  onReply,
+  onLike,
   onStartEdit,
   onDelete,
 }: {
   message: Message;
+  mine: boolean;
   onClose: () => void;
+  onReply: () => void;
+  onLike: () => void;
   onStartEdit: () => void;
   onDelete: () => void;
 }) {
   const closeRef = useRef<(() => void) | null>(null);
   const dismiss = () => (closeRef.current ?? onClose)();
-  const preview = message.attachment ? "Message" : message.body.trim().slice(0, 60) || "Message";
 
   return (
-    <Modal onClose={onClose} closeRef={closeRef} title={preview} variant="sheet" padded={false}>
+    <Modal
+      onClose={onClose}
+      closeRef={closeRef}
+      variant="sheet"
+      padded={false}
+      showClose={false}
+      dismissOnBackdrop
+      above={<HeldMessage message={message} mine={mine} />}
+    >
       <div className="flex flex-col py-1">
-        {!message.attachment && (
-          <button
-            type="button"
-            onClick={() => {
-              dismiss();
-              copyMessage(message.body);
-            }}
-            className="flex w-full items-center gap-3 px-5 py-3.5 text-left text-[14px] text-fg transition-colors hover:bg-surface-hi"
-          >
-            <Copy size={15} />
-            Copy text
-          </button>
-        )}
-        {!message.attachment && (
-          <button
-            type="button"
-            onClick={() => {
-              dismiss();
-              onStartEdit();
-            }}
-            className="flex w-full items-center gap-3 px-5 py-3.5 text-left text-[14px] text-fg transition-colors hover:bg-surface-hi"
-          >
-            <Pencil size={15} />
-            Edit message
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => {
-            dismiss();
-            onDelete();
-          }}
-          className="flex w-full items-center gap-3 px-5 py-3.5 text-left text-[14px] text-red transition-colors hover:bg-surface-hi"
-        >
-          <Trash2 size={15} />
-          Delete message
-        </button>
+        <MessageActions
+          message={message}
+          mine={mine}
+          onReply={onReply}
+          onLike={onLike}
+          onStartEdit={onStartEdit}
+          onDelete={onDelete}
+          onPick={dismiss}
+        />
       </div>
     </Modal>
+  );
+}
+
+function HeldMessage({ message, mine }: { message: Message; mine: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const jumbo = message.attachment ? null : jumboSize(message.body);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    el.animate(
+      [
+        { transform: "scale(0.94)", opacity: 0.4 },
+        { transform: "scale(1)", opacity: 1 },
+      ],
+      { duration: 240, easing: "cubic-bezier(0.34, 1.45, 0.64, 1)" },
+    );
+  }, []);
+
+  return (
+    <div ref={ref} className={`flex flex-col ${mine ? "items-end" : "items-start"}`}>
+      <div
+        className="max-w-[85%] rounded-2xl"
+        style={{ boxShadow: "0 16px 40px rgb(0 0 0 / 0.34), 0 3px 10px rgb(0 0 0 / 0.2)" }}
+      >
+        {message.attachment ? (
+          <AttachmentBubble message={message} mine={mine} />
+        ) : jumbo ? (
+          <div className="px-2 leading-none" style={{ fontSize: jumbo * 1.25, lineHeight: 1.15 }}>
+            {message.body}
+          </div>
+        ) : (
+          <div
+            className={`line-clamp-[8] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-[15px] leading-snug [overflow-wrap:anywhere] ${
+              mine ? "text-accent-fg" : "text-fg"
+            }`}
+            style={{ background: mine ? "var(--accent)" : "var(--surface-hi)" }}
+          >
+            {message.body}
+          </div>
+        )}
+      </div>
+      <div
+        className="mt-2 px-1 text-[12px] font-medium tabular-nums"
+        style={{ color: "rgb(214 217 224)", textShadow: "0 1px 3px rgb(0 0 0 / 0.5)" }}
+      >
+        @{message.sender.username} - {hourLabel(message.createdAt)}
+      </div>
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import com.rnave.studily.config.PageResponse;
 import com.rnave.studily.conversation.ConversationDtos.ConversationDto;
 import com.rnave.studily.conversation.ConversationDtos.MessageDto;
 import com.rnave.studily.conversation.ConversationDtos.MessageLikeDto;
+import com.rnave.studily.conversation.ConversationDtos.ReplyDto;
 import com.rnave.studily.conversation.ws.WsEvents;
 import com.rnave.studily.conversation.ws.WsSessionRegistry;
 import com.rnave.studily.friend.FriendRequestRepository;
@@ -38,6 +39,7 @@ import java.util.Set;
 public class ConversationService {
 
     private static final int MESSAGE_PUSH_TTL_SECONDS = 86_400;
+    private static final int REPLY_PREVIEW_LENGTH = 200;
 
     private final ConversationRepository conversationRepository;
     private final ConversationMemberRepository conversationMemberRepository;
@@ -155,28 +157,32 @@ public class ConversationService {
     }
 
     @Transactional
-    public MessageDto send(Long conversationId, String body) {
+    public MessageDto send(Long conversationId, String body, Long replyToId) {
         Conversation conv = requireMember(conversationId);
         requireCanPost(conv);
+        Message parent = requireReplyTarget(conv, replyToId);
         Message message = new Message();
         message.setConversation(conv);
         message.setSender(currentUser.entity());
         message.setBody(body.trim());
+        message.setReplyToMessageId(parent == null ? null : parent.getId());
         conv.setLastMessageAt(Instant.now());
-        MessageDto dto = MessageDto.from(messageRepository.save(message), flairs);
+        MessageDto dto = MessageDto.from(messageRepository.save(message), replyOf(parent), flairs);
         broadcastAfterCommit(conv, dto);
         return dto;
     }
 
     @Transactional
-    public MessageDto sendAttachment(Long conversationId, MultipartFile file) {
+    public MessageDto sendAttachment(Long conversationId, MultipartFile file, Long replyToId) {
         Conversation conv = requireMember(conversationId);
         requireCanPost(conv);
+        Message parent = requireReplyTarget(conv, replyToId);
         AttachmentProcessor.Processed processed = attachmentProcessor.process(file);
         Message message = new Message();
         message.setConversation(conv);
         message.setSender(currentUser.entity());
         message.setBody("");
+        message.setReplyToMessageId(parent == null ? null : parent.getId());
         message.setAttachmentFilename(processed.filename());
         message.setAttachmentContentType(processed.contentType());
         message.setAttachmentSize((long) processed.data().length);
@@ -188,7 +194,7 @@ public class ConversationService {
         blob.setMessageId(message.getId());
         blob.setData(processed.data());
         messageAttachmentRepository.save(blob);
-        MessageDto dto = MessageDto.from(message, flairs);
+        MessageDto dto = MessageDto.from(message, replyOf(parent), flairs);
         broadcastAfterCommit(conv, dto);
         return dto;
     }
@@ -203,7 +209,7 @@ public class ConversationService {
         message.setBody(body.trim());
         message.setEditedAt(Instant.now());
         messageRepository.flush();
-        MessageDto dto = MessageDto.from(message, flairs);
+        MessageDto dto = MessageDto.from(message, replies(List.of(message)).get(message.getReplyToMessageId()), flairs);
         broadcastToMembersAfterCommit(conv, WsEvents.MessageEditEvent.of(dto));
         return dto;
     }
@@ -277,9 +283,54 @@ public class ConversationService {
                 mine.add(row.getMessageId());
             }
         }
+        Map<Long, ReplyDto> replies = replies(messages);
         return messages.stream()
-                .map(m -> MessageDto.from(m, counts.getOrDefault(m.getId(), 0), mine.contains(m.getId()), flairs))
+                .map(m -> MessageDto.from(m, counts.getOrDefault(m.getId(), 0), mine.contains(m.getId()),
+                        replies.get(m.getReplyToMessageId()), flairs))
                 .toList();
+    }
+
+    private Map<Long, ReplyDto> replies(List<Message> messages) {
+        Set<Long> ids = new HashSet<>();
+        for (Message m : messages) {
+            if (m.getReplyToMessageId() != null) {
+                ids.add(m.getReplyToMessageId());
+            }
+        }
+        Map<Long, ReplyDto> replies = new HashMap<>();
+        if (ids.isEmpty()) {
+            return replies;
+        }
+        for (Message parent : messageRepository.findWithSenderByIdIn(ids)) {
+            replies.put(parent.getId(), replyOf(parent));
+        }
+        for (Long id : ids) {
+            replies.putIfAbsent(id, ReplyDto.deleted(id));
+        }
+        return replies;
+    }
+
+    private Message requireReplyTarget(Conversation conv, Long replyToId) {
+        if (replyToId == null) {
+            return null;
+        }
+        return messageRepository.findById(replyToId)
+                .filter(m -> m.getConversation().getId().equals(conv.getId()))
+                .orElseThrow(() -> new BadRequestException("You can only reply to messages in this chat"));
+    }
+
+    private ReplyDto replyOf(Message parent) {
+        if (parent == null) {
+            return null;
+        }
+        String preview = previewText(parent);
+        return new ReplyDto(parent.getId(), parent.getSender().getId(), displayName(parent.getSender()),
+                preview.length() > REPLY_PREVIEW_LENGTH ? preview.substring(0, REPLY_PREVIEW_LENGTH) : preview,
+                false);
+    }
+
+    private static String displayName(User u) {
+        return u.getName() == null || u.getName().isBlank() ? "@" + u.getUsername() : u.getName();
     }
 
     @Transactional
@@ -347,6 +398,8 @@ public class ConversationService {
         String preview = previewText(dto);
         String pushTitle = group ? conv.getName() : senderName;
         String pushBody = group ? senderName + ": " + preview : preview;
+        String replyPushBody = group ? senderName + " replied: " + preview : "Replied: " + preview;
+        Long repliedToId = dto.replyTo() == null ? null : dto.replyTo().senderId();
         String pushUrl = "/messages/" + conv.getId();
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
@@ -356,7 +409,8 @@ public class ConversationService {
                     if (!memberId.equals(senderId)
                             && !wsSessionRegistry.isWatching(memberId)
                             && notificationPrefsService.prefsFor(memberId).isMessages()) {
-                        webPushSender.sendToUser(memberId, PushPayload.of(pushTitle, pushBody, pushUrl), MESSAGE_PUSH_TTL_SECONDS);
+                        String body = memberId.equals(repliedToId) ? replyPushBody : pushBody;
+                        webPushSender.sendToUser(memberId, PushPayload.of(pushTitle, body, pushUrl), MESSAGE_PUSH_TTL_SECONDS);
                     }
                 }
             }

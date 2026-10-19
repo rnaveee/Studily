@@ -94,7 +94,9 @@ public class MessageSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        dispatch(userId, session, () -> conversationService.send(conversationId, body));
+        long replyTo = frame.path("replyToId").asLong(0);
+        Long replyToId = replyTo > 0 ? replyTo : null;
+        dispatch(userId, session, () -> conversationService.send(conversationId, body, replyToId));
     }
 
     private void handleMarkRead(Long userId, WebSocketSession session, JsonNode frame) {

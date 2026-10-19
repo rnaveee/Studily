@@ -546,6 +546,15 @@ export interface Message {
   editedAt?: string | null;
   likeCount: number;
   likedByMe: boolean;
+  replyTo?: MessageReply | null;
+}
+
+export interface MessageReply {
+  id: number;
+  senderId: number | null;
+  senderName: string | null;
+  body: string | null;
+  deleted: boolean;
 }
 
 export interface MessageLike {

@@ -114,7 +114,11 @@ export function applyEditToCache(message: Message) {
         pages: old.pages.map((p) => ({
           ...p,
           items: p.items.map((m) =>
-            m.id === message.id ? { ...m, body: message.body, editedAt: message.editedAt } : m,
+            m.id === message.id
+              ? { ...m, body: message.body, editedAt: message.editedAt }
+              : m.replyTo?.id === message.id
+                ? { ...m, replyTo: { ...m.replyTo, body: message.body.slice(0, 200) } }
+                : m,
           ),
         })),
       };
@@ -130,7 +134,16 @@ export function removeMessageFromCache(conversationId: number, messageId: number
       if (!old) return old;
       return {
         ...old,
-        pages: old.pages.map((p) => ({ ...p, items: p.items.filter((m) => m.id !== messageId) })),
+        pages: old.pages.map((p) => ({
+          ...p,
+          items: p.items
+            .filter((m) => m.id !== messageId)
+            .map((m) =>
+              m.replyTo?.id === messageId
+                ? { ...m, replyTo: { ...m.replyTo, senderId: null, senderName: null, body: null, deleted: true } }
+                : m,
+            ),
+        })),
       };
     },
   );
@@ -282,9 +295,9 @@ export const ws = {
     return socket?.readyState === WebSocket.OPEN;
   },
 
-  sendChat(conversationId: number, body: string): boolean {
+  sendChat(conversationId: number, body: string, replyToId?: number | null): boolean {
     if (!this.isConnected()) return false;
-    socket!.send(JSON.stringify({ type: "send", conversationId, body }));
+    socket!.send(JSON.stringify({ type: "send", conversationId, body, replyToId: replyToId ?? null }));
     return true;
   },
 

@@ -7,6 +7,7 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
+  { version: 59, date: "2026-10-18", summary: "Added replies to messages, plus copy, like and reply on everyone's messages." },
   { version: 58, date: "2026-10-18", summary: "Added eight new alarm sounds and separate focus and break alarms for study sessions." },
   { version: 57, date: "2026-10-18", summary: "Added making flashcards from your slides and notes." },
   { version: 56, date: "2026-10-15", summary: "Fixed copying messages and link previews in chats." },

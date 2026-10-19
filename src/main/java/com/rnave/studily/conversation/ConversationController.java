@@ -83,7 +83,7 @@ public class ConversationController {
     @PostMapping("/{id}/messages")
     @ResponseStatus(HttpStatus.CREATED)
     public MessageDto send(@PathVariable Long id, @Valid @RequestBody SendMessageRequest req) {
-        return conversationService.send(id, req.body());
+        return conversationService.send(id, req.body(), req.replyToId());
     }
 
     @PutMapping("/{id}/messages/{messageId}")
@@ -111,11 +111,12 @@ public class ConversationController {
 
     @PostMapping("/{id}/attachments")
     @ResponseStatus(HttpStatus.CREATED)
-    public MessageDto sendAttachment(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+    public MessageDto sendAttachment(@PathVariable Long id, @RequestParam("file") MultipartFile file,
+                                     @RequestParam(required = false) Long replyToId) {
         if (!uploadLimiter.tryConsume("user:" + currentUser.id())) {
             throw new TooManyRequestsException("You're uploading too many files. Please wait a few minutes.");
         }
-        return conversationService.sendAttachment(id, file);
+        return conversationService.sendAttachment(id, file, replyToId);
     }
 
     @GetMapping("/{id}/messages/{messageId}/attachment")
