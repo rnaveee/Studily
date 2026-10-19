@@ -65,6 +65,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const confirm = useCallback(
     (opts: ConfirmOptions): Promise<boolean> =>
       new Promise((resolve) => {
+        pending.current?.(false);
         answer.current = false;
         pending.current = resolve;
         setState(opts);

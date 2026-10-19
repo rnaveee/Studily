@@ -23,7 +23,7 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-dvh items-center justify-center px-4">
       <div className="w-full max-w-[340px] animate-in">
         <div className="mb-8 text-center">
           <img src="/studily-3a.svg" alt="" className="mx-auto mb-2 h-14 w-14" />
@@ -44,8 +44,8 @@ export default function ForgotPasswordPage() {
                 Enter your account email and we'll send you a link to set a new password.
               </p>
               <div>
-                <label className="field-label">Email</label>
-                <input
+                <label htmlFor="for-field-1" className="field-label">Email</label>
+                <input id="for-field-1" autoComplete="email"
                   className="input"
                   type="email"
                   placeholder="you@example.com"

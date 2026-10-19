@@ -8,7 +8,7 @@
   --line:       #dcdfec;
   --fg:         #0e0e1a;
   --fg-2:       #56566f;
-  --fg-3:       #8a8aa6;
+  --fg-3:       #666682;
   --accent:     #5548c8;
   --accent-2:   #4438b0;
   --accent-fg:  #ffffff;
@@ -120,7 +120,7 @@
   --line:       #272939;
   --fg:         #e4e4f0;
   --fg-2:       #8c8ea6;
-  --fg-3:       #5b5d74;
+  --fg-3:       #85879e;
   --accent:     #7968dc;
   --accent-2:   #8b7de8;
   --accent-fg:  #ffffff;
@@ -168,7 +168,7 @@
   --surface-hi: #ebebf0;
   --line:       #e0e0ea;
   --fg-2:       #5e5e7a;
-  --fg-3:       #9898b5;
+  --fg-3:       #656582;
   --edge-hi:    rgb(255 255 255 / 0);
 }
 
@@ -179,7 +179,7 @@
   --line:       #2a2a38;
   --fg:         #e4e4f0;
   --fg-2:       #8484a0;
-  --fg-3:       #50506a;
+  --fg-3:       #8686a0;
   --edge-hi:    rgb(255 255 255 / 0.06);
 }
 
@@ -321,6 +321,7 @@ summary,
 .animate-slide { animation: slide-down 0.14s ease-out both; }
 .animate-sheet { animation: sheet-up 0.22s ease-out both; }
 
+@layer components {
 .input {
   display: block;
   width: 100%;
@@ -429,6 +430,7 @@ textarea.input { resize: vertical; }
   box-shadow: var(--glass-shadow);
   backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.6);
+}
 }
 
 .pomo-ring {

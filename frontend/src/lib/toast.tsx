@@ -13,7 +13,18 @@ interface ToastItem {
 type Listener = (item: ToastItem) => void;
 const _listeners = new Set<Listener>();
 
+const recent = new Map<string, number>();
+const DEDUPE_MS = 1500;
+
 function _fire(message: string, type: ToastType) {
+  const key = `${type}:${message}`;
+  const now = Date.now();
+  const last = recent.get(key);
+  if (last !== undefined && now - last < DEDUPE_MS) return;
+  recent.set(key, now);
+  if (recent.size > 50) {
+    for (const [k, t] of recent) if (now - t >= DEDUPE_MS) recent.delete(k);
+  }
   const item: ToastItem = { id: Math.random().toString(36).slice(2), message, type };
   _listeners.forEach((l) => l(item));
 }
@@ -61,14 +72,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div
         aria-live="polite"
-        className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 md:bottom-6 md:right-6"
+        className="pointer-events-none fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom,0px)+104px)] z-[130] flex flex-col items-end gap-2 md:inset-x-auto md:bottom-6 md:right-6"
       >
         {toasts.map((t) => {
           const Icon = ICON[t.type];
           return (
             <div
               key={t.id}
-              className={`glass flex min-w-[260px] max-w-sm items-start gap-3 px-4 py-3 ${
+              className={`glass pointer-events-auto flex w-full max-w-sm items-start gap-3 px-4 py-3 md:min-w-[260px] md:w-auto ${
                 t.leaving ? "toast-out" : "animate-in"
               }`}
             >
@@ -76,6 +87,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <span className="flex-1 text-[13px] text-fg">{t.message}</span>
               <button
                 onClick={() => dismiss(t.id)}
+                aria-label="Dismiss"
                 className="shrink-0 rounded p-0.5 text-fg-3 transition-colors hover:text-fg"
               >
                 <X size={13} />

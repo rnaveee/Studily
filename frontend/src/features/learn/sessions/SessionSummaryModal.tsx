@@ -30,7 +30,7 @@ export default function SessionSummaryModal({ sessionId, onClose }: { sessionId:
   }
 
   return (
-    <Modal onClose={finish} size="sm" showClose={false}>
+    <Modal onClose={finish} size="sm" showClose={!recap.data}>
       {recap.data ? (
         <SummaryFlow recap={recap.data} />
       ) : recap.isError ? (

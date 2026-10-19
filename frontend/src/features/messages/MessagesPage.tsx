@@ -10,6 +10,7 @@ import SegmentedToggle from "../../components/SegmentedToggle";
 import type { Conversation, FriendRequestItem } from "../../types";
 import NewGroupModal from "./NewGroupModal";
 import { SkeletonList } from "../../components/Skeleton";
+import QueryError from "../../components/QueryError";
 
 type Tab = "messages" | "groups";
 
@@ -85,6 +86,16 @@ export default function MessagesPage() {
         value={tab}
         onChange={setTab}
       />
+
+      {(friends.isError || directConvos.isError || groups.isError) && (
+        <QueryError
+          onRetry={() => {
+            friends.refetch();
+            directConvos.refetch();
+            groups.refetch();
+          }}
+        />
+      )}
 
       {tab === "messages" ? (
         friends.isLoading ? (

@@ -21,6 +21,7 @@ import { inferItemType, itemColor } from "../../lib/itemType";
 import Modal from "../../components/Modal";
 import ScopeChoice from "./ScopeChoice";
 import { invalidateItemQueries } from "../../lib/invalidateItems";
+import { readableOn } from "../../lib/courseColors";
 
 export default function CalendarEntryModal({
   item,
@@ -153,8 +154,8 @@ export default function CalendarEntryModal({
       onClose={onClose}
       title={
         <span
-          className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
-          style={{ backgroundColor: color }}
+          className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+          style={{ backgroundColor: color, color: readableOn(color) }}
         >
           {badge}
         </span>

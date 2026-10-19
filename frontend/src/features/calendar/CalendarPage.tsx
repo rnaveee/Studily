@@ -10,6 +10,8 @@ import DayModal from "./DayModal";
 import IcsPanel from "./IcsPanel";
 import CalendarEntryModal from "./CalendarEntryModal";
 import { dayKey, eventEntry, itemEntry, tintBackground, type Entry } from "./entries";
+import QueryError from "../../components/QueryError";
+import { readableOn } from "../../lib/courseColors";
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MAX_BLOCKS_PER_DAY = 3;
@@ -33,12 +35,12 @@ export default function CalendarPage() {
 
   const range = `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 
-  const { data: items } = useQuery({
+  const { data: items, isError: itemsError, refetch: refetchItems } = useQuery({
     queryKey: ["calendar", from, to],
     queryFn: () => api.get<AcademicItem[]>(`/calendar?${range}`),
   });
 
-  const { data: events } = useQuery({
+  const { data: events, isError: eventsError, refetch: refetchEvents } = useQuery({
     queryKey: ["calendar-events", from, to],
     queryFn: () => api.get<CalendarEvent[]>(`/calendar/events?${range}`),
   });
@@ -108,6 +110,16 @@ export default function CalendarPage() {
           <ChevronRight size={15} />
         </button>
       </div>
+
+      {(itemsError || eventsError) && (
+        <QueryError
+          onRetry={() => {
+            refetchItems();
+            refetchEvents();
+          }}
+          message="Couldn't load your calendar. Check your connection and try again."
+        />
+      )}
 
       <IcsPanel />
 
@@ -192,8 +204,8 @@ export default function CalendarPage() {
                   className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-surface-hi"
                 >
                   <span
-                    className="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
-                    style={{ backgroundColor: en.accent }}
+                    className="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                    style={{ backgroundColor: en.accent, color: readableOn(en.accent) }}
                   >
                     {en.badge}
                   </span>

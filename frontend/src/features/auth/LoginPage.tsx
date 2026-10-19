@@ -32,7 +32,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-dvh items-center justify-center px-4">
       <div className="w-full max-w-[340px] animate-in">
         <div className="mb-8 text-center">
           <img src="/studily-3a.svg" alt="" className="mx-auto mb-2 h-14 w-14" />
@@ -45,20 +45,19 @@ export default function LoginPage() {
 
           <form onSubmit={onSubmit} className="space-y-3">
             <div>
-              <label className="field-label">Email</label>
-              <input
+              <label htmlFor="log-field-1" className="field-label">Email</label>
+              <input id="log-field-1" autoComplete="email"
                 className="input"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                autoFocus
               />
             </div>
             <div>
-              <label className="field-label">Password</label>
-              <input
+              <label htmlFor="log-field-2" className="field-label">Password</label>
+              <input id="log-field-2" autoComplete="current-password"
                 className="input"
                 type="password"
                 placeholder="••••••••"

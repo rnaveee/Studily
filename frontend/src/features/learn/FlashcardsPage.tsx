@@ -10,6 +10,7 @@ import type { Course, FlashcardSet } from "../../types";
 import NewFlashcardSetModal from "./NewFlashcardSetModal";
 import { VisibilityBadge } from "./visibility";
 import { SkeletonList } from "../../components/Skeleton";
+import QueryError from "../../components/QueryError";
 
 export default function FlashcardsPage() {
   const qc = useQueryClient();
@@ -56,6 +57,8 @@ export default function FlashcardsPage() {
 
       {sets.isLoading ? (
         <SkeletonList rows={3} />
+      ) : sets.isError && !sets.data ? (
+        <QueryError onRetry={() => sets.refetch()} />
       ) : sets.data && sets.data.length > 0 ? (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {sets.data.map((s) => {

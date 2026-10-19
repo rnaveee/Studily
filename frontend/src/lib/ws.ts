@@ -27,6 +27,11 @@ let attempts = 0;
 let reconnectTimer: number | undefined;
 let heartbeatTimer: number | undefined;
 let lastActivity = 0;
+type PendingSend = { conversationId: number; body: string; replyToId: number | null; at: number };
+let pendingSend: PendingSend | null = null;
+const sendFailureListeners = new Set<(p: PendingSend) => void>();
+const SEND_ERROR_WINDOW_MS = 5000;
+const STALE_SEND_MS = 50_000;
 let currentUserId: number | null = null;
 
 const messageListeners = new Set<MessageListener>();
@@ -213,9 +218,11 @@ function open() {
   const token = getToken();
   if (!shouldRun || !token || socket) return;
 
-  socket = new WebSocket(url(), [WS_PROTOCOL, token]);
+  const sock = new WebSocket(url(), [WS_PROTOCOL, token]);
+  socket = sock;
 
-  socket.onopen = () => {
+  sock.onopen = () => {
+    if (socket !== sock) return;
     attempts = 0;
     startHeartbeat();
     sendPresence();
@@ -223,7 +230,8 @@ function open() {
     queryClient.invalidateQueries({ queryKey: ["conversations"] });
   };
 
-  socket.onmessage = (e) => {
+  sock.onmessage = (e) => {
+    if (socket !== sock) return;
     lastActivity = Date.now();
     let event: ServerEvent;
     try {
@@ -231,25 +239,36 @@ function open() {
     } catch {
       return;
     }
-    if (event.type === "message") handleIncoming(event.message);
+    if (event.type === "message") {
+      pendingSend = null;
+      handleIncoming(event.message);
+    }
     else if (event.type === "messageEdited") applyEditToCache(event.message);
     else if (event.type === "messageDeleted")
       removeMessageFromCache(event.conversationId, event.messageId);
     else if (event.type === "conversationCleared") clearMessagesInCache(event.conversationId);
     else if (event.type === "like") applyLikeToCache(event.like, currentUserId ?? undefined);
     else if (event.type === "read") applyReadToCache(event.conversationId, event.at);
-    else if (event.type === "error") toast.error(event.message);
+    else if (event.type === "error") {
+      const failed = pendingSend;
+      pendingSend = null;
+      if (failed && Date.now() - failed.at < SEND_ERROR_WINDOW_MS) {
+        sendFailureListeners.forEach((l) => l(failed));
+      }
+      toast.error(event.message);
+    }
   };
 
-  socket.onclose = () => {
+  sock.onclose = () => {
+    if (socket !== sock) return;
     socket = null;
     window.clearInterval(heartbeatTimer);
     notifyState(false);
     scheduleReconnect();
   };
 
-  socket.onerror = () => {
-    socket?.close();
+  sock.onerror = () => {
+    sock.close();
   };
 }
 
@@ -296,9 +315,17 @@ export const ws = {
   },
 
   sendChat(conversationId: number, body: string, replyToId?: number | null): boolean {
-    if (!this.isConnected()) return false;
+    if (!this.isConnected() || Date.now() - lastActivity > STALE_SEND_MS) return false;
+    pendingSend = { conversationId, body, replyToId: replyToId ?? null, at: Date.now() };
     socket!.send(JSON.stringify({ type: "send", conversationId, body, replyToId: replyToId ?? null }));
     return true;
+  },
+
+  onSendFailed(listener: (p: PendingSend) => void) {
+    sendFailureListeners.add(listener);
+    return () => {
+      sendFailureListeners.delete(listener);
+    };
   },
 
   markRead(conversationId: number) {

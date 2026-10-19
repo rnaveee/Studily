@@ -36,7 +36,7 @@ export default function SignupPage() {
 
   if (created) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4">
+      <div className="flex min-h-dvh items-center justify-center px-4">
         <div className="w-full max-w-[360px] animate-in">
           <div className="mb-8 text-center">
             <img src="/studily-3a.svg" alt="" className="mx-auto mb-2 h-14 w-14" />
@@ -64,7 +64,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-8">
+    <div className="flex min-h-dvh items-center justify-center px-4 py-8">
       <div className="w-full max-w-[360px] animate-in">
         <div className="mb-8 text-center">
           <img src="/studily-3a.svg" alt="" className="mx-auto mb-2 h-14 w-14" />
@@ -78,25 +78,25 @@ export default function SignupPage() {
           <form onSubmit={onSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="field-label">Full name</label>
-                <input className="input" placeholder="Alex Kim" value={form.name} onChange={set("name")} required />
+                <label htmlFor="sig-field-1" className="field-label">Full name</label>
+                <input id="sig-field-1" autoComplete="name" className="input" placeholder="Alex Kim" value={form.name} onChange={set("name")} required />
               </div>
               <div>
-                <label className="field-label">Username</label>
-                <input className="input" placeholder="alexkim" value={form.username} onChange={set("username")} required minLength={3} maxLength={30} pattern="[A-Za-z0-9._\-]+" title="Letters, numbers, dots, dashes, and underscores only" />
+                <label htmlFor="sig-field-2" className="field-label">Username</label>
+                <input id="sig-field-2" autoComplete="username" className="input" placeholder="alexkim" value={form.username} onChange={set("username")} required minLength={3} maxLength={30} pattern="[A-Za-z0-9._\-]+" title="Letters, numbers, dots, dashes, and underscores only" />
               </div>
             </div>
             <div>
-              <label className="field-label">Email</label>
-              <input className="input" type="email" placeholder="you@example.com" value={form.email} onChange={set("email")} required />
+              <label htmlFor="sig-field-3" className="field-label">Email</label>
+              <input id="sig-field-3" autoComplete="email" className="input" type="email" placeholder="you@example.com" value={form.email} onChange={set("email")} required />
             </div>
             <div>
-              <label className="field-label">Password</label>
-              <input className="input" type="password" placeholder="min 8 characters" value={form.password} onChange={set("password")} required minLength={8} />
+              <label htmlFor="sig-field-4" className="field-label">Password</label>
+              <input id="sig-field-4" autoComplete="new-password" className="input" type="password" placeholder="min 8 characters" value={form.password} onChange={set("password")} required minLength={8} />
             </div>
             <div>
-              <label className="field-label">School <span className="normal-case text-fg-3">(optional)</span></label>
-              <input className="input" placeholder="e.g. Simon Fraser University" value={form.school} onChange={set("school")} />
+              <label htmlFor="sig-field-5" className="field-label">School <span className="normal-case text-fg-3">(optional)</span></label>
+              <input id="sig-field-5" autoComplete="organization" className="input" placeholder="e.g. Simon Fraser University" value={form.school} onChange={set("school")} />
             </div>
 
             {error && (

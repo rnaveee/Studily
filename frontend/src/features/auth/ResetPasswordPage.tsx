@@ -30,7 +30,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-dvh items-center justify-center px-4">
       <div className="w-full max-w-[340px] animate-in">
         <div className="mb-8 text-center">
           <img src="/studily-3a.svg" alt="" className="mx-auto mb-2 h-14 w-14" />
@@ -60,8 +60,8 @@ export default function ResetPasswordPage() {
           ) : (
             <form onSubmit={onSubmit} className="space-y-3">
               <div>
-                <label className="field-label">New password</label>
-                <input
+                <label htmlFor="res-field-1" className="field-label">New password</label>
+                <input id="res-field-1" autoComplete="new-password"
                   className="input"
                   type="password"
                   placeholder="min 8 characters"
@@ -73,8 +73,8 @@ export default function ResetPasswordPage() {
                 />
               </div>
               <div>
-                <label className="field-label">Confirm password</label>
-                <input
+                <label htmlFor="res-field-2" className="field-label">Confirm password</label>
+                <input id="res-field-2" autoComplete="new-password"
                   className="input"
                   type="password"
                   placeholder="repeat it"

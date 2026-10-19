@@ -51,8 +51,10 @@ const SUB_LINKS = [
 function useTypingInField() {
   const [typing, setTyping] = useState(false);
   useEffect(() => {
+    const NON_TEXT = new Set(["checkbox", "radio", "range", "button", "submit", "reset", "file", "color"]);
     const isField = (el: EventTarget | null) =>
-      el instanceof HTMLElement && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
+      el instanceof HTMLElement &&
+      (el.tagName === "TEXTAREA" || (el instanceof HTMLInputElement && !NON_TEXT.has(el.type)));
     const onFocusIn = (e: FocusEvent) => setTyping(isField(e.target));
     const onFocusOut = () => setTyping(false);
     window.addEventListener("focusin", onFocusIn);

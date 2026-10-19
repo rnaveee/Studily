@@ -131,6 +131,15 @@ export default function ConversationPage() {
   const [wsConnected, setWsConnected] = useState(ws.isConnected());
   useEffect(() => ws.onState(setWsConnected), []);
 
+  useEffect(
+    () =>
+      ws.onSendFailed((failed) => {
+        if (failed.conversationId !== convId) return;
+        setDraft((current) => (current ? current : failed.body));
+      }),
+    [convId],
+  );
+
   const conversation = useQuery({
     queryKey: ["conversations", convId],
     queryFn: () => api.get<Conversation>(`/conversations/${convId}`),

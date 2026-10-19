@@ -12,6 +12,7 @@ import UserSearchModal from "./UserSearchModal";
 import type { FriendRequestItem } from "../../types";
 import { SkeletonList } from "../../components/Skeleton";
 import { invalidateProgress } from "../../lib/progressDelta";
+import QueryError from "../../components/QueryError";
 
 export default function FriendsPage() {
   const { user } = useAuth();
@@ -111,6 +112,16 @@ export default function FriendsPage() {
           <div className="text-[12px] text-fg-3">Other users from your school</div>
         </div>
       </Link>
+
+      {!loading && (incoming.isError || pending.isError || friends.isError) && (
+        <QueryError
+          onRetry={() => {
+            incoming.refetch();
+            pending.refetch();
+            friends.refetch();
+          }}
+        />
+      )}
 
       {loading ? (
         <SkeletonList rows={4} />

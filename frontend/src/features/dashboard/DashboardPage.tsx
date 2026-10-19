@@ -26,6 +26,8 @@ import TodoQuickView from "../todos/TodoQuickView";
 import { priorityLabel, priorityTone } from "../todos/priority";
 import DashboardStreak from "./DashboardStreak";
 import { quoteOfTheDay } from "./quotes";
+import QueryError from "../../components/QueryError";
+import { readableOn } from "../../lib/courseColors";
 
 
 
@@ -191,7 +193,7 @@ export default function DashboardPage() {
   });
 
   const params = semesterId != null ? `?semesterId=${semesterId}` : "";
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["dashboard", "week", semesterId],
     queryFn: () => api.get<WeekView>(`/dashboard/week${params}`),
     refetchInterval: 60_000,
@@ -279,7 +281,7 @@ export default function DashboardPage() {
           <SkeletonBlock height={320} className="min-w-0 flex-1" />
         </div>
       )}
-      {error && <p className="text-sm text-red">Failed to load dashboard.</p>}
+      {error && !data && <QueryError onRetry={() => refetch()} message="Couldn't load your week. Check your connection and try again." />}
 
       {data && (
         <>
@@ -298,9 +300,10 @@ export default function DashboardPage() {
                         <Link
                           key={i}
                           to={`/courses/${m.courseId}`}
-                          className="press flex items-start gap-2 rounded-lg px-3 py-2 text-[13px] font-medium text-white hover:opacity-80"
+                          className="press flex items-start gap-2 rounded-lg px-3 py-2 text-[13px] font-medium hover:opacity-80"
                           style={{
                             backgroundColor: m.color ?? "var(--accent)",
+                            color: readableOn(m.color),
                             opacity: done ? 0.45 : 1,
                           }}
                         >

@@ -60,6 +60,13 @@ export default function ProfilePage() {
       <p className="px-5 py-4 text-[13px] text-fg-3">
         {schedule.isLoading ? (
           "Loading…"
+        ) : schedule.isError ? (
+          <>
+            Couldn't load your schedule.{" "}
+            <button type="button" onClick={() => schedule.refetch()} className="text-accent hover:text-accent-2 transition-colors">
+              Retry
+            </button>
+          </>
         ) : (
           <>
             No active semester.{" "}

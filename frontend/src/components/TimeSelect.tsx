@@ -108,8 +108,9 @@ export default function TimeSelect({
       else commitTyped();
       return;
     }
-    if (e.key === "Escape") {
+    if (e.key === "Escape" && (open || text)) {
       e.preventDefault();
+      e.stopPropagation();
       setText("");
       setOpen(false);
     }

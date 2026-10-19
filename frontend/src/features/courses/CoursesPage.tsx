@@ -12,6 +12,7 @@ import { courseLocations, hhmm } from "../../lib/format";
 import CourseForm from "./CourseForm";
 import NewCourseChooser from "./NewCourseChooser";
 import Modal from "../../components/Modal";
+import QueryError from "../../components/QueryError";
 
 export default function CoursesPage() {
   const qc = useQueryClient();
@@ -26,7 +27,7 @@ export default function CoursesPage() {
   });
 
   const coursesUrl = semesterFilter != null ? `/courses?semesterId=${semesterFilter}` : "/courses";
-  const { data: courses, isLoading } = useQuery({
+  const { data: courses, isLoading, isError, refetch } = useQuery({
     queryKey: ["courses", semesterFilter],
     queryFn: () => api.get<Course[]>(coursesUrl),
   });
@@ -99,6 +100,8 @@ export default function CoursesPage() {
 
       {isLoading ? (
         <SkeletonCards count={4} className="stagger-item grid-cols-1 sm:grid-cols-2" style={staggerDelay(1)} />
+      ) : isError && !courses ? (
+        <QueryError onRetry={() => refetch()} />
       ) : courses && courses.length > 0 ? (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {courses.map((c, index) => (

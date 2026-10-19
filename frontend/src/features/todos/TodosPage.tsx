@@ -11,6 +11,7 @@ import { staggerDelay } from "../../lib/motion";
 import type { Todo } from "../../types";
 import TodoModal from "./TodoModal";
 import { pillStyle, priorityLabel, priorityTone, urgencyStyle } from "./priority";
+import QueryError from "../../components/QueryError";
 
 export default function TodosPage() {
   const qc = useQueryClient();
@@ -131,6 +132,8 @@ export default function TodosPage() {
 
       {todos.isLoading ? (
         <SkeletonList rows={4} className="stagger-item" style={staggerDelay(1)} />
+      ) : todos.isError && !todos.data ? (
+        <QueryError onRetry={() => todos.refetch()} />
       ) : todos.data && todos.data.length > 0 ? (
         <ul className="card divide-y divide-line overflow-hidden">
           {todos.data.map((todo, index) => {
