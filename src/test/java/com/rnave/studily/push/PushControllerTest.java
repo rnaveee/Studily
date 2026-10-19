@@ -21,8 +21,8 @@ import static org.mockito.Mockito.when;
 
 class PushControllerTest {
 
-    private static final String ENDPOINT = "https://push.example.com/abc";
-    private static final String NEW_ENDPOINT = "https://push.example.com/xyz";
+    private static final String ENDPOINT = "https://fcm.googleapis.com/fcm/send/abc";
+    private static final String NEW_ENDPOINT = "https://fcm.googleapis.com/fcm/send/xyz";
 
     private PushSubscriptionRepository repository;
     private CurrentUser currentUser;

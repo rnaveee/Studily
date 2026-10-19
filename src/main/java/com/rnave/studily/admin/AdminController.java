@@ -35,6 +35,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -163,9 +164,9 @@ public class AdminController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void verifyEmail(@PathVariable Long id, @RequestParam(defaultValue = "true") boolean verified,
                             HttpServletRequest request) {
-        userService.setEmailVerified(id, verified);
         auditService.record(admin(request), request, "USER_SET_VERIFIED", "user:" + id,
                 "verified=" + verified);
+        userService.setEmailVerified(id, verified);
     }
 
     @PostMapping("/users/{id}/reset-link")
@@ -183,8 +184,8 @@ public class AdminController {
     @PostMapping("/users/{id}/revoke-sessions")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void revokeSessions(@PathVariable Long id, HttpServletRequest request) {
-        userService.revokeSessions(id);
         auditService.record(admin(request), request, "USER_REVOKE_SESSIONS", "user:" + id, null);
+        userService.revokeSessions(id);
     }
 
     @DeleteMapping("/users/{id}")
@@ -221,22 +222,22 @@ public class AdminController {
             @PathVariable String id,
             @RequestBody Map<String, Object> changes,
             HttpServletRequest request) {
-        int affected = dbService.updateRow(table, id, changes);
         auditService.record(admin(request), request, "DB_ROW_UPDATE", table + "#" + id, changes.toString());
+        int affected = dbService.updateRow(table, id, changes);
         return Map.of("rowsAffected", affected);
     }
 
     @DeleteMapping("/db/tables/{table}/rows/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteRow(@PathVariable String table, @PathVariable String id, HttpServletRequest request) {
-        dbService.deleteRow(table, id);
         auditService.record(admin(request), request, "DB_ROW_DELETE", table + "#" + id, null);
+        dbService.deleteRow(table, id);
     }
 
     @GetMapping("/db/tables/{table}/export")
     public ResponseEntity<byte[]> exportTable(@PathVariable String table, HttpServletRequest request) {
-        String csv = dbService.csv(table);
         auditService.record(admin(request), request, "DB_EXPORT", table, null);
+        String csv = dbService.csv(table);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("text/csv"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + table + ".csv\"")
@@ -245,23 +246,15 @@ public class AdminController {
 
     @PostMapping("/db/query")
     public QueryResult query(@RequestBody QueryRequest body, HttpServletRequest request) {
-        boolean read = dbService.isRead(body.sql());
-        if (!read) {
-            auditService.record(admin(request), request, "DB_QUERY_WRITE", null, body.sql());
-        }
-        QueryResult result = dbService.query(body.sql(), body.write());
-        if (read) {
-            auditService.record(admin(request), request, "DB_QUERY_READ", null, body.sql());
-        }
-        return result;
+        boolean read = dbService.isRead(body.sql()) && !body.write();
+        auditService.record(admin(request), request, read ? "DB_QUERY_READ" : "DB_QUERY_WRITE", null, body.sql());
+        return dbService.query(body.sql(), body.write());
     }
 
     @PostMapping("/broadcast")
     public BroadcastResult broadcast(@RequestBody BroadcastRequest body, HttpServletRequest request) {
-        BroadcastResult result = opsService.broadcast(body);
-        auditService.record(admin(request), request, "BROADCAST", body.title(),
-                result.recipients() + " recipients: " + body.body());
-        return result;
+        auditService.record(admin(request), request, "BROADCAST", body.title(), body.body());
+        return opsService.broadcast(body);
     }
 
     @GetMapping("/audit")
@@ -269,6 +262,11 @@ public class AdminController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
         return opsService.audit(page, size);
+    }
+
+    @ModelAttribute
+    void requireAdminContext(HttpServletRequest request) {
+        admin(request);
     }
 
     private static User admin(HttpServletRequest request) {

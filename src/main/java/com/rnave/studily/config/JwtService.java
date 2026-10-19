@@ -20,6 +20,9 @@ public class JwtService {
     private static final int MIN_SECRET_LENGTH = 64;
     private static final String DEV_PREFIX = "dev-only";
 
+    @Value("${RAILWAY_ENVIRONMENT:}")
+    private String hostedEnvironment = "";
+
     private final String rawSecret;
     private final SecretKey key;
     private final long expirationMs;
@@ -39,6 +42,10 @@ public class JwtService {
                 "JWT secret is too short (" + rawSecret.length() + " chars). " +
                 "Set the JWT_SECRET environment variable to a random string of at least " +
                 MIN_SECRET_LENGTH + " characters.");
+        }
+        if (rawSecret.startsWith(DEV_PREFIX) && !hostedEnvironment.isBlank()) {
+            throw new IllegalStateException(
+                "JWT_SECRET is not set. Refusing to start a hosted deployment with the built-in development secret.");
         }
         if (rawSecret.startsWith(DEV_PREFIX)) {
             log.warn("\n" +

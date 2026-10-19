@@ -298,6 +298,9 @@ public class AdminDbService {
         try {
             result = jdbc.execute((org.springframework.jdbc.core.StatementCallback<QueryResult>) statement -> {
                 statement.execute("SET LOCAL statement_timeout = " + STATEMENT_TIMEOUT_MS);
+                if (!allowWrite) {
+                    statement.execute("SET TRANSACTION READ ONLY");
+                }
                 statement.setMaxRows(MAX_ROWS + 1);
                 boolean hasResultSet = statement.execute(sql);
                 if (!hasResultSet) {

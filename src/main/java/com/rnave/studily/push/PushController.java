@@ -1,5 +1,6 @@
 package com.rnave.studily.push;
 
+import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.user.User;
@@ -23,6 +24,8 @@ import java.security.MessageDigest;
 @RequestMapping("/api/push")
 public class PushController {
 
+    private static final int MAX_SUBSCRIPTIONS_PER_USER = 20;
+
     private final WebPushSender webPushSender;
     private final PushSubscriptionRepository subscriptionRepository;
     private final CurrentUser currentUser;
@@ -44,6 +47,9 @@ public class PushController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Transactional
     public void subscribe(@Valid @RequestBody SubscribeRequest request) {
+        if (!PushEndpoints.isAllowed(request.endpoint())) {
+            throw new BadRequestException("Unsupported push service");
+        }
         User me = currentUser.entity();
         PushSubscription subscription = subscriptionRepository
                 .findByEndpoint(request.endpoint())
@@ -52,6 +58,10 @@ public class PushController {
                 && !subscription.getUser().getId().equals(me.getId())
                 && !keysMatch(subscription, request.keys())) {
             throw new ConflictException("This push endpoint is registered to another device");
+        }
+        if (subscription.getId() == null
+                && subscriptionRepository.findByUserId(me.getId()).size() >= MAX_SUBSCRIPTIONS_PER_USER) {
+            throw new BadRequestException("Too many push subscriptions on this account");
         }
         subscription.setUser(me);
         subscription.setEndpoint(request.endpoint());
@@ -70,6 +80,9 @@ public class PushController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Transactional
     public void rotate(@Valid @RequestBody RotateRequest request) {
+        if (!PushEndpoints.isAllowed(request.endpoint())) {
+            return;
+        }
         subscriptionRepository.findByEndpoint(request.oldEndpoint()).ifPresent(subscription -> {
             if (!keysMatch(subscription, request.oldKeys())) {
                 return;
