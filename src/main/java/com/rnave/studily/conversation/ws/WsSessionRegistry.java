@@ -17,6 +17,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class WsSessionRegistry {
 
+    public static final CloseStatus SUSPENDED = new CloseStatus(4403, "ACCOUNT_SUSPENDED");
+
     private static final Logger log = LoggerFactory.getLogger(WsSessionRegistry.class);
     private static final int SEND_TIME_LIMIT_MS = 10_000;
     private static final int SEND_BUFFER_SIZE_BYTES = 512 * 1024;
@@ -64,6 +66,20 @@ public class WsSessionRegistry {
             session.close(status);
         } catch (IOException | IllegalStateException e) {
             log.debug("Could not close WebSocket session {}: {}", session.getId(), e.getMessage());
+        }
+    }
+
+    public void closeAllForUser(Long userId, CloseStatus status) {
+        Map<String, Connection> sessions = sessionsByUser.remove(userId);
+        if (sessions == null) {
+            return;
+        }
+        for (Connection connection : sessions.values()) {
+            try {
+                connection.session.close(status);
+            } catch (IOException | IllegalStateException e) {
+                log.debug("Could not close WebSocket session {}: {}", connection.session.getId(), e.getMessage());
+            }
         }
     }
 

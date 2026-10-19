@@ -1,21 +1,26 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Check, Send } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { toast } from "../../lib/toast";
+import { SUPPORT_EMAIL } from "../../lib/support";
 import { Page, Section } from "./shell";
 
 const CATEGORIES = [
   { value: "BUG", label: "Bug" },
   { value: "FEEDBACK", label: "Feedback" },
+  { value: "APPEAL", label: "Account appeal" },
   { value: "OTHER", label: "Other" },
 ] as const;
 
-const SUPPORT_EMAIL = "ryannave97@gmail.com";
-
 export default function SupportPage() {
   const { user } = useAuth();
-  const [category, setCategory] = useState<string>("BUG");
+  const [params] = useSearchParams();
+  const [category, setCategory] = useState<string>(() => {
+    const wanted = params.get("category");
+    return CATEGORIES.find((c) => c.value === wanted)?.value ?? "BUG";
+  });
   const [message, setMessage] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);

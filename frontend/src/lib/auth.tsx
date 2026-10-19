@@ -5,6 +5,7 @@ import { queryClient } from "./queryClient";
 import { syncPush } from "./push";
 import { syncTimeZone } from "./timezone";
 import { ws } from "./ws";
+import { SUSPENDED_EVENT } from "./moderation";
 import type { AuthResponse, User } from "../types";
 
 const SLIDING_REFRESH_MS = 15 * 24 * 60 * 60 * 1000;
@@ -56,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pushSynced = useRef(false);
 
   useEffect(() => {
-    if (user && !pushSynced.current) {
+    if (user && !user.suspended && !pushSynced.current) {
       pushSynced.current = true;
       syncPush().catch(() => {});
       syncTimeZone().catch(() => {});
@@ -113,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     ws.setUserId(user?.id ?? null);
-    if (user?.emailVerified) ws.connect();
+    if (user?.emailVerified && !user.suspended) ws.connect();
     else ws.disconnect();
   }, [user]);
 
@@ -157,6 +158,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const u = await api.get<User>("/me");
     setUser(u);
   }
+
+  const refreshRef = useRef(refresh);
+  refreshRef.current = refresh;
+  const refreshing = useRef(false);
+
+  useEffect(() => {
+    function onSuspended() {
+      if (refreshing.current) return;
+      refreshing.current = true;
+      refreshRef.current().catch(() => {}).finally(() => {
+        refreshing.current = false;
+      });
+    }
+    window.addEventListener(SUSPENDED_EVENT, onSuspended);
+    return () => window.removeEventListener(SUSPENDED_EVENT, onSuspended);
+  }, []);
 
   return (
     <AuthContext.Provider

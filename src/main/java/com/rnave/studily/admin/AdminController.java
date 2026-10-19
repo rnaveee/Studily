@@ -150,9 +150,10 @@ public class AdminController {
     public Paged<UserRow> users(
             @RequestParam(required = false) String q,
             @RequestParam(defaultValue = "recent") String sort,
+            @RequestParam(required = false) String filter,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "25") int size) {
-        return userService.search(q, sort, page, size);
+        return userService.search(q, sort, filter, page, size);
     }
 
     @GetMapping("/users/{id}")
@@ -269,7 +270,7 @@ public class AdminController {
         admin(request);
     }
 
-    private static User admin(HttpServletRequest request) {
+    static User admin(HttpServletRequest request) {
         Object user = request.getAttribute(AdminAuthFilter.USER_ATTRIBUTE);
         if (user instanceof User resolved) {
             return resolved;

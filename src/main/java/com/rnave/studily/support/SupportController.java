@@ -80,7 +80,7 @@ public class SupportController {
     }
 
     public enum Category {
-        BUG("Bug"), FEEDBACK("Feedback"), OTHER("Other");
+        BUG("Bug"), FEEDBACK("Feedback"), APPEAL("Account appeal"), OTHER("Other");
 
         private final String label;
 

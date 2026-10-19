@@ -223,6 +223,25 @@ public class ConversationService {
     public void deleteMessage(Long conversationId, Long messageId) {
         Conversation conv = requireMember(conversationId);
         Message message = requireOwnMessage(conv, messageId);
+        removeMessage(conv, message);
+    }
+
+    @Transactional
+    public boolean deleteMessageAsModerator(Long messageId, Long expectedSenderId) {
+        Message message = messageRepository.findById(messageId).orElse(null);
+        if (message == null) {
+            return false;
+        }
+        if (!message.getSender().getId().equals(expectedSenderId)) {
+            throw new BadRequestException("That message doesn't belong to this user");
+        }
+        removeMessage(message.getConversation(), message);
+        return true;
+    }
+
+    private void removeMessage(Conversation conv, Message message) {
+        Long conversationId = conv.getId();
+        Long messageId = message.getId();
         messageRepository.delete(message);
         messageRepository.flush();
         conv.setLastMessageAt(messageRepository.findTopByConversationIdOrderByIdDesc(conversationId)

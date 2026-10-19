@@ -20,6 +20,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.time.Instant;
 import java.util.List;
 
 @Component
@@ -60,8 +61,10 @@ public class MessageSocketHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) {
         Long userId = userId(session);
-        if (!stillAuthorized(session, userId)) {
-            registry.closeSession(userId, session, CloseStatus.POLICY_VIOLATION);
+        AuthState state = authState(session, userId);
+        if (state != AuthState.OK) {
+            registry.closeSession(userId, session,
+                    state == AuthState.SUSPENDED ? WsSessionRegistry.SUSPENDED : CloseStatus.POLICY_VIOLATION);
             return;
         }
         registry.heardFrom(userId, session.getId());
@@ -130,14 +133,21 @@ public class MessageSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private boolean stillAuthorized(WebSocketSession session, Long userId) {
+    private enum AuthState { OK, REVOKED, SUSPENDED }
+
+    private AuthState authState(WebSocketSession session, Long userId) {
         Object version = session.getAttributes().get(WsHandshakeInterceptor.TOKEN_VERSION_ATTR);
         if (!(version instanceof Integer expected)) {
-            return false;
+            return AuthState.REVOKED;
         }
         return userRepository.findById(userId)
-                .map(user -> user.getTokenVersion() == expected)
-                .orElse(false);
+                .map(user -> {
+                    if (user.getTokenVersion() != expected) {
+                        return AuthState.REVOKED;
+                    }
+                    return user.isSuspendedAt(Instant.now()) ? AuthState.SUSPENDED : AuthState.OK;
+                })
+                .orElse(AuthState.REVOKED);
     }
 
     private Long userId(WebSocketSession session) {

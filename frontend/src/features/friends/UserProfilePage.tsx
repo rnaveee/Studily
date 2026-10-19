@@ -1,8 +1,11 @@
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { UserPlus, Check, Clock, School, GraduationCap, BookOpen, CalendarDays, Lock, MessageSquare } from "lucide-react";
+import { UserPlus, Check, Clock, School, GraduationCap, BookOpen, CalendarDays, Lock, MessageSquare, MoreVertical, Flag } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { queryClient } from "../../lib/queryClient";
+import { useAuth } from "../../lib/auth";
+import ReportModal from "../moderation/ReportModal";
 import Avatar from "../../components/Avatar";
 import BackButton from "../../components/BackButton";
 import ScheduleCard from "../../components/ScheduleCard";
@@ -16,6 +19,23 @@ export default function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>();
   const id = Number(userId);
   const navigate = useNavigate();
+  const { guest } = useAuth();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [reporting, setReporting] = useState(false);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = () => setMenuOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("click", close);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("click", close);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["friends", "user", id],
@@ -84,7 +104,42 @@ export default function UserProfilePage() {
       ) : (
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 lg:gap-5">
           <div className="min-w-0 space-y-4 lg:space-y-5">
-            <div className="card p-6 text-center">
+            <div className="card relative p-6 text-center">
+              {!guest && (
+                <div className="absolute right-2 top-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpen((open) => !open);
+                    }}
+                    className="rounded-lg p-2 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+                    aria-label="More options"
+                    aria-haspopup="menu"
+                    aria-expanded={menuOpen}
+                  >
+                    <MoreVertical size={16} />
+                  </button>
+                  {menuOpen && (
+                    <div
+                      className="popover absolute right-0 top-full z-50 mt-1 w-48 overflow-hidden py-1 text-left animate-slide"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setReporting(true);
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] text-red transition-colors hover:bg-surface-hi"
+                      >
+                        <Flag size={13} />
+                        <span className="min-w-0 truncate">Report @{data.user.username}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
               <Avatar name={data.user.name} username={data.user.username} avatarUrl={data.user.avatarUrl} flair={data.user.flair} size={80} className="mx-auto mb-4 text-3xl" />
               <h1 className="text-xl font-bold text-fg">{data.user.name}</h1>
               <p className="mt-0.5 text-[13px] text-fg-3">@{data.user.username}</p>
@@ -185,6 +240,13 @@ export default function UserProfilePage() {
             />
           </div>
         </div>
+      )}
+
+      {reporting && data && (
+        <ReportModal
+          target={{ kind: "USER", userId: id, name: data.user.username }}
+          onClose={() => setReporting(false)}
+        />
       )}
     </div>
   );

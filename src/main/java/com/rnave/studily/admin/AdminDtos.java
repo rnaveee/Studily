@@ -1,5 +1,11 @@
 package com.rnave.studily.admin;
 
+import com.rnave.studily.moderation.ModerationActionType;
+import com.rnave.studily.moderation.ReportReason;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -106,7 +112,11 @@ public final class AdminDtos {
             Instant createdAt,
             Instant lastActiveAt,
             long courses,
-            long items) {
+            long items,
+            String status,
+            boolean banned,
+            Instant suspendedUntil,
+            long openReports) {
     }
 
     public record UserDetail(
@@ -115,7 +125,97 @@ public final class AdminDtos {
             String major,
             String bio,
             int tokenVersion,
-            Map<String, Long> counts) {
+            Map<String, Long> counts,
+            String avatarUrl,
+            List<ModerationActionRow> actions) {
+    }
+
+    public record ReportGroupRow(
+            Long userId,
+            String username,
+            String name,
+            String avatarUrl,
+            String status,
+            boolean banned,
+            Instant suspendedUntil,
+            long openCount,
+            long totalCount,
+            Map<String, Long> openReasons,
+            Instant latestAt) {
+    }
+
+    public record ReportRow(
+            Long id,
+            String kind,
+            String reason,
+            String details,
+            String status,
+            Long reporterId,
+            String reporterUsername,
+            Instant createdAt,
+            Long messageId,
+            Long conversationId,
+            String messageBody,
+            String attachmentFilename,
+            String attachmentContentType,
+            Instant messageCreatedAt,
+            boolean messageExists,
+            boolean hasEvidence,
+            String targetNameSnapshot,
+            String targetBioSnapshot,
+            Instant resolvedAt,
+            String resolvedBy,
+            Long actionId) {
+    }
+
+    public record ModerationActionRow(
+            Long id,
+            String type,
+            List<String> reasons,
+            String note,
+            Instant createdAt,
+            String createdBy,
+            Instant endsAt,
+            Instant acknowledgedAt,
+            Instant revokedAt,
+            String revokedBy,
+            boolean removedAvatar,
+            boolean clearedBio,
+            int deletedMessages,
+            boolean active) {
+    }
+
+    public record ReportCase(
+            UserRow user,
+            String bio,
+            String avatarUrl,
+            List<ReportRow> reports,
+            List<ModerationActionRow> actions) {
+    }
+
+    public record ModerationRequest(
+            @NotNull ModerationActionType type,
+            Integer days,
+            @NotEmpty @Size(max = 8) List<@NotNull ReportReason> reasons,
+            @Size(max = 500) String note,
+            boolean removeAvatar,
+            boolean clearBio,
+            @Size(max = 50) List<Long> deleteMessageIds,
+            @Size(max = 200) List<Long> reportIds) {
+    }
+
+    public record ModerationResult(
+            Long actionId,
+            String status,
+            boolean banned,
+            Instant suspendedUntil,
+            int deletedMessages) {
+    }
+
+    public record DismissRequest(@Size(max = 200) List<Long> reportIds) {
+    }
+
+    public record EvidenceContent(String contentType, byte[] data) {
     }
 
     public record ResetLink(String url, Instant expiresAt) {

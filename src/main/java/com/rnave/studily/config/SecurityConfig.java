@@ -32,6 +32,7 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final AuthRateLimitFilter authRateLimitFilter;
     private final GlobalRateLimitFilter globalRateLimitFilter;
+    private final SuspensionFilter suspensionFilter;
     private final EmailVerificationFilter emailVerificationFilter;
     private final AdminAuthFilter adminAuthFilter;
     private final ActivityTracker activityTracker;
@@ -41,12 +42,14 @@ public class SecurityConfig {
 
     public SecurityConfig(JwtAuthFilter jwtAuthFilter, AuthRateLimitFilter authRateLimitFilter,
                           GlobalRateLimitFilter globalRateLimitFilter,
+                          SuspensionFilter suspensionFilter,
                           EmailVerificationFilter emailVerificationFilter,
                           AdminAuthFilter adminAuthFilter,
                           ActivityTracker activityTracker) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.authRateLimitFilter = authRateLimitFilter;
         this.globalRateLimitFilter = globalRateLimitFilter;
+        this.suspensionFilter = suspensionFilter;
         this.emailVerificationFilter = emailVerificationFilter;
         this.adminAuthFilter = adminAuthFilter;
         this.activityTracker = activityTracker;
@@ -91,7 +94,8 @@ public class SecurityConfig {
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(authRateLimitFilter, JwtAuthFilter.class)
                 .addFilterAfter(globalRateLimitFilter, JwtAuthFilter.class)
-                .addFilterAfter(emailVerificationFilter, GlobalRateLimitFilter.class)
+                .addFilterAfter(suspensionFilter, GlobalRateLimitFilter.class)
+                .addFilterAfter(emailVerificationFilter, SuspensionFilter.class)
                 .addFilterAfter(adminAuthFilter, EmailVerificationFilter.class)
                 .addFilterAfter(activityTracker, AdminAuthFilter.class);
         return http.build();

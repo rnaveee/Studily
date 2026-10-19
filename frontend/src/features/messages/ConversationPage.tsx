@@ -6,6 +6,7 @@ import {
   Copy,
   CornerUpLeft,
   FileText,
+  Flag,
   Heart,
   ImagePlus,
   MoreHorizontal,
@@ -43,6 +44,7 @@ import {
 import BackButton, { useGoBack } from "../../components/BackButton";
 import Avatar from "../../components/Avatar";
 import Modal from "../../components/Modal";
+import ReportModal from "../moderation/ReportModal";
 import AttachmentBubble from "./AttachmentBubble";
 import type { Conversation, Message, MessageLike, MessageReply, Page, PublicUser } from "../../types";
 
@@ -122,6 +124,7 @@ export default function ConversationPage() {
   const [showMembers, setShowMembers] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [openMenu, setOpenMenu] = useState<number | "header" | null>(null);
+  const [reporting, setReporting] = useState<Message | null>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const confirm = useConfirm();
@@ -626,6 +629,7 @@ export default function ConversationPage() {
                       onCancelEdit={() => setEditingId(null)}
                       onSubmitEdit={(body) => editMessage.mutate({ messageId: m.id, body })}
                       onDelete={() => handleDeleteMessage(m.id)}
+                      onReport={() => setReporting(m)}
                     />
                   </div>
                 </div>
@@ -789,6 +793,13 @@ export default function ConversationPage() {
           onClose={() => setShowMembers(false)}
         />
       )}
+
+      {reporting && (
+        <ReportModal
+          target={{ kind: "MESSAGE", messageId: reporting.id, name: reporting.sender.username }}
+          onClose={() => setReporting(null)}
+        />
+      )}
     </div>
   );
 }
@@ -858,6 +869,7 @@ function MessageBubble({
   onCancelEdit,
   onSubmitEdit,
   onDelete,
+  onReport,
 }: {
   message: Message;
   mine: boolean;
@@ -871,6 +883,7 @@ function MessageBubble({
   onCancelEdit: () => void;
   onSubmitEdit: (body: string) => void;
   onDelete: () => void;
+  onReport: () => void;
 }) {
   const tap = useDoubleTap(onLike);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -960,7 +973,7 @@ function MessageBubble({
     </div>
   );
 
-  const actions = { mine, onReply, onLike, onStartEdit, onDelete };
+  const actions = { mine, onReply, onLike, onStartEdit, onDelete, onReport };
 
   return (
     <div className={`group/msg flex min-w-0 items-center gap-0.5 ${mine ? "flex-row-reverse" : ""}`}>
@@ -1087,6 +1100,7 @@ function MessageActions({
   onLike,
   onStartEdit,
   onDelete,
+  onReport,
   onPick,
   compact = false,
 }: {
@@ -1096,6 +1110,7 @@ function MessageActions({
   onLike: () => void;
   onStartEdit: () => void;
   onDelete: () => void;
+  onReport: () => void;
   onPick: () => void;
   compact?: boolean;
 }) {
@@ -1141,6 +1156,12 @@ function MessageActions({
           Delete message
         </button>
       )}
+      {!mine && (
+        <button type="button" onClick={pick(onReport)} className={`${row} text-red`}>
+          <Flag size={size} />
+          Report message
+        </button>
+      )}
     </>
   );
 }
@@ -1153,6 +1174,7 @@ function MessageActionsSheet({
   onLike,
   onStartEdit,
   onDelete,
+  onReport,
 }: {
   message: Message;
   mine: boolean;
@@ -1161,6 +1183,7 @@ function MessageActionsSheet({
   onLike: () => void;
   onStartEdit: () => void;
   onDelete: () => void;
+  onReport: () => void;
 }) {
   const closeRef = useRef<(() => void) | null>(null);
   const dismiss = () => (closeRef.current ?? onClose)();
@@ -1183,6 +1206,7 @@ function MessageActionsSheet({
           onLike={onLike}
           onStartEdit={onStartEdit}
           onDelete={onDelete}
+          onReport={onReport}
           onPick={dismiss}
         />
       </div>

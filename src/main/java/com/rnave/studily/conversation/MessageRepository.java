@@ -16,6 +16,9 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     @Query("select m from Message m join fetch m.sender where m.id in :ids")
     List<Message> findWithSenderByIdIn(@Param("ids") Collection<Long> ids);
 
+    @Query("select m.id from Message m where m.id in :ids")
+    List<Long> findExistingIds(@Param("ids") Collection<Long> ids);
+
     Slice<Message> findByConversationIdAndIdLessThanAndIdGreaterThanOrderByIdDesc(
             Long conversationId, Long beforeId, long afterId, Pageable pageable);
 

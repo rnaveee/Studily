@@ -2,6 +2,7 @@ import type { InfiniteData } from "@tanstack/react-query";
 import { getToken } from "./api";
 import { queryClient } from "./queryClient";
 import { toast } from "./toast";
+import { SUSPENDED_EVENT } from "./moderation";
 import type { Conversation, Message, MessageLike, Page } from "../types";
 
 type ServerEvent =
@@ -259,11 +260,17 @@ function open() {
     }
   };
 
-  sock.onclose = () => {
+  sock.onclose = (e) => {
     if (socket !== sock) return;
     socket = null;
     window.clearInterval(heartbeatTimer);
     notifyState(false);
+    if (e.code === 4403) {
+      shouldRun = false;
+      window.clearTimeout(reconnectTimer);
+      window.dispatchEvent(new Event(SUSPENDED_EVENT));
+      return;
+    }
     scheduleReconnect();
   };
 

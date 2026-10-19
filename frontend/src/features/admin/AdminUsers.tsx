@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, Search, X } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
@@ -6,6 +7,9 @@ import { toast } from "../../lib/toast";
 import { useConfirm } from "../../lib/confirm";
 import type { AdminPaged, AdminResetLink, AdminUserDetail, AdminUserRow } from "../../types";
 import { ago } from "./AdminOverview";
+import AccountStatusPill from "./AccountStatusPill";
+import ModerationActionPanel from "./ModerationActionPanel";
+import { LiftButton, ModerationHistory } from "./ModerationHistory";
 
 const SORTS = [
   { key: "recent", label: "Newest" },
@@ -77,6 +81,7 @@ export default function AdminUsers() {
                 <Th>User</Th>
                 <Th>Email</Th>
                 <Th>School</Th>
+                <Th>Status</Th>
                 <Th>Courses</Th>
                 <Th>Joined</Th>
                 <Th>Last seen</Th>
@@ -98,6 +103,14 @@ export default function AdminUsers() {
                   </Td>
                   <Td className="text-fg-2">{u.email}</Td>
                   <Td className="text-fg-2">{u.school ?? "—"}</Td>
+                  <Td>
+                    <AccountStatusPill status={u.status} banned={u.banned} suspendedUntil={u.suspendedUntil} />
+                    {u.openReports > 0 && (
+                      <span className="ml-1.5 text-[10px] text-red">
+                        {u.openReports} report{u.openReports === 1 ? "" : "s"}
+                      </span>
+                    )}
+                  </Td>
                   <Td className="text-fg-2">
                     {u.courses}
                     <span className="text-fg-3"> / {u.items} items</span>
@@ -139,6 +152,7 @@ export default function AdminUsers() {
 function UserDrawer({ id, onClose }: { id: number; onClose: () => void }) {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const [acting, setActing] = useState(false);
 
   const detailQ = useQuery({
     queryKey: ["admin", "user", id],
@@ -205,7 +219,7 @@ function UserDrawer({ id, onClose }: { id: number; onClose: () => void }) {
 
   const detail = detailQ.data;
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex justify-end animate-fade" style={{ background: "var(--scrim)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}>
       <div
         className="h-full w-full max-w-md overflow-y-auto p-5 animate-slide"
@@ -250,6 +264,41 @@ function UserDrawer({ id, onClose }: { id: number; onClose: () => void }) {
               ))}
             </div>
 
+            <h3 className="mt-5 text-[11px] font-semibold uppercase tracking-wider text-fg-3">Moderation</h3>
+            <div className="mt-2 space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <AccountStatusPill
+                  status={detail.user.status}
+                  banned={detail.user.banned}
+                  suspendedUntil={detail.user.suspendedUntil}
+                />
+                {detail.user.suspendedUntil && !detail.user.banned && (
+                  <span className="text-[12px] text-fg-3">
+                    until {new Date(detail.user.suspendedUntil).toLocaleString()}
+                  </span>
+                )}
+                {(detail.user.banned || detail.user.status === "SUSPENDED") && (
+                  <LiftButton userId={id} username={detail.user.username} banned={detail.user.banned} />
+                )}
+                <button className="btn btn-ghost" onClick={() => setActing((a) => !a)}>
+                  {acting ? "Cancel" : "Take action…"}
+                </button>
+              </div>
+              {acting && (
+                <ModerationActionPanel
+                  userId={id}
+                  username={detail.user.username}
+                  defaultReasons={[]}
+                  reportIds={[]}
+                  deletableMessageIds={[]}
+                  hasAvatar={!!detail.avatarUrl}
+                  hasBio={!!detail.bio && detail.bio.trim().length > 0}
+                  onDone={() => setActing(false)}
+                />
+              )}
+              <ModerationHistory actions={detail.actions} />
+            </div>
+
             <h3 className="mt-5 text-[11px] font-semibold uppercase tracking-wider text-fg-3">
               Support actions
             </h3>
@@ -284,7 +333,8 @@ function UserDrawer({ id, onClose }: { id: number; onClose: () => void }) {
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

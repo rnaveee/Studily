@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -41,7 +42,8 @@ public class WsHandshakeInterceptor implements HandshakeInterceptor {
         try {
             JwtService.TokenPayload payload = jwtService.parseToken(token);
             boolean current = userRepository.findById(payload.userId())
-                    .map(u -> u.getTokenVersion() == payload.tokenVersion() && u.isEmailVerified())
+                    .map(u -> u.getTokenVersion() == payload.tokenVersion() && u.isEmailVerified()
+                            && !u.isSuspendedAt(Instant.now()))
                     .orElse(false);
             attributes.put(TOKEN_VERSION_ATTR, payload.tokenVersion());
             if (!current) {

@@ -10,6 +10,7 @@ import {
   demoWeek,
   demoWeights,
 } from "./demo";
+import { SUSPENDED_EVENT } from "./moderation";
 
 const TOKEN_KEY = "studily.token";
 const GUEST_KEY = "studily.guest";
@@ -156,6 +157,11 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 
     if (res.status === 401 && code === "ADMIN_LOCKED") {
       setAdminToken(null);
+      throw new ApiError(res.status, message, code);
+    }
+
+    if (res.status === 403 && code === "ACCOUNT_SUSPENDED") {
+      window.dispatchEvent(new Event(SUSPENDED_EVENT));
       throw new ApiError(res.status, message, code);
     }
 

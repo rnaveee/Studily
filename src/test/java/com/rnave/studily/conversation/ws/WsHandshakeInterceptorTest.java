@@ -139,6 +139,33 @@ class WsHandshakeInterceptorTest {
     }
 
     @Test
+    void suspendedUser_rejectsWith401() {
+        givenProtocolToken("good");
+        when(jwtService.parseToken("good")).thenReturn(new JwtService.TokenPayload(42L, 0));
+        User suspended = verifiedUserWithTokenVersion(0);
+        suspended.setSuspendedUntil(java.time.Instant.now().plusSeconds(600));
+        when(userRepository.findById(42L)).thenReturn(Optional.of(suspended));
+
+        boolean accepted = interceptor.beforeHandshake(request, response, wsHandler, attributes);
+
+        assertThat(accepted).isFalse();
+        verify(response).setStatusCode(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void bannedUser_rejectsWith401() {
+        givenProtocolToken("good");
+        when(jwtService.parseToken("good")).thenReturn(new JwtService.TokenPayload(42L, 0));
+        User banned = verifiedUserWithTokenVersion(0);
+        banned.setBanned(true);
+        when(userRepository.findById(42L)).thenReturn(Optional.of(banned));
+
+        boolean accepted = interceptor.beforeHandshake(request, response, wsHandler, attributes);
+
+        assertThat(accepted).isFalse();
+    }
+
+    @Test
     void deletedUser_rejectsWith401() {
         givenProtocolToken("orphan");
         when(jwtService.parseToken("orphan")).thenReturn(new JwtService.TokenPayload(99L, 0));

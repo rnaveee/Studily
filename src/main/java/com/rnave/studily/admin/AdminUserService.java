@@ -1,5 +1,6 @@
 package com.rnave.studily.admin;
 
+import com.rnave.studily.admin.AdminDtos.ModerationActionRow;
 import com.rnave.studily.admin.AdminDtos.Paged;
 import com.rnave.studily.admin.AdminDtos.ResetLink;
 import com.rnave.studily.admin.AdminDtos.UserDetail;
@@ -8,6 +9,10 @@ import com.rnave.studily.auth.AccountTokenService;
 import com.rnave.studily.auth.AccountTokenType;
 import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.NotFoundException;
+import com.rnave.studily.moderation.ModerationAction;
+import com.rnave.studily.moderation.ModerationActionRepository;
+import com.rnave.studily.moderation.ModerationActionType;
+import com.rnave.studily.user.AvatarUrls;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,6 +20,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -42,26 +48,33 @@ public class AdminUserService {
             u.id, u.username, u.name, u.email, u.school, u.email_verified, u.created_at, u.last_active_at,
             (SELECT count(*) FROM courses c WHERE c.user_id = u.id) AS courses,
             (SELECT count(*) FROM academic_items i
-                JOIN courses c ON c.id = i.course_id WHERE c.user_id = u.id) AS items
+                JOIN courses c ON c.id = i.course_id WHERE c.user_id = u.id) AS items,
+            u.suspended_until, u.banned,
+            (SELECT count(*) FROM reports r WHERE r.target_user_id = u.id AND r.status = 'OPEN') AS open_reports
             """;
 
     private final JdbcTemplate jdbc;
     private final UserRepository userRepository;
     private final AccountTokenService accountTokenService;
     private final AdminGuard adminGuard;
+    private final ModerationActionRepository actionRepository;
+    private final Clock clock;
     private final String baseUrl;
 
     public AdminUserService(JdbcTemplate jdbc, UserRepository userRepository,
                             AccountTokenService accountTokenService, AdminGuard adminGuard,
+                            ModerationActionRepository actionRepository, Clock clock,
                             @Value("${app.base-url}") String baseUrl) {
         this.jdbc = jdbc;
         this.userRepository = userRepository;
         this.accountTokenService = accountTokenService;
         this.adminGuard = adminGuard;
+        this.actionRepository = actionRepository;
+        this.clock = clock;
         this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
     }
 
-    public Paged<UserRow> search(String query, String sort, int page, int size) {
+    public Paged<UserRow> search(String query, String sort, String filter, int page, int size) {
         int safeSize = Math.min(Math.max(size, 1), 100);
         int safePage = Math.max(page, 0);
         String order = switch (sort == null ? "" : sort) {
@@ -73,8 +86,16 @@ public class AdminUserService {
 
         boolean filtered = query != null && !query.isBlank();
         String where = filtered
-                ? " WHERE u.username ILIKE ? OR u.email ILIKE ? OR u.name ILIKE ? OR u.school ILIKE ? OR CAST(u.id AS TEXT) = ?"
+                ? " WHERE (u.username ILIKE ? OR u.email ILIKE ? OR u.name ILIKE ? OR u.school ILIKE ? OR CAST(u.id AS TEXT) = ?)"
                 : "";
+        String statusClause = switch (filter == null ? "" : filter) {
+            case "reported" -> "EXISTS (SELECT 1 FROM reports r WHERE r.target_user_id = u.id AND r.status = 'OPEN')";
+            case "restricted" -> "(u.banned OR u.suspended_until > NOW())";
+            default -> null;
+        };
+        if (statusClause != null) {
+            where = where.isEmpty() ? " WHERE " + statusClause : where + " AND " + statusClause;
+        }
         Object[] args;
         if (filtered) {
             String pattern = "%" + query.trim() + "%";
@@ -99,7 +120,11 @@ public class AdminUserService {
         return new Paged<>(rows, (long) (safePage + 1) * safeSize < count, count);
     }
 
-    private static UserRow mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
+    private UserRow mapRow(java.sql.ResultSet rs) throws java.sql.SQLException {
+        boolean banned = rs.getBoolean("banned");
+        Instant suspendedUntil = AdminAnalyticsService.instant(rs.getTimestamp("suspended_until"));
+        String status = banned || (suspendedUntil != null && suspendedUntil.isAfter(clock.instant()))
+                ? "SUSPENDED" : "GOOD";
         return new UserRow(
                 rs.getLong("id"),
                 rs.getString("username"),
@@ -110,15 +135,16 @@ public class AdminUserService {
                 AdminAnalyticsService.instant(rs.getTimestamp("created_at")),
                 AdminAnalyticsService.instant(rs.getTimestamp("last_active_at")),
                 rs.getLong("courses"),
-                rs.getLong("items"));
+                rs.getLong("items"),
+                status,
+                banned,
+                suspendedUntil,
+                rs.getLong("open_reports"));
     }
 
     public UserDetail detail(Long id) {
         User user = require(id);
-        UserRow row = jdbc.query(
-                "SELECT " + ROW_COLUMNS + " FROM users u WHERE u.id = ?",
-                (rs, i) -> mapRow(rs), id).stream().findFirst()
-                .orElseThrow(() -> new NotFoundException("User not found"));
+        UserRow row = row(id);
 
         Map<String, Long> counts = new LinkedHashMap<>();
         COUNT_QUERIES.forEach((key, sql) -> {
@@ -129,7 +155,32 @@ public class AdminUserService {
         });
 
         return new UserDetail(
-                row, user.getYear(), user.getMajor(), user.getBio(), user.getTokenVersion(), counts);
+                row, user.getYear(), user.getMajor(), user.getBio(), user.getTokenVersion(), counts,
+                AvatarUrls.of(user), actions(id));
+    }
+
+    public UserRow row(Long id) {
+        return jdbc.query(
+                "SELECT " + ROW_COLUMNS + " FROM users u WHERE u.id = ?",
+                (rs, i) -> mapRow(rs), id).stream().findFirst()
+                .orElseThrow(() -> new NotFoundException("User not found"));
+    }
+
+    public List<ModerationActionRow> actions(Long id) {
+        Instant now = clock.instant();
+        return actionRepository.findByUserIdOrderByCreatedAtDesc(id).stream()
+                .map(a -> actionRow(a, now))
+                .toList();
+    }
+
+    static ModerationActionRow actionRow(ModerationAction a, Instant now) {
+        boolean active = a.getType() != ModerationActionType.WARNING
+                && a.getRevokedAt() == null
+                && (a.getEndsAt() == null || a.getEndsAt().isAfter(now));
+        return new ModerationActionRow(
+                a.getId(), a.getType().name(), a.getReasons().stream().map(Enum::name).toList(), a.getNote(),
+                a.getCreatedAt(), a.getCreatedByName(), a.getEndsAt(), a.getAcknowledgedAt(), a.getRevokedAt(),
+                a.getRevokedByName(), a.isRemovedAvatar(), a.isClearedBio(), a.getDeletedMessages(), active);
     }
 
     @Transactional

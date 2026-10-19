@@ -10,6 +10,9 @@ import com.rnave.studily.config.LoginRateLimiter;
 import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.config.UnauthorizedException;
 import com.rnave.studily.flashcard.WelcomeFlashcards;
+import com.rnave.studily.config.ForbiddenException;
+import com.rnave.studily.moderation.BannedEmailRepository;
+import com.rnave.studily.moderation.BannedEmails;
 import com.rnave.studily.progress.FlairRepository;
 import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
@@ -42,6 +45,8 @@ class AuthServiceTest {
     private AuthService authService;
 
     private WelcomeFlashcards welcomeFlashcards;
+    private BannedEmails bannedEmails;
+    private BannedEmailRepository bannedEmailRepository;
 
     @BeforeEach
     void setUp() {
@@ -53,11 +58,12 @@ class AuthServiceTest {
         accountTokenService = mock(AccountTokenService.class);
         adminGuard = mock(AdminGuard.class);
         welcomeFlashcards = mock(WelcomeFlashcards.class);
+        bannedEmails = new BannedEmails(bannedEmailRepository = mock(BannedEmailRepository.class));
         when(loginRateLimiter.tryConsume(anyString())).thenReturn(true);
         authService = new AuthService(userRepository, passwordEncoder, jwtService, loginRateLimiter,
                 authEmailService, accountTokenService, adminGuard,
                 new Flairs(mock(FlairRepository.class), Clock.systemUTC(), "https://badges.studily.ca/flairs/v1"),
-                welcomeFlashcards);
+                welcomeFlashcards, bannedEmails);
     }
 
     @Test
@@ -231,5 +237,56 @@ class AuthServiceTest {
 
         verify(welcomeFlashcards).create(argThat(u -> u.getId() == 9L));
         assertThat(response.user().welcomed()).isFalse();
+    }
+
+    @Test
+    void signup_rejectsBannedEmailIncludingNormalizedVariants() {
+        String bannedHash = BannedEmails.hash("firstlast@gmail.com");
+        when(bannedEmailRepository.existsByEmailHash(bannedHash)).thenReturn(true);
+        SignupRequest req = new SignupRequest(
+                "First.Last+x@googlemail.com", "evader", "password123", "Evader", null);
+
+        assertThatThrownBy(() -> authService.signup(req)).isInstanceOf(ForbiddenException.class);
+        org.mockito.Mockito.verify(userRepository, org.mockito.Mockito.never()).save(any(User.class));
+    }
+
+    @Test
+    void login_succeedsForSuspendedUserAndFlagsTheDto() {
+        User user = new User();
+        user.setId(7L);
+        user.setEmail("me@example.com");
+        user.setUsername("me");
+        user.setPasswordHash("hashed");
+        java.time.Instant until = java.time.Instant.now().plusSeconds(3600);
+        user.setSuspendedUntil(until);
+        when(userRepository.findByEmail("me@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("correct", "hashed")).thenReturn(true);
+        when(jwtService.generateToken(7L, 0)).thenReturn("token-xyz");
+
+        var response = authService.login(new LoginRequest("me@example.com", "correct"));
+
+        assertThat(response.token()).isEqualTo("token-xyz");
+        assertThat(response.user().suspended()).isTrue();
+        assertThat(response.user().suspendedUntil()).isEqualTo(until);
+        assertThat(response.user().banned()).isFalse();
+    }
+
+    @Test
+    void login_bannedUserDtoCarriesBanned() {
+        User user = new User();
+        user.setId(7L);
+        user.setEmail("me@example.com");
+        user.setUsername("me");
+        user.setPasswordHash("hashed");
+        user.setBanned(true);
+        when(userRepository.findByEmail("me@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("correct", "hashed")).thenReturn(true);
+        when(jwtService.generateToken(7L, 0)).thenReturn("token-xyz");
+
+        var response = authService.login(new LoginRequest("me@example.com", "correct"));
+
+        assertThat(response.user().suspended()).isTrue();
+        assertThat(response.user().banned()).isTrue();
+        assertThat(response.user().suspendedUntil()).isNull();
     }
 }

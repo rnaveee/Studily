@@ -6,11 +6,13 @@ import com.rnave.studily.auth.AuthDtos.AuthResponse;
 import com.rnave.studily.auth.AuthDtos.LoginRequest;
 import com.rnave.studily.auth.AuthDtos.SignupRequest;
 import com.rnave.studily.config.ConflictException;
+import com.rnave.studily.config.ForbiddenException;
 import com.rnave.studily.config.JwtService;
 import com.rnave.studily.config.LoginRateLimiter;
 import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.config.UnauthorizedException;
 import com.rnave.studily.flashcard.WelcomeFlashcards;
+import com.rnave.studily.moderation.BannedEmails;
 import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserDto;
@@ -33,11 +35,12 @@ public class AuthService {
     private final AdminGuard adminGuard;
     private final Flairs flairs;
     private final WelcomeFlashcards welcomeFlashcards;
+    private final BannedEmails bannedEmails;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
                        LoginRateLimiter loginRateLimiter, AuthEmailService authEmailService,
                        AccountTokenService accountTokenService, AdminGuard adminGuard, Flairs flairs,
-                       WelcomeFlashcards welcomeFlashcards) {
+                       WelcomeFlashcards welcomeFlashcards, BannedEmails bannedEmails) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -47,6 +50,7 @@ public class AuthService {
         this.adminGuard = adminGuard;
         this.flairs = flairs;
         this.welcomeFlashcards = welcomeFlashcards;
+        this.bannedEmails = bannedEmails;
     }
 
     @Transactional
@@ -58,6 +62,9 @@ public class AuthService {
         }
         if (userRepository.existsByUsernameIgnoreCase(username)) {
             throw new ConflictException("Username already taken");
+        }
+        if (bannedEmails.isBanned(email)) {
+            throw new ForbiddenException("Sign up isn't available for this email. Contact support if you think this is a mistake.");
         }
         User user = new User();
         user.setEmail(email);

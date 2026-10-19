@@ -58,6 +58,18 @@ class JwtAuthFilterTest {
     }
 
     @Test
+    void validBearerToken_stashesTheUserOnTheRequest() throws Exception {
+        User user = userWithTokenVersion(0);
+        when(request.getHeader("Authorization")).thenReturn("Bearer good-token");
+        when(jwtService.parseToken("good-token")).thenReturn(new JwtService.TokenPayload(42L, 0));
+        when(userRepository.findById(42L)).thenReturn(Optional.of(user));
+
+        filter.doFilterInternal(request, response, filterChain);
+
+        verify(request).setAttribute(JwtAuthFilter.USER_ATTRIBUTE, user);
+    }
+
+    @Test
     void tokenWithStaleVersion_leavesRequestUnauthenticated() throws Exception {
         when(request.getHeader("Authorization")).thenReturn("Bearer revoked-token");
         when(jwtService.parseToken("revoked-token")).thenReturn(new JwtService.TokenPayload(42L, 0));

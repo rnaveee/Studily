@@ -53,7 +53,10 @@ export default function PrivacyPage() {
             Terms of Service
           </Link>
           . You can permanently delete your account and all of its data anytime from the Settings
-          page. For any privacy questions, email{" "}
+          page. If you report someone, or your account is reported, we keep the report and a copy of the
+          reported content so we can review it, even after an account is deleted. If an account is banned,
+          we also keep a one-way hash of its email address so it can't be used to sign up again. For any
+          privacy questions, email{" "}
           <a href="mailto:ryannave97@gmail.com" className="text-accent transition-colors hover:text-accent-2">
             ryannave97@gmail.com
           </a>

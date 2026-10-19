@@ -79,6 +79,9 @@ export interface User {
   emailVerified: boolean;
   admin?: boolean;
   welcomed?: boolean;
+  suspended?: boolean;
+  suspendedUntil?: string | null;
+  banned?: boolean;
   createdAt: string;
 }
 
@@ -711,6 +714,10 @@ export interface AdminUserRow {
   lastActiveAt: string | null;
   courses: number;
   items: number;
+  status: AccountStatus;
+  banned: boolean;
+  suspendedUntil: string | null;
+  openReports: number;
 }
 
 export interface AdminUserDetail {
@@ -720,6 +727,8 @@ export interface AdminUserDetail {
   bio: string | null;
   tokenVersion: number;
   counts: Record<string, number>;
+  avatarUrl: string | null;
+  actions: AdminModerationAction[];
 }
 
 export interface AdminResetLink {
@@ -1047,4 +1056,107 @@ export interface FlashcardRunResult {
     correct: boolean;
   }[];
   delta: ProgressDelta;
+}
+
+export type AccountStatus = "GOOD" | "SUSPENDED";
+export type ReportKind = "USER" | "MESSAGE";
+export type ReportReason =
+  | "SPAM"
+  | "INAPPROPRIATE_AVATAR"
+  | "INAPPROPRIATE_BIO"
+  | "HARASSMENT"
+  | "THREATS"
+  | "HATE_SPEECH"
+  | "INAPPROPRIATE_CONTENT"
+  | "OTHER";
+export type ReportStatus = "OPEN" | "ACTIONED" | "DISMISSED";
+export type ModerationActionType = "WARNING" | "SUSPENSION" | "BAN";
+
+export interface ModerationWarning {
+  id: number;
+  reasons: ReportReason[];
+  note: string | null;
+  createdAt: string;
+}
+
+export interface MeModeration {
+  status: AccountStatus;
+  banned: boolean;
+  suspendedUntil: string | null;
+  suspendedAt: string | null;
+  reasons: ReportReason[];
+  note: string | null;
+  supportEmail: string | null;
+  warnings: ModerationWarning[];
+}
+
+export interface AdminReportGroup {
+  userId: number;
+  username: string;
+  name: string | null;
+  avatarUrl: string | null;
+  status: AccountStatus;
+  banned: boolean;
+  suspendedUntil: string | null;
+  openCount: number;
+  totalCount: number;
+  openReasons: Record<string, number>;
+  latestAt: string;
+}
+
+export interface AdminReport {
+  id: number;
+  kind: ReportKind;
+  reason: ReportReason;
+  details: string | null;
+  status: ReportStatus;
+  reporterId: number | null;
+  reporterUsername: string;
+  createdAt: string;
+  messageId: number | null;
+  conversationId: number | null;
+  messageBody: string | null;
+  attachmentFilename: string | null;
+  attachmentContentType: string | null;
+  messageCreatedAt: string | null;
+  messageExists: boolean;
+  hasEvidence: boolean;
+  targetNameSnapshot: string | null;
+  targetBioSnapshot: string | null;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  actionId: number | null;
+}
+
+export interface AdminModerationAction {
+  id: number;
+  type: ModerationActionType;
+  reasons: ReportReason[];
+  note: string | null;
+  createdAt: string;
+  createdBy: string;
+  endsAt: string | null;
+  acknowledgedAt: string | null;
+  revokedAt: string | null;
+  revokedBy: string | null;
+  removedAvatar: boolean;
+  clearedBio: boolean;
+  deletedMessages: number;
+  active: boolean;
+}
+
+export interface AdminReportCase {
+  user: AdminUserRow;
+  bio: string | null;
+  avatarUrl: string | null;
+  reports: AdminReport[];
+  actions: AdminModerationAction[];
+}
+
+export interface AdminModerationResult {
+  actionId: number;
+  status: AccountStatus;
+  banned: boolean;
+  suspendedUntil: string | null;
+  deletedMessages: number;
 }

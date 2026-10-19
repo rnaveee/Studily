@@ -76,4 +76,13 @@ public class User {
 
     @Column(name = "equipped_flair_code", length = 48)
     private String equippedFlairCode;
+
+    private Instant suspendedUntil;
+
+    @Column(nullable = false)
+    private boolean banned = false;
+
+    public boolean isSuspendedAt(Instant now) {
+        return banned || (suspendedUntil != null && suspendedUntil.isAfter(now));
+    }
 }

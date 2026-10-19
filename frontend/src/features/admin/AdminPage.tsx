@@ -6,14 +6,16 @@ import { api, ApiError, setAdminToken } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import BackButton from "../../components/BackButton";
 import { toast } from "../../lib/toast";
-import type { AdminStatus, AdminUnlockResponse } from "../../types";
+import type { AdminPaged, AdminReportGroup, AdminStatus, AdminUnlockResponse } from "../../types";
 import AdminOverview from "./AdminOverview";
 import AdminUsers from "./AdminUsers";
+import AdminReports from "./AdminReports";
 import AdminDatabase from "./AdminDatabase";
 import AdminOps from "./AdminOps";
 
 const TABS = [
   { key: "overview", label: "Overview" },
+  { key: "reports", label: "Reports" },
   { key: "users", label: "Users" },
   { key: "database", label: "Database" },
   { key: "ops", label: "Ops" },
@@ -32,6 +34,14 @@ export default function AdminPage() {
     retry: false,
     refetchInterval: 60_000,
   });
+
+  const openReportsQ = useQuery({
+    queryKey: ["admin", "reports", "open-count"],
+    queryFn: () => api.get<AdminPaged<AdminReportGroup>>("/admin/reports?status=OPEN&size=1"),
+    enabled: !!statusQ.data?.unlocked,
+    refetchInterval: 60_000,
+  });
+  const openReports = openReportsQ.data?.total ?? 0;
 
   if (loading) return null;
   if (!user?.admin) return <Navigate to="/dashboard" replace />;
@@ -90,12 +100,16 @@ export default function AdminPage() {
                 }
               >
                 {t.label}
+                {t.key === "reports" && openReports > 0 && (
+                  <span className="badge badge-red ml-1.5">{openReports}</span>
+                )}
               </button>
             ))}
           </div>
 
           <div className="mt-4">
             {tab === "overview" && <AdminOverview />}
+            {tab === "reports" && <AdminReports />}
             {tab === "users" && <AdminUsers />}
             {tab === "database" && <AdminDatabase />}
             {tab === "ops" && <AdminOps />}

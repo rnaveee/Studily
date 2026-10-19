@@ -1,7 +1,10 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, type ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
+import { useAuth } from "./lib/auth";
+import SuspendedScreen from "./features/moderation/SuspendedScreen";
+import ModerationNotices from "./features/moderation/ModerationNotices";
 import AboutPage from "./features/static/AboutPage";
 import TermsPage from "./features/static/TermsPage";
 import PrivacyPage from "./features/static/PrivacyPage";
@@ -47,7 +50,43 @@ const PeriodicTablePage = lazy(() => import("./features/learn/PeriodicTablePage"
 const CalculatorPage = lazy(() => import("./features/learn/CalculatorPage"));
 const AdminPage = lazy(() => import("./features/admin/AdminPage"));
 
+function BareShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="fixed inset-0 overflow-y-auto bg-bg" style={{ height: "var(--app-height)" }}>
+      <div className="mx-auto w-full max-w-3xl px-4 pb-10 pt-4">
+        <div className="mb-5 flex items-center gap-1.5">
+          <img src="/studily-3a.svg" alt="" className="h-8 w-8 shrink-0" />
+          <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
+  const { user } = useAuth();
+
+  if (user?.suspended) {
+    return (
+      <Routes>
+        <Route path="/support" element={<BareShell><SupportPage /></BareShell>} />
+        <Route path="/terms" element={<BareShell><TermsPage /></BareShell>} />
+        <Route path="/privacy" element={<BareShell><PrivacyPage /></BareShell>} />
+        <Route path="*" element={<SuspendedScreen />} />
+      </Routes>
+    );
+  }
+
+  return (
+    <>
+      <AppRoutes />
+      <ModerationNotices />
+    </>
+  );
+}
+
+function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<HomeRoute />} />

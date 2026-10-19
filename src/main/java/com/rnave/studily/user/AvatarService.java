@@ -88,11 +88,15 @@ public class AvatarService {
     @Transactional
     public UserDto delete() {
         User user = currentUser.entity();
+        clear(user);
+        return UserDto.from(userRepository.save(user), adminGuard.isAdmin(user), flairs);
+    }
+
+    public void clear(User user) {
         user.setAvatarImage(null);
         user.setAvatarContentType(null);
         user.setAvatarKey(null);
         user.setAvatarVersion(user.getAvatarVersion() + 1);
-        return UserDto.from(userRepository.save(user), adminGuard.isAdmin(user), flairs);
     }
 
     @Transactional(readOnly = true)

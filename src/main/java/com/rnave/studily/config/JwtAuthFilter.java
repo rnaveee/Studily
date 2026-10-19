@@ -1,5 +1,6 @@
 package com.rnave.studily.config;
 
+import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,6 +18,8 @@ import java.util.List;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
+
+    public static final String USER_ATTRIBUTE = "studily.auth.user";
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
@@ -38,10 +41,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String token = header.substring(7);
             try {
                 JwtService.TokenPayload payload = jwtService.parseToken(token);
-                boolean current = userRepository.findById(payload.userId())
-                        .map(u -> u.getTokenVersion() == payload.tokenVersion())
-                        .orElse(false);
-                if (current) {
+                User user = userRepository.findById(payload.userId())
+                        .filter(u -> u.getTokenVersion() == payload.tokenVersion())
+                        .orElse(null);
+                if (user != null) {
+                    request.setAttribute(USER_ATTRIBUTE, user);
                     var auth = new UsernamePasswordAuthenticationToken(
                             payload.userId(), null, List.of());
                     auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
