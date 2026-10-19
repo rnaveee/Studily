@@ -12,6 +12,7 @@ import com.anthropic.models.messages.StopReason;
 import com.anthropic.models.messages.TextBlockParam;
 import com.anthropic.models.messages.ThinkingConfigAdaptive;
 import com.rnave.studily.config.BadRequestException;
+import com.rnave.studily.config.ServiceUnavailableException;
 import com.rnave.studily.parse.ExtractedInput.ExtractedImage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -189,8 +190,9 @@ public class ClaudeCourseParser {
         try {
             response = client().messages().create(params.get());
         } catch (Exception e) {
-            log.warn("{} request failed: {}", label, e.getMessage());
-            throw new BadRequestException(UNREADABLE);
+            log.error("{} request failed: {}", label, e.getMessage());
+            throw new ServiceUnavailableException(
+                    "Automatic course creation is busy right now. Please try again in a few minutes.");
         }
 
         log.info("{} used model={} input={} output={}",
@@ -291,7 +293,11 @@ public class ClaudeCourseParser {
         }
         synchronized (this) {
             if (client == null) {
-                client = AnthropicOkHttpClient.builder().apiKey(apiKey).build();
+                client = AnthropicOkHttpClient.builder()
+                        .apiKey(apiKey)
+                        .timeout(java.time.Duration.ofSeconds(120))
+                        .maxRetries(1)
+                        .build();
             }
             return client;
         }

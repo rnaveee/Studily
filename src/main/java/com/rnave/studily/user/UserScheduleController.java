@@ -28,17 +28,20 @@ public class UserScheduleController {
     private final FriendRequestRepository friendRequestRepository;
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
+    private final UserTimeZones timeZones;
 
     public UserScheduleController(SemesterRepository semesterRepository,
                                   CourseRepository courseRepository,
                                   FriendRequestRepository friendRequestRepository,
                                   UserRepository userRepository,
-                                  CurrentUser currentUser) {
+                                  CurrentUser currentUser,
+                                  UserTimeZones timeZones) {
         this.semesterRepository = semesterRepository;
         this.courseRepository = courseRepository;
         this.friendRequestRepository = friendRequestRepository;
         this.userRepository = userRepository;
         this.currentUser = currentUser;
+        this.timeZones = timeZones;
     }
 
     public record ScheduleDto(SemesterDto semester, List<CourseDto> courses, boolean visible) {
@@ -59,7 +62,7 @@ public class UserScheduleController {
                 return new ScheduleDto(null, List.of(), false);
             }
         }
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(timeZones.zoneFor(target));
         Semester current = semesterRepository
                 .findFirstByUserIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(
                         id, today, today)

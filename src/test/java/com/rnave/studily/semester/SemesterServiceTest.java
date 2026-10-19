@@ -7,6 +7,7 @@ import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.semester.SemesterDtos.SemesterDto;
 import com.rnave.studily.semester.SemesterDtos.SemesterRequest;
 import com.rnave.studily.user.User;
+import com.rnave.studily.user.UserTimeZones;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -31,7 +32,9 @@ class SemesterServiceTest {
     void setUp() {
         semesterRepository = mock(SemesterRepository.class);
         currentUser = mock(CurrentUser.class);
-        semesterService = new SemesterService(semesterRepository, currentUser);
+        UserTimeZones timeZones = mock(UserTimeZones.class);
+        when(timeZones.zoneFor(any())).thenReturn(java.time.ZoneOffset.UTC);
+        semesterService = new SemesterService(semesterRepository, currentUser, timeZones);
     }
 
     @Test

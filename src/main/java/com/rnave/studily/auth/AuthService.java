@@ -22,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
 
+    private volatile String dummyHash;
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
@@ -103,11 +105,23 @@ public class AuthService {
         if (!loginRateLimiter.tryConsume(email)) {
             throw new TooManyRequestsException("Too many login attempts for this account, please try again later.");
         }
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) {
+            passwordEncoder.matches(req.password(), dummyHash());
+            throw new UnauthorizedException("Invalid email or password");
+        }
         if (!passwordEncoder.matches(req.password(), user.getPasswordHash())) {
             throw new UnauthorizedException("Invalid email or password");
         }
         return new AuthResponse(jwtService.generateToken(user.getId(), user.getTokenVersion()), UserDto.from(user, adminGuard.isAdmin(user), flairs));
+    }
+
+    private String dummyHash() {
+        String existing = dummyHash;
+        if (existing == null) {
+            existing = passwordEncoder.encode("studily-timing-equalizer");
+            dummyHash = existing;
+        }
+        return existing;
     }
 }

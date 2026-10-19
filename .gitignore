@@ -67,3 +67,5 @@ learning/
 example/
 
 .wrangler/
+
+frontend/tsconfig.tsbuildinfo

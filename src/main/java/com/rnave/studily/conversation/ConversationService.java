@@ -38,6 +38,8 @@ import java.util.Set;
 @Service
 public class ConversationService {
 
+    private static final long MAX_ATTACHMENT_BYTES_PER_USER = 500L * 1024 * 1024;
+
     private static final int MESSAGE_PUSH_TTL_SECONDS = 86_400;
     private static final int REPLY_PREVIEW_LENGTH = 200;
 
@@ -177,6 +179,9 @@ public class ConversationService {
         Conversation conv = requireMember(conversationId);
         requireCanPost(conv);
         Message parent = requireReplyTarget(conv, replyToId);
+        if (messageRepository.attachmentBytesBySender(currentUser.id()) + file.getSize() > MAX_ATTACHMENT_BYTES_PER_USER) {
+            throw new BadRequestException("You've reached your attachment storage limit. Delete some old attachments first.");
+        }
         AttachmentProcessor.Processed processed = attachmentProcessor.process(file);
         Message message = new Message();
         message.setConversation(conv);

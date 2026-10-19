@@ -90,6 +90,14 @@ public class PublicUrlFetcher {
         return uri;
     }
 
+    private static final long READ_DEADLINE_SECONDS = 15;
+    private static final java.util.concurrent.ScheduledExecutorService WATCHDOG =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "url-fetch-watchdog");
+                t.setDaemon(true);
+                return t;
+            });
+
     private HttpResponse<InputStream> send(URI uri, String accept, Duration timeout, String userAgent) {
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .timeout(timeout)
@@ -108,12 +116,21 @@ public class PublicUrlFetcher {
     }
 
     private Response read(URI uri, String contentType, HttpResponse<InputStream> response, int maxBytes) {
-        try (InputStream in = response.body()) {
+        InputStream in = response.body();
+        var watchdog = WATCHDOG.schedule(() -> {
+            try {
+                in.close();
+            } catch (Exception ignored) {
+            }
+        }, READ_DEADLINE_SECONDS, java.util.concurrent.TimeUnit.SECONDS);
+        try (in) {
             byte[] bytes = in.readNBytes(maxBytes + 1);
             boolean truncated = bytes.length > maxBytes;
             return new Response(uri, contentType, truncated ? Arrays.copyOf(bytes, maxBytes) : bytes, truncated);
         } catch (Exception e) {
             throw new BadRequestException("Could not read that link");
+        } finally {
+            watchdog.cancel(false);
         }
     }
 

@@ -31,6 +31,7 @@ public class AvatarService {
 
     private static final int MAX_DIMENSION = 480;
     private static final int MAX_SOURCE_DIMENSION = 8000;
+    private static final long MAX_SOURCE_PIXELS = 25_000_000L;
     private static final long MAX_UPLOAD_BYTES = 5L * 1024 * 1024;
     private static final Set<String> ALLOWED_TYPES = Set.of("image/jpeg", "image/png", "image/webp");
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -125,7 +126,8 @@ public class AvatarService {
             ImageReader reader = readers.next();
             try {
                 reader.setInput(in);
-                if (reader.getWidth(0) > MAX_SOURCE_DIMENSION || reader.getHeight(0) > MAX_SOURCE_DIMENSION) {
+                if (reader.getWidth(0) > MAX_SOURCE_DIMENSION || reader.getHeight(0) > MAX_SOURCE_DIMENSION
+                        || (long) reader.getWidth(0) * reader.getHeight(0) > MAX_SOURCE_PIXELS) {
                     throw new BadRequestException(
                             "Image dimensions are too large (max " + MAX_SOURCE_DIMENSION + "px per side)");
                 }

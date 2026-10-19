@@ -17,6 +17,7 @@ import java.util.Map;
 public class WsHandshakeInterceptor implements HandshakeInterceptor {
 
     public static final String USER_ID_ATTR = "userId";
+    public static final String TOKEN_VERSION_ATTR = "tokenVersion";
     public static final String PROTOCOL = "studily";
 
     private final JwtService jwtService;
@@ -42,6 +43,7 @@ public class WsHandshakeInterceptor implements HandshakeInterceptor {
             boolean current = userRepository.findById(payload.userId())
                     .map(u -> u.getTokenVersion() == payload.tokenVersion() && u.isEmailVerified())
                     .orElse(false);
+            attributes.put(TOKEN_VERSION_ATTR, payload.tokenVersion());
             if (!current) {
                 response.setStatusCode(HttpStatus.UNAUTHORIZED);
                 return false;

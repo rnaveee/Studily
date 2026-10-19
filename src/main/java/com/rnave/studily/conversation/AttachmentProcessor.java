@@ -27,6 +27,7 @@ public class AttachmentProcessor {
 
     private static final int MAX_IMAGE_DIMENSION = 1600;
     private static final int MAX_SOURCE_DIMENSION = 10000;
+    private static final long MAX_SOURCE_PIXELS = 40_000_000L;
     private static final Set<String> IMAGE_TYPES = Set.of("image/jpeg", "image/png");
     private static final String GIF_TYPE = "image/gif";
     private static final String WEBP_TYPE = "image/webp";
@@ -140,7 +141,8 @@ public class AttachmentProcessor {
 
     private Processed processImage(String filename, byte[] bytes, int maxDimension) {
         int[] source = readDimensions(bytes);
-        if (Math.max(source[0], source[1]) > MAX_SOURCE_DIMENSION) {
+        if (Math.max(source[0], source[1]) > MAX_SOURCE_DIMENSION
+                || (long) source[0] * source[1] > MAX_SOURCE_PIXELS) {
             throw new BadRequestException(
                     "Image dimensions are too large (max " + MAX_SOURCE_DIMENSION + "px per side)");
         }

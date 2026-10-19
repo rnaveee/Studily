@@ -50,8 +50,8 @@ public class AccountTokenService {
         }
         return repository.findByTokenHashAndType(hash(rawToken.trim()), type)
                 .map(token -> {
-                    repository.delete(token);
-                    return token.getExpiresAt().isAfter(Instant.now()) ? token.getUser() : null;
+                    boolean won = repository.deleteTokenById(token.getId()) == 1;
+                    return won && token.getExpiresAt().isAfter(Instant.now()) ? token.getUser() : null;
                 });
     }
 

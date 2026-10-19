@@ -28,6 +28,8 @@ import java.util.Set;
 @Component
 public class ReminderScheduler {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ReminderScheduler.class);
+
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("EEE, MMM d");
     private static final int CLASS_LEAD_MINUTES = 15;
@@ -86,7 +88,7 @@ public class ReminderScheduler {
                 if (!livesIn(user, zone) || !prefsService.prefsFor(user.getId()).isClassReminders()) {
                     continue;
                 }
-                dispatcher.dispatch(user, NotificationType.CLASS_REMINDER, block.getId(),
+                safeDispatch(user, NotificationType.CLASS_REMINDER, block.getId(),
                         "CLASS:%d:%s".formatted(block.getId(), date),
                         "Class in 15 minutes",
                         "%s starts at %s".formatted(
@@ -117,7 +119,7 @@ public class ReminderScheduler {
                 String body = event.getPlace() == null || event.getPlace().isBlank()
                         ? "%s at %s".formatted(event.getTitle(), time)
                         : "%s at %s · %s".formatted(event.getTitle(), time, event.getPlace());
-                dispatcher.dispatch(user, NotificationType.EVENT_TODAY, event.getId(),
+                safeDispatch(user, NotificationType.EVENT_TODAY, event.getId(),
                         "EVENT:%d:%s".formatted(event.getId(), today),
                         "Today", body, "/calendar");
             }
@@ -128,7 +130,7 @@ public class ReminderScheduler {
                 if (!livesIn(user, zone) || !prefsService.prefsFor(user.getId()).isExamDayOf()) {
                     continue;
                 }
-                dispatcher.dispatch(user, NotificationType.EXAM_TODAY, exam.getId(),
+                safeDispatch(user, NotificationType.EXAM_TODAY, exam.getId(),
                         "EXAMDAY:%d:%s".formatted(exam.getId(), today),
                         "Exam today: " + exam.getTitle(),
                         "%s at %s. You got this! 💪".formatted(
@@ -165,7 +167,7 @@ public class ReminderScheduler {
                     case 1 -> "due tomorrow";
                     default -> "due in " + days + " days";
                 };
-                dispatcher.dispatch(user, NotificationType.ITEM_WEEK_AHEAD, item.getId(),
+                safeDispatch(user, NotificationType.ITEM_WEEK_AHEAD, item.getId(),
                         "ITEM7D:" + item.getId(),
                         "%s %s".formatted(kind, when),
                         "%s · %s · %s at %s".formatted(
@@ -173,6 +175,15 @@ public class ReminderScheduler {
                                 DATE_FMT.format(due), TIME_FMT.format(due)),
                         "/courses/" + item.getCourse().getId());
             }
+        }
+    }
+
+    private void safeDispatch(User user, NotificationType type, Long relatedItemId,
+                              String dedupKey, String title, String body, String url) {
+        try {
+            dispatcher.dispatch(user, type, relatedItemId, dedupKey, title, body, url);
+        } catch (RuntimeException e) {
+            log.error("Could not send {} reminder {} to user {}", type, dedupKey, user.getId(), e);
         }
     }
 }

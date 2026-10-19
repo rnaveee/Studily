@@ -7,6 +7,7 @@ import com.rnave.studily.config.ForbiddenException;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.config.SlidingWindowRateLimiter;
 import com.rnave.studily.conversation.ConversationService;
+import com.rnave.studily.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
@@ -31,16 +32,19 @@ public class MessageSocketHandler extends TextWebSocketHandler {
     private final ConversationService conversationService;
     private final WsSessionRegistry registry;
     private final ObjectMapper objectMapper;
+    private final UserRepository userRepository;
 
     private final SlidingWindowRateLimiter sendLimiter =
             new SlidingWindowRateLimiter(120, RATE_WINDOW_MS);
 
     public MessageSocketHandler(ConversationService conversationService,
                                 WsSessionRegistry registry,
-                                ObjectMapper objectMapper) {
+                                ObjectMapper objectMapper,
+                                UserRepository userRepository) {
         this.conversationService = conversationService;
         this.registry = registry;
         this.objectMapper = objectMapper;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -56,6 +60,10 @@ public class MessageSocketHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) {
         Long userId = userId(session);
+        if (!stillAuthorized(session, userId)) {
+            registry.closeSession(userId, session, CloseStatus.POLICY_VIOLATION);
+            return;
+        }
         registry.heardFrom(userId, session.getId());
         JsonNode frame;
         try {
@@ -120,6 +128,16 @@ public class MessageSocketHandler extends TextWebSocketHandler {
         } finally {
             SecurityContextHolder.clearContext();
         }
+    }
+
+    private boolean stillAuthorized(WebSocketSession session, Long userId) {
+        Object version = session.getAttributes().get(WsHandshakeInterceptor.TOKEN_VERSION_ATTR);
+        if (!(version instanceof Integer expected)) {
+            return false;
+        }
+        return userRepository.findById(userId)
+                .map(user -> user.getTokenVersion() == expected)
+                .orElse(false);
     }
 
     private Long userId(WebSocketSession session) {

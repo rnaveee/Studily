@@ -32,6 +32,7 @@ public class DocumentExtractor {
     static final int MAX_PDF_PAGES = 20;
     static final int MAX_TEXT_CHARS = 25_000;
     static final int MAX_SOURCE_DIMENSION = 10_000;
+    static final long MAX_SOURCE_PIXELS = 40_000_000L;
     static final int TARGET_DIMENSION = 1600;
     static final int MIN_CHARS_PER_PAGE = 100;
     static final int MAX_RENDERED_PAGES = 8;
@@ -124,8 +125,30 @@ public class DocumentExtractor {
         return out;
     }
 
+    private static void requireSafeDimensions(byte[] bytes) throws java.io.IOException {
+        try (var in = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
+            var readers = ImageIO.getImageReaders(in);
+            if (!readers.hasNext()) {
+                throw new BadRequestException("That image could not be read.");
+            }
+            var reader = readers.next();
+            try {
+                reader.setInput(in);
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                if (width > MAX_SOURCE_DIMENSION || height > MAX_SOURCE_DIMENSION
+                        || (long) width * height > MAX_SOURCE_PIXELS) {
+                    throw new BadRequestException("That image is too large to process.");
+                }
+            } finally {
+                reader.dispose();
+            }
+        }
+    }
+
     private ExtractedImage normalizeImage(byte[] bytes) {
         return withTimeout(() -> {
+            requireSafeDimensions(bytes);
             BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
             if (image == null) {
                 throw new BadRequestException("That image could not be read.");

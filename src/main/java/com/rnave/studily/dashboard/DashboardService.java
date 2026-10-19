@@ -5,6 +5,7 @@ import com.rnave.studily.academic.AcademicItemDtos.AcademicItemDto;
 import com.rnave.studily.academic.AcademicItemRepository;
 import com.rnave.studily.academic.ItemType;
 import com.rnave.studily.config.CurrentUser;
+import com.rnave.studily.user.UserTimeZones;
 import com.rnave.studily.course.Course;
 import com.rnave.studily.course.CourseRepository;
 import com.rnave.studily.course.DayOfWeek;
@@ -22,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -34,28 +35,29 @@ import java.util.stream.Collectors;
 @Service
 public class DashboardService {
 
-    private static final ZoneOffset ZONE = ZoneOffset.UTC;
-
     private final CourseRepository courseRepository;
     private final AcademicItemRepository itemRepository;
     private final TodoRepository todoRepository;
     private final SemesterService semesterService;
     private final CurrentUser currentUser;
+    private final UserTimeZones timeZones;
 
     public DashboardService(CourseRepository courseRepository, AcademicItemRepository itemRepository,
                             TodoRepository todoRepository, @Lazy SemesterService semesterService,
-                            CurrentUser currentUser) {
+                            CurrentUser currentUser, UserTimeZones timeZones) {
         this.courseRepository = courseRepository;
         this.itemRepository = itemRepository;
         this.todoRepository = todoRepository;
         this.semesterService = semesterService;
         this.currentUser = currentUser;
+        this.timeZones = timeZones;
     }
 
     @Transactional(readOnly = true)
     public WeekView week(LocalDate anchor, Long semesterId) {
         Long userId = currentUser.id();
-        LocalDate date = anchor != null ? anchor : LocalDate.now(ZONE);
+        ZoneId zone = timeZones.zoneFor(currentUser.entity());
+        LocalDate date = anchor != null ? anchor : LocalDate.now(zone);
 
         SemesterDto semester = null;
         if (semesterId != null) {
@@ -68,8 +70,8 @@ public class DashboardService {
         int daysFromSunday = date.getDayOfWeek().getValue() % 7;
         LocalDate weekStart = date.minusDays(daysFromSunday);
         LocalDate weekEnd = weekStart.plusDays(6);
-        Instant weekStartInstant = weekStart.atStartOfDay(ZONE).toInstant();
-        Instant weekEndInstant = weekStart.plusDays(7).atStartOfDay(ZONE).toInstant();
+        Instant weekStartInstant = weekStart.atStartOfDay(zone).toInstant();
+        Instant weekEndInstant = weekStart.plusDays(7).atStartOfDay(zone).toInstant();
 
         List<Course> courses = semesterId != null
                 ? courseRepository.findByUserIdAndSemesterIdOrderByNameAsc(userId, semesterId)
@@ -94,7 +96,7 @@ public class DashboardService {
                         userId, weekStartInstant, weekEndInstant);
 
         Map<Integer, List<AcademicItemDto>> itemsByDay = weekItems.stream().collect(Collectors.groupingBy(
-                i -> (int) ChronoUnit.DAYS.between(weekStart, i.getDueAt().atZone(ZONE).toLocalDate()),
+                i -> (int) ChronoUnit.DAYS.between(weekStart, i.getDueAt().atZone(zone).toLocalDate()),
                 Collectors.mapping(AcademicItemDto::from, Collectors.toList())));
 
         List<DayColumn> days = new ArrayList<>(7);

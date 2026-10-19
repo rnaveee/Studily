@@ -3,6 +3,7 @@ package com.rnave.studily.semester;
 import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
+import com.rnave.studily.user.UserTimeZones;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.semester.SemesterDtos.SemesterDto;
 import com.rnave.studily.semester.SemesterDtos.SemesterRequest;
@@ -18,10 +19,13 @@ public class SemesterService {
 
     private final SemesterRepository semesterRepository;
     private final CurrentUser currentUser;
+    private final UserTimeZones timeZones;
 
-    public SemesterService(SemesterRepository semesterRepository, CurrentUser currentUser) {
+    public SemesterService(SemesterRepository semesterRepository, CurrentUser currentUser,
+                           UserTimeZones timeZones) {
         this.semesterRepository = semesterRepository;
         this.currentUser = currentUser;
+        this.timeZones = timeZones;
     }
 
     @Transactional(readOnly = true)
@@ -37,7 +41,7 @@ public class SemesterService {
 
     @Transactional(readOnly = true)
     public Optional<SemesterDto> current() {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(timeZones.zoneFor(currentUser.entity()));
         return semesterRepository
                 .findFirstByUserIdAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByStartDateDesc(
                         currentUser.id(), today, today)

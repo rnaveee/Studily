@@ -5,6 +5,7 @@ import tools.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
@@ -20,6 +21,7 @@ public class WsSessionRegistry {
     private static final int SEND_TIME_LIMIT_MS = 10_000;
     private static final int SEND_BUFFER_SIZE_BYTES = 512 * 1024;
     private static final long PRESENCE_TTL_MS = 70_000;
+    private static final int MAX_SESSIONS_PER_USER = 8;
 
     private static final class Connection {
         private final WebSocketSession session;
@@ -46,8 +48,23 @@ public class WsSessionRegistry {
     public void register(Long userId, WebSocketSession session) {
         var decorated = new ConcurrentWebSocketSessionDecorator(
                 session, SEND_TIME_LIMIT_MS, SEND_BUFFER_SIZE_BYTES);
-        sessionsByUser.computeIfAbsent(userId, k -> new ConcurrentHashMap<>())
-                .put(session.getId(), new Connection(decorated));
+        Map<String, Connection> sessions = sessionsByUser.computeIfAbsent(userId, k -> new ConcurrentHashMap<>());
+        sessions.put(session.getId(), new Connection(decorated));
+        if (sessions.size() > MAX_SESSIONS_PER_USER) {
+            sessions.values().stream()
+                    .filter(c -> !c.session.getId().equals(session.getId()))
+                    .min(java.util.Comparator.comparingLong(c -> c.lastHeardFrom))
+                    .ifPresent(oldest -> closeSession(userId, oldest.session, CloseStatus.POLICY_VIOLATION));
+        }
+    }
+
+    public void closeSession(Long userId, WebSocketSession session, CloseStatus status) {
+        remove(userId, session.getId());
+        try {
+            session.close(status);
+        } catch (IOException | IllegalStateException e) {
+            log.debug("Could not close WebSocket session {}: {}", session.getId(), e.getMessage());
+        }
     }
 
     public void remove(Long userId, String sessionId) {

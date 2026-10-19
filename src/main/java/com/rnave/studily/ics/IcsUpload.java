@@ -2,12 +2,10 @@ package com.rnave.studily.ics;
 
 import com.rnave.studily.config.BadRequestException;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
 
 public final class IcsUpload {
 
@@ -40,25 +38,42 @@ public final class IcsUpload {
 
     private static String fromZip(byte[] bytes) {
         StringBuilder out = new StringBuilder();
-        int entries = 0;
-        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(bytes), StandardCharsets.UTF_8)) {
-            ZipEntry entry;
-            while ((entry = zip.getNextEntry()) != null) {
-                if (++entries > MAX_ZIP_ENTRIES) {
+        java.nio.file.Path temp = null;
+        try {
+            temp = java.nio.file.Files.createTempFile("studily-ics", ".zip");
+            java.nio.file.Files.write(temp, bytes);
+            try (java.util.zip.ZipFile zip = new java.util.zip.ZipFile(temp.toFile(), StandardCharsets.UTF_8)) {
+                if (zip.size() > MAX_ZIP_ENTRIES) {
                     throw new BadRequestException("That zip has too many files in it");
                 }
-                String base = name(entry.getName());
-                if (entry.isDirectory() || !base.endsWith(".ics") || base.startsWith("._")) {
-                    continue;
-                }
-                byte[] content = zip.readNBytes(MAX_TEXT_CHARS - out.length() + 1);
-                out.append(new String(content, StandardCharsets.UTF_8)).append('\n');
-                if (out.length() > MAX_TEXT_CHARS) {
-                    throw new BadRequestException("That calendar is too large to import");
+                var entries = zip.entries();
+                while (entries.hasMoreElements()) {
+                    ZipEntry entry = entries.nextElement();
+                    String base = name(entry.getName());
+                    if (entry.isDirectory() || !base.endsWith(".ics") || base.startsWith("._")) {
+                        continue;
+                    }
+                    if (entry.getSize() < 0 || entry.getSize() > MAX_TEXT_CHARS) {
+                        throw new BadRequestException("That calendar is too large to import");
+                    }
+                    try (var in = zip.getInputStream(entry)) {
+                        byte[] content = in.readNBytes(MAX_TEXT_CHARS - out.length() + 1);
+                        out.append(new String(content, StandardCharsets.UTF_8)).append('\n');
+                    }
+                    if (out.length() > MAX_TEXT_CHARS) {
+                        throw new BadRequestException("That calendar is too large to import");
+                    }
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | IllegalArgumentException e) {
             throw new BadRequestException("Could not read that zip file");
+        } finally {
+            if (temp != null) {
+                try {
+                    java.nio.file.Files.deleteIfExists(temp);
+                } catch (IOException ignored) {
+                }
+            }
         }
         return out.toString();
     }

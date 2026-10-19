@@ -127,11 +127,14 @@ public class ConversationController {
         ContentDisposition disposition = (inline ? ContentDisposition.inline() : ContentDisposition.attachment())
                 .filename(content.filename(), StandardCharsets.UTF_8)
                 .build();
-        return ResponseEntity.ok()
+        ResponseEntity.BodyBuilder response = ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(content.contentType()))
                 .cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePrivate())
-                .header("Content-Disposition", disposition.toString())
-                .body(content.data());
+                .header("Content-Disposition", disposition.toString());
+        if (!content.contentType().equals("application/pdf")) {
+            response.header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+        }
+        return response.body(content.data());
     }
 
     @Scheduled(fixedRate = 10 * UPLOAD_WINDOW_MS)

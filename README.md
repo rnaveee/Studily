@@ -68,7 +68,7 @@ Schema is owned by Flyway migrations (`src/main/resources/db/migration`);
 
 Decisions worth knowing about before reading the code:
 
-- **Auth**: stateless JWT (HS256, 24h) in the `Authorization` header — CSRF protection
+- **Auth**: stateless JWT (HS256, 30 days by default) in the `Authorization` header — CSRF protection
   is off because no credential rides in a cookie. Revocation without server-side
   sessions via a `token_version` column checked per request: password changes and
   logout-everywhere bump the version and stale tokens die immediately.
@@ -147,9 +147,9 @@ handshake at `/ws` authenticates via the same JWT.
 |---|---|---|
 | `PORT` | `8080` | Server port (Railway injects this) |
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | `localhost` / `5432` / `studily` / `postgres` / `postgres` | Postgres connection |
-| `JWT_SECRET` | dev placeholder | HS256 key — **must be ≥64 chars in prod**, app refuses to boot otherwise |
+| `JWT_SECRET` | dev placeholder | HS256 key — **must be ≥64 chars**; the app refuses to boot with a short key, and refuses the dev placeholder when `RAILWAY_ENVIRONMENT` is set |
 | `JWT_EXPIRATION_MS` | `2592000000` | Token lifetime (30 days; refreshed on app open) |
-| `CORS_ORIGINS` | `http://localhost:5173` | Allowed dev origin(s); prod is same-origin |
+| `CORS_ORIGINS` | `http://localhost:5173` | Allowed origin(s) for CORS and the WebSocket handshake — **must include `https://studily.ca` in prod** |
 | `APP_TIMEZONE` | `America/Toronto` | Timezone for reminder scheduling |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | unset (push disabled) | Web Push keypair (`npx web-push generate-vapid-keys`) |
 | `RESEND_API_KEY` / `MAIL_FROM` | unset (email disabled) | Resend key + verified From address for verification/reset emails |
@@ -159,7 +159,12 @@ handshake at `/ws` authenticates via the same JWT.
 | `PARSE_MODEL_TEXT` / `PARSE_MODEL_VISION` | `claude-sonnet-5` / `claude-sonnet-5-5` | Models used for PDF/pasted text and for images (outlines and schedule screenshots) |
 | `BADGE_ASSET_BASE_URL` | `https://badges.studily.ca/badges/v4` | Where badge art is served from; bump the version folder to bust caches |
 | `PROGRESS_OG_CUTOFF` | `2026-10-11` | Accounts created before this date earn the OG badge |
-| `SENTRY_DSN` / `SENTRY_ENVIRONMENT` | unset / `development` | Backend error tracking |
+| `SENTRY_DSN` / `SENTRY_ENVIRONMENT` / `SENTRY_TRACES_SAMPLE_RATE` | unset / `development` / `0.2` | Backend error tracking |
+| `ADMIN_USERNAME` | unset (admin disabled) | Username allowed into `/admin` |
+| `ADMIN_TOTP_SECRET` / `ADMIN_TOKEN_SECRET` / `ADMIN_SESSION_MS` | unset / derived from `JWT_SECRET` / `1800000` | TOTP step-up secret, admin session signing key, admin session length — set both secrets in prod |
+| `SUPPORT_EMAIL` | `ryannave97@gmail.com` | Address shown for support |
+| `FLAIR_ASSET_BASE_URL` | `https://badges.studily.ca/flairs/v1` | Where flair art is served from |
+| `PARSE_MONTHLY_LIMIT` / `PARSE_DAILY_BUDGET_USD` / `PARSE_MONTHLY_BUDGET_USD` / `PARSE_QUOTA_RESET_AT` | `10` / `0.5` / `2` / unset | Per-student outline allowance and site-wide spend caps |
 | `VITE_SENTRY_DSN` | unset | Frontend error tracking — **build-time** var, baked into the bundle |
 
 ## Deploying

@@ -19,6 +19,10 @@ public interface MessageRepository extends JpaRepository<Message, Long> {
     Slice<Message> findByConversationIdAndIdLessThanAndIdGreaterThanOrderByIdDesc(
             Long conversationId, Long beforeId, long afterId, Pageable pageable);
 
+    @Query("select coalesce(sum(m.attachmentSize), 0) from Message m "
+            + "where m.sender.id = :senderId and m.attachmentFilename is not null")
+    long attachmentBytesBySender(@Param("senderId") Long senderId);
+
     Optional<Message> findTopByConversationIdAndIdGreaterThanOrderByIdDesc(Long conversationId, long afterId);
 
     Optional<Message> findTopByConversationIdOrderByIdDesc(Long conversationId);

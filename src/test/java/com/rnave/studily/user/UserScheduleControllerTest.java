@@ -42,8 +42,11 @@ class UserScheduleControllerTest {
         friendRequestRepository = mock(FriendRequestRepository.class);
         userRepository = mock(UserRepository.class);
         currentUser = mock(CurrentUser.class);
+        UserTimeZones timeZones = mock(UserTimeZones.class);
+        when(timeZones.zoneFor(any())).thenReturn(java.time.ZoneOffset.UTC);
         controller = new UserScheduleController(
-                semesterRepository, courseRepository, friendRequestRepository, userRepository, currentUser);
+                semesterRepository, courseRepository, friendRequestRepository, userRepository, currentUser,
+                timeZones);
         when(currentUser.id()).thenReturn(1L);
         viewer(true, ScheduleVisibility.FRIENDS);
         target(ScheduleVisibility.FRIENDS);
