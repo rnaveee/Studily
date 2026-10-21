@@ -23,6 +23,9 @@ public class StudySessionDtos {
     public record TaskUpdateRequest(Boolean done, @Size(max = 200) String text) {
     }
 
+    public record FocusRequest(@NotNull Boolean focused) {
+    }
+
     public record AddTaskRequest(@NotBlank @Size(max = 200) String text) {
     }
 

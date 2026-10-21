@@ -535,6 +535,73 @@ class StudySessionServiceTest {
     }
 
     @Test
+    void checkin_watchingInFullscreen_closesThreeMinutesAfterDue() {
+        StudySession s = startPomodoro(5);
+        for (int sec = 24 * 60; sec <= 28 * 60; sec += 30) {
+            at(Duration.ofSeconds(sec));
+            service.focus(s.getId(), true);
+        }
+        StudySessionDto dto = service.focus(s.getId(), true);
+        assertThat(dto.checkinClosesAt()).isEqualTo(T0.plus(min(28)));
+
+        at(min(28).plusSeconds(1));
+
+        assertThatThrownBy(() -> service.checkin(s.getId()))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("This block expired");
+    }
+
+    @Test
+    void checkin_watchingInFullscreen_stillCreditsInsideThreeMinutes() {
+        StudySession s = startPomodoro(5);
+        for (int sec = 24 * 60; sec <= 27 * 60; sec += 30) {
+            at(Duration.ofSeconds(sec));
+            service.focus(s.getId(), true);
+        }
+
+        service.checkin(s.getId());
+
+        assertThat(block(s, 1).getStatus()).isEqualTo(StudyBlockStatus.CONFIRMED);
+    }
+
+    @Test
+    void checkin_fullscreenOpenedAfterDue_keepsTenMinuteWindow() {
+        StudySession s = startPomodoro(5);
+        at(min(26));
+        StudySessionDto dto = service.focus(s.getId(), true);
+
+        assertThat(dto.checkinClosesAt()).isEqualTo(T0.plus(min(35)));
+        at(min(30));
+        service.focus(s.getId(), true);
+        service.checkin(s.getId());
+        assertThat(block(s, 1).getStatus()).isEqualTo(StudyBlockStatus.CONFIRMED);
+    }
+
+    @Test
+    void checkin_staleFocusHeartbeat_keepsTenMinuteWindow() {
+        StudySession s = startPomodoro(5);
+        at(min(24));
+        service.focus(s.getId(), true);
+        at(min(29));
+
+        service.checkin(s.getId());
+
+        assertThat(block(s, 1).getStatus()).isEqualTo(StudyBlockStatus.CONFIRMED);
+    }
+
+    @Test
+    void focus_leavingFullscreen_restoresTenMinuteWindow() {
+        StudySession s = startPomodoro(5);
+        at(min(24));
+        service.focus(s.getId(), true);
+        StudySessionDto dto = service.focus(s.getId(), false);
+
+        assertThat(dto.checkinClosesAt()).isEqualTo(T0.plus(min(35)));
+        assertThat(s.getFocusStartedAt()).isNull();
+        assertThat(s.getFocusSeenAt()).isNull();
+    }
+
+    @Test
     void checkin_afterLateEdge_throwsExpired() {
         StudySession s = startPomodoro(5);
         at(min(35).plusSeconds(1));

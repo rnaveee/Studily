@@ -259,7 +259,7 @@ function StartForm() {
         <Info size={14} className="mt-px shrink-0 text-accent" />
         <span>
           Check in at the end of each block to earn its XP. You'll get a notification, and you have 10 minutes to
-          check in before the session pauses.
+          check in before the session pauses, or 3 if you're watching in fullscreen.
         </span>
       </p>
 

@@ -1,25 +1,15 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Clock, Coffee, Maximize2, Minimize2, Pause, Play, Plus, Settings, Square, X, Zap } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { Maximize2, Minimize2, Settings, Square, Zap } from "lucide-react";
 import { api } from "../../../lib/api";
-import { useConfirm } from "../../../lib/confirm";
-import { formatTime } from "../../../lib/format";
 import { useFullscreen } from "../../../lib/fullscreen";
-import { formatMs, pomodoroColor } from "../../../lib/pomodoro";
-import { applyDelta, holdProgressMoments } from "../../../lib/progressDelta";
 import { progressKeys } from "../../progress/useProgress";
 import SessionSettingsModal from "./SessionSettingsModal";
+import { BlockRow, PrimaryAction, Ring, TaskList } from "./SessionParts";
 import { formatMultiplier, MODE_LABEL } from "./sessionFormat";
-import type { StudySessionDto, StudySessionResult, StudySessionTaskDto } from "../../../types";
-
-type Phase = "focus" | "break" | "checkin" | "late" | "expired" | "paused" | "held";
-
-const FOCUS = pomodoroColor("study");
-const BREAK = pomodoroColor("break");
-const USER_PAUSE_LIMIT_MS = 30 * 60_000;
-const MAX_TASKS = 10;
-const MAX_TASK_LEN = 200;
+import { useSessionControls } from "./useSessionControls";
+import type { StudySessionDto } from "../../../types";
 
 export default function ActiveSessionCard({
   session,
@@ -28,225 +18,28 @@ export default function ActiveSessionCard({
   session: StudySessionDto;
   receivedAt: number;
 }) {
-  const qc = useQueryClient();
-  const confirm = useConfirm();
   const [expanded, setExpanded] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const skew = Date.parse(session.serverNow) - receivedAt;
-  const [now, setNow] = useState(() => Date.now() + skew);
+  const c = useSessionControls(session, receivedAt);
+  const { phase, color } = c;
 
-  useEffect(() => {
-    setNow(Date.now() + skew);
-    const id = window.setInterval(() => setNow(Date.now() + skew), 250);
-    return () => window.clearInterval(id);
-  }, [skew]);
-
-  const current = session.blocks.find((b) => b.index === session.currentBlock) ?? null;
-  const running = session.status === "ACTIVE" && current?.status === "RUNNING" ? current : null;
-  const startMs = running ? Date.parse(running.startedAt) : 0;
-  const dueMs = running ? Date.parse(running.dueAt) : 0;
-  const opensMs = session.checkinOpensAt ? Date.parse(session.checkinOpensAt) : dueMs - 60_000;
-  const closesMs = session.checkinClosesAt ? Date.parse(session.checkinClosesAt) : dueMs + 10 * 60_000;
-  const heldMs = running && session.userPausedAt ? Date.parse(session.userPausedAt) : null;
-
-  let phase: Phase;
-  if (!running) phase = "paused";
-  else if (heldMs !== null) phase = "held";
-  else if (now < startMs) phase = "break";
-  else if (now < opensMs) phase = "focus";
-  else if (now <= dueMs) phase = "checkin";
-  else if (now <= closesMs) phase = "late";
-  else phase = "expired";
-
-  useEffect(() => {
-    if (phase !== "expired") return;
-    const sync = () => {
-      qc.invalidateQueries({ queryKey: progressKeys.activeSession });
-      qc.invalidateQueries({ queryKey: progressKeys.history });
-      qc.invalidateQueries({ queryKey: progressKeys.streak });
-    };
-    sync();
-    const id = window.setInterval(sync, 10_000);
-    return () => window.clearInterval(id);
-  }, [phase, qc]);
-
-  useEffect(
-    () => () => {
-      if (qc.getQueryData(progressKeys.activeSession) === null) {
-        qc.invalidateQueries({ queryKey: progressKeys.history });
-        qc.invalidateQueries({ queryKey: progressKeys.streak });
-      }
-    },
-    [qc],
-  );
-
-  function settle(result: StudySessionResult) {
-    const s = result.session;
-    const open = s.status === "ACTIVE" || s.status === "PAUSED";
-    if (!open) holdProgressMoments();
-    qc.setQueryData(progressKeys.activeSession, open ? s : null);
-    qc.invalidateQueries({ queryKey: progressKeys.streak });
-    qc.invalidateQueries({ queryKey: progressKeys.history });
-    applyDelta(result.delta, qc, { toastXp: open });
-    return s;
-  }
-
-  const refresh = () => qc.invalidateQueries({ queryKey: progressKeys.activeSession });
-
-  const checkin = useMutation({
-    mutationFn: () => api.post<StudySessionResult>(`/study-sessions/${session.id}/checkin`),
-    onSuccess: settle,
-    onError: refresh,
-  });
-
-  const pause = useMutation({
-    mutationFn: () => api.post<StudySessionDto>(`/study-sessions/${session.id}/pause`),
-    onSuccess: (s) => qc.setQueryData(progressKeys.activeSession, s),
-    onError: refresh,
-  });
-
-  const resume = useMutation({
-    mutationFn: () => api.post<StudySessionDto>(`/study-sessions/${session.id}/resume`),
-    onSuccess: (s) => qc.setQueryData(progressKeys.activeSession, s),
-    onError: refresh,
-  });
-
-  const end = useMutation({
-    mutationFn: () => api.post<StudySessionResult>(`/study-sessions/${session.id}/end`),
-    onSuccess: settle,
-    onError: refresh,
-  });
-
-  const toggleTask = useMutation({
-    mutationFn: (v: { taskId: number; done: boolean }) =>
-      api.patch<StudySessionResult>(`/study-sessions/${session.id}/tasks/${v.taskId}`, { done: v.done }),
-    onMutate: (v) => {
-      qc.setQueryData<StudySessionDto | null>(progressKeys.activeSession, (old) =>
-        old
-          ? {
-              ...old,
-              serverNow: new Date(Date.now() + skew).toISOString(),
-              tasks: old.tasks.map((t) => (t.id === v.taskId ? { ...t, done: v.done } : t)),
-            }
-          : old,
-      );
-    },
-    onSuccess: settle,
-    onError: refresh,
-  });
-
-  const patchTasks = (fn: (tasks: StudySessionTaskDto[]) => StudySessionTaskDto[]) =>
-    qc.setQueryData<StudySessionDto | null>(progressKeys.activeSession, (old) =>
-      old ? { ...old, serverNow: new Date(Date.now() + skew).toISOString(), tasks: fn(old.tasks) } : old,
-    );
-
-  const addTask = useMutation({
-    mutationFn: (text: string) => api.post<StudySessionDto>(`/study-sessions/${session.id}/tasks`, { text }),
-    onSuccess: (s) => qc.setQueryData(progressKeys.activeSession, s),
-    onError: refresh,
-  });
-
-  const renameTask = useMutation({
-    mutationFn: (v: { taskId: number; text: string }) =>
-      api.patch<StudySessionResult>(`/study-sessions/${session.id}/tasks/${v.taskId}`, { text: v.text }),
-    onMutate: (v) => patchTasks((tasks) => tasks.map((t) => (t.id === v.taskId ? { ...t, text: v.text } : t))),
-    onSuccess: settle,
-    onError: refresh,
-  });
-
-  const removeTask = useMutation({
-    mutationFn: (taskId: number) => api.del<StudySessionDto>(`/study-sessions/${session.id}/tasks/${taskId}`),
-    onMutate: (taskId) => patchTasks((tasks) => tasks.filter((t) => t.id !== taskId)),
-    onSuccess: (s) => qc.setQueryData(progressKeys.activeSession, s),
-    onError: refresh,
-  });
-
-  async function endSession() {
-    const ok = await confirm({
-      title: "End this study session?",
-      message:
-        "If you've studied at least 10 minutes of the current block, those minutes still count. Otherwise the block is dropped.",
-      confirmLabel: "End session",
-      danger: true,
-    });
-    if (ok) end.mutate();
-  }
-
-  const busy = checkin.isPending || pause.isPending || resume.isPending || end.isPending;
-  const color =
-    phase === "break"
-      ? BREAK
-      : phase === "late" || phase === "checkin"
-        ? "var(--accent)"
-        : phase === "paused" || phase === "expired" || phase === "held"
-          ? "var(--fg-3)"
-          : FOCUS;
-  const localTime = (ms: number) => formatTime(new Date(ms - skew).toISOString());
-
-  let fraction = 1;
-  let clock = "--:--";
-  let label = "Focus";
-  let caption = "";
-  if (phase === "focus" || phase === "checkin") {
-    fraction = (dueMs - now) / Math.max(1, dueMs - startMs);
-    clock = formatMs(dueMs - now);
-    label = phase === "checkin" ? "Almost done" : "Focus";
-    caption = `Ends at ${localTime(dueMs)}`;
-  } else if (phase === "break") {
-    fraction = (startMs - now) / Math.max(1, session.breakMinutes * 60_000);
-    clock = formatMs(startMs - now);
-    label = "Break";
-    caption = `Block ${session.currentBlock} at ${localTime(startMs)}`;
-  } else if (phase === "late") {
-    fraction = (closesMs - now) / Math.max(1, closesMs - dueMs);
-    clock = formatMs(closesMs - now);
-    label = "Check in!";
-    caption = "left to check in";
-  } else if (phase === "expired") {
-    fraction = 0;
-    clock = "00:00";
-    label = "Missed";
-    caption = "Updating…";
-  } else if (phase === "held" && heldMs !== null) {
-    const inBreak = heldMs < startMs;
-    const left = inBreak ? startMs - heldMs : dueMs - heldMs;
-    fraction = left / Math.max(1, inBreak ? session.breakMinutes * 60_000 : dueMs - startMs);
-    clock = formatMs(left);
-    label = "Paused";
-    caption = `Ends in ${formatMs(heldMs + USER_PAUSE_LIMIT_MS - now)}`;
-  } else {
-    label = "On hold";
-    caption = "Missed a check-in";
-  }
-  fraction = Math.min(1, Math.max(0, fraction));
-
-  const canCheckIn = phase === "checkin" || phase === "late";
-  const ringProps = { color, fraction, label, clock, caption, glow: phase === "focus" || phase === "break" };
-  const blocks = <BlockRow session={session} phase={phase} now={now} startMs={startMs} dueMs={dueMs} />;
+  const ringProps = { ...c.ring, toggle: c.toggle, onToggle: c.onToggle };
+  const blocks = <BlockRow session={session} phase={phase} now={c.now} startMs={c.startMs} dueMs={c.dueMs} />;
   const actions = (
-    <SessionActions
-      phase={phase}
-      busy={busy}
-      canCheckIn={canCheckIn}
-      untilStart={startMs - now}
-      untilCheckin={opensMs - now}
-      onCheckIn={() => checkin.mutate()}
-      onPause={() => pause.mutate()}
-      onResume={() => resume.mutate()}
-      onEnd={endSession}
-      onSettings={() => setSettingsOpen(true)}
-    />
+    <>
+      <PrimaryAction
+        phase={phase}
+        busy={c.busy}
+        canCheckIn={c.canCheckIn}
+        untilStart={c.untilStart}
+        untilCheckin={c.untilCheckin}
+        onCheckIn={c.onCheckIn}
+        onResume={c.onResume}
+      />
+      <SessionActions busy={c.busy} onEnd={c.onEnd} onSettings={() => setSettingsOpen(true)} />
+    </>
   );
-  const tasks = (
-    <TaskList
-      tasks={session.tasks}
-      adding={addTask.isPending}
-      onToggle={(t) => toggleTask.mutate({ taskId: t.id, done: !t.done })}
-      onRename={(t, text) => renameTask.mutate({ taskId: t.id, text })}
-      onRemove={(t) => removeTask.mutate(t.id)}
-      onAdd={(text) => addTask.mutate(text)}
-    />
-  );
+  const tasks = <TaskList {...c.tasks} />;
 
   return (
     <div
@@ -270,7 +63,7 @@ export default function ActiveSessionCard({
       <div className="mt-4 border-t border-line pt-3">{tasks}</div>
 
       {expanded && (
-        <FullscreenSession color={color} onClose={() => setExpanded(false)}>
+        <FullscreenSession sessionId={session.id} color={color} onClose={() => setExpanded(false)}>
           <div
             className="mx-auto grid w-full max-w-5xl items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:gap-14"
           >
@@ -299,7 +92,7 @@ export default function ActiveSessionCard({
   );
 }
 
-function SessionHeader({
+export function SessionHeader({
   session,
   color,
   centered = false,
@@ -344,139 +137,92 @@ function SessionHeader({
 }
 
 function SessionActions({
-  phase,
-  busy,
-  canCheckIn,
-  untilStart,
-  untilCheckin,
-  onCheckIn,
-  onPause,
-  onResume,
   onEnd,
   onSettings,
+  busy,
 }: {
-  phase: Phase;
-  busy: boolean;
-  canCheckIn: boolean;
-  untilStart: number;
-  untilCheckin: number;
-  onCheckIn: () => void;
-  onPause: () => void;
-  onResume: () => void;
   onEnd: () => void;
   onSettings: () => void;
+  busy: boolean;
 }) {
-  const canPause = phase === "focus" || phase === "break";
   return (
-    <>
-      {phase === "held" ? (
-        <>
-          <p className="text-[12.5px] leading-snug text-fg-2">
-            Paused. Resume within 30 minutes or the session ends on its own. Time studied before the pause still counts.
-          </p>
-          <button onClick={onResume} disabled={busy} className="btn btn-primary btn-lg w-full" style={{ minHeight: 48, fontSize: 15 }}>
-            <Play size={15} fill="currentColor" strokeWidth={0} />
-            Resume
-          </button>
-        </>
-      ) : phase === "paused" ? (
-        <>
-          <p className="text-[12.5px] leading-snug text-fg-2">
-            You missed a check-in, so this session is on hold. Resume within 30 minutes or it ends on its own.
-          </p>
-          <button onClick={onResume} disabled={busy} className="btn btn-primary btn-lg w-full" style={{ minHeight: 48 }}>
-            <Play size={15} fill="currentColor" strokeWidth={0} />
-            Resume session
-          </button>
-        </>
-      ) : (
-        <>
-          <p className="text-[12.5px] leading-snug text-fg-2">
-            {phase === "break"
-              ? "Stretch, refill your water. The next block starts on its own."
-              : phase === "focus"
-                ? "Stay on task. Check in when the block ends to bank its XP."
-                : phase === "expired"
-                  ? "The check-in window closed, so this block didn't count."
-                  : "Block done! Check in now to keep its XP."}
-          </p>
-          <button
-            onClick={onCheckIn}
-            disabled={!canCheckIn || busy}
-            className={`btn btn-lg w-full ${canCheckIn ? "btn-primary checkin-pulse" : "btn-ghost"}`}
-            style={{ minHeight: 48, fontSize: 15 }}
-          >
-            {canCheckIn ? (
-              <>
-                <Check size={17} strokeWidth={2.6} />
-                Check in
-              </>
-            ) : phase === "break" ? (
-              <>
-                <Coffee size={15} />
-                Next block in {formatMs(untilStart)}
-              </>
-            ) : phase === "expired" ? (
-              <>
-                <Pause size={15} />
-                Block expired
-              </>
-            ) : (
-              <>
-                <Clock size={15} />
-                Check-in opens in {formatMs(untilCheckin)}
-              </>
-            )}
-          </button>
-        </>
-      )}
-
-      <div className="flex items-center justify-between gap-2">
-        {canPause ? (
-          <button
-            onClick={onPause}
-            disabled={busy}
-            className="-ml-2.5 inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-fg-2 transition-colors hover:bg-surface-hi hover:text-fg"
-          >
-            <Pause size={13} fill="currentColor" strokeWidth={0} />
-            Pause
-          </button>
-        ) : (
-          <span />
-        )}
-        <span className="flex items-center">
-          <button
-            onClick={onSettings}
-            aria-label="Session settings"
-            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-          >
-            <Settings size={13} />
-            Settings
-          </button>
-          <button
-            onClick={onEnd}
-            disabled={busy}
-            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
-          >
-            <Square size={12} />
-            End session
-          </button>
-        </span>
-      </div>
-    </>
+    <div className="flex items-center justify-end gap-2">
+      <span className="flex items-center">
+        <button
+          onClick={onSettings}
+          aria-label="Session settings"
+          className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+        >
+          <Settings size={13} />
+          Settings
+        </button>
+        <button
+          onClick={onEnd}
+          disabled={busy}
+          className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
+        >
+          <Square size={12} />
+          End session
+        </button>
+      </span>
+    </div>
   );
 }
 
+function useFullscreenFocus(sessionId: number) {
+  const qc = useQueryClient();
+
+  useEffect(() => {
+    let timer: number | undefined;
+    let reporting = false;
+
+    const send = (focused: boolean, keepalive = false) =>
+      api
+        .post<StudySessionDto>(`/study-sessions/${sessionId}/focus`, { focused }, { keepalive })
+        .then((s) => {
+          if (focused === reporting) qc.setQueryData(progressKeys.activeSession, s);
+        })
+        .catch(() => {});
+
+    const start = () => {
+      if (reporting) return;
+      reporting = true;
+      send(true);
+      timer = window.setInterval(() => send(true), 30_000);
+    };
+    const stop = (keepalive: boolean) => {
+      if (!reporting) return;
+      reporting = false;
+      window.clearInterval(timer);
+      send(false, keepalive);
+    };
+    const onVisibility = () => (document.hidden ? stop(true) : start());
+    const onPageHide = () => stop(true);
+
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", onPageHide);
+      stop(true);
+    };
+  }, [sessionId, qc]);
+}
+
 function FullscreenSession({
+  sessionId,
   color,
   onClose,
   children,
 }: {
+  sessionId: number;
   color: string;
   onClose: () => void;
   children: ReactNode;
 }) {
   useFullscreen(document.documentElement, onClose);
+  useFullscreenFocus(sessionId);
 
   return createPortal(
     <div
@@ -515,302 +261,5 @@ function FullscreenSession({
       </div>
     </div>,
     document.body,
-  );
-}
-
-function Ring({
-  color,
-  fraction,
-  label,
-  clock,
-  caption,
-  glow = false,
-  large = false,
-}: {
-  color: string;
-  fraction: number;
-  label: string;
-  clock: string;
-  caption: string;
-  glow?: boolean;
-  large?: boolean;
-}) {
-  const r = 46;
-  const circumference = 2 * Math.PI * r;
-  return (
-    <div
-      className={`relative mx-auto aspect-square shrink-0 ${large ? "" : "w-[156px]"}`}
-      style={large ? { width: "min(72vw, 44vh, 380px)" } : undefined}
-    >
-      {large && (
-        <div
-          aria-hidden
-          className={`absolute inset-[8%] rounded-full ${glow ? "pomo-breathe" : ""}`}
-          style={{
-            background: `radial-gradient(circle, color-mix(in srgb, ${color} 26%, transparent) 0%, transparent 70%)`,
-            filter: "blur(18px)",
-          }}
-        />
-      )}
-      <svg viewBox="0 0 100 100" className="relative h-full w-full -rotate-90 overflow-visible">
-        <circle cx="50" cy="50" r={r} fill="none" stroke="var(--surface-hi)" strokeWidth="5" />
-        <circle
-          cx="50"
-          cy="50"
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth="5"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - fraction)}
-          className="pomo-ring"
-          style={{ filter: `drop-shadow(0 0 3px color-mix(in srgb, ${color} 50%, transparent))` }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span
-          className={`font-semibold uppercase ${large ? "text-[12px] tracking-[0.18em]" : "text-[10px] tracking-[0.16em]"}`}
-          style={{ color }}
-        >
-          {label}
-        </span>
-        <span
-          className={`font-mono font-bold leading-none tabular-nums text-fg ${
-            large ? "mt-1.5 text-[min(15vw,9vh,80px)]" : "mt-0.5 text-[32px]"
-          }`}
-        >
-          {clock}
-        </span>
-        <span className={`truncate text-fg-3 ${large ? "mt-2 max-w-[70%] text-[13px]" : "mt-1 max-w-[120px] text-[11px]"}`}>
-          {caption}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function BlockRow({
-  session,
-  phase,
-  now,
-  startMs,
-  dueMs,
-}: {
-  session: StudySessionDto;
-  phase: Phase;
-  now: number;
-  startMs: number;
-  dueMs: number;
-}) {
-  const total = Math.max(session.plannedBlocks, ...session.blocks.map((b) => b.index));
-  const runningFill =
-    phase === "focus" || phase === "checkin"
-      ? (now - startMs) / Math.max(1, dueMs - startMs)
-      : phase === "late" || phase === "expired"
-        ? 1
-        : 0;
-
-  return (
-    <div>
-      <div className="flex gap-1" aria-hidden>
-        {Array.from({ length: total }, (_, i) => {
-          const b = session.blocks.find((x) => x.index === i + 1);
-          const tone =
-            b?.status === "CONFIRMED"
-              ? "var(--green)"
-              : b?.status === "PARTIAL"
-                ? "var(--yellow)"
-                : b?.status === "MISSED"
-                  ? "color-mix(in srgb, var(--red) 55%, transparent)"
-                  : null;
-          return (
-            <span
-              key={i}
-              className="relative h-2 flex-1 overflow-hidden rounded-full"
-              style={{ background: tone ?? "var(--surface-hi)", boxShadow: tone ? undefined : "var(--control-inset)" }}
-            >
-              {b?.status === "RUNNING" && (
-                <span
-                  className="xp-fill absolute inset-y-0 left-0 rounded-full"
-                  style={{ width: `${Math.min(1, Math.max(0, runningFill)) * 100}%`, background: "var(--accent)" }}
-                />
-              )}
-            </span>
-          );
-        })}
-      </div>
-      <div className="mt-1.5 flex justify-between text-[11px] tabular-nums text-fg-3">
-        <span>
-          {session.blocks.filter((b) => b.status === "CONFIRMED").length} of {session.plannedBlocks}{" "}
-          {session.plannedBlocks === 1 ? "block" : "blocks"} done
-        </span>
-        <span>{session.creditedMinutes} min credited</span>
-      </div>
-    </div>
-  );
-}
-
-function TaskList({
-  tasks,
-  adding,
-  onToggle,
-  onRename,
-  onRemove,
-  onAdd,
-}: {
-  tasks: StudySessionTaskDto[];
-  adding: boolean;
-  onToggle: (task: StudySessionTaskDto) => void;
-  onRename: (task: StudySessionTaskDto, text: string) => void;
-  onRemove: (task: StudySessionTaskDto) => void;
-  onAdd: (text: string) => void;
-}) {
-  const sorted = [...tasks].sort((a, b) => a.position - b.position);
-  const done = tasks.filter((t) => t.done).length;
-  const full = tasks.length >= MAX_TASKS;
-  const [editing, setEditing] = useState<number | null>(null);
-  const [edit, setEdit] = useState("");
-  const [draft, setDraft] = useState("");
-  const open = useRef<number | null>(null);
-
-  function startEdit(task: StudySessionTaskDto) {
-    open.current = task.id;
-    setEdit(task.text);
-    setEditing(task.id);
-  }
-
-  function stopEdit() {
-    open.current = null;
-    setEditing(null);
-  }
-
-  function commit(task: StudySessionTaskDto) {
-    if (open.current !== task.id) return;
-    const text = edit.trim();
-    stopEdit();
-    if (text && text !== task.text) onRename(task, text);
-  }
-
-  function add() {
-    const text = draft.trim();
-    if (!text || full || adding) return;
-    onAdd(text);
-    setDraft("");
-  }
-
-  return (
-    <div>
-      <div className="mb-1 flex items-center justify-between px-0.5 text-[12px]">
-        <span className="font-semibold text-fg">Tasks</span>
-        {tasks.length > 0 && (
-          <span className="tabular-nums text-fg-3">
-            {done}/{tasks.length} done
-          </span>
-        )}
-      </div>
-      <ul>
-        {sorted.map((t) => (
-          <li key={t.id} className="flex min-h-[40px] items-center gap-1">
-            <button
-              type="button"
-              role="checkbox"
-              aria-checked={t.done}
-              aria-label={t.text}
-              onClick={() => onToggle(t)}
-              className="flex h-10 w-9 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-surface-hi"
-            >
-              <span
-                className="flex h-[18px] w-[18px] items-center justify-center rounded-full transition-colors"
-                style={
-                  t.done
-                    ? { background: "var(--green)", color: "var(--accent-fg)" }
-                    : { border: "1.5px solid var(--fg-3)" }
-                }
-              >
-                {t.done && <Check size={11} strokeWidth={3.2} />}
-              </span>
-            </button>
-            {editing === t.id ? (
-              <input
-                className="input"
-                autoFocus
-                value={edit}
-                maxLength={MAX_TASK_LEN}
-                aria-label="Edit task"
-                enterKeyHint="done"
-                onChange={(e) => setEdit(e.target.value)}
-                onBlur={() => commit(t)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    commit(t);
-                  } else if (e.key === "Escape") {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    stopEdit();
-                  }
-                }}
-                style={{ minHeight: 36, fontSize: 13 }}
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => startEdit(t)}
-                title="Edit task"
-                className={`min-w-0 flex-1 break-words rounded-lg px-1.5 py-2 text-left text-[13px] transition-colors hover:bg-surface-hi ${
-                  t.done ? "text-fg-3 line-through" : "text-fg"
-                }`}
-              >
-                {t.text}
-              </button>
-            )}
-            {!t.earned && editing !== t.id && (
-              <button
-                type="button"
-                onClick={() => onRemove(t)}
-                aria-label={`Remove ${t.text}`}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </li>
-        ))}
-        {!full && (
-          <li className="flex items-center gap-1">
-            <span className="flex h-10 w-9 shrink-0 items-center justify-center text-accent">
-              <Plus size={15} />
-            </span>
-            <input
-              className="input"
-              value={draft}
-              maxLength={MAX_TASK_LEN}
-              placeholder={tasks.length === 0 ? "Add a task to this session" : "Add another task"}
-              aria-label="New task"
-              enterKeyHint="enter"
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  add();
-                }
-              }}
-              style={{ minHeight: 36, fontSize: 13 }}
-            />
-            <button
-              type="button"
-              onClick={add}
-              disabled={!draft.trim() || adding}
-              aria-label="Add task"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-accent transition-colors hover:bg-surface-hi disabled:opacity-40"
-            >
-              <Plus size={16} />
-            </button>
-          </li>
-        )}
-      </ul>
-      {full && <p className="mt-1 px-0.5 text-[11.5px] text-fg-3">That's the max of {MAX_TASKS} tasks.</p>}
-    </div>
   );
 }

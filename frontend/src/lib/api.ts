@@ -117,7 +117,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function request<T>(method: string, path: string, body?: unknown, keepalive?: boolean): Promise<T> {
   const headers: Record<string, string> = {};
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
@@ -143,6 +143,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     method,
     headers,
     body: body === undefined ? undefined : isFormData ? body : JSON.stringify(body),
+    keepalive,
   });
 
   if (!res.ok) {
@@ -195,7 +196,8 @@ async function requestBlob(path: string): Promise<Blob> {
 
 export const api = {
   get: <T>(path: string) => request<T>("GET", path),
-  post: <T>(path: string, body?: unknown) => request<T>("POST", path, body),
+  post: <T>(path: string, body?: unknown, opts?: { keepalive?: boolean }) =>
+    request<T>("POST", path, body, opts?.keepalive),
   put: <T>(path: string, body?: unknown) => request<T>("PUT", path, body),
   patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body),
   del: <T>(path: string) => request<T>("DELETE", path),

@@ -57,6 +57,8 @@ public class StudySessionService {
     static final int MAX_TASK_LENGTH = 200;
     static final Duration CHECKIN_EARLY = Duration.ofSeconds(60);
     static final Duration CHECKIN_LATE = Duration.ofMinutes(10);
+    static final Duration CHECKIN_LATE_FOCUSED = Duration.ofMinutes(3);
+    static final Duration FOCUS_STALE = Duration.ofSeconds(75);
     static final Duration REPLAY_WINDOW = Duration.ofMinutes(2);
     static final Duration PAUSE_LIMIT = Duration.ofMinutes(30);
     static final Duration USER_PAUSE_LIMIT = Duration.ofMinutes(30);
@@ -180,7 +182,7 @@ public class StudySessionService {
         if (block.getStatus() == StudyBlockStatus.CONFIRMED) {
             return new StudySessionResult(toDto(session, now), delta.build());
         }
-        if (block.getStatus() != StudyBlockStatus.RUNNING || now.isAfter(block.getDueAt().plus(CHECKIN_LATE))) {
+        if (block.getStatus() != StudyBlockStatus.RUNNING || now.isAfter(block.getDueAt().plus(checkinLate(session, block, now)))) {
             throw new ConflictException("This block expired");
         }
         if (now.isBefore(block.getDueAt().minus(CHECKIN_EARLY))) {
@@ -192,6 +194,41 @@ public class StudySessionService {
         confirm(delta, user, session, block, now);
         trackCoins(delta, session);
         return new StudySessionResult(toDto(session, now), progressService.finish(delta));
+    }
+
+    Duration checkinLate(StudySession session, StudySessionBlock block, Instant now) {
+        Instant seen = session.getFocusSeenAt();
+        Instant started = session.getFocusStartedAt();
+        if (seen != null && started != null
+                && !seen.isBefore(now.minus(FOCUS_STALE))
+                && !started.isAfter(block.getDueAt())) {
+            return CHECKIN_LATE_FOCUSED;
+        }
+        return CHECKIN_LATE;
+    }
+
+    @Transactional
+    public StudySessionDto focus(Long id, boolean focused) {
+        User user = currentUser.entity();
+        rateLimiter.check(user.getId());
+        progressService.ensure(user.getId());
+        StudySession session = requireOwned(id, user.getId());
+        Instant now = clock.instant();
+        if (!OPEN.contains(session.getStatus())) {
+            return toDto(session, now);
+        }
+        if (focused) {
+            Instant seen = session.getFocusSeenAt();
+            boolean fresh = seen != null && !seen.isBefore(now.minus(FOCUS_STALE));
+            if (!fresh || session.getFocusStartedAt() == null) {
+                session.setFocusStartedAt(now);
+            }
+            session.setFocusSeenAt(now);
+        } else {
+            session.setFocusStartedAt(null);
+            session.setFocusSeenAt(null);
+        }
+        return toDto(session, now);
     }
 
     @Transactional
@@ -401,9 +438,11 @@ public class StudySessionService {
 
     @Transactional(readOnly = true)
     public List<SweepTarget> overdueBlocks() {
-        Instant cutoff = clock.instant().minus(CHECKIN_LATE);
+        Instant now = clock.instant();
+        Instant cutoff = now.minus(CHECKIN_LATE_FOCUSED);
         return blockRepository.findByStatusAndDueAtBefore(StudyBlockStatus.RUNNING, cutoff).stream()
                 .filter(b -> isRunning(b.getSession()))
+                .filter(b -> now.isAfter(b.getDueAt().plus(checkinLate(b.getSession(), b, now))))
                 .map(b -> new SweepTarget(b.getSession().getUser().getId(), b.getId()))
                 .toList();
     }
@@ -454,7 +493,7 @@ public class StudySessionService {
         StudySessionBlock block = blockRepository.findById(blockId).orElse(null);
         Instant now = clock.instant();
         if (block == null || block.getStatus() != StudyBlockStatus.RUNNING
-                || !now.isAfter(block.getDueAt().plus(CHECKIN_LATE))) {
+                || !now.isAfter(block.getDueAt().plus(checkinLate(block.getSession(), block, now)))) {
             return false;
         }
         StudySession session = block.getSession();
@@ -701,7 +740,7 @@ public class StudySessionService {
 
     private void settleRunningBlock(ProgressDeltaBuilder delta, StudySession session, StudySessionBlock block,
                                     Instant now) {
-        if (now.isAfter(block.getDueAt().plus(CHECKIN_LATE))) {
+        if (now.isAfter(block.getDueAt().plus(checkinLate(session, block, now)))) {
             block.setStatus(StudyBlockStatus.MISSED);
             return;
         }
@@ -786,7 +825,7 @@ public class StudySessionService {
                 s.getEndedAt(),
                 s.getCurrentBlock(),
                 running == null ? null : running.getDueAt().minus(CHECKIN_EARLY),
-                running == null ? null : running.getDueAt().plus(CHECKIN_LATE),
+                running == null ? null : running.getDueAt().plus(checkinLate(s, running, now)),
                 s.getCreditedMinutes(),
                 s.getXpAwarded(),
                 s.getMultiplier().doubleValue(),

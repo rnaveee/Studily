@@ -21,6 +21,7 @@ import Banners from "./Banners";
 import ProgressWhatsNew from "../features/progress/ProgressWhatsNew";
 import ProgressHost from "../features/progress/ProgressHost";
 import SessionChime from "../features/learn/sessions/SessionChime";
+import SessionDock, { SessionHost } from "../features/learn/sessions/SessionDock";
 import WelcomeTour from "../features/welcome/WelcomeTour";
 import { useWelcomeTourStep } from "../lib/welcomeTour";
 import CoinBalance from "../features/progress/CoinBalance";
@@ -150,7 +151,8 @@ export default function Layout() {
           <CoinBalance />
         </div>
 
-        <nav ref={sideNavRef} className="relative flex-1 overflow-y-auto px-2 py-1 space-y-0.5">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+        <nav ref={sideNavRef} className="relative px-2 py-1 space-y-0.5">
           {indicator && (
             <span
               aria-hidden="true"
@@ -187,6 +189,8 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
+        <SessionDock placement="sidebar" />
+        </div>
 
         <div className="px-5 pb-3">
           <div className="flex flex-wrap gap-x-3 gap-y-1">
@@ -300,6 +304,8 @@ export default function Layout() {
           </div>
         </header>
 
+        <SessionDock placement="bar" />
+
         <Banners />
         <ProgressWhatsNew />
 
@@ -325,6 +331,7 @@ export default function Layout() {
       {debug && <ViewportDebug />}
       <ProgressHost />
       <SessionChime />
+      <SessionHost />
       <WelcomeTour />
     </div>
   );

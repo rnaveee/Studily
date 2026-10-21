@@ -62,6 +62,10 @@ public class StudySession {
 
     private Instant userPausedAt;
 
+    private Instant focusStartedAt;
+
+    private Instant focusSeenAt;
+
     @Column(nullable = false)
     private int coinsAwarded = 0;
 

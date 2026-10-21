@@ -90,7 +90,7 @@ const SLIDES: Slide[] = [
   {
     eyebrow: "Study sessions",
     title: "Study with a plan, earn as you go",
-    body: "Start a session at the top of the Study page. Pick Pomodoro (25-minute blocks with 5-minute breaks) or a timer from 30 minutes to 3 hours, and list what you want to get done. When a block ends, check in within 10 minutes to bank its XP, and we'll notify you when it's time. Miss a check-in and that block earns nothing and the session pauses, but you can resume within 30 minutes. Checked-in blocks earn chests when the session ends: a wooden chest for 1, silver for 3, gold for 5 and diamond for 7, with a chance at a bonus chest in between, for your first 3 sessions each day.",
+    body: "Start a session at the top of the Study page. Pick Pomodoro (25-minute blocks with 5-minute breaks) or a timer from 30 minutes to 3 hours, and list what you want to get done. When a block ends, check in within 10 minutes (3 if you're watching in fullscreen) to bank its XP, and we'll notify you when it's time. Miss a check-in and that block earns nothing and the session pauses, but you can resume within 30 minutes. Checked-in blocks earn chests when the session ends: a wooden chest for 1, silver for 3, gold for 5 and diamond for 7, with a chance at a bonus chest in between, for your first 3 sessions each day.",
     visual: <CheckinVisual />,
   },
   {

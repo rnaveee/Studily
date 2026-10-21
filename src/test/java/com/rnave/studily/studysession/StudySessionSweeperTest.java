@@ -206,6 +206,32 @@ class StudySessionSweeperTest {
     }
 
     @Test
+    void sweep_focusedBlock_missedAfterThreeMinutes() {
+        StudySession s = session(10L, 3, StudySessionStatus.ACTIVE);
+        StudySessionBlock b = block(20L, s, 1);
+        b.setNotifiedAt(T0.plus(Duration.ofMinutes(25)));
+        s.setFocusStartedAt(T0.plus(Duration.ofMinutes(24)));
+        s.setFocusSeenAt(T0.plus(Duration.ofMinutes(28)));
+        at(Duration.ofMinutes(28).plusSeconds(30));
+
+        sweeper.sweep();
+
+        assertThat(b.getStatus()).isEqualTo(StudyBlockStatus.MISSED);
+    }
+
+    @Test
+    void sweep_unfocusedBlock_survivesPastThreeMinutes() {
+        StudySession s = session(10L, 3, StudySessionStatus.ACTIVE);
+        StudySessionBlock b = block(20L, s, 1);
+        b.setNotifiedAt(T0.plus(Duration.ofMinutes(25)));
+        at(Duration.ofMinutes(28).plusSeconds(30));
+
+        sweeper.sweep();
+
+        assertThat(b.getStatus()).isEqualTo(StudyBlockStatus.RUNNING);
+    }
+
+    @Test
     void sweep_atLateEdge_leavesBlockRunning() {
         StudySession s = session(10L, 3, StudySessionStatus.ACTIVE);
         StudySessionBlock b = block(20L, s, 1);

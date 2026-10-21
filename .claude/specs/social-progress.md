@@ -80,7 +80,7 @@ Lifecycle (server time is authoritative):
    - Tasks: 0–10, each 1–200 chars, trimmed, blanks dropped.
    - Only one `ACTIVE` or `PAUSED` session per user. A second start returns 409 `You already have a study session running`.
 2. **Check-in.**
-   - Accepted when `due_at − 60s ≤ now ≤ due_at + 10 min` (widened from 5 min by Ryan 2026-10-13, so a forgotten check-in has more room).
+   - Accepted when `due_at − 60s ≤ now ≤ due_at + 10 min` (widened from 5 min by Ryan 2026-10-13, so a forgotten check-in has more room). The late edge is 3 minutes instead of 10 while the student is watching in fullscreen (Ryan 2026-10-20, V61 `focus_started_at`/`focus_seen_at`): `POST /study-sessions/{id}/focus {focused}` is sent on entering fullscreen, every 30 s while visible, and with `focused:false` on leaving or hiding. The 3-minute edge applies only if the last heartbeat is under 75 s old and the first heartbeat of that stretch was at or before `due_at`; anything else keeps 10 minutes.
    - Earlier → 409 `This block isn't finished yet`. Later → the block was already marked MISSED by the sweeper → 409 `This block expired`.
    - Confirming credits `block_minutes` and grants STUDY_BLOCK XP.
    - If this was the last planned block: the session becomes `COMPLETED` and gets the STUDY_COMPLETE bonus.
@@ -88,7 +88,7 @@ Lifecycle (server time is authoritative):
    - Check-in is idempotent: confirming an already-confirmed block returns the current state with an empty delta. This holds for 2 minutes after the confirm (the request has no block index). A later retry during a break gets 409 `This block isn't finished yet`, and the UI simply refetches (lead decision 2026-10-08).
 3. **Sweeper** (`@Scheduled(fixedDelay = 30_000)`, DB-driven so it survives restarts):
    - (a) For ACTIVE sessions whose current block has `due_at ≤ now` and `notified_at IS NULL`: sends a push and sets `notified_at`. Push: title `Study session`, body `Block done! Check in to keep your XP.`, url `/learn`. Use `WebPushSender.sendToUser(userId, PushPayload.of(...), 600)`, a TTL that covers the whole check-in window.
-   - (b) For ACTIVE sessions where `now > due_at + 10 min`: block → `MISSED` (0 XP), session → `PAUSED`, `next_checkin_due_at = null`. If the missed block was the last planned block, the session goes straight to `EXPIRED` with `ended_at = now`, because there is nothing left to resume. A missed block uses up one planned block: resume starts block `current_block + 1`, so a session with a missed block can never earn STUDY_COMPLETE.
+   - (b) For ACTIVE sessions where `now > due_at + 10 min` (3 min when the focus rule above applies): block → `MISSED` (0 XP), session → `PAUSED`, `next_checkin_due_at = null`. If the missed block was the last planned block, the session goes straight to `EXPIRED` with `ended_at = now`, because there is nothing left to resume. A missed block uses up one planned block: resume starts block `current_block + 1`, so a session with a missed block can never earn STUDY_COMPLETE.
    - (c) For PAUSED sessions paused more than 30 min: → `EXPIRED`, `ended_at = now`.
    - (d) (V50) For ACTIVE sessions with `user_paused_at` more than 30 min ago: settle the running block as of `user_paused_at`, then → `ENDED`. Steps (a) and (b) skip sessions with `user_paused_at` set.
 4. **Resume** (PAUSED only): a new block starts now, and the session becomes ACTIVE.
@@ -644,7 +644,8 @@ The card is built from `features/learn/sessions/`:
   - Countdown to the current block's `dueAt`, corrected with `serverNow`. Reuse `formatMs` and `pomodoroColor` from `lib/pomodoro.ts` and `playRingtone` from `lib/ringtones.ts` for the block-end sound.
   - A block progress row and a big "Check in" button, enabled during the check-in window and pulsing then.
   - Paused state with a Resume button, task checkboxes (PATCH), and an End session button with confirm.
-  - (2026-10-13) A Pause button during focus and break. While paused, the ring freezes and shows when the session will end on its own, and the main button becomes Resume. The missed-check-in hold is labelled "On hold".
+  - (2026-10-20) Pause is now a tap on the timer ring (hover dims the ring and shows a pause symbol, and it shows Play while paused); the Pause button is gone. A session dock follows the student around the app: a card under the sidebar nav on desktop and a collapsible strip under the header on phones, hidden on /learn. Check-in is blue everywhere.
+  - (2026-10-13, superseded) A Pause button during focus and break. While paused, the ring freezes and shows when the session will end on its own, and the main button becomes Resume. The missed-check-in hold is labelled "On hold".
   - (2026-10-13) Tasks can be edited inline: tap the text to rename it, X removes it (hidden once it earned XP), and an add row sits at the bottom.
   - (2026-10-13) Whenever an open session closes (completed, ended, expired), `StudySessionsPanel` opens `SessionSummaryModal`, which reads `GET /study-sessions/{id}/recap`. It has three slides:
     1. A random line from `sessionCheers.json`, plus the time studied and the blocks checked in.

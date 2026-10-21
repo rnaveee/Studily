@@ -4,6 +4,7 @@ import com.rnave.studily.config.PageResponse;
 import com.rnave.studily.progress.ProgressDtos.ProgressDelta;
 import com.rnave.studily.progress.StreakRestoreService;
 import com.rnave.studily.studysession.StudySessionDtos.AddTaskRequest;
+import com.rnave.studily.studysession.StudySessionDtos.FocusRequest;
 import com.rnave.studily.studysession.StudySessionDtos.StartSessionRequest;
 import com.rnave.studily.studysession.StudySessionDtos.StreakRestoreResult;
 import com.rnave.studily.studysession.StudySessionDtos.StreakWeekDto;
@@ -77,6 +78,11 @@ public class StudySessionController {
     @PostMapping("/{id}/pause")
     public StudySessionDto pause(@PathVariable Long id) {
         return studySessionService.pause(id);
+    }
+
+    @PostMapping("/{id}/focus")
+    public StudySessionDto focus(@PathVariable Long id, @Valid @RequestBody FocusRequest req) {
+        return studySessionService.focus(id, req.focused());
     }
 
     @PostMapping("/{id}/resume")

@@ -383,6 +383,17 @@ textarea.input { resize: vertical; }
   border-color: var(--accent-2);
   box-shadow: var(--btn-shadow-hi);
 }
+.btn-checkin {
+  background: var(--blue-vivid);
+  color: #ffffff;
+  border-color: var(--blue-vivid);
+  box-shadow: var(--btn-shadow);
+}
+.btn-checkin:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--blue-vivid) 88%, #000);
+  border-color: color-mix(in srgb, var(--blue-vivid) 88%, #000);
+  box-shadow: var(--btn-shadow-hi);
+}
 
 .btn-ghost {
   background: var(--surface);
@@ -895,9 +906,9 @@ textarea.input { resize: vertical; }
 .chest-art-still .chest-art-ring { display: none; }
 
 @keyframes checkin-pulse {
-  0%   { box-shadow: var(--btn-shadow), 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
-  70%  { box-shadow: var(--btn-shadow), 0 0 0 12px color-mix(in srgb, var(--accent) 0%, transparent); }
-  100% { box-shadow: var(--btn-shadow), 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
+  0%   { box-shadow: var(--btn-shadow), 0 0 0 0 color-mix(in srgb, var(--blue-vivid) 55%, transparent); }
+  70%  { box-shadow: var(--btn-shadow), 0 0 0 12px color-mix(in srgb, var(--blue-vivid) 0%, transparent); }
+  100% { box-shadow: var(--btn-shadow), 0 0 0 0 color-mix(in srgb, var(--blue-vivid) 0%, transparent); }
 }
 .checkin-pulse { animation: checkin-pulse 1.6s ease-out infinite; }
 
