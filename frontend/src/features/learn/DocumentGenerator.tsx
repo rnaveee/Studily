@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Sparkles } from "lucide-react";
+import { ClipboardType, Loader2, Sparkles } from "lucide-react";
 import ParseDropzone from "../courses/ParseDropzone";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
@@ -18,10 +18,14 @@ export default function DocumentGenerator({
   setId,
   onGenerated,
   onCancel,
+  emptyAction,
+  allowText,
 }: {
   setId?: number;
   onGenerated: (deck: GeneratedDeck) => void;
   onCancel?: () => void;
+  emptyAction?: { onClick: () => void; disabled: boolean; pending?: boolean };
+  allowText?: boolean;
 }) {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -29,6 +33,8 @@ export default function DocumentGenerator({
   const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [seconds, setSeconds] = useState(0);
+  const [showText, setShowText] = useState(false);
+  const [text, setText] = useState("");
 
   const generate = useMutation({
     mutationFn: () => {
@@ -51,10 +57,11 @@ export default function DocumentGenerator({
   }, [generate.isPending]);
 
   const a = availability.data;
-  if (availability.isLoading) {
+  const unavailable = !availability.isLoading && !a?.enabled;
+  if (availability.isLoading && !emptyAction) {
     return <p className="text-[12px] text-fg-3">Loading…</p>;
   }
-  if (!a?.enabled) {
+  if (unavailable && !emptyAction) {
     return (
       <p className="rounded-lg px-3 py-2.5 text-[12px] text-fg-2" style={{ background: "var(--surface-hi)" }}>
         Making cards from documents isn't available right now.
@@ -63,11 +70,30 @@ export default function DocumentGenerator({
   }
 
   const verified = !!user?.emailVerified;
-  const blocked = genBlocked(a);
-  const quota = genQuotaText(a);
-  const overQuota = files.length > a.remaining;
+  const blocked = a ? genBlocked(a) : false;
+  const quota = a ? genQuotaText(a) : null;
+  const overQuota = a ? files.length > a.remaining : false;
   const stage = [...STAGES].reverse().find(([at]) => seconds >= at)?.[1] ?? STAGES[0][1];
-  const disabled = files.length === 0 || generate.isPending || blocked || !verified || overQuota;
+  const emptyMode = !!emptyAction && files.length === 0;
+  const disabled = emptyMode
+    ? emptyAction.disabled || !!emptyAction.pending
+    : files.length === 0 || generate.isPending || blocked || !verified || overQuota || !a?.enabled;
+  const atLimit = files.length >= DOCUMENT_RULES.maxFiles;
+
+  function addText() {
+    const body = text.trim();
+    if (!body) return;
+    if (atLimit) {
+      setError(`Add up to ${DOCUMENT_RULES.maxFiles} files at a time.`);
+      return;
+    }
+    setError(null);
+    let name = "Pasted notes.txt";
+    for (let n = 2; files.some((f) => f.name === name); n++) name = `Pasted notes ${n}.txt`;
+    setFiles([...files, new File([body], name, { type: "text/plain" })]);
+    setText("");
+    setShowText(false);
+  }
 
   return (
     <div className="space-y-3">
@@ -82,20 +108,63 @@ export default function DocumentGenerator({
           <p className="text-[13px] font-medium text-fg">{stage}</p>
           <p className="text-[12px] text-fg-3">This usually takes 10 to 40 seconds.</p>
         </div>
+      ) : unavailable ? (
+        <p className="rounded-lg px-3 py-2.5 text-[12px] text-fg-2" style={{ background: "var(--surface-hi)" }}>
+          Making cards from documents isn't available right now.
+        </p>
       ) : (
-        <ParseDropzone
-          files={files}
-          onChange={setFiles}
-          onError={setError}
-          compact
-          label="Drop lecture slides, notes or handouts here"
-          rules={DOCUMENT_RULES}
-        />
+        <>
+          <ParseDropzone
+            files={files}
+            onChange={setFiles}
+            onError={setError}
+            compact
+            label="Drop lecture slides, notes or handouts here"
+            rules={DOCUMENT_RULES}
+          />
+          {allowText && !showText && (
+            <button
+              type="button"
+              onClick={() => setShowText(true)}
+              className="flex items-center gap-1.5 text-[12px] font-medium text-accent hover:underline"
+            >
+              <ClipboardType size={12} />
+              Paste text instead
+            </button>
+          )}
+          {allowText && showText && (
+            <div className="space-y-2">
+              <textarea
+                className="input"
+                rows={5}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Paste your notes here"
+              />
+              <div className="flex justify-end gap-2">
+                <button type="button" onClick={() => setShowText(false)} className="btn btn-ghost">
+                  Hide
+                </button>
+                <button
+                  type="button"
+                  onClick={addText}
+                  disabled={!text.trim() || atLimit}
+                  className="btn btn-ghost"
+                >
+                  Add as document
+                </button>
+              </div>
+              {atLimit && (
+                <p className="text-[11px] text-red">Add up to {DOCUMENT_RULES.maxFiles} files at a time.</p>
+              )}
+            </div>
+          )}
+        </>
       )}
 
-      {!verified && <p className="text-[12px] text-fg-3">Verify your email to unlock this.</p>}
+      {!unavailable && !verified && <p className="text-[12px] text-fg-3">Verify your email to unlock this.</p>}
       {quota && <p className={`text-[11px] ${blocked ? "text-red" : "text-fg-3"}`}>{quota}</p>}
-      {overQuota && !blocked && (
+      {a && overQuota && !blocked && (
         <p className="text-[11px] text-red">
           You have {a.remaining} {a.remaining === 1 ? "document" : "documents"} left this month. Remove some files.
         </p>
@@ -113,8 +182,13 @@ export default function DocumentGenerator({
             Cancel
           </button>
         )}
-        <button type="button" onClick={() => generate.mutate()} disabled={disabled} className="btn btn-primary">
-          <Sparkles size={13} />
+        <button
+          type="button"
+          onClick={() => (emptyMode ? emptyAction.onClick() : generate.mutate())}
+          disabled={disabled}
+          className="btn btn-primary"
+        >
+          {!emptyMode && <Sparkles size={13} />}
           {generate.isPending ? "Making cards…" : "Make flashcards"}
         </button>
       </div>

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ClipboardPaste, Layers, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, ClipboardPaste, Layers, Pencil, Plus, Trash2 } from "lucide-react";
 import { api } from "../../lib/api";
 import BackButton from "../../components/BackButton";
 import { useRequireAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
 import type { Course, FlashcardSet } from "../../types";
 import NewFlashcardSetModal from "./NewFlashcardSetModal";
+import EditSetModal from "./EditSetModal";
 import { VisibilityBadge } from "./visibility";
 import { SkeletonList } from "../../components/Skeleton";
 import QueryError from "../../components/QueryError";
@@ -16,6 +17,7 @@ export default function FlashcardsPage() {
   const qc = useQueryClient();
   const requireAuth = useRequireAuth();
   const confirm = useConfirm();
+  const [editingSet, setEditingSet] = useState<FlashcardSet | null>(null);
   const [showCreate, setShowCreate] = useState<"blank" | "import" | null>(null);
 
   const sets = useQuery({
@@ -43,7 +45,15 @@ export default function FlashcardsPage() {
             <p className="mt-1 text-[13px] text-fg-3">Create sets and study them.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+          <button
+            type="button"
+            onClick={() => requireAuth(() => setShowCreate("import"))}
+            className="inline-flex items-center gap-1 text-[13px] font-medium text-fg-3 transition-colors hover:text-fg"
+          >
+            Use Quizlet?
+            <ArrowRight size={13} />
+          </button>
           <button onClick={() => requireAuth(() => setShowCreate("import"))} className="btn btn-ghost">
             <ClipboardPaste size={13} />
             Import
@@ -101,21 +111,30 @@ export default function FlashcardsPage() {
                     )}
                   </div>
                 </Link>
-                <button
-                  onClick={async () => {
-                    const ok = await confirm({
-                      title: `Delete ${s.title}?`,
-                      message: `This permanently removes the set and its ${s.cards.length} ${s.cards.length === 1 ? "card" : "cards"}.`,
-                      confirmLabel: "Delete set",
-                      danger: true,
-                    });
-                    if (ok) remove.mutate(s.id);
-                  }}
-                  className="shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
-                  aria-label="Delete set"
-                >
-                  <Trash2 size={15} />
-                </button>
+                <div className="flex shrink-0 items-center">
+                  <button
+                    onClick={() => requireAuth(() => setEditingSet(s))}
+                    className="shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+                    aria-label="Edit set"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: `Delete ${s.title}?`,
+                        message: `This permanently removes the set and its ${s.cards.length} ${s.cards.length === 1 ? "card" : "cards"}.`,
+                        confirmLabel: "Delete set",
+                        danger: true,
+                      });
+                      if (ok) remove.mutate(s.id);
+                    }}
+                    className="shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-red"
+                    aria-label="Delete set"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </li>
             );
           })}
@@ -126,6 +145,8 @@ export default function FlashcardsPage() {
           <p className="text-sm text-fg-3">You have no flashcards. Create one!</p>
         </div>
       )}
+
+      {editingSet && <EditSetModal set={editingSet} onClose={() => setEditingSet(null)} />}
 
       {showCreate && (
         <NewFlashcardSetModal importing={showCreate === "import"} onClose={() => setShowCreate(null)} />

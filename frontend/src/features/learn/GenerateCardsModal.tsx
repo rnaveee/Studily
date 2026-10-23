@@ -9,8 +9,16 @@ import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
 import type { Flashcard, FlashcardSet, FlashcardSetRequest, GeneratedDeck } from "../../types";
 
-export default function GenerateCardsModal({ set, onClose }: { set: FlashcardSet; onClose: () => void }) {
-  const [deck, setDeck] = useState<GeneratedDeck | null>(null);
+export default function GenerateCardsModal({
+  set,
+  onClose,
+  initialDeck = null,
+}: {
+  set: FlashcardSet;
+  onClose: () => void;
+  initialDeck?: GeneratedDeck | null;
+}) {
+  const [deck, setDeck] = useState<GeneratedDeck | null>(initialDeck);
   const qc = useQueryClient();
   const confirmDialog = useConfirm();
   const closeRef = useRef<(() => void) | null>(null);

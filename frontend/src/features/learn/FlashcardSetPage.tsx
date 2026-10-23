@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ClipboardPaste, FileText, ImageOff, Plus, Share2 } from "lucide-react";
+import { ImageOff, Pencil, Share2 } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { useAuth, useRequireAuth } from "../../lib/auth";
 import BackButton from "../../components/BackButton";
@@ -13,10 +13,10 @@ import LearnMode from "./LearnMode";
 import MemoryGame from "./MemoryGame";
 import SpeedMatch from "./SpeedMatch";
 import ShareSetModal from "./ShareSetModal";
-import ImportCardsModal from "./ImportCardsModal";
-import GenerateCardsModal from "./GenerateCardsModal";
+import EditSetModal from "./EditSetModal";
+import AddCardsPanel from "./AddCardsPanel";
 import MissingImagesModal from "./MissingImagesModal";
-import CardEditor, { cardIsComplete, EMPTY_CARD, type CardDraft } from "./CardEditor";
+import CardEditor, { cardIsComplete, type CardDraft } from "./CardEditor";
 import Modal, { useModalClose } from "../../components/Modal";
 import SetModePicker, { useStudyMode } from "./SetModePicker";
 import { VisibilityBadge } from "./visibility";
@@ -32,12 +32,9 @@ export default function FlashcardSetPage() {
   const requireAuth = useRequireAuth();
   const [mode, setMode] = useStudyMode();
 
-  const [draft, setDraft] = useState<CardDraft>(EMPTY_CARD);
-  const [draftUploading, setDraftUploading] = useState(false);
   const [editing, setEditing] = useState<number | null>(null);
   const [sharing, setSharing] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [editingSet, setEditingSet] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const addImagesOnOpen = !!(location.state as { addImages?: boolean } | null)?.addImages;
@@ -97,15 +94,13 @@ export default function FlashcardSetPage() {
   const missing = count - studyable.length;
   const viewerKey = user ? String(user.id) : "guest";
 
-  function addCard() {
-    if (!cardIsComplete(draft)) return;
+  function addCard(card: CardDraft) {
     update.mutate({
       title: data.title,
       description: data.description,
       courseId: data.courseId,
-      cards: [...data.cards, { ...draft, front: draft.front.trim(), back: draft.back.trim() }],
+      cards: [...data.cards, { ...card, front: card.front.trim(), back: card.back.trim() }],
     });
-    setDraft(EMPTY_CARD);
   }
 
   function saveCard(index: number, card: CardDraft, onDone: () => void) {
@@ -150,17 +145,21 @@ export default function FlashcardSetPage() {
 
   return (
     <div className="space-y-6 stagger-children">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
         <BackButton fallback="/learn/flashcards" />
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-semibold text-fg">{data.title}</h1>
-          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-fg-3">
-            <span>
+        <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
+          <h1 className="break-words text-xl font-semibold text-fg">
+            {data.title}
+            <span className="ml-2 whitespace-nowrap text-[13px] font-medium text-fg-3">
               {count} {count === 1 ? "card" : "cards"}
-              {data.description && ` · ${data.description}`}
             </span>
-            <VisibilityBadge visibility={data.visibility} />
-          </p>
+          </h1>
+          {(data.description || data.visibility !== "PRIVATE") && (
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-fg-3">
+              {data.description && <span>{data.description}</span>}
+              <VisibilityBadge visibility={data.visibility} />
+            </p>
+          )}
           {data.copiedFrom && (
             <p className="mt-0.5 text-[12px] text-fg-3">
               Copied from{" "}
@@ -179,13 +178,24 @@ export default function FlashcardSetPage() {
             </p>
           )}
         </div>
-        <button
-          onClick={() => requireAuth(() => setSharing(true))}
-          className="btn btn-ghost shrink-0"
-        >
-          <Share2 size={13} />
-          Share
-        </button>
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          <button
+            onClick={() => requireAuth(() => setEditingSet(true))}
+            className="btn btn-ghost shrink-0"
+            aria-label="Edit set"
+          >
+            <Pencil size={13} />
+            Edit
+          </button>
+          <button
+            onClick={() => requireAuth(() => setSharing(true))}
+            className="btn btn-ghost shrink-0"
+            aria-label="Share set"
+          >
+            <Share2 size={13} />
+            Share
+          </button>
+        </div>
       </div>
 
       {missing > 0 && (
@@ -218,47 +228,7 @@ export default function FlashcardSetPage() {
             onDelete={deleteCard}
             onEdit={(i) => requireAuth(() => setEditing(i))}
           />
-          <div className="card space-y-3 p-4">
-            <h2 className="text-[12px] font-semibold uppercase tracking-wide text-fg-3">Add a card</h2>
-            <p className="text-[12px] text-fg-3">Paste or drop an image into either side, or tap the picture button.</p>
-            <CardEditor
-              value={draft}
-              onChange={setDraft}
-              onUploadingChange={setDraftUploading}
-              onSubmit={addCard}
-              footer={
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => requireAuth(() => setGenerating(true))}
-                      className="btn btn-ghost"
-                    >
-                      <FileText size={13} />
-                      From a document
-                    </button>
-                    <button
-                      type="button"
-                      data-tour="quizlet-import"
-                      onClick={() => requireAuth(() => setImporting(true))}
-                      className="btn btn-ghost"
-                    >
-                      <ClipboardPaste size={13} />
-                      Import from Quizlet
-                    </button>
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={!cardIsComplete(draft) || draftUploading}
-                    className="btn btn-primary"
-                  >
-                    <Plus size={13} />
-                    Add card
-                  </button>
-                </div>
-              }
-            />
-          </div>
+          <AddCardsPanel set={data} onAddCard={addCard} onNeedImages={() => setFilling(true)} />
         </>
       )}
 
@@ -307,14 +277,13 @@ export default function FlashcardSetPage() {
       )}
 
       {sharing && <ShareSetModal set={data} onClose={() => setSharing(false)} />}
-      {importing && (
-        <ImportCardsModal
+      {editingSet && (
+        <EditSetModal
           set={data}
-          onClose={() => setImporting(false)}
-          onAdded={(needImages) => needImages > 0 && setFilling(true)}
+          onClose={() => setEditingSet(false)}
+          onDeleted={() => navigate("/learn/flashcards", { replace: true })}
         />
       )}
-      {generating && <GenerateCardsModal set={data} onClose={() => setGenerating(false)} />}
       {filling && missing > 0 && <MissingImagesModal cards={data.cards} onClose={saveFilled} />}
       {editing !== null && data.cards[editing] && (
         <Modal onClose={() => setEditing(null)} title="Edit card" size="md">

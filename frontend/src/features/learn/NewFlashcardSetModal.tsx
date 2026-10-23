@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { ClipboardPaste, FileText } from "lucide-react";
 import Modal from "../../components/Modal";
 import SegmentedToggle from "../../components/SegmentedToggle";
 import { VISIBILITY_HINT, VISIBILITY_OPTIONS } from "./visibility";
@@ -35,7 +34,6 @@ export default function NewFlashcardSetModal({
 }) {
   const [title, setTitle] = useState("");
   const [importing, setImporting] = useState(startImporting);
-  const [fromDocs, setFromDocs] = useState(false);
   const [deck, setDeck] = useState<GeneratedDeck | null>(null);
   const confirmDialog = useConfirm();
   const [parsed, setParsed] = useState<ParseResult>(NO_CARDS);
@@ -184,18 +182,16 @@ export default function NewFlashcardSetModal({
   return (
     <Modal
       onClose={onClose}
-      size={importing || fromDocs ? "lg" : "sm"}
+      size="lg"
       title={
         <div>
           <h2 className="text-[15px] font-semibold text-fg">
-            {importing ? "Import from Quizlet" : fromDocs ? "Make cards from documents" : "New flashcard set"}
+            {importing ? "Import from Quizlet" : "New flashcard set"}
           </h2>
           <p className="mt-1 text-[13px] text-fg-2">
             {importing
               ? "Paste your Quizlet export and give the new set a title."
-              : fromDocs
-                ? "Upload lecture slides or notes and we'll write the cards. You check them before anything is saved."
-                : "Give it a title and, optionally, a course."}
+              : "Give it a title and, optionally, a course."}
           </p>
         </div>
       }
@@ -207,7 +203,7 @@ export default function NewFlashcardSetModal({
             className="input"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder={fromDocs ? "Leave blank to use one from your file" : "e.g. Bio 101 midterm"}
+            placeholder="e.g. Bio 101 midterm"
             maxLength={MAX_TITLE_LENGTH}
             autoFocus
           />
@@ -259,29 +255,7 @@ export default function NewFlashcardSetModal({
           </p>
         </div>
 
-        {fromDocs ? (
-          <div>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <span className="field-label" style={{ marginBottom: 0 }}>
-                Documents
-              </span>
-              <button
-                type="button"
-                onClick={() => setFromDocs(false)}
-                className="text-[12px] text-fg-3 transition-colors hover:text-fg"
-              >
-                Start empty instead
-              </button>
-            </div>
-            <DocumentGenerator
-              onGenerated={(generated) => {
-                setDeck(generated);
-                if (!title.trim()) setTitle(generated.title.slice(0, MAX_TITLE_LENGTH));
-              }}
-              onCancel={onClose}
-            />
-          </div>
-        ) : importing ? (
+        {importing ? (
           <div>
             <div className="mb-2 flex items-center justify-between gap-2">
               <span className="field-label" style={{ marginBottom: 0 }}>
@@ -307,27 +281,24 @@ export default function NewFlashcardSetModal({
             />
           </div>
         ) : (
-          <div className="flex flex-col items-start gap-2">
-            <button
-              type="button"
-              onClick={() => setFromDocs(true)}
-              className="flex items-center gap-1.5 text-[13px] font-medium text-accent hover:underline"
-            >
-              <FileText size={13} />
-              Make cards from slides or notes
-            </button>
-            <button
-              type="button"
-              onClick={() => setImporting(true)}
-              className="flex items-center gap-1.5 text-[13px] font-medium text-accent hover:underline"
-            >
-              <ClipboardPaste size={13} />
-              Import cards from Quizlet
-            </button>
+          <div>
+            <p className="text-[13px] font-medium text-fg">Create your flashcards from your notes and lecture slides</p>
+            <p className="mb-2 mt-0.5 text-[12px] text-fg-3">
+              Optional. Add slides, notes or handouts and we'll write the cards; you check them first.
+            </p>
+            <DocumentGenerator
+              allowText
+              emptyAction={{ onClick: handleCreate, disabled: !canCreate, pending: create.isPending }}
+              onGenerated={(generated) => {
+                setDeck(generated);
+                if (!title.trim()) setTitle(generated.title.slice(0, MAX_TITLE_LENGTH));
+              }}
+              onCancel={onClose}
+            />
           </div>
         )}
 
-        {!fromDocs && (
+        {importing && (
           <div className="flex justify-end gap-2">
             <button onClick={onClose} className="btn btn-ghost">
               Cancel

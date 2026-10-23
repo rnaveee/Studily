@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
@@ -889,7 +890,7 @@ function MessageBubble({
   const [sheetOpen, setSheetOpen] = useState(false);
   const hold = useLongPress(isTouch ? () => setSheetOpen(true) : null);
   const selectable = isTouch ? "select-none" : "select-text";
-  const [menuSide, setMenuSide] = useState<"left" | "right">("left");
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
   const dotsRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [editDraft, setEditDraft] = useState(message.body);
@@ -906,6 +907,7 @@ function MessageBubble({
     const dots = dotsRef.current;
     if (!menuOpen || !menu || !dots) return;
     const width = menu.offsetWidth;
+    const height = menu.offsetHeight;
     const rect = dots.getBoundingClientRect();
     const fits = {
       left: rect.left - MENU_GAP - width >= MENU_GAP,
@@ -913,10 +915,32 @@ function MessageBubble({
     };
     const preferred = mine ? "left" : "right";
     const fallback = mine ? "right" : "left";
-    if (fits[preferred]) setMenuSide(preferred);
-    else if (fits[fallback]) setMenuSide(fallback);
-    else setMenuSide(rect.left > window.innerWidth - rect.right ? "left" : "right");
+    let side: "left" | "right";
+    if (fits[preferred]) side = preferred;
+    else if (fits[fallback]) side = fallback;
+    else side = rect.left > window.innerWidth - rect.right ? "left" : "right";
+    const left = side === "left" ? rect.left - 4 - width : rect.right + 4;
+    const centered = rect.top + rect.height / 2 - height / 2;
+    const top = Math.max(MENU_GAP, Math.min(centered, window.innerHeight - height - MENU_GAP));
+    setMenuPos({ top, left });
   }, [menuOpen, mine]);
+
+  useEffect(() => {
+    if (!menuOpen) {
+      setMenuPos(null);
+      return;
+    }
+    const onScroll = (e: Event) => {
+      if (e.target instanceof Node && menuRef.current?.contains(e.target)) return;
+      onCloseMenu();
+    };
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onCloseMenu);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onCloseMenu);
+    };
+  }, [menuOpen, onCloseMenu]);
 
   if (editing) {
     return (
@@ -1031,17 +1055,18 @@ function MessageBubble({
           >
             <MoreHorizontal size={14} />
           </button>
-          {menuOpen && (
-            <div
-              ref={menuRef}
-              className={`popover absolute top-1/2 z-50 w-44 -translate-y-1/2 overflow-hidden py-1 animate-in ${
-                menuSide === "left" ? "right-full mr-1" : "left-full ml-1"
-              }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MessageActions message={message} {...actions} onPick={onCloseMenu} compact />
-            </div>
-          )}
+          {menuOpen &&
+            createPortal(
+              <div
+                ref={menuRef}
+                className="popover fixed z-[60] w-44 overflow-hidden py-1 animate-in"
+                style={{ top: menuPos?.top ?? 0, left: menuPos?.left ?? 0, visibility: menuPos ? "visible" : "hidden" }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MessageActions message={message} {...actions} onPick={onCloseMenu} compact />
+              </div>,
+              document.body,
+            )}
         </div>
       )}
 

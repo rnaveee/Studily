@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
+
 interface SegmentedToggleProps<T extends string> {
-  options: { value: T; label: string }[];
+  options: { value: T; label: ReactNode }[];
   value: T;
   onChange: (value: T) => void;
   className?: string;
@@ -21,7 +23,7 @@ export default function SegmentedToggle<T extends string>({
         disabled ? "pointer-events-none opacity-50" : ""
       } ${className}`}
       style={{
-        gridTemplateColumns: `repeat(${options.length}, 1fr)`,
+        gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))`,
         boxShadow: "var(--control-inset)",
       }}
     >
@@ -43,7 +45,7 @@ export default function SegmentedToggle<T extends string>({
           type="button"
           disabled={disabled}
           onClick={() => onChange(o.value)}
-          className={`relative z-10 rounded-md px-4 py-1.5 text-[13px] font-medium transition-colors ${
+          className={`relative z-10 min-w-0 rounded-md px-2 py-1.5 text-[13px] font-medium transition-colors sm:px-4 ${
             o.value === value ? "text-accent" : "text-fg-3 hover:text-fg"
           }`}
         >

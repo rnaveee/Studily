@@ -126,16 +126,11 @@ export default function FlashcardViewer({ cards, color, setId, viewerKey, onDele
     );
   }
 
-  const header = (
-    <div className="flex items-center justify-between gap-3">
-      <span className="min-w-0 truncate text-[12px] text-fg-3">
-        {tracking && track.round > 1 && !roundDone && `Round ${track.round} · ${track.deck.length} to review`}
-      </span>
-      <label className="flex shrink-0 items-center gap-2 text-[12px] font-medium text-fg-2">
-        Track progress
-        <Toggle checked={tracking} onChange={setTrackingPref} />
-      </label>
-    </div>
+  const trackToggle = (
+    <label className="flex shrink-0 items-center gap-2 pl-1 text-[12px] font-medium text-fg-2">
+      Track progress
+      <Toggle checked={tracking} onChange={setTrackingPref} />
+    </label>
   );
 
   if (roundDone) {
@@ -143,7 +138,7 @@ export default function FlashcardViewer({ cards, color, setId, viewerKey, onDele
     const knownOverall = count - wrong;
     return (
       <div className="space-y-3" data-tour="flashcard-viewer">
-        {header}
+        <div className="flex justify-end">{trackToggle}</div>
         <div className="card p-6 text-center animate-in sm:p-8">
           {allKnown ? (
             <PartyPopper className="mx-auto mb-2" size={28} strokeWidth={1.5} style={{ color }} />
@@ -219,25 +214,12 @@ export default function FlashcardViewer({ cards, color, setId, viewerKey, onDele
           <X size={14} />
         </button>
       )}
+      {trackToggle}
     </>
   );
 
   return (
     <div className="space-y-3" data-tour="flashcard-viewer">
-      {header}
-      {tracking && (
-        <div
-          className="flex h-1.5 overflow-hidden rounded-full"
-          style={{ background: "var(--surface-hi)" }}
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={track.deck.length}
-          aria-valuenow={track.pos}
-        >
-          <div className="transition-all duration-300" style={{ width: `${(right / track.deck.length) * 100}%`, background: "var(--green)" }} />
-          <div className="transition-all duration-300" style={{ width: `${(wrong / track.deck.length) * 100}%`, background: "var(--red)" }} />
-        </div>
-      )}
       <button
         onClick={() => setFlipped((f) => !f)}
         className="card flex min-h-48 w-full items-center justify-center p-8 text-center transition-colors hover:bg-surface-hi"
@@ -254,6 +236,26 @@ export default function FlashcardViewer({ cards, color, setId, viewerKey, onDele
           )}
         </div>
       </button>
+      {tracking && (
+        <div className="flex items-center gap-3">
+          <div
+            className="flex h-1.5 flex-1 overflow-hidden rounded-full"
+            style={{ background: "var(--surface-hi)" }}
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={track.deck.length}
+            aria-valuenow={track.pos}
+          >
+            <div className="transition-all duration-300" style={{ width: `${(right / track.deck.length) * 100}%`, background: "var(--green)" }} />
+            <div className="transition-all duration-300" style={{ width: `${(wrong / track.deck.length) * 100}%`, background: "var(--red)" }} />
+          </div>
+          {track.round > 1 && (
+            <span className="shrink-0 text-[12px] text-fg-3">
+              Round {track.round} · {track.deck.length} to review
+            </span>
+          )}
+        </div>
+      )}
       {tracking ? (
         <div className="flex items-center justify-between gap-2">
           <button
@@ -266,7 +268,7 @@ export default function FlashcardViewer({ cards, color, setId, viewerKey, onDele
             <X size={18} strokeWidth={2.5} />
             <span className="tabular-nums">{wrong}</span>
           </button>
-          <div className="flex min-w-0 items-center gap-1">
+          <div className="flex min-w-0 flex-wrap items-center justify-center gap-1">
             <span className="px-1 text-[12px] text-fg-3 tabular-nums">
               {track.pos + 1} / {track.deck.length}
             </span>
@@ -292,7 +294,7 @@ export default function FlashcardViewer({ cards, color, setId, viewerKey, onDele
             <ChevronLeft size={13} />
             Prev
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center justify-center gap-2">
             <span className="text-[12px] text-fg-3 tabular-nums">
               {safeIndex + 1} / {count}
             </span>

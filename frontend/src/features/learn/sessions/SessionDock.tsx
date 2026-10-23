@@ -101,6 +101,9 @@ function SidebarSession({ session, receivedAt }: { session: StudySessionDto; rec
       <div className="mt-3 max-h-44 overflow-y-auto border-t border-line pt-2">
         <TaskList {...c.tasks} />
       </div>
+      <Link to="/learn" className="btn btn-ghost mt-3 w-full">
+        Open Study page
+      </Link>
     </div>
   );
 }

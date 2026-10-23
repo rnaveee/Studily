@@ -110,7 +110,7 @@ export default function TodosPage() {
           <div>
             <h1 className="text-xl font-semibold text-fg">To-Do List</h1>
             <p className="mt-1 text-[13px] text-fg-3">
-              Everything on your plate, sorted by priority and due date.
+              Tasks for you to keep track of.
             </p>
           </div>
         </div>

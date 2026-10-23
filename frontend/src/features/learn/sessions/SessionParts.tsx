@@ -297,7 +297,7 @@ export function TaskList({
               className="input"
               value={draft}
               maxLength={MAX_TASK_LEN}
-              placeholder={tasks.length === 0 ? "Add a task to this session" : "Add another task"}
+              placeholder={tasks.length === 0 ? "Add a task" : "Add another task"}
               aria-label="New task"
               enterKeyHint="enter"
               onChange={(e) => setDraft(e.target.value)}
@@ -352,8 +352,8 @@ export function PrimaryAction({
         {!compact && (
           <p className="text-[12.5px] leading-snug text-fg-2">
             {phase === "held"
-              ? "Paused. Resume within 30 minutes or the session ends on its own. Time studied before the pause still counts."
-              : "You missed a check-in, so this session is on hold. Resume within 30 minutes or it ends on its own."}
+              ? "Paused. Session will end on it's own in 30 minutes."
+              : "You missed a check-in. Resume your study session."}
           </p>
         )}
         <button onClick={onResume} disabled={busy} className="btn btn-primary btn-lg w-full" style={size}>
@@ -368,9 +368,9 @@ export function PrimaryAction({
       {!compact && (
         <p className="text-[12.5px] leading-snug text-fg-2">
           {phase === "break"
-            ? "Stretch, refill your water. The next block starts on its own."
+            ? "Break time! The next block will start on its own."
             : phase === "focus"
-              ? "Stay on task. Check in when the block ends to bank its XP."
+              ? "Lock in."
               : phase === "expired"
                 ? "The check-in window closed, so this block didn't count."
                 : "Block done! Check in now to keep its XP."}
@@ -400,7 +400,7 @@ export function PrimaryAction({
         ) : (
           <>
             <Clock size={15} />
-            Check-in opens in {formatMs(untilCheckin)}
+            Check-in: {formatMs(untilCheckin)}
           </>
         )}
       </button>

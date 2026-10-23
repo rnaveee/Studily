@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import Modal from "../../components/Modal";
 import { api } from "../../lib/api";
 import { toast } from "../../lib/toast";
 import QuizletPastePanel from "./QuizletPastePanel";
@@ -17,17 +16,16 @@ function plural(n: number, word: string) {
   return `${n} ${n === 1 ? word : `${word}s`}`;
 }
 
-export default function ImportCardsModal({
+export default function ImportCardsPanel({
   set,
-  onClose,
   onAdded,
 }: {
   set: FlashcardSet;
-  onClose: () => void;
   onAdded?: (needImages: number) => void;
 }) {
   const qc = useQueryClient();
   const [parsed, setParsed] = useState<ParseResult>(NO_CARDS);
+  const [pasteKey, setPasteKey] = useState(0);
 
   const existing = useMemo(() => new Set(set.cards.map(cardKey)), [set.cards]);
   const fresh = parsed.cards.filter((card) => !existing.has(cardKey(card)));
@@ -46,7 +44,8 @@ export default function ImportCardsModal({
         `Added ${plural(added.length, "card")}${needImages > 0 ? `. ${needImages} ${needImages === 1 ? "needs" : "need"} an image` : ""}`,
       );
       onAdded?.(needImages);
-      onClose();
+      setParsed(NO_CARDS);
+      setPasteKey((k) => k + 1);
     },
     onError: () => toast.error("Couldn't add those cards"),
   });
@@ -76,23 +75,10 @@ export default function ImportCardsModal({
   }
 
   return (
-    <Modal
-      onClose={onClose}
-      size="lg"
-      variant="sheet"
-      title={
-        <div>
-          <h2 className="text-[15px] font-semibold text-fg">Import from Quizlet</h2>
-          <p className="mt-1 text-[13px] text-fg-2">Add cards to {set.title}.</p>
-        </div>
-      }
-    >
-      <QuizletPastePanel onParsed={setParsed} notices={notices} autoFocus />
+    <div className="space-y-3">
+      <QuizletPastePanel key={pasteKey} onParsed={setParsed} notices={notices} />
 
-      <div className="flex justify-end gap-2">
-        <button onClick={onClose} className="btn btn-ghost">
-          Cancel
-        </button>
+      <div className="flex justify-end">
         <button
           onClick={handleAdd}
           disabled={adding.length === 0 || save.isPending}
@@ -101,6 +87,6 @@ export default function ImportCardsModal({
           {adding.length > 0 ? `Add ${plural(adding.length, "card")}` : "Add cards"}
         </button>
       </div>
-    </Modal>
+    </div>
   );
 }
