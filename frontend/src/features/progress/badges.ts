@@ -97,4 +97,5 @@ export const CHEST_SOURCE_LABEL: Record<ChestSource, string> = {
   SESSION: "Study session bonus",
   FLASHCARD: "Flashcard bonus",
   WELCOME: "Welcome gift",
+  SURVEY: "Survey reward",
 };

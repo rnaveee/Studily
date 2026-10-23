@@ -23,6 +23,7 @@ import type {
   NotificationPrefs,
   PrivacyPrefs,
   ScheduleVisibility,
+  SurveyDto,
 } from "../../types";
 
 const PREF_ROWS: { key: keyof NotificationPrefs; label: string; hint: string }[] = [
@@ -197,12 +198,53 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      <FeedbackSection />
+
       <IntegrationsSection />
 
       <AccountSection />
 
       <AdminSection />
     </div>
+  );
+}
+
+function FeedbackSection() {
+  const { guest } = useAuth();
+  const surveyQ = useQuery({
+    queryKey: ["survey"],
+    queryFn: () => api.get<SurveyDto>("/survey"),
+    enabled: !guest,
+  });
+  const survey = surveyQ.data;
+  if (guest || !survey || (!survey.open && !survey.completed)) return null;
+
+  return (
+    <>
+      <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
+        Feedback
+      </h2>
+
+      <div className="card mt-3">
+        <div className="flex items-center justify-between gap-4 p-4">
+          <div>
+            <div className="text-[14px] font-medium text-fg">
+              {survey.completed ? "Thanks for your feedback" : "Give feedback"}
+            </div>
+            <div className="mt-0.5 text-[12px] text-fg-3">
+              {survey.completed
+                ? "You answered the survey and earned the Feedback badge"
+                : "A 3 minute survey that earns a diamond chest and a badge"}
+            </div>
+          </div>
+          {!survey.completed && (
+            <Link to="/survey" className="btn btn-ghost shrink-0">
+              Start
+            </Link>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
 

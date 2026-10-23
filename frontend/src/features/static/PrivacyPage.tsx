@@ -36,6 +36,14 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
+      <Section title="Feedback surveys">
+        <p>
+          If you answer a Studily survey, your answers are tied to your account, are used only to
+          improve Studily, and are deleted when you delete your account. If you say we can email you
+          a follow-up question, we may use your email for that.
+        </p>
+      </Section>
+
       <Section title="Future AI features">
         <p>
           In the future, Studily plans to add AI-powered study assistance. If you upload documents

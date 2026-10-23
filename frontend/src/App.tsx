@@ -42,6 +42,7 @@ import SharedSetPage from "./features/learn/SharedSetPage";
 import AiChatPage from "./features/learn/AiChatPage";
 import PomodoroPage from "./features/learn/PomodoroPage";
 import SettingsPage from "./features/settings/SettingsPage";
+import SurveyPage from "./features/survey/SurveyPage";
 import TodosPage from "./features/todos/TodosPage";
 import BadgesPage from "./features/progress/BadgesPage";
 import SessionHistoryPage from "./features/learn/sessions/SessionHistoryPage";
@@ -151,6 +152,7 @@ function AppRoutes() {
         <Route path="/profile/edit" element={<ProfileEditPage />} />
         <Route path="/profile/badges" element={<BadgesPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/survey" element={<SurveyPage />} />
         <Route
           path="/admin"
           element={

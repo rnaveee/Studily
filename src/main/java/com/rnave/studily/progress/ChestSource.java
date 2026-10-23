@@ -5,5 +5,6 @@ public enum ChestSource {
     STREAK,
     SESSION,
     FLASHCARD,
-    WELCOME
+    WELCOME,
+    SURVEY
 }

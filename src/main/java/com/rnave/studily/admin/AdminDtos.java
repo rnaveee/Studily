@@ -284,4 +284,40 @@ public final class AdminDtos {
 
     public record Paged<T>(List<T> items, boolean hasMore, long total) {
     }
+
+    public record SurveyCount(String label, long count) {
+    }
+
+    public record SurveyMatrixRow(String id, String label, List<SurveyCount> counts) {
+    }
+
+    public record SurveyQuestionSummary(
+            String id,
+            int step,
+            String type,
+            String prompt,
+            long respondents,
+            List<SurveyCount> counts,
+            List<SurveyMatrixRow> matrix) {
+    }
+
+    public record SurveySummary(
+            String key,
+            long responses,
+            long eligible,
+            Double pmfAll,
+            long pmfAllBase,
+            Double pmfWeekly,
+            long pmfWeeklyBase,
+            Double nps,
+            long npsBase,
+            Double avgEase,
+            List<SurveyQuestionSummary> questions) {
+    }
+
+    public record SurveyTextAnswer(String username, Instant createdAt, String value) {
+    }
+
+    public record SurveyContact(String username, String email, Instant createdAt) {
+    }
 }

@@ -1,10 +1,11 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { toast } from "./toast";
-import type { ChestDto, ProgressDelta, ProgressDto } from "../types";
+import type { BadgeDto, ChestDto, ProgressDelta, ProgressDto } from "../types";
 
 export type ProgressMoment =
   | { kind: "level-up"; levelBefore: number; levelAfter: number; coinsGained: number }
-  | { kind: "chests"; chests: ChestDto[] };
+  | { kind: "chests"; chests: ChestDto[] }
+  | { kind: "badges"; badges: BadgeDto[] };
 
 type Listener = (moment: ProgressMoment) => void;
 
@@ -50,10 +51,10 @@ export function invalidateProgress(qc: QueryClient) {
 export function applyDelta(
   delta: ProgressDelta | null | undefined,
   qc: QueryClient,
-  options: { toastXp?: boolean; shownBadges?: string[]; shownFlairs?: string[] } = {},
+  options: { toastXp?: boolean; shownBadges?: string[]; shownFlairs?: string[]; announceBadges?: boolean } = {},
 ) {
   if (!delta) return;
-  const { toastXp = true, shownBadges = [], shownFlairs = [] } = options;
+  const { toastXp = true, shownBadges = [], shownFlairs = [], announceBadges = false } = options;
 
   qc.setQueryData<ProgressDto>(["progress", "me"], (old) =>
     old
@@ -80,8 +81,9 @@ export function applyDelta(
     });
   }
 
-  for (const badge of delta.newBadges) {
-    if (!shownBadges.includes(badge.code)) toast.success(`New badge unlocked: ${badge.title}`);
+  const newBadges = delta.newBadges.filter((b) => !shownBadges.includes(b.code));
+  if (!announceBadges) {
+    for (const badge of newBadges) toast.success(`New badge unlocked: ${badge.title}`);
   }
 
   for (const flair of delta.newFlairs ?? []) {
@@ -89,4 +91,6 @@ export function applyDelta(
   }
 
   offerChests(delta.chests);
+
+  if (announceBadges && newBadges.length > 0) emit({ kind: "badges", badges: newBadges });
 }

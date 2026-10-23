@@ -19,6 +19,7 @@ import { prefersReducedMotion } from "../lib/motion";
 import Avatar from "./Avatar";
 import Banners from "./Banners";
 import ProgressWhatsNew from "../features/progress/ProgressWhatsNew";
+import SurveyPrompt from "../features/survey/SurveyPrompt";
 import ProgressHost from "../features/progress/ProgressHost";
 import SessionChime from "../features/learn/sessions/SessionChime";
 import SessionDock, { SessionHost } from "../features/learn/sessions/SessionDock";
@@ -308,6 +309,7 @@ export default function Layout() {
 
         <Banners />
         <ProgressWhatsNew />
+        <SurveyPrompt />
 
         <main className="flex-1 overflow-y-auto overscroll-contain">
           <div

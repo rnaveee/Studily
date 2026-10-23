@@ -12,11 +12,13 @@ import AdminUsers from "./AdminUsers";
 import AdminReports from "./AdminReports";
 import AdminDatabase from "./AdminDatabase";
 import AdminOps from "./AdminOps";
+import AdminSurvey from "./AdminSurvey";
 
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "reports", label: "Reports" },
   { key: "users", label: "Users" },
+  { key: "feedback", label: "Feedback" },
   { key: "database", label: "Database" },
   { key: "ops", label: "Ops" },
 ] as const;
@@ -111,6 +113,7 @@ export default function AdminPage() {
             {tab === "overview" && <AdminOverview />}
             {tab === "reports" && <AdminReports />}
             {tab === "users" && <AdminUsers />}
+            {tab === "feedback" && <AdminSurvey />}
             {tab === "database" && <AdminDatabase />}
             {tab === "ops" && <AdminOps />}
           </div>

@@ -4,6 +4,7 @@ import { wasAnnounced } from "../../lib/chestAnnounce";
 import { offerChests, onProgressMoment, type ProgressMoment } from "../../lib/progressDelta";
 import { useWelcomeTourStep } from "../../lib/welcomeTour";
 import { useProgressEnabled } from "./useProgress";
+import BadgeAwardModal from "./BadgeAwardModal";
 import ChestModal from "./ChestModal";
 import LevelUpModal from "./LevelUpModal";
 import type { ChestDto } from "../../types";
@@ -67,6 +68,9 @@ export default function ProgressHost() {
         onClose={done}
       />
     );
+  }
+  if (current.moment.kind === "badges") {
+    return <BadgeAwardModal key={current.id} badges={current.moment.badges} onClose={done} />;
   }
   return <ChestModal key={current.id} chests={current.moment.chests} onClose={done} />;
 }

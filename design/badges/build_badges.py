@@ -65,6 +65,7 @@ BADGES = [
     ("cosmetic_cope", "wood", "photo_cope", "COPE"),
     ("cosmetic_son", "ruby", "photo_son", "SON"),
     ("cosmetic_bruh", "bronze", "photo_bruh", "BRUH"),
+    ("feedback", "diamond", "feedback", "FEEDBACK"),
 ]
 
 FACE = "M56 300 L256 150 L456 300 L256 450 Z"
@@ -371,6 +372,46 @@ def icon_warrior():
     )
 
 
+def icon_feedback():
+    thumb = (
+        "M8 80 L16 28 C16 9 28 -1 42 1 C56 3 62 17 58 34 L54 64 L107 64 A13 13 0 0 1 107 90 "
+        "L105 90 A13 13 0 0 1 105 116 L101 116 A13 13 0 0 1 101 142 L93 142 A13 13 0 0 1 93 168 "
+        "L20 168 C8 168 0 160 0 148 L0 92 C0 84 4 80 8 80 Z"
+    )
+    mouth = "M150 238 C186 248 242 248 278 238 C274 288 246 306 214 306 C182 306 154 288 150 238 Z"
+    clips = (
+        f'<defs><clipPath id="hand"><path d="{thumb}" transform="translate(7 9)"/></clipPath>'
+        f'<clipPath id="mouth"><path d="{mouth}"/></clipPath></defs>'
+    )
+    face = (
+        '<circle cx="214" cy="226" r="104" fill="#FFE066"/>'
+        '<path d="M214 122 A104 104 0 0 1 318 226 A104 104 0 0 1 255 321 A128 128 0 0 0 214 122 Z" fill="#F5B700"/>'
+        '<ellipse cx="166" cy="170" rx="28" ry="15" fill="#FFFFFF" opacity="0.55" transform="rotate(-38 166 170)"/>'
+        f'<path d="M164 214 C168 190 198 190 202 214 M228 214 C232 190 262 190 266 214" fill="none" stroke="{OUT}" stroke-width="11" stroke-linecap="round"/>'
+        f'<path d="{mouth}" fill="{OUT}"/>'
+        '<g clip-path="url(#mouth)">'
+        '<path d="M162 228 L266 228 L266 262 C240 274 188 274 162 262 Z" fill="#FFFFFF"/>'
+        '<path d="M162 255 C188 267 240 267 266 255 L266 262 C240 274 188 274 162 262 Z" fill="#D9D6EA"/>'
+        '<path d="M162 262 C188 274 240 274 266 262" fill="none" stroke="#B9B5D3" stroke-width="3"/>'
+        '<path d="M162 262 C188 274 240 274 266 262 L266 320 L162 320 Z" fill="#FFFFFF"/>'
+        '</g>'
+        f'<path d="{mouth}" fill="none" stroke="{OUT}" stroke-width="8" stroke-linejoin="round"/>'
+        f'<circle cx="214" cy="226" r="104" fill="none" stroke="{OUT}" stroke-width="{SW + 2}"/>'
+    )
+    hand = (
+        '<g transform="translate(286 196)">'
+        f'<path d="{thumb}" fill="#E9A10C"/>'
+        f'<path d="{thumb}" fill="#FFC83D" clip-path="url(#hand)" transform="translate(-7 -9)"/>'
+        f'<g stroke="{OUT}" stroke-width="7" stroke-linecap="round">'
+        '<path d="M66 90 L104 90"/><path d="M66 116 L100 116"/><path d="M66 142 L92 142"/>'
+        '</g>'
+        '<ellipse cx="30" cy="34" rx="7" ry="15" fill="#FFFFFF" opacity="0.55" transform="rotate(8 30 34)"/>'
+        f'<path d="{thumb}" fill="none" stroke="{OUT}" stroke-width="{SW}" stroke-linejoin="round"/>'
+        '</g>'
+    )
+    return clips + face + hand
+
+
 def photo(name, x, y, w):
     path = PHOTO_DIR / f"{name}.png"
     with Image.open(path) as img:
@@ -381,7 +422,7 @@ def photo(name, x, y, w):
 ICONS = {
     "arrow": icon_arrow, "brain": icon_brain, "cards": icon_cards, "people": icon_people,
     "bicep": icon_bicep, "double_bicep": icon_double_bicep, "spark": icon_spark,
-    "comet": icon_comet, "crown": icon_crown, "warrior": icon_warrior,
+    "comet": icon_comet, "crown": icon_crown, "warrior": icon_warrior, "feedback": icon_feedback,
     "photo_doge": lambda: photo("cosmetic_doge", 127, 60, 258),
     "photo_mog": lambda: photo("cosmetic_mog", 128, 66, 249),
     "photo_chad_nugget": lambda: photo("cosmetic_chad_nugget", 140, 56, 233),

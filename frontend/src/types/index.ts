@@ -860,7 +860,7 @@ export interface PublicProgressDto {
   badgeTotal: number;
 }
 
-export type ChestSource = "LEVEL" | "STREAK" | "SESSION" | "FLASHCARD" | "WELCOME";
+export type ChestSource = "LEVEL" | "STREAK" | "SESSION" | "FLASHCARD" | "WELCOME" | "SURVEY";
 
 export type ChestTier = "WOOD" | "SILVER" | "GOLD" | "DIAMOND";
 
@@ -1159,4 +1159,80 @@ export interface AdminModerationResult {
   banned: boolean;
   suspendedUntil: string | null;
   deletedMessages: number;
+}
+
+export type SurveyQuestionType = "SINGLE" | "MULTI" | "MATRIX" | "SCALE" | "TEXT";
+
+export interface SurveyQuestion {
+  id: string;
+  step: number;
+  type: SurveyQuestionType;
+  prompt: string;
+  options: string[] | null;
+  rows: { id: string; label: string }[] | null;
+  columns: string[] | null;
+  min: number | null;
+  max: number | null;
+  maxPicks: number | null;
+  required: boolean;
+  showIf: { question: string; values: string[] } | null;
+  optionsFrom: string | null;
+}
+
+export interface SurveyDto {
+  key: string;
+  open: boolean;
+  eligible: boolean;
+  completed: boolean;
+  promptSeen: boolean;
+  definition: { key: string; steps: number; questions: SurveyQuestion[] };
+}
+
+export type SurveyAnswerValue = string | number | string[] | Record<string, string>;
+
+export interface AdminSurveyCount {
+  label: string;
+  count: number;
+}
+
+export interface AdminSurveyMatrixRow {
+  id: string;
+  label: string;
+  counts: AdminSurveyCount[];
+}
+
+export interface AdminSurveyQuestion {
+  id: string;
+  step: number;
+  type: SurveyQuestionType;
+  prompt: string;
+  respondents: number;
+  counts: AdminSurveyCount[];
+  matrix: AdminSurveyMatrixRow[] | null;
+}
+
+export interface AdminSurveySummary {
+  key: string;
+  responses: number;
+  eligible: number;
+  pmfAll: number | null;
+  pmfAllBase: number;
+  pmfWeekly: number | null;
+  pmfWeeklyBase: number;
+  nps: number | null;
+  npsBase: number;
+  avgEase: number | null;
+  questions: AdminSurveyQuestion[];
+}
+
+export interface AdminSurveyText {
+  username: string;
+  createdAt: string;
+  value: string;
+}
+
+export interface AdminSurveyContact {
+  username: string;
+  email: string;
+  createdAt: string;
 }
