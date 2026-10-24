@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, type ReactNode } from "react";
+import { Suspense, lazy, useEffect, useRef, type ReactNode } from "react";
 import { Navigate, Route, Routes, matchPath, useLocation } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
@@ -105,7 +105,10 @@ function titleFor(pathname: string): string {
 
 function TitleSync() {
   const { pathname } = useLocation();
+  const shown = useRef(pathname);
   useEffect(() => {
+    if (shown.current === pathname) return;
+    shown.current = pathname;
     document.title = titleFor(pathname);
   }, [pathname]);
   return null;
