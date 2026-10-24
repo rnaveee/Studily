@@ -106,7 +106,7 @@ function jsonLd(description) {
   return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
 }
 
-function publicPage(template, { hoisted, markup }, route) {
+function publicPage(template, markup, route) {
   const canonical = route.path === "/" ? `${BASE}/` : `${BASE}${route.path}`;
   let html = template.replace(/\s*<meta name="robots" content="noindex" \/>/, "");
   html = setTitle(html, route.title);
@@ -118,17 +118,17 @@ function publicPage(template, { hoisted, markup }, route) {
   html = setMeta(html, "name", "twitter:title", route.title);
   html = setMeta(html, "name", "twitter:description", route.description);
   html = setMeta(html, "name", "twitter:image", `${BASE}/og-image.png`);
-  const extras = [`<link rel="canonical" href="${canonical}" />`, ...hoisted];
+  const extras = [`<link rel="canonical" href="${canonical}" />`];
   if (route.path === "/") extras.push(jsonLd(route.description));
   html = headExtras(html, extras);
   return inject(html, markup);
 }
 
-function notFoundPage(template, { hoisted, markup }) {
+function notFoundPage(template, markup) {
   let html = setTitle(template, NOT_FOUND_TITLE);
   html = setMeta(html, "property", "og:title", NOT_FOUND_TITLE);
   html = setMeta(html, "name", "twitter:title", NOT_FOUND_TITLE);
-  return inject(headExtras(html, hoisted), markup);
+  return inject(html, markup);
 }
 
 function inject(html, markup) {
@@ -159,15 +159,13 @@ function write(relative, content) {
   writeFileSync(file, content);
 }
 
-function splitHoisted(rendered) {
-  const match = rendered.match(/^(?:<link rel="preload"[^>]*>)*/);
-  const hoisted = match[0].match(/<link[^>]*>/g) ?? [];
-  return { hoisted, markup: rendered.slice(match[0].length) };
+function stripPreloads(rendered) {
+  return rendered.replace(/^(?:<link rel="preload"[^>]*>)*/, "");
 }
 
 function renderPage(render, url) {
   try {
-    return splitHoisted(render(url));
+    return stripPreloads(render(url));
   } catch (error) {
     fail(`Rendering "${url}" failed: ${error?.stack ?? error}`);
     return null;
@@ -194,10 +192,10 @@ for (const route of routes.public) {
   const rendered = renderPage(ssr.render, route.path);
   if (rendered == null) continue;
   const relative = route.path === "/" ? "index.html" : `${route.path.slice(1)}/index.html`;
-  pages.push([relative, publicPage(template, rendered, route), rendered.markup]);
+  pages.push([relative, publicPage(template, rendered, route), rendered]);
 }
 const notFound = renderPage(ssr.render, "/__not-found__");
-if (notFound != null) pages.push(["404.html", notFoundPage(template, notFound), notFound.markup]);
+if (notFound != null) pages.push(["404.html", notFoundPage(template, notFound), notFound]);
 
 for (const [relative, html, markup] of pages) checkOutput(relative, html, markup);
 
