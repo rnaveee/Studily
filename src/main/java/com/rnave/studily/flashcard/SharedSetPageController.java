@@ -1,7 +1,7 @@
 package com.rnave.studily.flashcard;
 
+import com.rnave.studily.config.SpaPages;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -10,8 +10,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
@@ -19,19 +17,21 @@ import java.util.Optional;
 public class SharedSetPageController {
 
     private final FlashcardSetService flashcardSetService;
+    private final SpaPages spaPages;
     private final String baseUrl;
-    private volatile String template;
 
     public SharedSetPageController(FlashcardSetService flashcardSetService,
+                                   SpaPages spaPages,
                                    @Value("${app.base-url}") String baseUrl) {
         this.flashcardSetService = flashcardSetService;
+        this.spaPages = spaPages;
         this.baseUrl = baseUrl.replaceAll("/+$", "");
     }
 
     @GetMapping(value = "/sets/{id}", produces = MediaType.TEXT_HTML_VALUE)
     @ResponseBody
-    public ResponseEntity<String> page(@PathVariable String id) throws IOException {
-        String html = template();
+    public ResponseEntity<String> page(@PathVariable String id) {
+        String html = spaPages.shell().orElse(null);
         if (html == null) {
             return ResponseEntity.notFound().build();
         }
@@ -45,18 +45,6 @@ public class SharedSetPageController {
                 .cacheControl(CacheControl.noCache())
                 .contentType(new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8))
                 .body(body);
-    }
-
-    private String template() throws IOException {
-        String cached = template;
-        if (cached != null) return cached;
-        ClassPathResource resource = new ClassPathResource("static/index.html");
-        if (!resource.exists()) return null;
-        try (InputStream in = resource.getInputStream()) {
-            cached = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-        }
-        template = cached;
-        return cached;
     }
 
     private static Optional<Long> parseId(String id) {

@@ -1,7 +1,6 @@
 package com.rnave.studily.config;
 
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -28,10 +27,14 @@ public class SpaWebConfig implements WebMvcConfigurer {
                     @Override
                     protected Resource getResource(String resourcePath, Resource location) throws IOException {
                         Resource requested = location.createRelative(resourcePath);
+                        if (resourcePath.isEmpty() || resourcePath.endsWith("/")
+                                || resourcePath.equals("prerender") || resourcePath.startsWith("prerender/")) {
+                            return null;
+                        }
                         if (requested.exists() && requested.isReadable()) {
                             return requested;
                         }
-                        return new ClassPathResource("/static/index.html");
+                        return null;
                     }
                 });
     }

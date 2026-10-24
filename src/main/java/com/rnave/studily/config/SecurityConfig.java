@@ -16,7 +16,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.DelegatingRequestMatcherHeaderWriter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -68,6 +71,9 @@ public class SecurityConfig {
                                 .includeSubDomains(true)
                                 .preload(true)
                                 .maxAgeInSeconds(31536000))
+                        .addHeaderWriter(new DelegatingRequestMatcherHeaderWriter(
+                                PathPatternRequestMatcher.withDefaults().matcher("/api/public/**"),
+                                new StaticHeadersWriter("X-Robots-Tag", "noindex")))
                         .referrerPolicy(rp -> rp.policy(ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
                         .permissionsPolicyHeader(pp -> pp.policy(
                                 "accelerometer=(), camera=(), geolocation=(), gyroscope=(), "

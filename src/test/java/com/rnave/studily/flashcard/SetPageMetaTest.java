@@ -28,6 +28,16 @@ class SetPageMetaTest {
     }
 
     @Test
+    void keepsTheNoindexMeta() {
+        String html = HTML.replace("<head>", "<head>\n    <meta name=\"robots\" content=\"noindex\" />");
+        String out = SetPageMeta.render(html, preview("BIOL 101 Cells", null, "Ryan", "ryan", 8),
+                "https://studily.ca/sets/26", IMAGE);
+
+        assertThat(out).contains("<meta name=\"robots\" content=\"noindex\" />");
+        assertThat(out).contains("<title>Studily - BIOL 101 Cells by Ryan</title>");
+    }
+
+    @Test
     void replacesTitleDescriptionUrlAndImage() {
         String out = SetPageMeta.render(HTML, preview("BIOL 101 Cells", null, "Ryan", "ryan", 8),
                 "https://studily.ca/sets/26", IMAGE);
