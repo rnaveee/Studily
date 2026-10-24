@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import elements from "./elements.json";
 import BackButton from "../../components/BackButton";
+import { useAuth } from "../../lib/auth";
+import { Section } from "../static/shell";
 
 type ElementData = (typeof elements)[number];
 
@@ -136,6 +138,7 @@ function ElementDetail({ el, onClose }: { el: ElementData; onClose: () => void }
 }
 
 export default function PeriodicTablePage() {
+  const { user } = useAuth();
   const [selected, setSelected] = useState<ElementData | null>(null);
   const [query, setQuery] = useState("");
 
@@ -155,7 +158,7 @@ export default function PeriodicTablePage() {
   return (
     <div className="space-y-5 stagger-children">
       <div className="flex items-center gap-3">
-        <BackButton fallback="/learn" />
+        <BackButton fallback={user ? "/learn" : "/"} />
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-fg">Periodic Table</h1>
           <p className="mt-0.5 text-[13px] text-fg-3">
@@ -265,6 +268,19 @@ export default function PeriodicTablePage() {
         Melting points, boiling points and densities for the heaviest synthetic elements
         (from rutherfordium onward) are predicted or provisional.
       </p>
+
+      <Section title="About this periodic table">
+        <p>
+          All 118 elements are laid out by atomic number in 18 groups (columns) and 7 periods
+          (rows), with the lanthanides and actinides in their own rows underneath. Colours show
+          each element's category, from alkali metals to noble gases.
+        </p>
+        <p>
+          Search by name, symbol or atomic number, then tap any element to see its atomic mass,
+          group, period, block, phase at standard temperature and pressure, electron
+          configuration, electronegativity, melting and boiling points, and density.
+        </p>
+      </Section>
     </div>
   );
 }

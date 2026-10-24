@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Atom, Calculator, Layers, ListChecks, Sparkles, Timer } from "lucide-react";
+import { Atom, Calculator, Layers, ListChecks, Percent, Sparkles, Timer } from "lucide-react";
 import { formatMs, pomodoroColor, usePomodoro } from "../../lib/pomodoro";
 import StudySessionsPanel from "./sessions/StudySessionsPanel";
 
@@ -33,10 +33,17 @@ const TOOLS = [
     disabled: true,
   },
   {
-    to: "/learn/periodic-table",
+    to: "/periodic-table",
     icon: Atom,
     title: "Periodic Table",
     description: "Explore all 118 elements with detailed info.",
+    disabled: false,
+  },
+  {
+    to: "/grade-calculator",
+    icon: Percent,
+    title: "Grade Calculator",
+    description: "Work out your weighted grade and what you need on your final.",
     disabled: false,
   },
   {

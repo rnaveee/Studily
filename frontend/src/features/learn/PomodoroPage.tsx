@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { Maximize2, Minimize2, Pause, Play, RotateCcw, SkipForward } from "lucide-react";
 import {
@@ -14,6 +15,9 @@ import { formatTime } from "../../lib/format";
 import { useFullscreen } from "../../lib/fullscreen";
 import { playRingtone } from "../../lib/ringtones";
 import BackButton from "../../components/BackButton";
+import { useHydrated } from "../../components/ClientOnly";
+import { useAuth } from "../../lib/auth";
+import { Section } from "../static/shell";
 import { RingtoneGrid, VolumeSlider } from "../../components/RingtonePicker";
 import SegmentedToggle from "../../components/SegmentedToggle";
 
@@ -32,6 +36,8 @@ const SESSIONS_PER_ROUND = 4;
 
 export default function PomodoroPage() {
   const s = usePomodoro();
+  const { user } = useAuth();
+  const hydrated = useHydrated();
   const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
@@ -41,7 +47,7 @@ export default function PomodoroPage() {
   return (
     <div className="space-y-6 stagger-children">
       <div className="flex items-center gap-3">
-        <BackButton fallback="/learn" />
+        <BackButton fallback={user ? "/learn" : "/"} />
         <div>
           <h1 className="text-xl font-semibold text-fg">Pomodoro Timer</h1>
           <p className="mt-1 text-[13px] text-fg-3">Focus in sprints: study, break, repeat.</p>
@@ -79,6 +85,44 @@ export default function PomodoroPage() {
           <DurationsCard s={s} />
           <SoundCard s={s} />
         </div>
+      </div>
+
+      <div className="mx-auto w-full max-w-4xl space-y-4">
+        {hydrated && !user && (
+          <div className="card flex flex-wrap items-center justify-between gap-3 p-5">
+            <p className="text-[13px] leading-relaxed text-fg-2">
+              <span className="font-medium text-fg">Turn your sprints into progress.</span> With a
+              free account, study sessions earn XP, build a daily streak and unlock badges.
+            </p>
+            <Link to="/signup" className="btn btn-primary">
+              Create a free account
+            </Link>
+          </div>
+        )}
+
+        <Section title="What is the Pomodoro Technique?">
+          <p>
+            The Pomodoro Technique breaks studying into short, focused sprints. You work on one
+            thing for 25 minutes, take a 5-minute break, and repeat. After four sprints, take a
+            longer break.
+          </p>
+          <p>
+            A fixed sprint makes it easier to start, keeps you from drifting to your phone, and
+            gives your brain regular rests, so you can keep going for longer without burning out.
+          </p>
+        </Section>
+
+        <Section title="How to use this timer">
+          <p>
+            Pick a preset (Classic 25/5, Long 50/10 or Deep 90/15) or set your own lengths, choose
+            the sound that plays when time is up, and press start. Fullscreen turns your screen
+            into a distraction-free clock.
+          </p>
+          <p>
+            The timer keeps running if you switch to another page, and your durations and sound are
+            saved in this browser.
+          </p>
+        </Section>
       </div>
 
       {fullscreen && <FullscreenTimer onClose={() => setFullscreen(false)} />}
@@ -205,7 +249,8 @@ function SessionDots({ count }: { count: number }) {
 
 function DurationsCard({ s }: { s: PomodoroState }) {
   const preset = PRESETS.find((p) => p.study === s.studyMin && p.rest === s.breakMin);
-  const [custom, setCustom] = useState(!preset);
+  const [chosen, setChosen] = useState<boolean | null>(null);
+  const custom = chosen ?? !preset;
 
   return (
     <div className="card p-5">
@@ -218,7 +263,7 @@ function DurationsCard({ s }: { s: PomodoroState }) {
               key={p.label}
               disabled={s.running}
               onClick={() => {
-                setCustom(false);
+                setChosen(false);
                 pomodoro.setDurations(p.study, p.rest);
               }}
               className={`btn flex-col gap-0 px-1 py-2 ${active ? "btn-soft" : "btn-ghost"}`}
@@ -233,7 +278,7 @@ function DurationsCard({ s }: { s: PomodoroState }) {
         })}
         <button
           disabled={s.running}
-          onClick={() => setCustom(true)}
+          onClick={() => setChosen(true)}
           className={`btn flex-col gap-0 px-1 py-2 ${custom ? "btn-soft" : "btn-ghost"}`}
           style={custom ? { boxShadow: "inset 0 0 0 1.5px var(--accent)" } : undefined}
         >

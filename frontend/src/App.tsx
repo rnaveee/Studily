@@ -44,6 +44,7 @@ import FlashcardSetPage from "./features/learn/FlashcardSetPage";
 import SharedSetPage from "./features/learn/SharedSetPage";
 import AiChatPage from "./features/learn/AiChatPage";
 import PomodoroPage from "./features/learn/PomodoroPage";
+import GradeCalculatorPage from "./features/tools/GradeCalculatorPage";
 import SettingsPage from "./features/settings/SettingsPage";
 import SurveyPage from "./features/survey/SurveyPage";
 import TodosPage from "./features/todos/TodosPage";
@@ -154,14 +155,6 @@ export const appRoutes = (
       <Route path="/learn/sessions" element={<SessionHistoryPage />} />
       <Route path="/learn/ai" element={<AiChatPage />} />
       <Route
-        path="/learn/periodic-table"
-        element={
-          <Suspense fallback={null}>
-            <PeriodicTablePage />
-          </Suspense>
-        }
-      />
-      <Route
         path="/learn/calculator"
         element={
           <Suspense fallback={null}>
@@ -169,7 +162,6 @@ export const appRoutes = (
           </Suspense>
         }
       />
-      <Route path="/pomodoro" element={<PomodoroPage />} />
       <Route path="/todos" element={<TodosPage />} />
       <Route path="/semesters" element={<SemestersPage />} />
       <Route path="/friends" element={<VerifyGate><FriendsPage /></VerifyGate>} />
@@ -199,6 +191,17 @@ export const appRoutes = (
       <Route path="/support" element={<SupportPage />} />
       <Route path="/install" element={<InstallPage />} />
       <Route path="/changelog" element={<ChangelogPage />} />
+      <Route path="/pomodoro" element={<PomodoroPage />} />
+      <Route path="/grade-calculator" element={<GradeCalculatorPage />} />
+      <Route
+        path="/periodic-table"
+        element={
+          <Suspense fallback={null}>
+            <PeriodicTablePage />
+          </Suspense>
+        }
+      />
+      <Route path="/learn/periodic-table" element={<Navigate to="/periodic-table" replace />} />
       <Route path="*" element={<NotFoundPage />} />
     </Route>
   </>

@@ -3,7 +3,11 @@
     {
       "path": "/",
       "title": "Studily: Free Student Planner, Flashcards & Study Timer",
-      "description": "Your whole semester on one screen: class schedule, assignments and exams, grade tracking, spaced-repetition flashcards, a Pomodoro study timer and study friends. Free."
+      "description": "Your whole semester on one screen: class schedule, assignments and exams, grade tracking, spaced-repetition flashcards, a Pomodoro study timer and study friends. Free.",
+      "structuredData": {
+        "type": "SoftwareApplication",
+        "name": "Studily"
+      }
     },
     {
       "path": "/about",
@@ -19,6 +23,33 @@
       "path": "/login",
       "title": "Log In to Studily",
       "description": "Log in to Studily to see your schedule, upcoming deadlines, flashcards and study sessions."
+    },
+    {
+      "path": "/pomodoro",
+      "title": "Free Pomodoro Timer for Studying · Studily",
+      "description": "A free online Pomodoro timer for studying: 25-minute focus sprints and short breaks, Long and Deep presets, custom lengths, alarm sounds and fullscreen. No sign-up needed.",
+      "structuredData": {
+        "type": "WebApplication",
+        "name": "Studily Pomodoro Timer"
+      }
+    },
+    {
+      "path": "/grade-calculator",
+      "title": "Grade Calculator: What Do I Need on My Final? · Studily",
+      "description": "Enter your assignments, weights and marks to see your weighted grade so far and exactly what you need on the rest of the course, or your final exam, to hit your target. Free.",
+      "structuredData": {
+        "type": "WebApplication",
+        "name": "Studily Grade Calculator"
+      }
+    },
+    {
+      "path": "/periodic-table",
+      "title": "Interactive Periodic Table of Elements · Studily",
+      "description": "Search all 118 elements by name, symbol or number and tap any element for its atomic mass, electron configuration, electronegativity, melting and boiling points and density. Free.",
+      "structuredData": {
+        "type": "WebApplication",
+        "name": "Studily Periodic Table"
+      }
     },
     {
       "path": "/install",
@@ -69,7 +100,6 @@
     "/learn/ai",
     "/learn/periodic-table",
     "/learn/calculator",
-    "/pomodoro",
     "/todos",
     "/semesters",
     "/friends",

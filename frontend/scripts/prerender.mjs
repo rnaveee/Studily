@@ -92,15 +92,16 @@ function headExtras(html, extras) {
   return html.replace(/ *<\/head>/, `${extras.map((e) => `    ${e}\n`).join("")}  </head>`);
 }
 
-function jsonLd(description) {
+function jsonLd(route, url) {
   const data = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Studily",
-    description,
+    "@type": route.structuredData.type,
+    name: route.structuredData.name,
+    description: route.description,
     applicationCategory: "EducationalApplication",
     operatingSystem: "Web",
-    url: `${BASE}/`,
+    url,
+    isAccessibleForFree: true,
     offers: { "@type": "Offer", price: "0", priceCurrency: "CAD" },
   };
   return `<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`;
@@ -119,7 +120,7 @@ function publicPage(template, markup, route) {
   html = setMeta(html, "name", "twitter:description", route.description);
   html = setMeta(html, "name", "twitter:image", `${BASE}/og-image.png`);
   const extras = [`<link rel="canonical" href="${canonical}" />`];
-  if (route.path === "/") extras.push(jsonLd(route.description));
+  if (route.structuredData) extras.push(jsonLd(route, canonical));
   html = headExtras(html, extras);
   return inject(html, markup);
 }
@@ -163,9 +164,9 @@ function stripPreloads(rendered) {
   return rendered.replace(/^(?:<link rel="preload"[^>]*>)*/, "");
 }
 
-function renderPage(render, url) {
+async function renderPage(render, url) {
   try {
-    return stripPreloads(render(url));
+    return stripPreloads(await render(url));
   } catch (error) {
     fail(`Rendering "${url}" failed: ${error?.stack ?? error}`);
     return null;
@@ -189,12 +190,12 @@ mkdirSync(out, { recursive: true });
 
 const pages = [];
 for (const route of routes.public) {
-  const rendered = renderPage(ssr.render, route.path);
+  const rendered = await renderPage(ssr.render, route.path);
   if (rendered == null) continue;
   const relative = route.path === "/" ? "index.html" : `${route.path.slice(1)}/index.html`;
   pages.push([relative, publicPage(template, rendered, route), rendered]);
 }
-const notFound = renderPage(ssr.render, "/__not-found__");
+const notFound = await renderPage(ssr.render, "/__not-found__");
 if (notFound != null) pages.push(["404.html", notFoundPage(template, notFound), notFound]);
 
 for (const [relative, html, markup] of pages) checkOutput(relative, html, markup);

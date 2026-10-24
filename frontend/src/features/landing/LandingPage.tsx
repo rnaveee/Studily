@@ -339,6 +339,9 @@ export default function LandingPage() {
           <span className="font-mono font-bold text-fg-2">Studily</span>
           {[
             ["About", "/about"],
+            ["Pomodoro timer", "/pomodoro"],
+            ["Grade calculator", "/grade-calculator"],
+            ["Periodic table", "/periodic-table"],
             ["Install", "/install"],
             ["Changelog", "/changelog"],
             ["Support", "/support"],
