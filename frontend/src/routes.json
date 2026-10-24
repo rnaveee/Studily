@@ -1,0 +1,88 @@
+{
+  "public": [
+    {
+      "path": "/",
+      "title": "Studily: Free Student Planner, Flashcards & Study Timer",
+      "description": "Your whole semester on one screen: class schedule, assignments and exams, grade tracking, spaced-repetition flashcards, a Pomodoro study timer and study friends. Free."
+    },
+    {
+      "path": "/about",
+      "title": "About Studily: The All-in-One Student Planner",
+      "description": "Studily is a free academic planner built by a student: weekly schedules, deadlines and grades, flashcards, Pomodoro study sessions and classmates in one app."
+    },
+    {
+      "path": "/signup",
+      "title": "Create Your Free Studily Account",
+      "description": "Sign up free and put your class schedule, assignments, grades, flashcards and study timer in one place. No card, no trial."
+    },
+    {
+      "path": "/login",
+      "title": "Log In to Studily",
+      "description": "Log in to Studily to see your schedule, upcoming deadlines, flashcards and study sessions."
+    },
+    {
+      "path": "/install",
+      "title": "Install Studily on iPhone, Android or Desktop",
+      "description": "Add Studily to your home screen in a few taps. It opens full-screen like a native app and sends reminders before classes and deadlines."
+    },
+    {
+      "path": "/changelog",
+      "title": "Studily Changelog: What's New",
+      "description": "Every feature and fix added to Studily, newest first: flashcard study modes, study sessions and badges, course outline import and more."
+    },
+    {
+      "path": "/support",
+      "title": "Studily Support: Report a Bug or Share an Idea",
+      "description": "Found a bug or have an idea? Studily is in beta, and every report shapes what gets fixed and built next."
+    },
+    {
+      "path": "/terms",
+      "title": "Terms of Service · Studily",
+      "description": "The terms for using Studily: who can use it, acceptable use, warnings and bans, and how the service works."
+    },
+    {
+      "path": "/privacy",
+      "title": "Privacy Policy · Studily",
+      "description": "What Studily collects, how it's used and where it's stored. Your data is never sold, and Studily uses no analytics or advertising trackers."
+    }
+  ],
+  "app": [
+    "/forgot-password",
+    "/reset-password",
+    "/verify-email",
+    "/welcome",
+    "/dashboard",
+    "/onboarding",
+    "/profile/setup",
+    "/calendar",
+    "/courses",
+    "/courses/new/auto",
+    "/courses/new/schedule",
+    "/courses/:id",
+    "/messages",
+    "/messages/:id",
+    "/learn",
+    "/learn/flashcards",
+    "/flashcards",
+    "/learn/flashcards/:id",
+    "/learn/sessions",
+    "/learn/ai",
+    "/learn/periodic-table",
+    "/learn/calculator",
+    "/pomodoro",
+    "/todos",
+    "/semesters",
+    "/friends",
+    "/friends/schoolmates",
+    "/profile",
+    "/profile/edit",
+    "/profile/badges",
+    "/settings",
+    "/survey",
+    "/admin",
+    "/users/:userId",
+    "/users/:userId/badges",
+    "/profile/:userId/add",
+    "/sets/:id"
+  ]
+}
