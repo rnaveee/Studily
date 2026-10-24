@@ -62,5 +62,5 @@ export const welcomeTour = {
 };
 
 export function useWelcomeTourStep(): number | null {
-  return useSyncExternalStore(welcomeTour.subscribe, welcomeTour.current);
+  return useSyncExternalStore(welcomeTour.subscribe, welcomeTour.current, () => null);
 }

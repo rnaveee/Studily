@@ -28,7 +28,7 @@ function clampMin(n: number): number {
 }
 
 function loadMin(key: string, fallback: number): number {
-  const n = Number(localStorage.getItem(key));
+  const n = Number(read(key));
   return Number.isFinite(n) && n >= 1 && n <= 180 ? n : fallback;
 }
 
@@ -305,6 +305,17 @@ export function pomodoroColor(phase: PomodoroPhase): string {
   return phase === "study" ? "var(--orange)" : "var(--green)";
 }
 
+const SERVER_STATE: PomodoroState = {
+  phase: "study",
+  running: false,
+  remainingMs: 25 * 60_000,
+  studyMin: 25,
+  breakMin: 5,
+  ringtone: "bells",
+  volume: 0.7,
+  completedToday: 0,
+};
+
 export function usePomodoro(): PomodoroState {
-  return useSyncExternalStore(pomodoro.subscribe, pomodoro.getState);
+  return useSyncExternalStore(pomodoro.subscribe, pomodoro.getState, () => SERVER_STATE);
 }

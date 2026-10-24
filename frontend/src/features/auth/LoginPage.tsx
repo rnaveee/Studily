@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
 import { ApiError } from "../../lib/api";
@@ -10,10 +10,12 @@ export default function LoginPage() {
   const [params] = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(
-    params.get("expired") === "1" ? "Your session expired. Please sign in again." : null,
-  );
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (params.get("expired") === "1") setError("Your session expired. Please sign in again.");
+  }, [params]);
 
   if (user) return <Navigate to="/dashboard" replace />;
 

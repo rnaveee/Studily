@@ -76,6 +76,8 @@ export const sessionSounds = {
   },
 };
 
+const SERVER_STATE: SessionSoundsState = { focusEnd: "bells", breakEnd: "rise", volume: 0.7 };
+
 export function useSessionSounds(): SessionSoundsState {
-  return useSyncExternalStore(sessionSounds.subscribe, sessionSounds.getState);
+  return useSyncExternalStore(sessionSounds.subscribe, sessionSounds.getState, () => SERVER_STATE);
 }

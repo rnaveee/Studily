@@ -79,7 +79,7 @@ export default function MobileFooter({
             </Link>
           ))}
         </div>
-        <div className="mt-2 text-[10px] text-fg-3" onClick={onCopyrightTap}>
+        <div className="mt-2 text-[10px] text-fg-3" onClick={onCopyrightTap} suppressHydrationWarning>
           © {new Date().getFullYear()} Ryan Nave
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Check, Send } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
@@ -17,10 +17,12 @@ const CATEGORIES = [
 export default function SupportPage() {
   const { user } = useAuth();
   const [params] = useSearchParams();
-  const [category, setCategory] = useState<string>(() => {
-    const wanted = params.get("category");
-    return CATEGORIES.find((c) => c.value === wanted)?.value ?? "BUG";
-  });
+  const [category, setCategory] = useState<string>("BUG");
+
+  useEffect(() => {
+    const wanted = CATEGORIES.find((c) => c.value === params.get("category"))?.value;
+    if (wanted) setCategory(wanted);
+  }, [params]);
   const [message, setMessage] = useState("");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);

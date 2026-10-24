@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Bell, CalendarDays, Coins, FileText, MessagesSquare } from "lucide-react";
 import Avatar from "../../components/Avatar";
+import ClientOnly, { useHydrated } from "../../components/ClientOnly";
 import { demoCourseGrades, demoCourses, demoFlashcardSets, demoItems, demoWeek } from "../../lib/demo";
 import { hhmm } from "../../lib/format";
 import { itemColor } from "../../lib/itemType";
@@ -24,6 +25,11 @@ function toMin(time: string): number {
 function fmtHour(h: number): string {
   if (h === 12) return "12p";
   return h > 12 ? `${h - 12}p` : `${h}a`;
+}
+
+function useReducedMotion(): boolean {
+  const hydrated = useHydrated();
+  return hydrated && prefersReducedMotion();
 }
 
 function useCountUp(target: number, active: boolean, duration = 900): number {
@@ -226,7 +232,9 @@ export function MockDueList() {
               <span
                 className={`badge shrink-0 ${it.type === "EXAM" ? "badge-accent" : "badge-muted"}`}
               >
-                {dayLabel(it.dueAt)}
+                <ClientOnly fallback={<span className="invisible">in 3 days</span>}>
+                  {dayLabel(it.dueAt)}
+                </ClientOnly>
               </span>
             </li>
           ))}
@@ -278,6 +286,7 @@ export function MockGradeCard() {
   const earned = ((grade.grade ?? 0) / 100) * grade.gradedWeight;
   const needed = Math.ceil(((80 - earned) / remaining) * 100);
 
+  const reduced = useReducedMotion();
   const { ref, inView } = useReveal<HTMLDivElement>();
   const shown = useCountUp(pct, inView);
 
@@ -303,7 +312,7 @@ export function MockGradeCard() {
               style={{
                 width: inView ? `${grade.gradedWeight}%` : "0%",
                 background: "var(--accent)",
-                transition: prefersReducedMotion()
+                transition: reduced
                   ? "none"
                   : "width 1s cubic-bezier(0.22, 0.61, 0.36, 1) 120ms",
               }}
@@ -342,6 +351,7 @@ const GRADES = [
 export function MockFlashcard() {
   const deck = demoFlashcardSets()[0];
   const card = deck.cards[0];
+  const reduced = useReducedMotion();
   const { ref, inView } = useReveal<HTMLDivElement>();
   const [flipped, setFlipped] = useState(false);
 
@@ -369,7 +379,7 @@ export function MockFlashcard() {
               style={{
                 opacity: flipped ? 1 : 0,
                 transform: flipped ? "none" : "translateY(4px)",
-                transition: prefersReducedMotion()
+                transition: reduced
                   ? "none"
                   : "opacity 0.35s ease-out, transform 0.35s ease-out",
               }}
@@ -470,6 +480,7 @@ const STREAK_DAYS = [
 ];
 
 export function MockStudySession() {
+  const reduced = useReducedMotion();
   const { ref, inView } = useReveal<HTMLDivElement>();
   const [checked, setChecked] = useState(false);
 
@@ -518,7 +529,7 @@ export function MockStudySession() {
               style={{
                 background: checked ? "color-mix(in srgb, var(--green) 16%, transparent)" : "var(--accent)",
                 color: checked ? "var(--green)" : "var(--accent-fg)",
-                transition: prefersReducedMotion() ? "none" : "background 0.3s ease, color 0.3s ease",
+                transition: reduced ? "none" : "background 0.3s ease, color 0.3s ease",
               }}
             >
               {checked ? "+84 XP" : "Check in"}

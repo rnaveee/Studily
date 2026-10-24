@@ -287,16 +287,18 @@ function reconnectNowIfDown() {
   }
 }
 
-window.addEventListener("online", reconnectNowIfDown);
-document.addEventListener("visibilitychange", () => {
-  sendPresence();
-  if (document.visibilityState === "visible") reconnectNowIfDown();
-});
-window.addEventListener("pagehide", () => {
-  if (socket?.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({ type: "presence", foreground: false }));
-  }
-});
+if (typeof window !== "undefined") {
+  window.addEventListener("online", reconnectNowIfDown);
+  document.addEventListener("visibilitychange", () => {
+    sendPresence();
+    if (document.visibilityState === "visible") reconnectNowIfDown();
+  });
+  window.addEventListener("pagehide", () => {
+    if (socket?.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: "presence", foreground: false }));
+    }
+  });
+}
 
 export const ws = {
   setUserId(id: number | null) {

@@ -67,7 +67,7 @@ const EXTRAS = [
 
 export default function LandingPage() {
   const { continueAsGuest } = useAuth();
-  const { dark, toggle } = useTheme();
+  const { toggle } = useTheme();
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
 
@@ -101,11 +101,12 @@ export default function LandingPage() {
             <button
               type="button"
               onClick={toggle}
-              aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-              title={dark ? "Switch to light mode" : "Switch to dark mode"}
+              aria-label="Toggle dark mode"
+              title="Toggle dark mode"
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-fg-2 transition-colors hover:bg-surface-hi hover:text-fg sm:h-8 sm:w-8"
             >
-              {dark ? <Sun size={16} strokeWidth={1.8} /> : <Moon size={16} strokeWidth={1.8} />}
+              <Sun size={16} strokeWidth={1.8} className="hidden dark:block" />
+              <Moon size={16} strokeWidth={1.8} className="dark:hidden" />
             </button>
             <Link to="/login" className="btn btn-ghost btn-nav">
               Log in

@@ -10,12 +10,14 @@ function isStandalone() {
 }
 
 export default function InstallPage() {
-  const [installPrompt, setInstallPrompt] = useState<Event | null>(
-    () => (window as unknown as { deferredInstallPrompt?: Event }).deferredInstallPrompt ?? null,
-  );
-  const [installed, setInstalled] = useState(isStandalone);
+  const [installPrompt, setInstallPrompt] = useState<Event | null>(null);
+  const [installed, setInstalled] = useState(false);
 
   useEffect(() => {
+    setInstalled(isStandalone());
+    setInstallPrompt(
+      (window as unknown as { deferredInstallPrompt?: Event }).deferredInstallPrompt ?? null,
+    );
     const onReady = () =>
       setInstallPrompt(
         (window as unknown as { deferredInstallPrompt?: Event }).deferredInstallPrompt ?? null,

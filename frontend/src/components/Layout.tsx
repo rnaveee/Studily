@@ -17,6 +17,7 @@ import { useAuth } from "../lib/auth";
 import { useKeyboardViewport } from "../lib/keyboardDock";
 import { prefersReducedMotion } from "../lib/motion";
 import Avatar from "./Avatar";
+import ClientOnly from "./ClientOnly";
 import Banners from "./Banners";
 import ProgressWhatsNew from "../features/progress/ProgressWhatsNew";
 import SurveyPrompt from "../features/survey/SurveyPrompt";
@@ -149,7 +150,9 @@ export default function Layout() {
             <img src="/studily-3a.svg" alt="" className="h-8 w-8 shrink-0" />
             <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
           </Link>
-          <CoinBalance />
+          <ClientOnly>
+            <CoinBalance />
+          </ClientOnly>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -190,7 +193,9 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
-        <SessionDock placement="sidebar" />
+        <ClientOnly>
+          <SessionDock placement="sidebar" />
+        </ClientOnly>
         </div>
 
         <div className="px-5 pb-3">
@@ -205,7 +210,7 @@ export default function Layout() {
               </Link>
             ))}
           </div>
-          <div className="mt-1.5 text-[10px] text-fg-3">
+          <div className="mt-1.5 text-[10px] text-fg-3" suppressHydrationWarning>
             © {new Date().getFullYear()} Ryan Nave
           </div>
         </div>
@@ -266,7 +271,11 @@ export default function Layout() {
           </Link>
 
           <div className="flex items-center gap-0.5">
-            {user && <CoinBalance />}
+            {user && (
+              <ClientOnly>
+                <CoinBalance />
+              </ClientOnly>
+            )}
             <NavLink
               to="/settings"
               className="rounded-lg p-2 text-fg-2 transition-colors hover:bg-surface-hi"
@@ -305,11 +314,12 @@ export default function Layout() {
           </div>
         </header>
 
-        <SessionDock placement="bar" />
-
-        <Banners />
-        <ProgressWhatsNew />
-        <SurveyPrompt />
+        <ClientOnly>
+          <SessionDock placement="bar" />
+          <Banners />
+          <ProgressWhatsNew />
+          <SurveyPrompt />
+        </ClientOnly>
 
         <main className="flex-1 overflow-y-auto overscroll-contain">
           <div
@@ -330,11 +340,13 @@ export default function Layout() {
           onCopyrightTap={handleDebugTap}
         />
       </div>
-      {debug && <ViewportDebug />}
-      <ProgressHost />
-      <SessionChime />
-      <SessionHost />
-      <WelcomeTour />
+      <ClientOnly>
+        {debug && <ViewportDebug />}
+        <ProgressHost />
+        <SessionChime />
+        <SessionHost />
+        <WelcomeTour />
+      </ClientOnly>
     </div>
   );
 }
