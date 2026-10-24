@@ -1,4 +1,12 @@
 (function () {
+  try {
+    if (
+      location.pathname === "/" &&
+      (localStorage.getItem("studily.token") || localStorage.getItem("studily.guest") === "1")
+    ) {
+      location.replace("/dashboard");
+    }
+  } catch (e) {}
   const stored = localStorage.getItem("studily.theme");
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const dark = stored === "dark" || (!stored && prefersDark);

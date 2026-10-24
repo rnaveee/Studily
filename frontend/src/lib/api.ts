@@ -17,6 +17,7 @@ const GUEST_KEY = "studily.guest";
 const ADMIN_TOKEN_KEY = "studily.admin";
 
 export function getToken(): string | null {
+  if (typeof localStorage === "undefined") return null;
   return localStorage.getItem(TOKEN_KEY);
 }
 
@@ -49,6 +50,7 @@ export function setAdminToken(token: string | null) {
 }
 
 export function isGuestMode(): boolean {
+  if (typeof localStorage === "undefined") return false;
   return !getToken() && localStorage.getItem(GUEST_KEY) === "1";
 }
 

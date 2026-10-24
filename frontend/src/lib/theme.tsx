@@ -20,9 +20,11 @@ const THEME_COLOR = {
 };
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
-  const [classic, setClassic] = useState(() =>
-    document.documentElement.classList.contains("classic"),
+  const [dark, setDark] = useState(
+    () => typeof document !== "undefined" && document.documentElement.classList.contains("dark"),
+  );
+  const [classic, setClassic] = useState(
+    () => typeof document !== "undefined" && document.documentElement.classList.contains("classic"),
   );
 
   useEffect(() => {

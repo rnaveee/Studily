@@ -1,16 +1,19 @@
-import { Suspense, lazy, type ReactNode } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Suspense, lazy, useEffect, type ReactNode } from "react";
+import { Navigate, Route, Routes, matchPath, useLocation } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import { useAuth } from "./lib/auth";
 import SuspendedScreen from "./features/moderation/SuspendedScreen";
 import ModerationNotices from "./features/moderation/ModerationNotices";
+import ClientOnly from "./components/ClientOnly";
+import routes from "./routes.json";
 import AboutPage from "./features/static/AboutPage";
 import TermsPage from "./features/static/TermsPage";
 import PrivacyPage from "./features/static/PrivacyPage";
 import SupportPage from "./features/static/SupportPage";
 import InstallPage from "./features/static/InstallPage";
 import ChangelogPage from "./features/static/ChangelogPage";
+import NotFoundPage from "./features/static/NotFoundPage";
 import LoginPage from "./features/auth/LoginPage";
 import SignupPage from "./features/auth/SignupPage";
 import ForgotPasswordPage from "./features/auth/ForgotPasswordPage";
@@ -81,100 +84,123 @@ export default function App() {
 
   return (
     <>
+      <TitleSync />
       <AppRoutes />
-      <ModerationNotices />
+      <ClientOnly>
+        <ModerationNotices />
+      </ClientOnly>
     </>
   );
 }
 
-function AppRoutes() {
-  return (
-    <Routes>
-      <Route path="/" element={<HomeRoute />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route path="/verify-email" element={<VerifyEmailPage />} />
+const DEFAULT_TITLE = "Studily";
+const NOT_FOUND_TITLE = "Page Not Found · Studily";
+
+function titleFor(pathname: string): string {
+  const matches = (pattern: string) => matchPath({ path: pattern, end: true }, pathname) != null;
+  const publicRoute = routes.public.find((r) => matches(r.path));
+  if (publicRoute) return publicRoute.title;
+  return routes.app.some(matches) ? DEFAULT_TITLE : NOT_FOUND_TITLE;
+}
+
+function TitleSync() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    document.title = titleFor(pathname);
+  }, [pathname]);
+  return null;
+}
+
+export const appRoutes = (
+  <>
+    <Route path="/" element={<HomeRoute />} />
+    <Route path="/login" element={<LoginPage />} />
+    <Route path="/signup" element={<SignupPage />} />
+    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+    <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <Route path="/verify-email" element={<VerifyEmailPage />} />
+    <Route
+      path="/welcome"
+      element={
+        <ProtectedRoute>
+          <WelcomePage />
+        </ProtectedRoute>
+      }
+    />
+    <Route
+      element={
+        <ProtectedRoute>
+          <Layout />
+        </ProtectedRoute>
+      }
+    >
+      <Route path="/dashboard" element={<DashboardPage />} />
+      <Route path="/onboarding" element={<OnboardingPage />} />
+      <Route path="/profile/setup" element={<ProfileSetupPage />} />
+      <Route path="/calendar" element={<CalendarPage />} />
+      <Route path="/courses" element={<CoursesPage />} />
+      <Route path="/courses/new/auto" element={<CourseAutoImportPage />} />
+      <Route path="/courses/new/schedule" element={<ScheduleImportPage />} />
+      <Route path="/courses/:id" element={<CourseDetailPage />} />
+      <Route path="/messages" element={<VerifyGate><MessagesPage /></VerifyGate>} />
+      <Route path="/messages/:id" element={<VerifyGate><ConversationPage /></VerifyGate>} />
+      <Route path="/learn" element={<LearnPage />} />
+      <Route path="/learn/flashcards" element={<FlashcardsPage />} />
+      <Route path="/flashcards" element={<Navigate to="/learn/flashcards" replace />} />
+      <Route path="/learn/flashcards/:id" element={<FlashcardSetPage />} />
+      <Route path="/learn/sessions" element={<SessionHistoryPage />} />
+      <Route path="/learn/ai" element={<AiChatPage />} />
       <Route
-        path="/welcome"
+        path="/learn/periodic-table"
         element={
-          <ProtectedRoute>
-            <WelcomePage />
-          </ProtectedRoute>
+          <Suspense fallback={null}>
+            <PeriodicTablePage />
+          </Suspense>
         }
       />
       <Route
+        path="/learn/calculator"
         element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
+          <Suspense fallback={null}>
+            <CalculatorPage />
+          </Suspense>
         }
-      >
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/onboarding" element={<OnboardingPage />} />
-        <Route path="/profile/setup" element={<ProfileSetupPage />} />
-        <Route path="/calendar" element={<CalendarPage />} />
-        <Route path="/courses" element={<CoursesPage />} />
-        <Route path="/courses/new/auto" element={<CourseAutoImportPage />} />
-        <Route path="/courses/new/schedule" element={<ScheduleImportPage />} />
-        <Route path="/courses/:id" element={<CourseDetailPage />} />
-        <Route path="/messages" element={<VerifyGate><MessagesPage /></VerifyGate>} />
-        <Route path="/messages/:id" element={<VerifyGate><ConversationPage /></VerifyGate>} />
-        <Route path="/learn" element={<LearnPage />} />
-        <Route path="/learn/flashcards" element={<FlashcardsPage />} />
-        <Route path="/flashcards" element={<Navigate to="/learn/flashcards" replace />} />
-        <Route path="/learn/flashcards/:id" element={<FlashcardSetPage />} />
-        <Route path="/learn/sessions" element={<SessionHistoryPage />} />
-        <Route path="/learn/ai" element={<AiChatPage />} />
-        <Route
-          path="/learn/periodic-table"
-          element={
-            <Suspense fallback={null}>
-              <PeriodicTablePage />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/learn/calculator"
-          element={
-            <Suspense fallback={null}>
-              <CalculatorPage />
-            </Suspense>
-          }
-        />
-        <Route path="/pomodoro" element={<PomodoroPage />} />
-        <Route path="/todos" element={<TodosPage />} />
-        <Route path="/semesters" element={<SemestersPage />} />
-        <Route path="/friends" element={<VerifyGate><FriendsPage /></VerifyGate>} />
-        <Route path="/friends/schoolmates" element={<VerifyGate><SchoolmatesPage /></VerifyGate>} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/profile/edit" element={<ProfileEditPage />} />
-        <Route path="/profile/badges" element={<BadgesPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/survey" element={<SurveyPage />} />
-        <Route
-          path="/admin"
-          element={
-            <Suspense fallback={null}>
-              <AdminPage />
-            </Suspense>
-          }
-        />
-        <Route path="/users/:userId" element={<VerifyGate><UserProfilePage /></VerifyGate>} />
-        <Route path="/users/:userId/badges" element={<VerifyGate><BadgesPage /></VerifyGate>} />
-        <Route path="/profile/:userId/add" element={<VerifyGate><UserProfilePage /></VerifyGate>} />
-      </Route>
-      <Route element={<Layout />}>
-        <Route path="/about"   element={<AboutPage />} />
-        <Route path="/sets/:id" element={<SharedSetPage />} />
-        <Route path="/terms"   element={<TermsPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/support" element={<SupportPage />} />
-        <Route path="/install" element={<InstallPage />} />
-        <Route path="/changelog" element={<ChangelogPage />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-  );
+      />
+      <Route path="/pomodoro" element={<PomodoroPage />} />
+      <Route path="/todos" element={<TodosPage />} />
+      <Route path="/semesters" element={<SemestersPage />} />
+      <Route path="/friends" element={<VerifyGate><FriendsPage /></VerifyGate>} />
+      <Route path="/friends/schoolmates" element={<VerifyGate><SchoolmatesPage /></VerifyGate>} />
+      <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/profile/edit" element={<ProfileEditPage />} />
+      <Route path="/profile/badges" element={<BadgesPage />} />
+      <Route path="/settings" element={<SettingsPage />} />
+      <Route path="/survey" element={<SurveyPage />} />
+      <Route
+        path="/admin"
+        element={
+          <Suspense fallback={null}>
+            <AdminPage />
+          </Suspense>
+        }
+      />
+      <Route path="/users/:userId" element={<VerifyGate><UserProfilePage /></VerifyGate>} />
+      <Route path="/users/:userId/badges" element={<VerifyGate><BadgesPage /></VerifyGate>} />
+      <Route path="/profile/:userId/add" element={<VerifyGate><UserProfilePage /></VerifyGate>} />
+    </Route>
+    <Route element={<Layout />}>
+      <Route path="/about"   element={<AboutPage />} />
+      <Route path="/sets/:id" element={<SharedSetPage />} />
+      <Route path="/terms"   element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/support" element={<SupportPage />} />
+      <Route path="/install" element={<InstallPage />} />
+      <Route path="/changelog" element={<ChangelogPage />} />
+      <Route path="*" element={<NotFoundPage />} />
+    </Route>
+  </>
+);
+
+function AppRoutes() {
+  return <Routes>{appRoutes}</Routes>;
 }

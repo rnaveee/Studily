@@ -50,7 +50,7 @@ async function slideToken() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [guest, setGuest] = useState(isGuestMode);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !!getToken());
   const [expired, setExpired] = useState(false);
   const [bootFailed, setBootFailed] = useState(false);
   const [bootNonce, setBootNonce] = useState(0);
