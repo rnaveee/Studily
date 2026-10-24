@@ -36,7 +36,7 @@
     {
       "path": "/grade-calculator",
       "title": "Grade Calculator: What Do I Need on My Final? · Studily",
-      "description": "Enter your assignments, weights and marks to see your weighted grade so far and exactly what you need on the rest of the course, or your final exam, to hit your target. Free.",
+      "description": "Add sections like assignments, midterms and your final exam with their weights, enter marks like 18/20 or 85%, and see exactly what you need on the final. Free.",
       "structuredData": {
         "type": "WebApplication",
         "name": "Studily Grade Calculator"
