@@ -352,7 +352,7 @@ function SectionCard({
             type="text"
             inputMode="decimal"
             value={section.weight}
-            placeholder="10"
+            placeholder="e.g. 10"
             onChange={(e) => onChange({ weight: e.target.value })}
           />
         </div>
@@ -381,7 +381,7 @@ function SectionCard({
                   type="text"
                   aria-label={`Mark for ${label}`}
                   value={item.mark}
-                  placeholder="16/20"
+                  placeholder="e.g. 16/20"
                   maxLength={20}
                   autoFocus={focusId === item.id}
                   onChange={(e) => onItemChange(item.id, { mark: e.target.value })}
@@ -451,7 +451,7 @@ function FinalCard({
             type="text"
             inputMode="decimal"
             value={final.weight}
-            placeholder="50"
+            placeholder="e.g. 50"
             onChange={(e) => onChange({ weight: e.target.value })}
           />
         </div>
@@ -464,7 +464,7 @@ function FinalCard({
             className="input tabular-nums"
             type="text"
             value={final.mark}
-            placeholder="94/120"
+            placeholder="Not written"
             maxLength={20}
             onChange={(e) => onChange({ mark: e.target.value })}
           />
@@ -648,7 +648,7 @@ function Results({
             type="text"
             inputMode="decimal"
             value={target}
-            placeholder="80"
+            placeholder="e.g. 80"
             onChange={(e) => onTarget(e.target.value)}
           />
         </div>
