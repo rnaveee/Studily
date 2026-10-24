@@ -7,6 +7,7 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
+  { version: 62, date: "2026-10-24", summary: "Added an install prompt that shows what you get from installing Studily as an app." },
   { version: 61, date: "2026-10-23", summary: "Added a feedback survey. Answer it for a diamond chest and the Feedback badge." },
   { version: 60, date: "2026-10-19", summary: "Added reporting for profiles and messages." },
   { version: 59, date: "2026-10-18", summary: "Added replies to messages, plus copy, like and reply on everyone's messages." },

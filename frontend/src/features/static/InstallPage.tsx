@@ -1,13 +1,7 @@
 import { useEffect, useState } from "react";
 import { CheckCircle2, Download, MonitorDown, Share, Smartphone } from "lucide-react";
 import { Page, Section } from "./shell";
-
-function isStandalone() {
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (navigator as unknown as { standalone?: boolean }).standalone === true
-  );
-}
+import { isStandalone } from "../../lib/pwa";
 
 export default function InstallPage() {
   const [installPrompt, setInstallPrompt] = useState<Event | null>(null);

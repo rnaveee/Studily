@@ -37,3 +37,4 @@ public class FlairController {
         return flairService.equip(req.code());
     }
 }
+

@@ -7,6 +7,7 @@ import { Spinner } from "../../components/Skeleton";
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { applyDelta } from "../../lib/progressDelta";
+import { isStandalone } from "../../lib/pwa";
 import { toast } from "../../lib/toast";
 import type {
   ProgressDelta,
@@ -61,17 +62,6 @@ function detectPlatform(): string {
   if (/iPhone|iPad|iPod/i.test(ua)) return "ios";
   if (/Android/i.test(ua)) return "android";
   return "desktop";
-}
-
-function detectStandalone(): boolean {
-  try {
-    return (
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (navigator as unknown as { standalone?: boolean }).standalone === true
-    );
-  } catch {
-    return false;
-  }
 }
 
 function visibleIds(questions: SurveyQuestion[], answers: Answers): Set<string> {
@@ -290,7 +280,7 @@ function Form({
       api.post<ProgressDelta>("/survey", {
         key,
         platform: detectPlatform(),
-        standalone: detectStandalone(),
+        standalone: isStandalone(),
         answers: cleanAnswers(questions, answers),
       }),
     onSuccess: (delta) => {

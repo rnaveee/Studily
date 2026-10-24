@@ -11,6 +11,10 @@ export function useModalClose() {
 
 const modalStack: string[] = [];
 
+export function hasOpenModal() {
+  return modalStack.length > 0;
+}
+
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 

@@ -1,7 +1,7 @@
   import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
-import { Eye, FileText, Gift, MailWarning, Smartphone, Timer, Trophy, X } from "lucide-react";
+import { Eye, FileText, Gift, MailWarning, Timer, Trophy, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { api } from "../lib/api";
 import type { ParseAvailability, SurveyDto } from "../types";
@@ -9,24 +9,13 @@ import { formatMs, pomodoroColor, usePomodoro } from "../lib/pomodoro";
 import { openProgressWhatsNew } from "../features/progress/ProgressWhatsNew";
 import { openSurveyPrompt } from "../features/survey/SurveyPrompt";
 
-const INSTALL_KEY = "studily.banner.install";
 const PARSER_KEY = "studily.banner.parser";
 const PROGRESS_KEY = "studily.banner.progress";
 const SURVEY_KEY = "studily.banner.survey.fall-2026";
 
-function isStandalone() {
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    (navigator as unknown as { standalone?: boolean }).standalone === true
-  );
-}
-
 export default function Banners() {
   const { user, guest } = useAuth();
   const { pathname } = useLocation();
-  const [installDismissed, setInstallDismissed] = useState(
-    () => localStorage.getItem(INSTALL_KEY) === "1" || isStandalone(),
-  );
   const [parserDismissed, setParserDismissed] = useState(
     () => localStorage.getItem(PARSER_KEY) === "1",
   );
@@ -68,7 +57,6 @@ export default function Banners() {
   const pomo = usePomodoro();
 
   if (
-    installDismissed &&
     !showParser &&
     !showProgress &&
     !showSurvey &&
@@ -156,18 +144,6 @@ export default function Banners() {
           </Link>{" "}
           and we'll fill in the times and deadlines. It's in beta and won't always get it right, so
           check everything before you save.
-        </Banner>
-      )}
-      {!installDismissed && (
-        <Banner
-          icon={<Smartphone size={13} className="shrink-0" />}
-          onDismiss={() => dismiss(INSTALL_KEY, setInstallDismissed)}
-        >
-          Get Studily as an app!{" "}
-          <Link to="/install" className="font-medium underline underline-offset-2">
-            See how to install it
-          </Link>
-          .
         </Banner>
       )}
     </div>
