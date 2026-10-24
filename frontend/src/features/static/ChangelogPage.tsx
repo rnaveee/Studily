@@ -7,8 +7,6 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
-  { version: 63, date: "2026-10-24", summary: "Added a free grade calculator, and made the Pomodoro timer and periodic table usable without an account." },
-  { version: 62, date: "2026-10-24", summary: "Made the public pages load instantly and show up in search engines, and added a proper Page not found page for links that don't exist." },
   { version: 61, date: "2026-10-23", summary: "Added a feedback survey. Answer it for a diamond chest and the Feedback badge." },
   { version: 60, date: "2026-10-19", summary: "Added reporting for profiles and messages." },
   { version: 59, date: "2026-10-18", summary: "Added replies to messages, plus copy, like and reply on everyone's messages." },
