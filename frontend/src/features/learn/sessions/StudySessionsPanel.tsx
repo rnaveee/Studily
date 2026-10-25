@@ -16,7 +16,7 @@ export default function StudySessionsPanel() {
   return (
     <section
       data-tour="study-sessions"
-      className="card card-raised px-4 pb-5 pt-6 sm:px-7 sm:pb-7 sm:pt-8"
+      className="card card-raised px-4 pb-5 pt-6 sm:px-7 sm:pb-7 sm:pt-8 xl:pb-5 xl:pt-4"
       aria-labelledby="study-sessions-title"
       style={{
         borderColor: "color-mix(in srgb, var(--accent) 30%, var(--line))",
@@ -32,7 +32,7 @@ export default function StudySessionsPanel() {
           Focus in blocks, check in to earn XP, and keep your streak alive.
         </p>
       </div>
-      <div className="mt-6">{enabled ? <PanelBody /> : <GuestPrompt />}</div>
+      <div className="mt-6 xl:mt-4">{enabled ? <PanelBody /> : <GuestPrompt />}</div>
     </section>
   );
 }
@@ -65,7 +65,7 @@ function PanelBody() {
   ).slice(0, 3);
 
   return (
-    <div className="space-y-4">
+    <div className="@container space-y-4">
       {active.isLoading ? (
         <div className="flex justify-center">
           <Skeleton height={52} className="w-full rounded-xl sm:max-w-sm" />
@@ -88,7 +88,7 @@ function PanelBody() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 @2xl:grid-cols-2">
         {streak.isLoading ? (
           <StreakWeekSkeleton />
         ) : streak.data ? (

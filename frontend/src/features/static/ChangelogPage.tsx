@@ -7,6 +7,7 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
+  { version: 63, date: "2026-10-25", summary: "Redesigned the Study page so your level, study sessions, flashcards, to-dos and tools fit on one screen." },
   { version: 62, date: "2026-10-24", summary: "Added an install prompt that shows what you get from installing Studily as an app." },
   { version: 61, date: "2026-10-23", summary: "Added a feedback survey. Answer it for a diamond chest and the Feedback badge." },
   { version: 60, date: "2026-10-19", summary: "Added reporting for profiles and messages." },

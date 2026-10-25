@@ -326,7 +326,9 @@ export default function Layout() {
         <main className="flex-1 overflow-y-auto overscroll-contain">
           <div
             ref={outletRef}
-            className={`mx-auto flex min-h-full max-w-5xl flex-col px-4 pt-6 md:px-10 md:pt-8 md:pb-24 ${
+            className={`mx-auto flex min-h-full ${
+              pathname === "/learn" ? "max-w-[96rem] xl:pb-16" : "max-w-5xl"
+            } flex-col px-4 pt-6 md:px-10 md:pt-8 md:pb-24 ${
               typing ? "pb-0" : "pb-24"
             }`}
           >

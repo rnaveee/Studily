@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, Navigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Coins, Lock, Pin, ShoppingBag, Trophy } from "lucide-react";
+import { Check, Coins, Lock, Pin, Trophy } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { useConfirm } from "../../lib/confirm";
@@ -151,7 +151,7 @@ function OwnBadges() {
         {coins != null && <CoinChip coins={coins} />}
       </div>
 
-      <SegmentedToggle options={TABS} value={tab} onChange={setTab} className="w-full sm:w-96" />
+      <SegmentedToggle options={TABS} value={tab} onChange={setTab} className="w-full" />
 
       {tab === "flairs" ? (
         <FlairsPanel streakBest={progress.data?.streak.best ?? null} onShop={() => setTab("shop")} />
@@ -183,7 +183,6 @@ function OwnBadges() {
             picking={picking}
             picked={picked}
             onPick={togglePick}
-            shopHint={list.some((b) => b.category === "COSMETIC" && !b.owned) ? () => setTab("shop") : undefined}
           />
         </>
       )}
@@ -239,13 +238,11 @@ function Collection({
   picking = false,
   picked = [],
   onPick,
-  shopHint,
 }: {
   badges: BadgeDto[];
   picking?: boolean;
   picked?: string[];
   onPick?: (badge: BadgeDto) => void;
-  shopHint?: () => void;
 }) {
   const groups = groupBadges(badges);
 
@@ -276,23 +273,6 @@ function Collection({
           </section>
         );
       })}
-      {shopHint && !picking && (
-        <button
-          onClick={shopHint}
-          className="card card-lift flex w-full items-center gap-3 p-4 text-left"
-        >
-          <span
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-            style={{ background: "color-mix(in srgb, var(--red-vivid) 12%, transparent)", color: "var(--red-vivid)" }}
-          >
-            <ShoppingBag size={16} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[14px] font-medium text-fg">More cosmetic badges in the Shop</span>
-            <span className="block text-[12px] text-fg-3">Spend coins from level-ups and chests.</span>
-          </span>
-        </button>
-      )}
     </div>
   );
 }

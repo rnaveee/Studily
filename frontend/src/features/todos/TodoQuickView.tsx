@@ -10,7 +10,15 @@ import { Spinner } from "../../components/Skeleton";
 
 const LIMIT = 5;
 
-export default function TodoQuickView() {
+export default function TodoQuickView({
+  limit = LIMIT,
+  stacked = false,
+  className = "",
+}: {
+  limit?: number;
+  stacked?: boolean;
+  className?: string;
+}) {
   const qc = useQueryClient();
   const requireAuth = useRequireAuth();
 
@@ -30,11 +38,11 @@ export default function TodoQuickView() {
 
   const all = todos.data ?? [];
   const open = all.filter((t) => !t.completed);
-  const top = open.slice(0, LIMIT);
+  const top = open.slice(0, limit);
   const overflow = open.length - top.length;
 
   return (
-    <div className="card">
+    <div className={`card flex flex-col ${className}`}>
       <div className="flex items-center gap-3 p-4">
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
@@ -57,12 +65,22 @@ export default function TodoQuickView() {
       </div>
 
       {todos.isLoading ? (
-        <div className="border-t border-line px-4 py-3"><Spinner label="Loading…" /></div>
+        <div className="flex-1 border-t border-line px-4 py-3"><Spinner label="Loading…" /></div>
       ) : top.length > 0 ? (
-        <ul className="divide-y divide-line border-t border-line">
+        <ul className="min-h-0 flex-1 divide-y divide-line overflow-y-auto border-t border-line">
           {top.map((todo) => {
             const urgency = dueUrgency(todo.dueAt);
             const tone = urgency ? urgencyStyle(urgency.level) : null;
+            const due =
+              urgency && tone ? (
+                <span className="badge shrink-0 tabular-nums" style={tone.pill}>
+                  {urgency.label}
+                </span>
+              ) : (
+                <span className="shrink-0 whitespace-nowrap text-[12px] tabular-nums text-fg-3">
+                  {todo.dueAt ? formatDateTime(todo.dueAt) : "No due date"}
+                </span>
+              );
             return (
               <li
                 key={todo.id}
@@ -103,23 +121,16 @@ export default function TodoQuickView() {
                       {priorityLabel(todo.priority)}
                     </span>
                   </div>
+                  {stacked && <div className="mt-1">{due}</div>}
                 </div>
 
-                {urgency && tone ? (
-                  <span className="badge shrink-0 tabular-nums" style={tone.pill}>
-                    {urgency.label}
-                  </span>
-                ) : (
-                  <span className="shrink-0 whitespace-nowrap text-[12px] tabular-nums text-fg-3">
-                    {todo.dueAt ? formatDateTime(todo.dueAt) : "No due date"}
-                  </span>
-                )}
+                {!stacked && due}
               </li>
             );
           })}
         </ul>
       ) : (
-        <div className="border-t border-line px-4 py-6 text-center">
+        <div className="flex-1 border-t border-line px-4 py-6 text-center">
           <ListChecks className="mx-auto mb-2 text-fg-3" size={24} strokeWidth={1.5} />
           <p className="text-[13px] text-fg-3">
             {all.length === 0 ? "Nothing on your list yet." : "Everything's checked off."}
