@@ -165,7 +165,7 @@ export function summarize(state: CalcState): Summary {
     earned += sectionEarned;
     gradedWeight += sectionGraded;
     const open = count === 0 ? weight : share * (count - marked);
-    if (open > 0.0001) unmarked.push({ name: section.name.trim() || "Untitled section", weight: open });
+    if (open > 0.0001) unmarked.push({ name: section.name.trim() || "Untitled type", weight: open });
     return {
       id: section.id,
       name: section.name,

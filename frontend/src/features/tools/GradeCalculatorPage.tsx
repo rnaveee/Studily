@@ -150,7 +150,7 @@ export default function GradeCalculatorPage() {
         <div>
           <h1 className="text-xl font-semibold text-fg">Grade Calculator</h1>
           <p className="mt-1 text-[13px] text-fg-3">
-            Add your course's sections and marks to see your grade and what you need on the final.
+            Add your course's types and marks to see your grade and what you need on the final.
           </p>
         </div>
       </div>
@@ -190,7 +190,7 @@ export default function GradeCalculatorPage() {
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" className="btn btn-primary" onClick={addSection}>
               <Plus size={14} />
-              Add section
+              Add type
             </button>
             {!state.final && (
               <button
@@ -238,67 +238,7 @@ export default function GradeCalculatorPage() {
           </Link>
         </section>
       )}
-
-      <Guide title="How do I calculate my grade with weighted sections?">
-        <p>
-          Most syllabi split your grade into sections, each worth a percentage: for example
-          assignments 10%, midterms 30%, tutorials 10% and a final exam 50%. Those percentages are
-          the weights, and they normally add up to 100.
-        </p>
-        <p>
-          Inside a section, each item usually counts equally, so the section's mark is the average
-          of its items. Assignments marked 18/20, 15/20 and 12/20 are 90%, 75% and 60%, which
-          average to 75%.
-        </p>
-        <p>
-          Your current grade is the weighted average of everything marked so far. With assignments
-          at 75%, midterms at 65% and tutorials at 95%, that is (75 x 10 + 65 x 30 + 95 x 10) / 50 =
-          73%.
-        </p>
-      </Guide>
-
-      <Guide title="What do I need on my final exam?">
-        <p>
-          Treat your current grade as what you keep on everything except the final. With 73% so far
-          and a final worth 50%, the other half of the course earns 73 x 0.5 = 36.5 points.
-        </p>
-        <p>
-          To finish with 80%, the final has to make up the rest: (80 - 36.5) / 50 x 100 = 87%. In
-          words: (target - current grade x share of the course that isn't the final) / weight of the
-          final.
-        </p>
-        <p>
-          If other work besides the final isn't marked yet, the calculator assumes it ends up at
-          your current average and says so. An answer above 100% means the target can't be reached,
-          and zero or below means it is already locked in.
-        </p>
-      </Guide>
-
-      <Guide title="What if my marks are out of 20, or my weights don't add up to 100%?">
-        <p>
-          Enter marks the way you get them back: 18/20, 9/10, 94/120, 85% or just 85. Each one is
-          turned into a percentage first, so a section can mix formats.
-        </p>
-        <p>
-          If your weights add up to less than 100%, the missing part is treated as work that isn't
-          marked yet. If they add up to more, check your syllabus for bonus marks. Use Other for
-          one-off items with their own weight, like a project or participation.
-        </p>
-        <p>
-          Treat the result as a guide: dropped lowest marks, rounding and bonus work can all change
-          the final numbers.
-        </p>
-      </Guide>
     </div>
-  );
-}
-
-function Guide({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="card p-6">
-      <h2 className="mb-3 text-[15px] font-semibold text-fg">{title}</h2>
-      <div className="space-y-3 text-[13px] leading-relaxed text-fg-2">{children}</div>
-    </section>
   );
 }
 
@@ -321,15 +261,15 @@ function SectionCard({
   onRemoveItem: (itemId: number) => void;
   onRemove: () => void;
 }) {
-  const title = section.name.trim() || "Untitled section";
+  const title = section.name.trim() || "Untitled type";
   const itemWord = singular(section.name);
 
   return (
-    <section className="card p-4 sm:p-5" aria-label={`${title} section`}>
+    <section className="card p-4 sm:p-5" aria-label={`${title} type`}>
       <div className="flex items-end gap-2">
         <div className="min-w-0 flex-1">
           <label className={fieldLabel} htmlFor={`gc-s-${section.id}`}>
-            Section
+            Type
           </label>
           <input
             id={`gc-s-${section.id}`}
@@ -356,7 +296,7 @@ function SectionCard({
             onChange={(e) => onChange({ weight: e.target.value })}
           />
         </div>
-        <button type="button" className={iconButton} onClick={onRemove} aria-label={`Remove ${title} section`}>
+        <button type="button" className={iconButton} onClick={onRemove} aria-label={`Remove ${title} type`}>
           <Trash2 size={15} />
         </button>
       </div>
@@ -579,7 +519,7 @@ function Results({
   if (current == null) {
     message =
       summary.markCount > 0
-        ? "Give your sections a weight to see your grade."
+        ? "Give your types a weight to see your grade."
         : "Nothing is marked yet. Enter a mark to see your grade.";
     tone = "text-fg-2";
   } else if (done) {
@@ -598,7 +538,7 @@ function Results({
       message = `You need ${pct(finalNeeded)} on your final exam (worth ${plain(summary.finalWeight!)}%) to finish with ${pct(targetValue)}.`;
     }
     const assumed: Unmarked[] = [...summary.unmarked];
-    if (total < 99.99) assumed.push({ name: "weight not in any section", weight: 100 - total });
+    if (total < 99.99) assumed.push({ name: "weight not in any type", weight: 100 - total });
     if (assumed.length > 0) {
       note = `This assumes your other unmarked work (${listUnmarked(assumed)}) ends up at your current average of ${pct(current)}.`;
     }
@@ -669,7 +609,7 @@ function Breakdown({ summary }: { summary: Summary }) {
   const rows: { key: string; name: string; weight: number; value: number | null; detail: string }[] =
     summary.sections.map((s) => ({
       key: `s${s.id}`,
-      name: s.name.trim() || "Untitled section",
+      name: s.name.trim() || "Untitled type",
       weight: s.weight,
       value: s.average,
       detail:
