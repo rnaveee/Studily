@@ -1,6 +1,7 @@
 package com.rnave.studily.canvas;
 
 import com.rnave.studily.canvas.CanvasDtos.FeedRequest;
+import com.rnave.studily.canvas.FeedImportDtos.FeedChange;
 import com.rnave.studily.canvas.FeedImportDtos.FeedStageResult;
 import com.rnave.studily.canvas.FeedImportDtos.StageOutcome;
 import com.rnave.studily.canvas.FeedImportDtos.StagedCourse;
@@ -23,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +37,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -94,7 +97,7 @@ class SchoolFeedServiceTest {
     }
 
     private static StageOutcome outcome() {
-        return new StageOutcome(payload("a", "b"), 0, 0, 0, false);
+        return new StageOutcome(payload("a", "b"), 0, 0, 0, false, List.of());
     }
 
     private static StoredImport stored(Long importId) {
@@ -365,6 +368,66 @@ class SchoolFeedServiceTest {
                 startsWith("feed-review:1:"), eq("New courses and deadlines from Canvas"),
                 eq("1 new course and 2 new deadlines from Canvas. Tap to review before anything is added."),
                 eq("/imports/5"));
+    }
+
+    @Test
+    void syncNotifiesWhenAnImportedDeadlineMoved() {
+        SchoolFeed feed = storedFeed(1L);
+        feed.setTimeZone("America/Vancouver");
+        when(repository.findById(1L)).thenReturn(Optional.of(feed));
+        when(importStore.save(any(), any(), any())).thenReturn(stored(null));
+        FeedChange moved = new FeedChange("canvas-assignment-9", "Lab 4", null, "ENSC252 D100",
+                Instant.parse("2026-10-24T06:59:00Z"), Instant.parse("2026-10-23T07:00:00Z"));
+        when(canvasFeedService.stage(any(), any())).thenReturn(
+                new StageOutcome(new StagedPayload("CANVAS", 9L, List.of()), 1, 0, 0, false, List.of(moved)));
+
+        service.syncDue(1L);
+
+        verify(dispatcher).dispatch(eq(user), eq(NotificationType.FEED_UPDATE), eq(1L),
+                startsWith("feed-update:1:"), eq("A deadline changed on Canvas"),
+                eq("Lab 4 (ENSC252 D100) is now due Fri Oct 23, 11:59 PM."), eq("/calendar"));
+        verify(dispatcher, never()).dispatch(any(), eq(NotificationType.FEED_REVIEW), any(), any(), any(),
+                any(), any());
+    }
+
+    @Test
+    void syncDoesNotSendAChangeNotificationWhenNothingChanged() {
+        SchoolFeed feed = storedFeed(1L);
+        when(repository.findById(1L)).thenReturn(Optional.of(feed));
+
+        service.syncDue(1L);
+
+        verify(dispatcher, never()).dispatch(any(), eq(NotificationType.FEED_UPDATE), any(), any(), any(),
+                any(), any());
+        verify(dispatcher, times(1)).dispatch(any(), eq(NotificationType.FEED_REVIEW), any(), any(), any(),
+                any(), any());
+    }
+
+    @Test
+    void describesRenamesAndCapsTheList() {
+        Instant at = Instant.parse("2026-11-06T08:00:00Z");
+        List<FeedChange> changes = List.of(
+                new FeedChange("u1", "Lab 5 (updated)", "Lab 5", "ENSC252 D100", at, null),
+                new FeedChange("u2", "Lab 6", null, null, at, at.minusSeconds(3600)),
+                new FeedChange("u3", "Lab 7", null, "ENSC252 D100", at, at.minusSeconds(60)),
+                new FeedChange("u4", "Lab 8", null, "ENSC252 D100", at, at.minusSeconds(60)));
+
+        String text = SchoolFeedService.describeChanges(changes, ZoneId.of("America/Vancouver"));
+
+        assertThat(text).isEqualTo("Lab 5 was renamed to Lab 5 (updated) (ENSC252 D100). "
+                + "Lab 6 is now due Fri Nov 6, 12:00 AM. Lab 7 (ENSC252 D100) is now due Fri Nov 6, 12:00 AM. "
+                + "And 1 more.");
+    }
+
+    @Test
+    void namesASingleNewDeadline() {
+        StagedPayload payload = new StagedPayload("CANVAS", 9L, List.of(new StagedCourse("canvas:1", 1L, null,
+                null, "ENSC252 D100", "ENSC252 D100", "#3b82f6", 9L, 4L, null,
+                List.of(new StagedItem("k", "k", StagedKind.ITEM, null, "Lab 7", NOW, null)))));
+
+        assertThat(SchoolFeedService.headline(payload, "Canvas")).isEqualTo("New deadlines from Canvas");
+        assertThat(SchoolFeedService.announcement(payload, "Canvas"))
+                .isEqualTo("Lab 7 (ENSC252 D100) was added on Canvas. Tap to review before it shows up in Studily.");
     }
 
     @Test

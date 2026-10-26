@@ -47,7 +47,11 @@ public class FeedImportDtos {
     }
 
     public record StageOutcome(StagedPayload payload, int itemsUpdated, int eventsImported, int skipped,
-                               boolean truncated) {
+                               boolean truncated, List<FeedChange> changes) {
+    }
+
+    public record FeedChange(String uid, String title, String previousTitle, String course,
+                             Instant at, Instant previousAt) {
     }
 
     public record StoredImport(FeedStageResult result, StagedPayload payload) {

@@ -1,6 +1,7 @@
 package com.rnave.studily.canvas;
 
 import com.rnave.studily.canvas.CanvasDtos.FeedRequest;
+import com.rnave.studily.canvas.FeedImportDtos.FeedChange;
 import com.rnave.studily.canvas.FeedImportDtos.FeedStageResult;
 import com.rnave.studily.canvas.FeedImportDtos.StageOutcome;
 import com.rnave.studily.canvas.FeedImportDtos.StagedCourse;
@@ -30,6 +31,8 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
@@ -161,9 +164,10 @@ public class SchoolFeedService {
     private FeedStageResult sync(SchoolFeed feed) {
         Instant now = clock.instant();
         StoredImport stored;
+        StageOutcome outcome;
         try {
             String url = cipher.decrypt(feed.getUrlCiphertext());
-            StageOutcome outcome = canvasFeedService.stage(feed.getUser(),
+            outcome = canvasFeedService.stage(feed.getUser(),
                     new FeedRequest(url, feed.getTimeZone(), feed.getSemesterId(), false));
             stored = importStore.save(feed.getUser(), feed.getId(), outcome);
             feed.setLastSyncedAt(now);
@@ -179,6 +183,7 @@ public class SchoolFeedService {
             throw e;
         }
         announce(feed, stored);
+        announceChanges(feed, outcome.changes(), stored.payload().provider());
         return stored.result();
     }
 
@@ -196,6 +201,55 @@ public class SchoolFeedService {
         } catch (RuntimeException e) {
             log.warn("Could not notify user {} about feed import {}: {}", feed.getUser().getId(), importId,
                     e.getClass().getSimpleName());
+        }
+    }
+
+    private void announceChanges(SchoolFeed feed, List<FeedChange> changes, String provider) {
+        if (changes == null || changes.isEmpty()) {
+            return;
+        }
+        try {
+            String label = providerLabel(provider);
+            ZoneId zone = zoneOf(feed.getTimeZone());
+            List<String> keys = new ArrayList<>();
+            for (FeedChange c : changes) {
+                keys.add(c.uid() + "@" + c.at() + "#" + c.title());
+            }
+            keys.sort(null);
+            dispatcher.dispatch(feed.getUser(), NotificationType.FEED_UPDATE, feed.getId(),
+                    "feed-update:" + feed.getId() + ":" + sha256(String.join("|", keys)).substring(0, 12),
+                    changes.size() == 1 ? "A deadline changed on " + label
+                            : changes.size() + " deadlines changed on " + label,
+                    describeChanges(changes, zone), "/calendar");
+        } catch (RuntimeException e) {
+            log.warn("Could not notify user {} about feed changes: {}", feed.getUser().getId(),
+                    e.getClass().getSimpleName());
+        }
+    }
+
+    static String describeChanges(List<FeedChange> changes, ZoneId zone) {
+        DateTimeFormatter when = DateTimeFormatter.ofPattern("EEE MMM d, h:mm a", Locale.ENGLISH).withZone(zone);
+        List<String> lines = new ArrayList<>();
+        for (FeedChange c : changes.subList(0, Math.min(changes.size(), 3))) {
+            String name = c.course() == null ? c.title() : c.title() + " (" + c.course() + ")";
+            if (c.previousAt() != null) {
+                lines.add(name + " is now due " + when.format(c.at()));
+            } else {
+                lines.add(c.previousTitle() + " was renamed to " + name);
+            }
+        }
+        String text = String.join(". ", lines) + ".";
+        if (changes.size() > 3) {
+            text += " And " + (changes.size() - 3) + " more.";
+        }
+        return text.length() <= 255 ? text : text.substring(0, 252) + "...";
+    }
+
+    private static ZoneId zoneOf(String timeZone) {
+        try {
+            return timeZone == null || timeZone.isBlank() ? ZoneId.systemDefault() : ZoneId.of(timeZone);
+        } catch (RuntimeException e) {
+            return ZoneId.systemDefault();
         }
     }
 
@@ -218,6 +272,15 @@ public class SchoolFeedService {
     static String announcement(StagedPayload payload, String label) {
         long courses = payload.courses().stream().filter(c -> c.linkedCourseId() == null).count();
         int items = payload.courses().stream().mapToInt(c -> c.items().size()).sum();
+        if (courses == 0 && items > 0 && items <= 2) {
+            List<String> names = new ArrayList<>();
+            for (StagedCourse course : payload.courses()) {
+                String code = course.code() != null ? course.code() : course.name();
+                course.items().forEach(item -> names.add(item.title() + " (" + code + ")"));
+            }
+            return String.join(" and ", names) + (items == 1 ? " was" : " were") + " added on " + label
+                    + ". Tap to review before it shows up in Studily.";
+        }
         List<String> parts = new ArrayList<>();
         if (courses > 0) {
             parts.add(courses + (courses == 1 ? " new course" : " new courses"));

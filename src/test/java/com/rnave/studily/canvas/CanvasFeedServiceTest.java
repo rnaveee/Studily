@@ -229,6 +229,43 @@ class CanvasFeedServiceTest {
     }
 
     @Test
+    void stage_reportsAMovedDeadlineButNotAnUnchangedOne() {
+        Course course = new Course();
+        course.setId(3L);
+        course.setUser(user);
+        course.setCode("CMPT 225");
+        course.setCanvasCourseId(88L);
+        when(courseRepository.findByUserIdAndCanvasCourseId(7L, 88L)).thenReturn(Optional.of(course));
+
+        AcademicItem moved = new AcademicItem();
+        moved.setCourse(course);
+        moved.setExternalUid("canvas-assignment-55");
+        moved.setTitle("Problem Set 3");
+        moved.setDueAt(java.time.Instant.parse("2026-10-04T03:59:00Z"));
+        AcademicItem same = new AcademicItem();
+        same.setCourse(course);
+        same.setExternalUid("canvas-assignment-56");
+        same.setTitle("Problem Set 4");
+        same.setDueAt(java.time.Instant.parse("2026-10-12T03:59:00Z"));
+        when(itemRepository.findFirstByCourseUserIdAndExternalUidOrderByIdAsc(7L, "canvas-assignment-55"))
+                .thenReturn(Optional.of(moved));
+        when(itemRepository.findFirstByCourseUserIdAndExternalUidOrderByIdAsc(7L, "canvas-assignment-56"))
+                .thenReturn(Optional.of(same));
+
+        StageOutcome outcome = importText(feed(
+                assignment("event-assignment-55", "Problem Set 3 [CMPT 225]", 88, 55, "20261005T035900Z")
+                        + assignment("event-assignment-56", "Problem Set 4 [CMPT 225]", 88, 56, "20261012T035900Z")));
+
+        assertThat(outcome.changes()).singleElement().satisfies(c -> {
+            assertThat(c.title()).isEqualTo("Problem Set 3");
+            assertThat(c.course()).isEqualTo("CMPT 225");
+            assertThat(c.previousAt()).isEqualTo(java.time.Instant.parse("2026-10-04T03:59:00Z"));
+            assertThat(c.at()).isEqualTo(java.time.Instant.parse("2026-10-05T03:59:00Z"));
+            assertThat(c.previousTitle()).isNull();
+        });
+    }
+
+    @Test
     void stage_leavesOutSkippedCoursesAndSkippedItems() {
         when(ignoredRefRepository.findByUserIdAndKind(7L, FeedIgnoredRef.Kind.COURSE))
                 .thenReturn(List.of(ignored(FeedIgnoredRef.Kind.COURSE, "canvas:88")));

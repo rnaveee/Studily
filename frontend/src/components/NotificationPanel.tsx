@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bell, ChevronRight, Inbox, Megaphone, UserPlus, X, type LucideIcon } from "lucide-react";
+import { Bell, CalendarClock, ChevronRight, Inbox, Megaphone, UserPlus, X, type LucideIcon } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { formatDateTimeFull, timeAgo } from "../lib/format";
@@ -19,6 +19,7 @@ const TYPE_STYLE: Partial<Record<NotificationKind, { icon: LucideIcon; color: st
   ANNOUNCEMENT: { icon: Megaphone, color: "var(--accent)", fallback: "Announcement" },
   FRIEND_REQUEST: { icon: UserPlus, color: "var(--green)", fallback: "New friend request" },
   FEED_REVIEW: { icon: Inbox, color: "var(--orange)", fallback: "New items to review" },
+  FEED_UPDATE: { icon: CalendarClock, color: "var(--blue-vivid)", fallback: "Deadlines changed" },
 };
 
 type Row =

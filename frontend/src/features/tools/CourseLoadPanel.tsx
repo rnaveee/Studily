@@ -156,9 +156,10 @@ export default function CourseLoadPanel({
 
   return (
     <section className="card flex flex-wrap items-center gap-3 p-4" aria-label="Load a course">
-      <div className="min-w-0 flex-1 text-[13px] text-fg-2">Load one of your courses to start from its real marks.</div>
+      <div className="w-full min-w-0 text-[13px] text-fg-2 sm:w-auto sm:flex-1">Load one of your courses to start from its real marks.</div>
       <select
-        className="input w-auto"
+        className="input"
+        style={{ width: "auto", minWidth: 0, maxWidth: "100%", flex: "1 1 14rem", textOverflow: "ellipsis" }}
         aria-label="Course"
         value={pick}
         onChange={(e) => setPick(e.target.value)}

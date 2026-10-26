@@ -58,7 +58,7 @@ class FeedImportStoreTest {
     }
 
     private static StageOutcome outcome(StagedCourse... courses) {
-        return new StageOutcome(new StagedPayload("CANVAS", 9L, List.of(courses)), 2, 1, 0, false);
+        return new StageOutcome(new StagedPayload("CANVAS", 9L, List.of(courses)), 2, 1, 0, false, List.of());
     }
 
     @Test

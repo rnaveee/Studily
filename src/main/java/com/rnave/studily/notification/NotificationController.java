@@ -24,7 +24,8 @@ import java.util.Map;
 public class NotificationController {
 
     static final List<NotificationType> CENTER_TYPES = List.of(
-            NotificationType.ANNOUNCEMENT, NotificationType.FRIEND_REQUEST, NotificationType.FEED_REVIEW);
+            NotificationType.ANNOUNCEMENT, NotificationType.FRIEND_REQUEST, NotificationType.FEED_REVIEW,
+            NotificationType.FEED_UPDATE);
 
     private final NotificationRepository notificationRepository;
     private final CurrentUser currentUser;

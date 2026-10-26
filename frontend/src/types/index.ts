@@ -1457,7 +1457,8 @@ export type NotificationKind =
   | "EXAM_COUNTDOWN"
   | "ANNOUNCEMENT"
   | "FRIEND_REQUEST"
-  | "FEED_REVIEW";
+  | "FEED_REVIEW"
+  | "FEED_UPDATE";
 
 export interface AppNotification {
   id: number;

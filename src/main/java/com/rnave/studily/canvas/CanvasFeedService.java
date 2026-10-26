@@ -7,6 +7,7 @@ import com.rnave.studily.academic.ItemTypes;
 import com.rnave.studily.calendar.CalendarEvent;
 import com.rnave.studily.calendar.CalendarEventRepository;
 import com.rnave.studily.canvas.CanvasDtos.FeedRequest;
+import com.rnave.studily.canvas.FeedImportDtos.FeedChange;
 import com.rnave.studily.canvas.FeedImportDtos.StageOutcome;
 import com.rnave.studily.canvas.FeedImportDtos.StagedCourse;
 import com.rnave.studily.canvas.FeedImportDtos.StagedItem;
@@ -30,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -39,6 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -116,7 +119,7 @@ public class CanvasFeedService {
         StagedPayload payload = new StagedPayload(provider.name(),
                 semester == null ? null : semester.getId(), courses);
         return new StageOutcome(payload, staging.itemsUpdated, staging.eventsImported, staging.skipped,
-                parsed.truncated());
+                parsed.truncated(), staging.changes);
     }
 
     private Set<String> ignoredRefs(Long userId, FeedIgnoredRef.Kind kind) {
@@ -155,6 +158,8 @@ public class CanvasFeedService {
             if (existing != null) {
                 eventRepository.findByUserIdAndExternalUid(s.user.getId(), externalUid(event))
                         .ifPresent(eventRepository::delete);
+                noteChange(s, uid, existing.getTitle(), title, existing.getDueAt(), event.startAt(),
+                        existing.getCourse());
                 existing.setTitle(title);
                 existing.setDueAt(event.startAt());
                 itemRepository.save(existing);
@@ -182,6 +187,8 @@ public class CanvasFeedService {
         String title = stripCourseCode(event.title());
         CalendarEvent existing = eventRepository.findByUserIdAndExternalUid(s.user.getId(), uid).orElse(null);
         if (existing != null) {
+            noteChange(s, uid, existing.getTitle(), title, existing.getStartAt(), event.startAt(),
+                    existing.getCourse());
             existing.setTitle(title);
             existing.setPlace(event.place());
             existing.setStartAt(event.startAt());
@@ -262,6 +269,8 @@ public class CanvasFeedService {
                     .findFirstByCourseUserIdAndExternalUidOrderByIdAsc(s.user.getId(), uid)
                     .orElse(null);
             if (existing != null) {
+                noteChange(s, uid, existing.getTitle(), ref.title(), existing.getDueAt(), event.startAt(),
+                        existing.getCourse());
                 existing.setTitle(ref.title());
                 existing.setDueAt(event.startAt());
                 itemRepository.save(existing);
@@ -371,6 +380,18 @@ public class CanvasFeedService {
         s.eventsUpdated++;
     }
 
+    private static void noteChange(Staging s, String uid, String oldTitle, String title, Instant oldAt,
+                                   Instant at, Course course) {
+        boolean moved = !Objects.equals(oldAt, at);
+        boolean renamed = !Objects.equals(oldTitle, title);
+        if (!moved && !renamed) {
+            return;
+        }
+        String label = course == null ? null
+                : course.getCode() != null && !course.getCode().isBlank() ? course.getCode() : course.getName();
+        s.changes.add(new FeedChange(uid, title, renamed ? oldTitle : null, label, at, moved ? oldAt : null));
+    }
+
     private Semester resolveSemester(Long userId, Long semesterId) {
         if (semesterId != null) {
             return semesterRepository.findByIdAndUserId(semesterId, userId)
@@ -443,6 +464,7 @@ public class CanvasFeedService {
         final Set<String> seen = new HashSet<>();
         final Map<String, StagedCourse> courses = new LinkedHashMap<>();
         final Map<String, Course> titleCourses = new HashMap<>();
+        final List<FeedChange> changes = new ArrayList<>();
         int itemsUpdated;
         int eventsImported;
         int eventsUpdated;

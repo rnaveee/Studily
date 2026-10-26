@@ -70,7 +70,8 @@ class NotificationControllerTest {
     @Test
     void centerTypes_excludeReminders() {
         assertThat(NotificationController.CENTER_TYPES).containsExactlyInAnyOrder(
-                NotificationType.ANNOUNCEMENT, NotificationType.FRIEND_REQUEST, NotificationType.FEED_REVIEW);
+                NotificationType.ANNOUNCEMENT, NotificationType.FRIEND_REQUEST, NotificationType.FEED_REVIEW,
+                NotificationType.FEED_UPDATE);
     }
 
     @Test
