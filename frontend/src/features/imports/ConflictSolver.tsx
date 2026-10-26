@@ -10,6 +10,7 @@ import MonthGrid, { groupByDay } from "../calendar/MonthGrid";
 
 const PAD = 3;
 const MARGIN = 16;
+const GAP = 10;
 
 function kindLabel(kind: "ITEM" | "EVENT", type: string | null): string {
   if (kind === "EVENT") return "Event";
@@ -38,12 +39,14 @@ interface Box {
 export default function ConflictSolver({
   conflicts,
   providerName,
+  courseCodes,
   busy,
   onDone,
   onCancel,
 }: {
   conflicts: ImportConflict[];
   providerName: string;
+  courseCodes: Record<string, string>;
   busy: boolean;
   onDone: (decisions: ItemDecision[]) => void;
   onCancel: () => void;
@@ -157,14 +160,27 @@ export default function ConflictSolver({
     setIndex(index - 1);
   }
 
-  const overlapsTop =
-    box != null && box.y < MARGIN + cardHeight + 12 && box.y + box.h > MARGIN - 12;
-  const cardTop = overlapsTop ? Math.max(MARGIN, viewport.h - cardHeight - MARGIN) : MARGIN;
-  const code = conflict.existing.courseCode || conflict.existing.courseName;
+  const cardWidth = Math.min(viewport.w - MARGIN * 2, 440);
+  let cardTop = MARGIN;
+  let cardLeft = (viewport.w - cardWidth) / 2;
+  if (box) {
+    const above = box.y - cardHeight - GAP;
+    const below = box.y + box.h + GAP;
+    if (above >= MARGIN) cardTop = above;
+    else if (below + cardHeight <= viewport.h - MARGIN) cardTop = below;
+    else cardTop = Math.max(MARGIN, viewport.h - cardHeight - MARGIN);
+    cardLeft = Math.min(
+      Math.max(MARGIN, box.x + box.w / 2 - cardWidth / 2),
+      viewport.w - cardWidth - MARGIN,
+    );
+  }
+  const code =
+    courseCodes[conflict.courseKey] || conflict.existing.courseCode || conflict.existing.courseName;
   const transition = animate ? "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)" : "none";
 
   return (
     <div className="space-y-4">
+      <div aria-hidden style={{ height: cardHeight }} />
       <h1 className="text-xl font-semibold text-fg">{label}</h1>
       <MonthGrid
         month={month}
@@ -205,8 +221,13 @@ export default function ConflictSolver({
           )}
           <div
             ref={cardRef}
-            className="glass fixed inset-x-4 mx-auto max-w-xl rounded-2xl p-4 shadow-xl"
-            style={{ top: cardTop, transition: animate ? "top 0.4s ease" : "none" }}
+            className="glass fixed rounded-2xl p-4 shadow-xl"
+            style={{
+              top: cardTop,
+              left: cardLeft,
+              width: cardWidth,
+              transition: animate ? "top 0.4s ease, left 0.4s ease" : "none",
+            }}
           >
             <div className="flex items-center justify-between gap-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-accent">

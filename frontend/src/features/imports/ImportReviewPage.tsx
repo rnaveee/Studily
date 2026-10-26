@@ -151,6 +151,7 @@ export default function ImportReviewPage() {
       <ConflictSolver
         conflicts={conflicts}
         providerName={providerLabel(view.provider)}
+        courseCodes={Object.fromEntries(view.courses.map((c) => [c.key, c.code ?? c.name]))}
         busy={apply.isPending}
         onDone={conflictsSolved}
         onCancel={cancelConflicts}

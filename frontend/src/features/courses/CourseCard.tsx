@@ -10,9 +10,11 @@ export default function CourseCard({
   semesterLabel,
   to,
   className = "",
+  wrapName = false,
   children,
 }: {
   course: CardCourse;
+  wrapName?: boolean;
   semesterLabel?: string | null;
   to?: string;
   className?: string;
@@ -21,12 +23,12 @@ export default function CourseCard({
   const locations = courseLocations(course.meetingBlocks, course.location);
   const content = (
     <>
-      <div className="flex min-w-0 items-center gap-2">
+      <div className={`flex min-w-0 gap-2 ${wrapName ? "items-start" : "items-center"}`}>
         <span
-          className="h-2.5 w-2.5 shrink-0 rounded-full"
+          className={`h-2.5 w-2.5 shrink-0 rounded-full ${wrapName ? "mt-[7px]" : ""}`}
           style={{ backgroundColor: course.color ?? "var(--accent)" }}
         />
-        <span className="min-w-0 flex-1 truncate font-semibold text-fg">{course.name}</span>
+        <span className={`min-w-0 flex-1 font-semibold text-fg ${wrapName ? "break-words" : "truncate"}`}>{course.name}</span>
         {course.code && (
           <span className="shrink-0 ml-auto rounded bg-surface-hi px-1.5 py-0.5 text-[11px] font-mono text-fg-3">
             {course.code}

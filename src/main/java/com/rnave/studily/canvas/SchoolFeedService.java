@@ -191,7 +191,7 @@ public class SchoolFeedService {
             String label = providerLabel(stored.payload().provider());
             dispatcher.dispatch(feed.getUser(), NotificationType.FEED_REVIEW, importId,
                     "feed-review:" + feed.getId() + ":" + fingerprint(stored.payload()),
-                    "New courses and deadlines from " + label, announcement(stored.payload(), label),
+                    headline(stored.payload(), label), announcement(stored.payload(), label),
                     "/imports/" + importId);
         } catch (RuntimeException e) {
             log.warn("Could not notify user {} about feed import {}: {}", feed.getUser().getId(), importId,
@@ -206,14 +206,26 @@ public class SchoolFeedService {
         return "MOODLE".equals(provider) ? "Moodle" : "Canvas";
     }
 
+    static String headline(StagedPayload payload, String label) {
+        boolean courses = payload.courses().stream().anyMatch(c -> c.linkedCourseId() == null);
+        boolean items = payload.courses().stream().anyMatch(c -> !c.items().isEmpty());
+        if (courses && items) {
+            return "New courses and deadlines from " + label;
+        }
+        return (courses ? "New courses from " : "New deadlines from ") + label;
+    }
+
     static String announcement(StagedPayload payload, String label) {
         long courses = payload.courses().stream().filter(c -> c.linkedCourseId() == null).count();
         int items = payload.courses().stream().mapToInt(c -> c.items().size()).sum();
-        String things = items + (items == 1 ? " new deadline or event" : " new deadlines and events");
+        List<String> parts = new ArrayList<>();
         if (courses > 0) {
-            things = courses + (courses == 1 ? " new course and " : " new courses and ") + things;
+            parts.add(courses + (courses == 1 ? " new course" : " new courses"));
         }
-        return things + " from " + label + " are ready to review.";
+        if (items > 0) {
+            parts.add(items + (items == 1 ? " new deadline" : " new deadlines"));
+        }
+        return String.join(" and ", parts) + " from " + label + ". Tap to review before anything is added.";
     }
 
     static String fingerprint(StagedPayload payload) {

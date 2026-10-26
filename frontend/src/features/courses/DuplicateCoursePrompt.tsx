@@ -32,12 +32,12 @@ export function CourseCompare({
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       <div className="min-w-0">
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-3">{incomingLabel}</p>
-        <CourseCard course={incoming} semesterLabel={semesterLabel(incoming.semesterId)} />
+        <CourseCard course={incoming} semesterLabel={semesterLabel(incoming.semesterId)} wrapName />
         {incomingFooter}
       </div>
       <div className="min-w-0">
         <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-3">{existingLabel}</p>
-        <CourseCard course={existing} semesterLabel={semesterLabel(existing.semesterId)} />
+        <CourseCard course={existing} semesterLabel={semesterLabel(existing.semesterId)} wrapName />
       </div>
     </div>
   );

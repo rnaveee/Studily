@@ -363,7 +363,7 @@ class SchoolFeedServiceTest {
         verify(importStore).save(eq(user), eq(1L), any(StageOutcome.class));
         verify(dispatcher).dispatch(eq(user), eq(NotificationType.FEED_REVIEW), eq(5L),
                 startsWith("feed-review:1:"), eq("New courses and deadlines from Canvas"),
-                eq("1 new course and 2 new deadlines and events from Canvas are ready to review."),
+                eq("1 new course and 2 new deadlines from Canvas. Tap to review before anything is added."),
                 eq("/imports/5"));
     }
 
