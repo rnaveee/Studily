@@ -58,6 +58,7 @@ export default function FlashcardsPage() {
   const [folderName, setFolderName] = useState("");
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [draggingId, setDraggingId] = useState<number | null>(null);
 
   const sets = useQuery({
     queryKey: ["flashcards", "sets"],
@@ -103,6 +104,24 @@ export default function FlashcardsPage() {
     mutationFn: (id: number) => api.del(`/flashcard-folders/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["flashcards"] }),
     onError: () => toast.error("Couldn't delete that folder"),
+  });
+
+  const moveSet = useMutation({
+    mutationFn: ({ setId, folderId }: { setId: number; folderId: number | null }) =>
+      api.put<FlashcardSet>(`/flashcard-sets/${setId}/folder`, { folderId }),
+    onMutate: async ({ setId, folderId }) => {
+      await qc.cancelQueries({ queryKey: ["flashcards", "sets"] });
+      const previous = qc.getQueryData<FlashcardSet[]>(["flashcards", "sets"]);
+      qc.setQueryData<FlashcardSet[]>(["flashcards", "sets"], (old) =>
+        old?.map((x) => (x.id === setId ? { ...x, folderId } : x)),
+      );
+      return { previous };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.previous) qc.setQueryData(["flashcards", "sets"], ctx.previous);
+      toast.error("Couldn't move that set");
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["flashcards"] }),
   });
 
   function setGrouping(next: Grouping) {
@@ -232,6 +251,16 @@ export default function FlashcardsPage() {
                 if (ok) removeFolder.mutate(f.id);
               }}
               courses={courses.data ?? []}
+              dragEnabled={grouping === "folder"}
+              draggingId={draggingId}
+              onDragStart={setDraggingId}
+              onDragEnd={() => setDraggingId(null)}
+              onDropSet={(setId, folderId) => {
+                setDraggingId(null);
+                const current = list.find((x) => x.id === setId);
+                if (!current || (current.folderId ?? null) === folderId) return;
+                requireAuth(() => moveSet.mutate({ setId, folderId }));
+              }}
               onEdit={(s) => requireAuth(() => setEditingSet(s))}
               onMove={(s) => requireAuth(() => setMovingSet(s))}
               onDelete={async (s) => {
@@ -312,6 +341,11 @@ function SectionBlock({
   onSubmitRename,
   onDeleteFolder,
   courses,
+  dragEnabled,
+  draggingId,
+  onDragStart,
+  onDragEnd,
+  onDropSet,
   onEdit,
   onMove,
   onDelete,
@@ -325,17 +359,51 @@ function SectionBlock({
   onSubmitRename: (f: FlashcardFolder) => void;
   onDeleteFolder: (f: FlashcardFolder) => void;
   courses: Course[];
+  dragEnabled: boolean;
+  draggingId: number | null;
+  onDragStart: (id: number) => void;
+  onDragEnd: () => void;
+  onDropSet: (setId: number, folderId: number | null) => void;
   onEdit: (s: FlashcardSet) => void;
   onMove: (s: FlashcardSet) => void;
   onDelete: (s: FlashcardSet) => void;
 }) {
   const navigate = useNavigate();
+  const [over, setOver] = useState(false);
   const totalCards = section.sets.reduce((n, s) => n + s.cards.length, 0);
   const folder = section.folder;
   const headerColor = section.color ?? "var(--fg-3)";
 
+  const dropActive = dragEnabled && draggingId != null;
+
   return (
-    <section className="space-y-3">
+    <section
+      className="space-y-3 rounded-2xl transition-colors"
+      style={
+        dropActive
+          ? {
+              outline: over ? "2px solid var(--accent)" : "2px dashed var(--line)",
+              outlineOffset: 6,
+              background: over ? "color-mix(in srgb, var(--accent) 6%, transparent)" : undefined,
+            }
+          : undefined
+      }
+      onDragOver={(e) => {
+        if (!dropActive) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        if (!over) setOver(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(false);
+      }}
+      onDrop={(e) => {
+        if (!dropActive) return;
+        e.preventDefault();
+        setOver(false);
+        onDropSet(draggingId, folder ? folder.id : null);
+      }}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2">
         {renaming && folder ? (
           <form
@@ -419,7 +487,7 @@ function SectionBlock({
 
       {section.sets.length === 0 ? (
         <p className="card px-4 py-5 text-center text-[13px] text-fg-3">
-          This folder is empty. Use the move button on a set to put it here.
+          This folder is empty. Drag a set here, or use the move button on a set.
         </p>
       ) : (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -428,6 +496,10 @@ function SectionBlock({
               key={s.id}
               set={s}
               color={courses.find((c) => c.id === s.courseId)?.color ?? "var(--accent)"}
+              draggable={dragEnabled}
+              dragging={draggingId === s.id}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
               onEdit={onEdit}
               onMove={onMove}
               onDelete={onDelete}
@@ -442,22 +514,38 @@ function SectionBlock({
 function SetCard({
   set: s,
   color,
+  draggable,
+  dragging,
+  onDragStart,
+  onDragEnd,
   onEdit,
   onMove,
   onDelete,
 }: {
   set: FlashcardSet;
   color: string;
+  draggable: boolean;
+  dragging: boolean;
+  onDragStart: (id: number) => void;
+  onDragEnd: () => void;
   onEdit: (s: FlashcardSet) => void;
   onMove: (s: FlashcardSet) => void;
   onDelete: (s: FlashcardSet) => void;
 }) {
   return (
     <li
-      className="card flex items-center justify-between gap-3 p-4 animate-fade"
-      style={{ borderLeft: `4px solid ${color}` }}
+      className={`card flex items-center justify-between gap-3 p-4 animate-fade ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
+      style={{ borderLeft: `4px solid ${color}`, opacity: dragging ? 0.45 : 1 }}
+      draggable={draggable}
+      onDragStart={(e) => {
+        if (!draggable) return;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", String(s.id));
+        onDragStart(s.id);
+      }}
+      onDragEnd={onDragEnd}
     >
-      <Link to={`/learn/flashcards/${s.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+      <Link draggable={false} to={`/learn/flashcards/${s.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-left">
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
           style={{ background: `color-mix(in srgb, ${color} 12%, transparent)` }}
