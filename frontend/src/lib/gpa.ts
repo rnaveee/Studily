@@ -10,9 +10,9 @@ export const GPA_SCALES: GpaScaleName[] = ["FOUR_POINT", "FOUR_THREE_THREE", "NI
 
 export const GPA_SCALE_LABELS: Record<GpaScaleName, string> = {
   FOUR_POINT: "4.0 scale",
-  FOUR_THREE_THREE: "4.33 scale (SFU)",
-  NINE_POINT: "9-point scale (UVic)",
-  UBC_PERCENT: "Percentage average (UBC)",
+  FOUR_THREE_THREE: "4.33 scale",
+  NINE_POINT: "9-point scale",
+  UBC_PERCENT: "Percentage average",
 };
 
 const BANDS: Record<GpaScaleName, Band[]> = {
