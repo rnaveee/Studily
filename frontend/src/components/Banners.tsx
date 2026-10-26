@@ -1,7 +1,7 @@
   import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "react-router-dom";
-import { Eye, FileText, Gift, MailWarning, Timer, Trophy, X } from "lucide-react";
+import { Eye, FileText, Gift, MailWarning, Percent, Timer, Trophy, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
 import { api } from "../lib/api";
 import type { ParseAvailability, SurveyDto } from "../types";
@@ -11,6 +11,8 @@ import { openSurveyPrompt } from "../features/survey/SurveyPrompt";
 
 const PARSER_KEY = "studily.banner.parser";
 const PROGRESS_KEY = "studily.banner.progress";
+const GRADECALC_KEY = "studily.banner.gradecalc";
+const NEW_ACCOUNT_MS = 24 * 60 * 60 * 1000;
 const SURVEY_KEY = "studily.banner.survey.fall-2026";
 
 export default function Banners() {
@@ -24,6 +26,10 @@ export default function Banners() {
   );
   const [surveyDismissed, setSurveyDismissed] = useState(
     () => localStorage.getItem(SURVEY_KEY) === "1",
+  );
+
+  const [gradeCalcDismissed, setGradeCalcDismissed] = useState(
+    () => localStorage.getItem(GRADECALC_KEY) === "1",
   );
 
   const { data: parseAvailability } = useQuery({
@@ -48,6 +54,14 @@ export default function Banners() {
     !survey.completed &&
     !pathname.startsWith("/survey");
 
+  const showGradeCalc =
+    !gradeCalcDismissed &&
+    !!user &&
+    !showParser &&
+    !showProgress &&
+    !showSurvey &&
+    Date.now() - new Date(user.createdAt).getTime() >= NEW_ACCOUNT_MS;
+
   function dismiss(key: string, set: (v: boolean) => void) {
     localStorage.setItem(key, "1");
     set(true);
@@ -60,6 +74,7 @@ export default function Banners() {
     !showParser &&
     !showProgress &&
     !showSurvey &&
+    !showGradeCalc &&
     !unverified &&
     !pomo.running &&
     !guest
@@ -127,6 +142,19 @@ export default function Banners() {
             className="font-medium underline underline-offset-2"
           >
             See what's new
+          </Link>
+          .
+        </Banner>
+      )}
+      {showGradeCalc && (
+        <Banner
+          icon={<Percent size={13} className="shrink-0" />}
+          onDismiss={() => dismiss(GRADECALC_KEY, setGradeCalcDismissed)}
+          wrap
+        >
+          New: a grade calculator. See what you need on your final.{" "}
+          <Link to="/grade-calculator" className="font-medium underline underline-offset-2">
+            Try it
           </Link>
           .
         </Banner>

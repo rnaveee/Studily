@@ -27,7 +27,7 @@ const TOOLS = [
     to: "/grade-calculator",
     icon: Percent,
     title: "Grade Calculator",
-    label: "Grades",
+    label: "Grade calc",
     color: "var(--blue-vivid)",
     description: "Work out your weighted grade and what you need on your final.",
   },

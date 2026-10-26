@@ -195,7 +195,7 @@ export default function CourseDetailPage() {
         </div>
       )}
 
-      <GradeCard items={itemsQ.data ?? []} categories={weightsQ.data ?? []} />
+      <GradeCard items={itemsQ.data ?? []} categories={weightsQ.data ?? []} courseId={courseId} />
       <WeightsSection
         courseId={courseId}
         categories={weightsQ.data ?? []}
@@ -222,9 +222,11 @@ export default function CourseDetailPage() {
 function GradeCard({
   items,
   categories,
+  courseId,
 }: {
   items: AcademicItem[];
   categories: GradeCategory[];
+  courseId: number;
 }) {
   const [target, setTarget] = useState("80");
   const summary = courseGrade(items, categories);
@@ -315,6 +317,13 @@ function GradeCard({
           Fill in the Weights section for a weighted grade and projections.
         </p>
       )}
+
+      <Link
+        to={`/grade-calculator?course=${courseId}`}
+        className="mt-3 inline-block text-[12px] font-medium text-accent underline underline-offset-2"
+      >
+        Open in grade calculator
+      </Link>
     </div>
   );
 }
