@@ -7,8 +7,8 @@ export interface TrackState {
 
 export const TRACK_PREF_KEY = "studily.flip.track";
 
-export function trackStorageKey(viewerKey: string, setId: number): string {
-  return `studily.flip.${viewerKey}.${setId}`;
+export function trackStorageKey(viewerKey: string, scope: string): string {
+  return `studily.flip.${viewerKey}.${scope}`;
 }
 
 export function freshTrack(keys: string[]): TrackState {

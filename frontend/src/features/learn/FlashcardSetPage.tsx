@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ImageOff, Pencil, Share2 } from "lucide-react";
+import { FolderInput, ImageOff, Pencil, Share2 } from "lucide-react";
 import { api, ApiError } from "../../lib/api";
 import { useAuth, useRequireAuth } from "../../lib/auth";
 import BackButton from "../../components/BackButton";
@@ -14,10 +14,12 @@ import MemoryGame from "./MemoryGame";
 import SpeedMatch from "./SpeedMatch";
 import ShareSetModal from "./ShareSetModal";
 import EditSetModal from "./EditSetModal";
+import MoveToFolderModal from "./MoveToFolderModal";
 import AddCardsPanel from "./AddCardsPanel";
 import MissingImagesModal from "./MissingImagesModal";
 import CardEditor, { cardIsComplete, type CardDraft } from "./CardEditor";
 import Modal, { useModalClose } from "../../components/Modal";
+import { setScope } from "./studyScope";
 import SetModePicker, { useStudyMode } from "./SetModePicker";
 import { VisibilityBadge } from "./visibility";
 import type { Course, Flashcard, FlashcardSet, FlashcardSetRequest } from "../../types";
@@ -35,6 +37,7 @@ export default function FlashcardSetPage() {
   const [editing, setEditing] = useState<number | null>(null);
   const [sharing, setSharing] = useState(false);
   const [editingSet, setEditingSet] = useState(false);
+  const [moving, setMoving] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const addImagesOnOpen = !!(location.state as { addImages?: boolean } | null)?.addImages;
@@ -188,6 +191,14 @@ export default function FlashcardSetPage() {
             Edit
           </button>
           <button
+            onClick={() => requireAuth(() => setMoving(true))}
+            className="btn btn-ghost shrink-0"
+            aria-label="Move to folder"
+          >
+            <FolderInput size={13} />
+            Folder
+          </button>
+          <button
             onClick={() => requireAuth(() => setSharing(true))}
             className="btn btn-ghost shrink-0"
             aria-label="Share set"
@@ -223,7 +234,7 @@ export default function FlashcardSetPage() {
             key={data.id}
             cards={data.cards}
             color={color}
-            setId={data.id}
+            scope={setScope(data.id)}
             viewerKey={viewerKey}
             onDelete={deleteCard}
             onEdit={(i) => requireAuth(() => setEditing(i))}
@@ -243,7 +254,7 @@ export default function FlashcardSetPage() {
           </div>
         ) : (
           <StudySession
-            setId={data.id}
+            scope={setScope(data.id)}
             cards={studyable}
             color={color}
             onExit={() => setMode("flashcards")}
@@ -253,7 +264,7 @@ export default function FlashcardSetPage() {
       {mode === "learn" && (
         <LearnMode
           key={data.id}
-          setId={data.id}
+          scope={setScope(data.id)}
           cards={studyable}
           color={color}
           viewerKey={viewerKey}
@@ -262,13 +273,13 @@ export default function FlashcardSetPage() {
       )}
 
       {mode === "memory" && (
-        <MemoryGame key={data.id} setId={data.id} cards={studyable} color={color} onDone={() => setMode("flashcards")} />
+        <MemoryGame key={data.id} scope={setScope(data.id)} cards={studyable} color={color} onDone={() => setMode("flashcards")} />
       )}
 
       {mode === "match" && (
         <SpeedMatch
           key={data.id}
-          setId={data.id}
+          scope={setScope(data.id)}
           cards={studyable}
           color={color}
           viewerKey={viewerKey}
@@ -276,6 +287,7 @@ export default function FlashcardSetPage() {
         />
       )}
 
+      {moving && <MoveToFolderModal set={data} onClose={() => setMoving(false)} />}
       {sharing && <ShareSetModal set={data} onClose={() => setSharing(false)} />}
       {editingSet && (
         <EditSetModal

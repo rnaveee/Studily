@@ -67,6 +67,7 @@ const GUEST_EMPTY_LISTS = new Set([
   "/friends/incoming",
   "/friends/pending",
   "/conversations",
+  "/flashcard-folders",
 ]);
 
 const GUEST_EMPTY_PAGES = new Set(["/friends/schoolmates", "/friends/search"]);
@@ -102,6 +103,22 @@ function guestStub(path: string): unknown {
       case "/notes":       return demoNotes(id);
       case "/classmates":  return [];
     }
+  }
+
+  if (p === "/flashcard-study") {
+    const q = new URLSearchParams(path.split("?")[1] ?? "");
+    const courseId = Number(q.get("courseId"));
+    if (!courseId) return undefined;
+    const course = demoCourses().find((c) => c.id === courseId);
+    const sets = demoFlashcardSets().filter((s) => s.courseId === courseId);
+    return {
+      kind: "course",
+      id: courseId,
+      title: course?.code ?? course?.name ?? "Course",
+      setCount: sets.length,
+      truncated: false,
+      cards: sets.flatMap((s) => s.cards.map((c) => ({ ...c, setId: s.id }))),
+    };
   }
 
   const set = p.match(/^\/flashcard-sets\/(\d+)$/);

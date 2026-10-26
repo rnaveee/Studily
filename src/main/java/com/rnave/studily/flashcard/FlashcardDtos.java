@@ -34,6 +34,7 @@ public class FlashcardDtos {
     public record FlashcardSetDto(
             Long id,
             Long courseId,
+            Long folderId,
             String title,
             String description,
             FlashcardSetVisibility visibility,
@@ -51,6 +52,7 @@ public class FlashcardDtos {
             return new FlashcardSetDto(
                     s.getId(),
                     s.getCourse() != null ? s.getCourse().getId() : null,
+                    s.getFolder() != null ? s.getFolder().getId() : null,
                     s.getTitle(),
                     s.getDescription(),
                     s.getVisibility(),
@@ -73,6 +75,28 @@ public class FlashcardDtos {
     }
 
     public record ReviewRequest(@NotNull Sm2.Grade grade) {
+    }
+
+    public record FolderRequest(@NotBlank @Size(max = 60) String name, Integer position) {
+    }
+
+    public record FolderDto(Long id, String name, int position, int setCount, Instant createdAt) {
+    }
+
+    public record SetFolderRequest(Long folderId) {
+    }
+
+    public record StudyCardDto(Long id, Long setId, String front, String back, String frontImage, String backImage,
+                               Instant dueAt, Integer intervalDays, Integer repetitions, Double easeFactor) {
+
+        public static StudyCardDto from(Flashcard c) {
+            return new StudyCardDto(c.getId(), c.getSet().getId(), c.getFront(), c.getBack(), c.getFrontImageKey(),
+                    c.getBackImageKey(), c.getDueAt(), c.getIntervalDays(), c.getRepetitions(), c.getEaseFactor());
+        }
+    }
+
+    public record StudyGroupDto(String kind, Long id, String title, int setCount, boolean truncated,
+                                List<StudyCardDto> cards) {
     }
 
     public record VisibilityRequest(@NotNull FlashcardSetVisibility visibility) {

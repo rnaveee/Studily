@@ -9,6 +9,7 @@ import Avatar from "../../components/Avatar";
 import BackButton from "../../components/BackButton";
 import { SkeletonList } from "../../components/Skeleton";
 import FlashcardViewer from "./FlashcardViewer";
+import { setScope } from "./studyScope";
 import LearnMode from "./LearnMode";
 import MemoryGame from "./MemoryGame";
 import SpeedMatch from "./SpeedMatch";
@@ -150,7 +151,7 @@ export default function SharedSetPage() {
       <SetModePicker mode={mode} onChange={setMode} color={COLOR} studyLocked />
 
       {mode === "flashcards" && (
-        <FlashcardViewer key={data.id} cards={data.cards} color={COLOR} setId={data.id} viewerKey={viewerKey} />
+        <FlashcardViewer key={data.id} cards={data.cards} color={COLOR} scope={setScope(data.id)} viewerKey={viewerKey} />
       )}
 
       {mode === "study" && (
@@ -173,7 +174,7 @@ export default function SharedSetPage() {
       {mode === "learn" && (
         <LearnMode
           key={data.id}
-          setId={data.id}
+          scope={setScope(data.id)}
           cards={data.cards}
           color={COLOR}
           viewerKey={viewerKey}
@@ -182,13 +183,13 @@ export default function SharedSetPage() {
       )}
 
       {mode === "memory" && (
-        <MemoryGame key={data.id} setId={data.id} cards={data.cards} color={COLOR} onDone={() => setMode("flashcards")} />
+        <MemoryGame key={data.id} scope={setScope(data.id)} cards={data.cards} color={COLOR} onDone={() => setMode("flashcards")} />
       )}
 
       {mode === "match" && (
         <SpeedMatch
           key={data.id}
-          setId={data.id}
+          scope={setScope(data.id)}
           cards={data.cards}
           color={COLOR}
           viewerKey={viewerKey}

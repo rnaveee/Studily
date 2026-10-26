@@ -27,6 +27,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -80,6 +81,32 @@ public class FlashcardRunService {
         User user = currentUser.entity();
         rateLimiter.check(user.getId());
         FlashcardSet set = flashcardSetService.requireViewable(setId, user.getId());
+        FlashcardRun run = newRun(user, mode);
+        run.setSet(set);
+        runRepository.save(run);
+        return new FlashcardRunStart(run.getId(), run.getStartedAt());
+    }
+
+    @Transactional
+    public FlashcardRunStart startGroup(FlashcardRunMode mode, Long folderId, Long courseId) {
+        if ((folderId == null) == (courseId == null)) {
+            throw new BadRequestException("Pass either folderId or courseId");
+        }
+        User user = currentUser.entity();
+        rateLimiter.check(user.getId());
+        boolean hasCards = flashcardSetService.ownedGroupSets(folderId, courseId).stream()
+                .anyMatch(s -> !s.completeCards().isEmpty());
+        if (!hasCards) {
+            throw new BadRequestException("There are no cards to study here yet");
+        }
+        FlashcardRun run = newRun(user, mode);
+        run.setFolderId(folderId);
+        run.setCourseId(courseId);
+        runRepository.save(run);
+        return new FlashcardRunStart(run.getId(), run.getStartedAt());
+    }
+
+    private FlashcardRun newRun(User user, FlashcardRunMode mode) {
         UserProgress progress = progressService.ensure(user.getId());
         Instant now = clock.instant();
         if (runRepository.countByUserIdAndStartedAtAfter(user.getId(), now.minus(Duration.ofHours(1)))
@@ -88,12 +115,10 @@ public class FlashcardRunService {
         }
         FlashcardRun run = new FlashcardRun();
         run.setUser(user);
-        run.setSet(set);
         run.setMode(mode);
         run.setStartedAt(now);
         run.setLocalDate(now.atZone(progressService.progressZone(progress, user)).toLocalDate());
-        runRepository.save(run);
-        return new FlashcardRunStart(run.getId(), run.getStartedAt());
+        return run;
     }
 
     @Transactional
@@ -110,13 +135,22 @@ public class FlashcardRunService {
         if (now.isAfter(run.getStartedAt().plus(MAX_RUN_AGE))) {
             throw new BadRequestException("This run has expired");
         }
-        if (run.getSet() == null) {
+        boolean group = run.getSet() == null && (run.getFolderId() != null || run.getCourseId() != null);
+        if (run.getSet() == null && !group) {
             throw new BadRequestException("This flashcard set no longer exists");
         }
-        FlashcardSet set = flashcardSetService.requireViewable(run.getSet().getId(), user.getId());
-        Map<Long, Flashcard> cards = set.getCards().stream()
-                .filter(c -> c.getId() != null)
-                .collect(Collectors.toMap(Flashcard::getId, Function.identity()));
+        Map<Long, Flashcard> cards;
+        if (group) {
+            cards = flashcardSetService.ownedGroupSets(run.getFolderId(), run.getCourseId()).stream()
+                    .flatMap(s -> s.completeCards().stream())
+                    .filter(c -> c.getId() != null)
+                    .collect(Collectors.toMap(Flashcard::getId, Function.identity()));
+        } else {
+            FlashcardSet set = flashcardSetService.requireViewable(run.getSet().getId(), user.getId());
+            cards = set.getCards().stream()
+                    .filter(c -> c.getId() != null)
+                    .collect(Collectors.toMap(Flashcard::getId, Function.identity()));
+        }
         List<CardResult> results = submitted == null ? List.of() : submitted;
         Set<Long> seen = new HashSet<>();
         for (CardResult r : results) {
@@ -127,16 +161,20 @@ public class FlashcardRunService {
                 throw new BadRequestException("Each card can only be reported once");
             }
             if (!cards.containsKey(r.cardId())) {
-                throw new BadRequestException("That card isn't in this set");
+                throw new BadRequestException(group ? "That card isn't in this group" : "That card isn't in this set");
             }
         }
         int cardCount = results.size();
         int correctCount = (int) results.stream().filter(CardResult::correct).count();
 
-        Score score = score(run, user.getId(), cardCount, correctCount, now);
+        Set<Long> touched = group
+                ? results.stream().map(r -> cards.get(r.cardId()).getSet().getId()).collect(Collectors.toSet())
+                : Set.of();
+        Score score = score(run, user.getId(), cardCount, correctCount, now, touched);
         int granted = progressService.grantXp(delta, XpSource.FLASHCARD_RUN, score.xp(),
                 "flashcard-run:" + run.getId(), run.getId());
 
+        run.getCoveredSetIds().addAll(touched);
         run.setCompletedAt(now);
         run.setCardCount(cardCount);
         run.setCorrectCount(correctCount);
@@ -160,7 +198,8 @@ public class FlashcardRunService {
                 score.reason(), summary, result);
     }
 
-    private Score score(FlashcardRun run, Long userId, int cardCount, int correctCount, Instant now) {
+    private Score score(FlashcardRun run, Long userId, int cardCount, int correctCount, Instant now,
+                       Set<Long> touchedSetIds) {
         if (cardCount < MIN_CARDS) {
             return new Score(0, XpReason.TOO_FEW);
         }
@@ -173,8 +212,7 @@ public class FlashcardRunService {
         if (GRADED_MODES.contains(run.getMode()) && correctCount * 5L >= cardCount * 4L) {
             xp += ACCURACY_BONUS;
         }
-        long earlier = runRepository.countByUserIdAndSetIdAndLocalDateAndXpAwardedGreaterThan(
-                userId, run.getSet().getId(), run.getLocalDate(), 0);
+        long earlier = earlierRuns(run, userId, touchedSetIds);
         XpReason reason = XpReason.FULL;
         if (earlier >= 2) {
             return new Score(0, XpReason.REPEAT);
@@ -189,5 +227,31 @@ public class FlashcardRunService {
             reason = XpReason.DAILY_CAP;
         }
         return new Score(xp, reason);
+    }
+
+    private long earlierRuns(FlashcardRun run, Long userId, Set<Long> touchedSetIds) {
+        if (run.getSet() != null) {
+            Long setId = run.getSet().getId();
+            return runRepository.countByUserIdAndSetIdAndLocalDateAndXpAwardedGreaterThan(
+                    userId, setId, run.getLocalDate(), 0)
+                    + runRepository.countGroupRunsCovering(userId, setId, run.getLocalDate());
+        }
+        long scoped = run.getFolderId() != null
+                ? runRepository.countByUserIdAndFolderIdAndLocalDateAndXpAwardedGreaterThan(
+                userId, run.getFolderId(), run.getLocalDate(), 0)
+                : runRepository.countByUserIdAndCourseIdAndLocalDateAndXpAwardedGreaterThan(
+                userId, run.getCourseId(), run.getLocalDate(), 0);
+        if (touchedSetIds.isEmpty()) {
+            return scoped;
+        }
+        Map<Long, Long> perSet = new HashMap<>();
+        for (Object[] row : runRepository.countSetRunsBySet(userId, touchedSetIds, run.getLocalDate())) {
+            perSet.merge((Long) row[0], ((Number) row[1]).longValue(), Long::sum);
+        }
+        for (Object[] row : runRepository.countGroupRunsCoveringSets(userId, touchedSetIds, run.getLocalDate())) {
+            perSet.merge((Long) row[0], ((Number) row[1]).longValue(), Long::sum);
+        }
+        long mostStudiedSet = perSet.values().stream().mapToLong(Long::longValue).max().orElse(0);
+        return Math.max(scoped, mostStudiedSet);
     }
 }

@@ -8,6 +8,7 @@ import RunSummary from "./RunSummary";
 import { useFlashcardRun } from "./useFlashcardRun";
 import CardFace from "./CardFace";
 import type { Flashcard, ReviewGrade } from "../../types";
+import type { StudyScope } from "./studyScope";
 
 const GRADES: { grade: ReviewGrade; label: string; explain: string; color: string }[] = [
   { grade: "AGAIN", label: "Again", explain: "Didn't know it",               color: "var(--red)" },
@@ -17,13 +18,13 @@ const GRADES: { grade: ReviewGrade; label: string; explain: string; color: strin
 ];
 
 interface Props {
-  setId: number;
+  scope: StudyScope;
   cards: Flashcard[];
   color: string;
   onExit: () => void;
 }
 
-export default function StudySession({ setId, cards, color, onExit }: Props) {
+export default function StudySession({ scope, cards, color, onExit }: Props) {
   const qc = useQueryClient();
   const [queue, setQueue] = useState<Flashcard[]>(() =>
     cards
@@ -34,7 +35,7 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
   const [reviewed, setReviewed] = useState(0);
   const [grading, setGrading] = useState(false);
   const initialDue = useRef(queue).current;
-  const run = useFlashcardRun(setId, "REVIEW", initialDue);
+  const run = useFlashcardRun(scope, "REVIEW", initialDue);
   const graded = useRef(new Map<number, boolean>());
   const started = useRef(false);
 
@@ -61,14 +62,14 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
     setGrading(true);
     try {
       const updated = await api.post<Flashcard>(
-        `/flashcard-sets/${setId}/cards/${card.id}/review`,
+        `/flashcard-sets/${card.setId ?? scope.id}/cards/${card.id}/review`,
         { grade: g },
       );
       if (card.id != null) {
         const id = card.id;
         graded.current.set(id, g !== "AGAIN" && graded.current.get(id) !== false);
       }
-      setQueue((q) => (g === "AGAIN" ? [...q.slice(1), updated] : q.slice(1)));
+      setQueue((q) => (g === "AGAIN" ? [...q.slice(1), { ...updated, setId: card.setId }] : q.slice(1)));
       setReviewed((n) => n + 1);
       setFlipped(false);
     } catch {
@@ -87,7 +88,7 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
         headline="All caught up!"
         color={color}
         onDone={done}
-        doneLabel="Back to set"
+        doneLabel={scope.kind === "set" ? "Back to set" : "Back to cards"}
       >
         <p className="mt-1 text-[12px] text-fg-3">
           You reviewed {reviewed} {reviewed === 1 ? "card" : "cards"}. Come back when more are due.
@@ -107,7 +108,7 @@ export default function StudySession({ setId, cards, color, onExit }: Props) {
             : "No cards are due right now. Come back later."}
         </p>
         <button onClick={done} className="btn btn-soft mt-4 inline-flex">
-          Back to set
+          {scope.kind === "set" ? "Back to set" : "Back to cards"}
         </button>
       </div>
     );

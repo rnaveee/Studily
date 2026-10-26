@@ -64,6 +64,18 @@ public class FlashcardSetService {
     }
 
     @Transactional(readOnly = true)
+    public List<FlashcardSet> ownedGroupSets(Long folderId, Long courseId) {
+        Long userId = currentUser.id();
+        if (folderId != null) {
+            return flashcardSetRepository.findByUserIdAndFolderIdOrderByCreatedAtDesc(userId, folderId);
+        }
+        if (courseId != null) {
+            return flashcardSetRepository.findByUserIdAndCourseIdOrderByCreatedAtDesc(userId, courseId);
+        }
+        return List.of();
+    }
+
+    @Transactional(readOnly = true)
     public FlashcardSetDto get(Long id) {
         return ownerDto(requireOwned(id));
     }

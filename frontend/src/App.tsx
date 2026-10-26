@@ -42,6 +42,7 @@ import ConversationPage from "./features/messages/ConversationPage";
 import LearnPage from "./features/learn/LearnPage";
 import FlashcardsPage from "./features/learn/FlashcardsPage";
 import FlashcardSetPage from "./features/learn/FlashcardSetPage";
+import FlashcardGroupPage from "./features/learn/FlashcardGroupPage";
 import SharedSetPage from "./features/learn/SharedSetPage";
 import AiChatPage from "./features/learn/AiChatPage";
 import PomodoroPage from "./features/learn/PomodoroPage";
@@ -153,6 +154,8 @@ export const appRoutes = (
       <Route path="/learn" element={<LearnPage />} />
       <Route path="/learn/flashcards" element={<FlashcardsPage />} />
       <Route path="/flashcards" element={<Navigate to="/learn/flashcards" replace />} />
+      <Route path="/learn/flashcards/folders/:id" element={<FlashcardGroupPage kind="folder" />} />
+      <Route path="/learn/flashcards/courses/:id" element={<FlashcardGroupPage kind="course" />} />
       <Route path="/learn/flashcards/:id" element={<FlashcardSetPage />} />
       <Route path="/learn/sessions" element={<SessionHistoryPage />} />
       <Route path="/learn/ai" element={<AiChatPage />} />

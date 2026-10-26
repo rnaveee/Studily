@@ -22,6 +22,9 @@ public class FlashcardRunDtos {
     public record StartRunRequest(@NotNull FlashcardRunMode mode) {
     }
 
+    public record StartGroupRunRequest(@NotNull FlashcardRunMode mode, Long folderId, Long courseId) {
+    }
+
     public record FlashcardRunStart(Long runId, Instant startedAt) {
     }
 

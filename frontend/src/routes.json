@@ -122,6 +122,8 @@
     "/learn",
     "/learn/flashcards",
     "/flashcards",
+    "/learn/flashcards/folders/:id",
+    "/learn/flashcards/courses/:id",
     "/learn/flashcards/:id",
     "/learn/sessions",
     "/learn/ai",

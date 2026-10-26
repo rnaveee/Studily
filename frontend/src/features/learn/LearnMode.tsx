@@ -17,9 +17,10 @@ import RunSummary from "./RunSummary";
 import { cardIdOf, useFlashcardRun } from "./useFlashcardRun";
 import CardFace from "./CardFace";
 import type { StudyCard } from "../../types";
+import { scopeKey, type StudyScope } from "./studyScope";
 
 interface Props {
-  setId: number;
+  scope: StudyScope;
   cards: StudyCard[];
   color: string;
   viewerKey: string;
@@ -38,9 +39,9 @@ type Phase = "asking" | "checkpoint" | "done";
 
 const AMBER = "#c78a2d";
 
-export default function LearnMode({ setId, cards, color, viewerKey, onSwitchMode }: Props) {
+export default function LearnMode({ scope, cards, color, viewerKey, onSwitchMode }: Props) {
   const deck = useMemo(() => learnCards(cards), [cards]);
-  const key = storageKey(viewerKey, setId);
+  const key = storageKey(viewerKey, scopeKey(scope));
   const [progress, setProgress] = useState<LearnProgress>(() =>
     restoreProgress(readJson<LearnProgress>(key), deck),
   );
@@ -53,7 +54,7 @@ export default function LearnMode({ setId, cards, color, viewerKey, onSwitchMode
   const [revealed, setRevealed] = useState(false);
   const lastAsked = useRef<Record<string, number>>({});
   const askCounter = useRef(0);
-  const run = useFlashcardRun(setId, "LEARN", cards);
+  const run = useFlashcardRun(scope, "LEARN", cards);
   const answers = useRef(new Map<string, boolean>());
   const runStarted = useRef(false);
 

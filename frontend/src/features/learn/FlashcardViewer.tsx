@@ -18,11 +18,12 @@ import {
   type TrackState,
 } from "./flipTrack";
 import type { StudyCard } from "../../types";
+import { scopeKey, type StudyScope } from "./studyScope";
 
 interface Props {
   cards: StudyCard[];
   color: string;
-  setId: number;
+  scope: StudyScope;
   viewerKey: string;
   onDelete?: (index: number) => void;
   onEdit?: (index: number) => void;
@@ -31,7 +32,7 @@ interface Props {
 const iconButton =
   "rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg disabled:opacity-40";
 
-export default function FlashcardViewer({ cards, color, setId, viewerKey, onDelete, onEdit }: Props) {
+export default function FlashcardViewer({ cards, color, scope, viewerKey, onDelete, onEdit }: Props) {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [order, setOrder] = useState<number[]>(() => cards.map((_, i) => i));
@@ -40,7 +41,7 @@ export default function FlashcardViewer({ cards, color, setId, viewerKey, onDele
   const keys = useMemo(() => cards.map((c, i) => cardKey(c, i)), [cards]);
   const keySig = keys.join(",");
   const indexByKey = useMemo(() => new Map(keys.map((k, i) => [k, i])), [keys]);
-  const storageKey = trackStorageKey(viewerKey, setId);
+  const storageKey = trackStorageKey(viewerKey, scopeKey(scope));
   const [track, setTrack] = useState<TrackState>(() => reconcileTrack(readJson<TrackState>(storageKey), keys));
 
   useEffect(() => {

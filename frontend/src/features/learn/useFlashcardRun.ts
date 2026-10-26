@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
 import { applyDelta } from "../../lib/progressDelta";
 import { useProgressEnabled } from "../progress/useProgress";
+import type { StudyScope } from "./studyScope";
 import type {
   FlashcardRunCardResult,
   FlashcardRunMode,
@@ -18,7 +19,7 @@ export function cardIdOf(key: string): number | null {
   return /^\d+$/.test(key) ? Number(key) : null;
 }
 
-export function useFlashcardRun(setId: number, mode: FlashcardRunMode, cards: { id?: number }[]) {
+export function useFlashcardRun(scope: StudyScope, mode: FlashcardRunMode, cards: { id?: number }[]) {
   const qc = useQueryClient();
   const signedIn = useProgressEnabled();
   const eligible = signedIn && cards.filter((c) => c.id != null).length >= MIN_RUN_CARDS;
@@ -29,12 +30,18 @@ export function useFlashcardRun(setId: number, mode: FlashcardRunMode, cards: { 
   const start = useCallback(() => {
     if (!eligible) return;
     setResult(null);
-    run.current = api
-      .post<FlashcardRunStart>(`/flashcard-sets/${setId}/runs`, { mode })
+    const request =
+      scope.kind === "set"
+        ? api.post<FlashcardRunStart>(`/flashcard-sets/${scope.id}/runs`, { mode })
+        : api.post<FlashcardRunStart>("/flashcard-runs", {
+            mode,
+            ...(scope.kind === "folder" ? { folderId: scope.id } : { courseId: scope.id }),
+          });
+    run.current = request
       .then((r) => r.runId)
       .catch(() => null);
     setStatus("running");
-  }, [eligible, setId, mode]);
+  }, [eligible, scope.kind, scope.id, mode]);
 
   const complete = useCallback(
     async (results: FlashcardRunCardResult[]) => {

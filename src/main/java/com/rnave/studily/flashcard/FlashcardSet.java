@@ -41,6 +41,10 @@ public class FlashcardSet {
     @JoinColumn(name = "course_id")
     private Course course;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "folder_id")
+    private FlashcardFolder folder;
+
     @Column(nullable = false)
     private String title;
 

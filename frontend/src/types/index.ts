@@ -452,6 +452,7 @@ export interface ProfileSchedule {
 
 export interface Flashcard {
   id?: number;
+  setId?: number;
   front: string;
   back: string;
   frontImage?: string | null;
@@ -469,6 +470,7 @@ export type FlashcardSetVisibility = "PRIVATE" | "FRIENDS" | "PUBLIC";
 export interface FlashcardSet {
   id: number;
   courseId?: number | null;
+  folderId?: number | null;
   title: string;
   description?: string | null;
   visibility: FlashcardSetVisibility;
@@ -492,8 +494,26 @@ export interface FlashcardSetRequest {
   visibility?: FlashcardSetVisibility;
 }
 
+export interface FlashcardFolder {
+  id: number;
+  name: string;
+  position: number;
+  setCount: number;
+  createdAt: string;
+}
+
+export interface StudyGroup {
+  kind: "folder" | "course";
+  id: number;
+  title: string;
+  setCount: number;
+  truncated: boolean;
+  cards: Flashcard[];
+}
+
 export interface StudyCard {
   id?: number;
+  setId?: number;
   front: string;
   back: string;
   frontImage?: string | null;

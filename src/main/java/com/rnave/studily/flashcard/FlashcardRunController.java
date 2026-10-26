@@ -3,6 +3,7 @@ package com.rnave.studily.flashcard;
 import com.rnave.studily.flashcard.FlashcardRunDtos.CompleteRunRequest;
 import com.rnave.studily.flashcard.FlashcardRunDtos.FlashcardRunResult;
 import com.rnave.studily.flashcard.FlashcardRunDtos.FlashcardRunStart;
+import com.rnave.studily.flashcard.FlashcardRunDtos.StartGroupRunRequest;
 import com.rnave.studily.flashcard.FlashcardRunDtos.StartRunRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +23,11 @@ public class FlashcardRunController {
     @PostMapping("/api/flashcard-sets/{id}/runs")
     public FlashcardRunStart start(@PathVariable Long id, @Valid @RequestBody StartRunRequest req) {
         return flashcardRunService.start(id, req.mode());
+    }
+
+    @PostMapping("/api/flashcard-runs")
+    public FlashcardRunStart startGroup(@Valid @RequestBody StartGroupRunRequest req) {
+        return flashcardRunService.startGroup(req.mode(), req.folderId(), req.courseId());
     }
 
     @PostMapping("/api/flashcard-runs/{runId}/complete")

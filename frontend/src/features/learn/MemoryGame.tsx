@@ -7,15 +7,16 @@ import RunSummary from "./RunSummary";
 import { cardIdOf, useFlashcardRun } from "./useFlashcardRun";
 import { TileFace } from "./CardFace";
 import type { StudyCard } from "../../types";
+import type { StudyScope } from "./studyScope";
 
 interface Props {
-  setId: number;
+  scope: StudyScope;
   cards: StudyCard[];
   color: string;
   onDone?: () => void;
 }
 
-export default function MemoryGame({ setId, cards, color, onDone }: Props) {
+export default function MemoryGame({ scope, cards, color, onDone }: Props) {
   const playable = useMemo(() => playableCards(cards), [cards]);
   const [deck, setDeck] = useState<GameCard[]>(() => shuffled(playable));
   const boards = useMemo(() => splitBoards(deck), [deck]);
@@ -29,7 +30,7 @@ export default function MemoryGame({ setId, cards, color, onDone }: Props) {
   const [finishedAt, setFinishedAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const timer = useRef<number | undefined>(undefined);
-  const run = useFlashcardRun(setId, "MEMORY", cards);
+  const run = useFlashcardRun(scope, "MEMORY", cards);
   const [pass, setPass] = useState({ moves: 0, ms: 0 });
   const replayArmed = useRef(false);
   const runScope = useRef<"deck" | "board">("deck");

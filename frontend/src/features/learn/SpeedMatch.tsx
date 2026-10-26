@@ -8,9 +8,10 @@ import RunSummary from "./RunSummary";
 import { cardIdOf, useFlashcardRun } from "./useFlashcardRun";
 import { TileFace } from "./CardFace";
 import type { StudyCard } from "../../types";
+import { scopeKey, type StudyScope } from "./studyScope";
 
 interface Props {
-  setId: number;
+  scope: StudyScope;
   cards: StudyCard[];
   color: string;
   viewerKey: string;
@@ -25,9 +26,9 @@ function seconds(ms: number): string {
   return (ms / 1000).toFixed(1);
 }
 
-export default function SpeedMatch({ setId, cards, color, viewerKey, onDone }: Props) {
+export default function SpeedMatch({ scope, cards, color, viewerKey, onDone }: Props) {
   const playable = useMemo(() => playableCards(cards), [cards]);
-  const bestKey = `studily.match.best.${viewerKey}.${setId}`;
+  const bestKey = `studily.match.best.${viewerKey}.${scopeKey(scope)}`;
   const [tiles, setTiles] = useState<Tile[]>(() => deal(playable));
   const [selected, setSelected] = useState<string | null>(null);
   const [gone, setGone] = useState<string[]>([]);
@@ -39,7 +40,7 @@ export default function SpeedMatch({ setId, cards, color, viewerKey, onDone }: P
   const [best, setBest] = useState<number | null>(() => readJson<number>(bestKey));
   const [newBest, setNewBest] = useState(false);
   const wrongTimer = useRef<number | undefined>(undefined);
-  const run = useFlashcardRun(setId, "MATCH", cards);
+  const run = useFlashcardRun(scope, "MATCH", cards);
 
   useEffect(() => () => window.clearTimeout(wrongTimer.current), []);
 

@@ -1,7 +1,9 @@
 package com.rnave.studily.flashcard;
 
 import com.rnave.studily.user.User;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -17,6 +19,8 @@ import lombok.Setter;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "flashcard_runs")
@@ -35,6 +39,17 @@ public class FlashcardRun {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "set_id")
     private FlashcardSet set;
+
+    @Column(name = "folder_id")
+    private Long folderId;
+
+    @Column(name = "course_id")
+    private Long courseId;
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "flashcard_run_sets", joinColumns = @JoinColumn(name = "run_id"))
+    @Column(name = "set_id")
+    private Set<Long> coveredSetIds = new HashSet<>();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)

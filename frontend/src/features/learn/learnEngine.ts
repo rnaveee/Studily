@@ -72,8 +72,8 @@ function answerSide(card: LearnCard, level: Level): Side {
   return "back";
 }
 
-export function storageKey(viewerKey: string, setId: number): string {
-  return `studily.learn.${viewerKey}.${setId}`;
+export function storageKey(viewerKey: string, scope: string): string {
+  return `studily.learn.${viewerKey}.${scope}`;
 }
 
 export function restoreProgress(saved: LearnProgress | null, cards: LearnCard[]): LearnProgress {
