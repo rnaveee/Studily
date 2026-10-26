@@ -1,6 +1,6 @@
 package com.rnave.studily.canvas;
 
-import com.rnave.studily.canvas.CanvasDtos.FeedResult;
+import com.rnave.studily.canvas.FeedImportDtos.FeedStageResult;
 import com.rnave.studily.canvas.SchoolFeedDtos.SchoolFeedList;
 import com.rnave.studily.config.CurrentUser;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +29,7 @@ public class SchoolFeedController {
     }
 
     @PostMapping("/{id}/sync")
-    public FeedResult syncNow(@PathVariable Long id) {
+    public FeedStageResult syncNow(@PathVariable Long id) {
         return service.syncNow(currentUser.entity(), id);
     }
 

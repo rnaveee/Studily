@@ -7,10 +7,14 @@ import com.rnave.studily.academic.ItemTypes;
 import com.rnave.studily.calendar.CalendarEvent;
 import com.rnave.studily.calendar.CalendarEventRepository;
 import com.rnave.studily.canvas.CanvasDtos.FeedRequest;
-import com.rnave.studily.canvas.CanvasDtos.FeedResult;
+import com.rnave.studily.canvas.FeedImportDtos.StageOutcome;
+import com.rnave.studily.canvas.FeedImportDtos.StagedCourse;
+import com.rnave.studily.canvas.FeedImportDtos.StagedItem;
+import com.rnave.studily.canvas.FeedImportDtos.StagedKind;
+import com.rnave.studily.canvas.FeedImportDtos.StagedPayload;
 import com.rnave.studily.config.BadRequestException;
-import com.rnave.studily.config.MatchKeys;
 import com.rnave.studily.course.Course;
+import com.rnave.studily.course.CourseMatcher;
 import com.rnave.studily.course.CourseRepository;
 import com.rnave.studily.ics.IcsFetcher;
 import com.rnave.studily.ics.IcsParser;
@@ -31,6 +35,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -53,22 +58,27 @@ public class CanvasFeedService {
     private final AcademicItemRepository itemRepository;
     private final CalendarEventRepository eventRepository;
     private final SemesterRepository semesterRepository;
+    private final FeedIgnoredRefRepository ignoredRefRepository;
+    private final CourseMatcher courseMatcher;
     private final IcsFetcher fetcher;
 
     Clock clock = Clock.systemDefaultZone();
 
     public CanvasFeedService(CourseRepository courseRepository, AcademicItemRepository itemRepository,
                              CalendarEventRepository eventRepository, SemesterRepository semesterRepository,
+                             FeedIgnoredRefRepository ignoredRefRepository, CourseMatcher courseMatcher,
                              IcsFetcher fetcher) {
         this.courseRepository = courseRepository;
         this.itemRepository = itemRepository;
         this.eventRepository = eventRepository;
         this.semesterRepository = semesterRepository;
+        this.ignoredRefRepository = ignoredRefRepository;
+        this.courseMatcher = courseMatcher;
         this.fetcher = fetcher;
     }
 
     @Transactional
-    public FeedResult importFeed(User user, FeedRequest req) {
+    public StageOutcome stage(User user, FeedRequest req) {
         String text = resolve(req.source());
         if (!text.toUpperCase(Locale.ROOT).contains("BEGIN:VCALENDAR")) {
             throw new BadRequestException("That does not look like a calendar feed from Canvas, "
@@ -83,13 +93,14 @@ public class CanvasFeedService {
 
         LmsProvider provider = LmsProvider.detect(req.source(), parsed.events());
         Semester semester = resolveSemester(user.getId(), req.semesterId());
-        Counters counters = new Counters();
-        counters.skipped = parsed.skipped();
-        Set<String> seen = new HashSet<>();
+        Staging staging = new Staging(user, semester,
+                ignoredRefs(user.getId(), FeedIgnoredRef.Kind.COURSE),
+                ignoredRefs(user.getId(), FeedIgnoredRef.Kind.ITEM));
+        staging.skipped = parsed.skipped();
 
         if (provider == LmsProvider.D2L || provider == LmsProvider.MOODLE) {
-            importLms(user, provider, parsed.events(), semester, seen, counters);
-        } else if (importCanvas(user, parsed.events(), semester, seen, counters)) {
+            stageLms(staging, provider, parsed.events());
+        } else if (stageCanvas(staging, parsed.events())) {
             provider = LmsProvider.CANVAS;
         }
 
@@ -99,14 +110,24 @@ public class CanvasFeedService {
                     + "Calendar > Import for a plain calendar.");
         }
 
-        return new FeedResult(counters.coursesCreated, counters.coursesMatched, counters.itemsImported,
-                counters.itemsUpdated, counters.eventsImported, counters.eventsUpdated,
-                counters.skipped, parsed.truncated(), provider.name());
+        List<StagedCourse> courses = staging.courses.values().stream()
+                .filter(c -> !c.items().isEmpty())
+                .toList();
+        StagedPayload payload = new StagedPayload(provider.name(),
+                semester == null ? null : semester.getId(), courses);
+        return new StageOutcome(payload, staging.itemsUpdated, staging.eventsImported, staging.skipped,
+                parsed.truncated());
     }
 
-    private boolean importCanvas(User user, List<ParsedEvent> events, Semester semester,
-                                 Set<String> seen, Counters counters) {
-        Map<Long, Course> courses = new HashMap<>();
+    private Set<String> ignoredRefs(Long userId, FeedIgnoredRef.Kind kind) {
+        Set<String> refs = new HashSet<>();
+        for (FeedIgnoredRef ref : ignoredRefRepository.findByUserIdAndKind(userId, kind)) {
+            refs.add(ref.getRef());
+        }
+        return refs;
+    }
+
+    private boolean stageCanvas(Staging s, List<ParsedEvent> events) {
         boolean sawCanvasRef = false;
         for (ParsedEvent event : events) {
             CanvasRef ref = CanvasRef.parse(event.url());
@@ -114,31 +135,103 @@ public class CanvasFeedService {
                 ref = CanvasRef.parse(event.description());
             }
             if (ref == null) {
-                importPlainEvent(user, event, courseFromTitle(user, event.title()), seen, counters);
+                importPlainEvent(s, event, courseFromTitle(s, event.title()));
                 continue;
             }
             sawCanvasRef = true;
             if (ref.kind() == CanvasRef.Kind.CALENDAR_EVENT) {
-                Course eventCourse = courses.computeIfAbsent(
-                        ref.courseId(), id -> resolveCourse(user, id, event.title(), semester, counters));
-                importPlainEvent(user, event, eventCourse, seen, counters);
+                stageCanvasEvent(s, event, ref);
                 continue;
             }
-            if (!seen.add(ref.externalUid())) {
-                counters.skipped++;
+            String uid = ref.externalUid();
+            if (!s.seen.add(uid)) {
+                s.skipped++;
                 continue;
             }
-            eventRepository.findByUserIdAndExternalUid(user.getId(), externalUid(event))
-                    .ifPresent(eventRepository::delete);
-            Course course = courses.computeIfAbsent(
-                    ref.courseId(), id -> resolveCourse(user, id, event.title(), semester, counters));
-            importItem(course, ref, event, counters);
+            String title = stripCourseCode(event.title());
+            AcademicItem existing = itemRepository
+                    .findFirstByCourseUserIdAndExternalUidOrderByIdAsc(s.user.getId(), uid)
+                    .orElse(null);
+            if (existing != null) {
+                eventRepository.findByUserIdAndExternalUid(s.user.getId(), externalUid(event))
+                        .ifPresent(eventRepository::delete);
+                existing.setTitle(title);
+                existing.setDueAt(event.startAt());
+                itemRepository.save(existing);
+                s.itemsUpdated++;
+                continue;
+            }
+            if (s.ignoredItems.contains(uid)) {
+                continue;
+            }
+            StagedCourse course = canvasCourse(s, ref.courseId(), event.title());
+            if (course != null) {
+                course.items().add(new StagedItem(uid, uid, StagedKind.ITEM, itemType(ref, title), title,
+                        event.startAt(), null));
+            }
         }
         return sawCanvasRef;
     }
 
-    private void importLms(User user, LmsProvider provider, List<ParsedEvent> events, Semester semester,
-                           Set<String> seen, Counters counters) {
+    private void stageCanvasEvent(Staging s, ParsedEvent event, CanvasRef ref) {
+        String uid = externalUid(event);
+        if (!s.seen.add(uid)) {
+            s.skipped++;
+            return;
+        }
+        String title = stripCourseCode(event.title());
+        CalendarEvent existing = eventRepository.findByUserIdAndExternalUid(s.user.getId(), uid).orElse(null);
+        if (existing != null) {
+            existing.setTitle(title);
+            existing.setPlace(event.place());
+            existing.setStartAt(event.startAt());
+            if (existing.getCourse() == null) {
+                courseRepository.findByUserIdAndCanvasCourseId(s.user.getId(), ref.courseId())
+                        .ifPresent(existing::setCourse);
+            }
+            eventRepository.save(existing);
+            s.eventsUpdated++;
+            return;
+        }
+        if (s.ignoredItems.contains(uid)) {
+            return;
+        }
+        StagedCourse course = canvasCourse(s, ref.courseId(), event.title());
+        if (course != null) {
+            course.items().add(new StagedItem(uid, uid, StagedKind.EVENT, null, title, event.startAt(),
+                    event.place()));
+        }
+    }
+
+    private StagedCourse canvasCourse(Staging s, long canvasCourseId, String eventTitle) {
+        String key = "canvas:" + canvasCourseId;
+        if (s.ignoredCourses.contains(key)) {
+            return null;
+        }
+        StagedCourse staged = s.courses.get(key);
+        if (staged != null) {
+            return staged;
+        }
+        Long semesterId = s.semester == null ? null : s.semester.getId();
+        Course linked = courseRepository.findByUserIdAndCanvasCourseId(s.user.getId(), canvasCourseId).orElse(null);
+        if (linked != null) {
+            linked.setCanvasSyncedAt(clock.instant());
+            courseRepository.save(linked);
+            staged = new StagedCourse(key, canvasCourseId, null, null, linked.getName(), linked.getCode(),
+                    linked.getColor(), semesterId, linked.getId(), null, new ArrayList<>());
+        } else {
+            CourseLabel label = CourseLabel.parse(courseCode(eventTitle));
+            String name = label.name() == null ? "Canvas course " + canvasCourseId : label.name();
+            Course match = courseMatcher.best(s.user.getId(), name, label.code(), semesterId, true);
+            staged = new StagedCourse(key, canvasCourseId, null, null, name, label.code(),
+                    COLORS[(int) Math.floorMod(canvasCourseId, COLORS.length)], semesterId, null,
+                    match == null ? null : match.getId(), new ArrayList<>());
+        }
+        s.courses.put(key, staged);
+        return staged;
+    }
+
+    private void stageLms(Staging s, LmsProvider provider, List<ParsedEvent> events) {
         List<LmsRef> refs = new ArrayList<>(events.size());
         Set<String> dueGroups = new HashSet<>();
         for (ParsedEvent event : events) {
@@ -149,87 +242,73 @@ public class CanvasFeedService {
             }
         }
 
-        Map<String, Course> courses = new HashMap<>();
         for (int i = 0; i < events.size(); i++) {
             ParsedEvent event = events.get(i);
             LmsRef ref = refs.get(i);
             if (ref == null) {
-                importPlainEvent(user, event, courseFromTitle(user, event.title()), seen, counters);
+                importPlainEvent(s, event, courseFromTitle(s, event.title()));
                 continue;
             }
             if (ref.kind() == LmsRef.Kind.SKIP || (ref.closing() && dueGroups.contains(ref.groupKey()))) {
-                counters.skipped++;
+                s.skipped++;
                 continue;
             }
             String uid = capUid(ref.uid());
-            if (!seen.add(uid)) {
-                counters.skipped++;
+            if (!s.seen.add(uid)) {
+                s.skipped++;
                 continue;
             }
-            Course course = courses.computeIfAbsent(
-                    ref.courseKey(), key -> resolveLmsCourse(user, provider, ref, semester, counters));
-            importLmsItem(course, ref, uid, event, counters);
-        }
-    }
-
-    private void importLmsItem(Course course, LmsRef ref, String uid, ParsedEvent event, Counters counters) {
-        AcademicItem existing = itemRepository
-                .findFirstByCourseUserIdAndExternalUidOrderByIdAsc(course.getUser().getId(), uid)
-                .orElse(null);
-        if (existing == null) {
-            AcademicItem item = new AcademicItem();
-            item.setCourse(course);
-            item.setExternalUid(uid);
-            item.setType(ref.typeHint() != null ? ref.typeHint() : ItemTypes.fromName(ref.title()));
-            item.setTitle(ref.title());
-            item.setDueAt(event.startAt());
-            itemRepository.save(item);
-            counters.itemsImported++;
-            return;
-        }
-        existing.setCourse(course);
-        existing.setTitle(ref.title());
-        existing.setDueAt(event.startAt());
-        itemRepository.save(existing);
-        counters.itemsUpdated++;
-    }
-
-    private Course resolveLmsCourse(User user, LmsProvider provider, LmsRef ref,
-                                    Semester semester, Counters counters) {
-        String providerName = provider.name();
-        Course byLms = courseRepository
-                .findByUserIdAndLmsProviderAndLmsCourseId(user.getId(), providerName, ref.courseKey()).orElse(null);
-        if (byLms != null) {
-            counters.coursesMatched++;
-            return byLms;
-        }
-
-        String code = ref.courseCode();
-        String codeKey = MatchKeys.codeKey(code);
-        if (codeKey != null) {
-            Course byCode = courseRepository
-                    .findFirstByUserIdAndCodeKeyOrderByIdAsc(user.getId(), codeKey).orElse(null);
-            if (byCode != null && byCode.getCanvasCourseId() == null && byCode.getLmsCourseId() == null) {
-                byCode.setLmsProvider(providerName);
-                byCode.setLmsCourseId(ref.courseKey());
-                counters.coursesMatched++;
-                return courseRepository.save(byCode);
+            AcademicItem existing = itemRepository
+                    .findFirstByCourseUserIdAndExternalUidOrderByIdAsc(s.user.getId(), uid)
+                    .orElse(null);
+            if (existing != null) {
+                existing.setTitle(ref.title());
+                existing.setDueAt(event.startAt());
+                itemRepository.save(existing);
+                s.itemsUpdated++;
+                continue;
+            }
+            if (s.ignoredItems.contains(uid)) {
+                continue;
+            }
+            StagedCourse course = lmsCourse(s, provider, ref);
+            if (course != null) {
+                ItemType type = ref.typeHint() != null ? ref.typeHint() : ItemTypes.fromName(ref.title());
+                course.items().add(new StagedItem(uid, uid, StagedKind.ITEM, type, ref.title(),
+                        event.startAt(), null));
             }
         }
+    }
 
-        String fallback = (provider == LmsProvider.D2L ? "Brightspace" : "Moodle") + " course " + ref.courseKey();
-        String name = ref.courseName() == null || ref.courseName().isBlank() ? fallback : ref.courseName();
-        Course course = new Course();
-        course.setUser(user);
-        course.setSemester(semester);
-        course.setName(name.length() <= 255 ? name : name.substring(0, 255));
-        course.setCode(code);
-        course.setCodeKey(codeKey);
-        course.setColor(COLORS[Math.floorMod(ref.courseKey().hashCode(), COLORS.length)]);
-        course.setLmsProvider(providerName);
-        course.setLmsCourseId(ref.courseKey());
-        counters.coursesCreated++;
-        return courseRepository.save(course);
+    private StagedCourse lmsCourse(Staging s, LmsProvider provider, LmsRef ref) {
+        String providerName = provider.name();
+        String key = providerName + ":" + ref.courseKey();
+        if (s.ignoredCourses.contains(key)) {
+            return null;
+        }
+        StagedCourse staged = s.courses.get(key);
+        if (staged != null) {
+            return staged;
+        }
+        Long semesterId = s.semester == null ? null : s.semester.getId();
+        Course linked = courseRepository
+                .findByUserIdAndLmsProviderAndLmsCourseId(s.user.getId(), providerName, ref.courseKey())
+                .orElse(null);
+        if (linked != null) {
+            staged = new StagedCourse(key, null, providerName, ref.courseKey(), linked.getName(),
+                    linked.getCode(), linked.getColor(), semesterId, linked.getId(), null, new ArrayList<>());
+        } else {
+            String fallback = (provider == LmsProvider.D2L ? "Brightspace" : "Moodle") + " course "
+                    + ref.courseKey();
+            String name = ref.courseName() == null || ref.courseName().isBlank() ? fallback : ref.courseName();
+            name = name.length() <= 255 ? name : name.substring(0, 255);
+            Course match = courseMatcher.best(s.user.getId(), name, ref.courseCode(), semesterId, true);
+            staged = new StagedCourse(key, null, providerName, ref.courseKey(), name, ref.courseCode(),
+                    COLORS[Math.floorMod(ref.courseKey().hashCode(), COLORS.length)], semesterId, null,
+                    match == null ? null : match.getId(), new ArrayList<>());
+        }
+        s.courses.put(key, staged);
+        return staged;
     }
 
     private String capUid(String uid) {
@@ -249,58 +328,37 @@ public class CanvasFeedService {
         }
     }
 
-    private void importItem(Course course, CanvasRef ref, ParsedEvent event, Counters counters) {
-        String uid = ref.externalUid();
-        String title = stripCourseCode(event.title());
-        AcademicItem existing = itemRepository
-                .findFirstByCourseUserIdAndExternalUidOrderByIdAsc(course.getUser().getId(), uid)
-                .orElse(null);
-
-        if (existing == null) {
-            AcademicItem item = new AcademicItem();
-            item.setCourse(course);
-            item.setExternalUid(uid);
-            item.setType(itemType(ref, title));
-            item.setTitle(title);
-            item.setDueAt(event.startAt());
-            itemRepository.save(item);
-            counters.itemsImported++;
-            return;
-        }
-
-        existing.setCourse(course);
-        existing.setTitle(title);
-        existing.setDueAt(event.startAt());
-        itemRepository.save(existing);
-        counters.itemsUpdated++;
-    }
-
-    private Course courseFromTitle(User user, String title) {
-        String codeKey = MatchKeys.codeKey(courseCode(title));
-        if (codeKey == null) {
+    private Course courseFromTitle(Staging s, String title) {
+        String code = CourseLabel.parse(courseCode(title)).code();
+        if (code == null) {
             return null;
         }
-        return courseRepository.findFirstByUserIdAndCodeKeyOrderByIdAsc(user.getId(), codeKey).orElse(null);
+        if (s.titleCourses.containsKey(code)) {
+            return s.titleCourses.get(code);
+        }
+        Long semesterId = s.semester == null ? null : s.semester.getId();
+        Course found = courseMatcher.best(s.user.getId(), null, code, semesterId, false);
+        s.titleCourses.put(code, found);
+        return found;
     }
 
-    private void importPlainEvent(User user, ParsedEvent event, Course course, Set<String> seen,
-                                  Counters counters) {
+    private void importPlainEvent(Staging s, ParsedEvent event, Course course) {
         String uid = externalUid(event);
-        if (!seen.add(uid)) {
-            counters.skipped++;
+        if (!s.seen.add(uid)) {
+            s.skipped++;
             return;
         }
-        CalendarEvent existing = eventRepository.findByUserIdAndExternalUid(user.getId(), uid).orElse(null);
+        CalendarEvent existing = eventRepository.findByUserIdAndExternalUid(s.user.getId(), uid).orElse(null);
         if (existing == null) {
             CalendarEvent created = new CalendarEvent();
-            created.setUser(user);
+            created.setUser(s.user);
             created.setTitle(stripCourseCode(event.title()));
             created.setPlace(event.place());
             created.setStartAt(event.startAt());
             created.setCourse(course);
             created.setExternalUid(uid);
             eventRepository.save(created);
-            counters.eventsImported++;
+            s.eventsImported++;
             return;
         }
         existing.setTitle(stripCourseCode(event.title()));
@@ -310,42 +368,7 @@ public class CanvasFeedService {
             existing.setCourse(course);
         }
         eventRepository.save(existing);
-        counters.eventsUpdated++;
-    }
-
-    private Course resolveCourse(User user, long canvasCourseId, String eventTitle,
-                                 Semester semester, Counters counters) {
-        Course byCanvasId = courseRepository.findByUserIdAndCanvasCourseId(user.getId(), canvasCourseId).orElse(null);
-        if (byCanvasId != null) {
-            counters.coursesMatched++;
-            byCanvasId.setCanvasSyncedAt(clock.instant());
-            return courseRepository.save(byCanvasId);
-        }
-
-        String code = courseCode(eventTitle);
-        String codeKey = MatchKeys.codeKey(code);
-        if (codeKey != null) {
-            Course byCode = courseRepository
-                    .findFirstByUserIdAndCodeKeyOrderByIdAsc(user.getId(), codeKey).orElse(null);
-            if (byCode != null && byCode.getCanvasCourseId() == null) {
-                byCode.setCanvasCourseId(canvasCourseId);
-                byCode.setCanvasSyncedAt(clock.instant());
-                counters.coursesMatched++;
-                return courseRepository.save(byCode);
-            }
-        }
-
-        Course course = new Course();
-        course.setUser(user);
-        course.setSemester(semester);
-        course.setName(code == null ? "Canvas course " + canvasCourseId : code);
-        course.setCode(code);
-        course.setCodeKey(codeKey);
-        course.setColor(COLORS[(int) Math.floorMod(canvasCourseId, COLORS.length)]);
-        course.setCanvasCourseId(canvasCourseId);
-        course.setCanvasSyncedAt(clock.instant());
-        counters.coursesCreated++;
-        return courseRepository.save(course);
+        s.eventsUpdated++;
     }
 
     private Semester resolveSemester(Long userId, Long semesterId) {
@@ -412,13 +435,24 @@ public class CanvasFeedService {
         }
     }
 
-    private static final class Counters {
-        int coursesCreated;
-        int coursesMatched;
-        int itemsImported;
+    private static final class Staging {
+        final User user;
+        final Semester semester;
+        final Set<String> ignoredCourses;
+        final Set<String> ignoredItems;
+        final Set<String> seen = new HashSet<>();
+        final Map<String, StagedCourse> courses = new LinkedHashMap<>();
+        final Map<String, Course> titleCourses = new HashMap<>();
         int itemsUpdated;
         int eventsImported;
         int eventsUpdated;
         int skipped;
+
+        Staging(User user, Semester semester, Set<String> ignoredCourses, Set<String> ignoredItems) {
+            this.user = user;
+            this.semester = semester;
+            this.ignoredCourses = ignoredCourses;
+            this.ignoredItems = ignoredItems;
+        }
     }
 }

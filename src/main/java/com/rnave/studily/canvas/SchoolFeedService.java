@@ -1,7 +1,11 @@
 package com.rnave.studily.canvas;
 
 import com.rnave.studily.canvas.CanvasDtos.FeedRequest;
-import com.rnave.studily.canvas.CanvasDtos.FeedResult;
+import com.rnave.studily.canvas.FeedImportDtos.FeedStageResult;
+import com.rnave.studily.canvas.FeedImportDtos.StageOutcome;
+import com.rnave.studily.canvas.FeedImportDtos.StagedCourse;
+import com.rnave.studily.canvas.FeedImportDtos.StagedPayload;
+import com.rnave.studily.canvas.FeedImportDtos.StoredImport;
 import com.rnave.studily.canvas.SchoolFeedDtos.SchoolFeedList;
 import com.rnave.studily.canvas.SchoolFeedDtos.SchoolFeedView;
 import com.rnave.studily.config.BadRequestException;
@@ -9,6 +13,8 @@ import com.rnave.studily.config.DeadLinkException;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.config.SlidingWindowRateLimiter;
 import com.rnave.studily.config.TooManyRequestsException;
+import com.rnave.studily.notification.NotificationDispatcher;
+import com.rnave.studily.notification.NotificationType;
 import com.rnave.studily.user.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +30,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
@@ -42,16 +49,21 @@ public class SchoolFeedService {
     private final SchoolFeedRepository repository;
     private final FeedUrlCipher cipher;
     private final CanvasFeedService canvasFeedService;
+    private final FeedImportStore importStore;
+    private final NotificationDispatcher dispatcher;
     private final Clock clock;
     private final Duration staleAfter;
     private final SlidingWindowRateLimiter syncNowLimiter = new SlidingWindowRateLimiter(1, SYNC_NOW_WINDOW_MS);
 
     public SchoolFeedService(SchoolFeedRepository repository, FeedUrlCipher cipher,
-                             CanvasFeedService canvasFeedService, Clock clock,
+                             CanvasFeedService canvasFeedService, FeedImportStore importStore,
+                             NotificationDispatcher dispatcher, Clock clock,
                              @Value("${app.feeds.stale-after-hours:6}") long staleAfterHours) {
         this.repository = repository;
         this.cipher = cipher;
         this.canvasFeedService = canvasFeedService;
+        this.importStore = importStore;
+        this.dispatcher = dispatcher;
         this.clock = clock;
         this.staleAfter = Duration.ofHours(staleAfterHours);
     }
@@ -69,9 +81,9 @@ public class SchoolFeedService {
     }
 
     @Transactional
-    public void remember(User user, FeedRequest req, FeedResult result) {
+    public Long remember(User user, FeedRequest req, String provider) {
         if (!cipher.isEnabled() || Boolean.FALSE.equals(req.keepSynced()) || !isRemoteSource(req.source())) {
-            return;
+            return null;
         }
         String url = normalise(req.source());
         String hash = sha256(url);
@@ -80,7 +92,7 @@ public class SchoolFeedService {
         if (feed == null) {
             if (repository.countByUserId(user.getId()) >= MAX_FEEDS_PER_USER) {
                 log.info("User {} is at the saved school feed limit", user.getId());
-                return;
+                return null;
             }
             feed = new SchoolFeed();
             feed.setUser(user);
@@ -89,7 +101,7 @@ public class SchoolFeedService {
         }
         feed.setUrlCiphertext(cipher.encrypt(url));
         feed.setHost(hostOf(url));
-        feed.setProvider(result.provider());
+        feed.setProvider(provider);
         feed.setTimeZone(req.timeZone());
         feed.setSemesterId(req.semesterId());
         feed.setLastSyncedAt(now);
@@ -97,10 +109,10 @@ public class SchoolFeedService {
         feed.setLastError(null);
         feed.setFailureCount(0);
         feed.setEnabled(true);
-        repository.save(feed);
+        return repository.save(feed).getId();
     }
 
-    public FeedResult syncNow(User user, Long id) {
+    public FeedStageResult syncNow(User user, Long id) {
         SchoolFeed feed = repository.findByIdAndUserId(id, user.getId())
                 .orElseThrow(() -> new NotFoundException("Saved feed not found"));
         if (!cipher.isEnabled()) {
@@ -146,25 +158,72 @@ public class SchoolFeedService {
         sync(feed);
     }
 
-    private FeedResult sync(SchoolFeed feed) {
+    private FeedStageResult sync(SchoolFeed feed) {
         Instant now = clock.instant();
+        StoredImport stored;
         try {
             String url = cipher.decrypt(feed.getUrlCiphertext());
-            FeedResult result = canvasFeedService.importFeed(feed.getUser(),
+            StageOutcome outcome = canvasFeedService.stage(feed.getUser(),
                     new FeedRequest(url, feed.getTimeZone(), feed.getSemesterId(), false));
+            stored = importStore.save(feed.getUser(), feed.getId(), outcome);
             feed.setLastSyncedAt(now);
             feed.setLastSuccessAt(now);
             feed.setFailureCount(0);
             feed.setLastError(null);
-            if (result.provider() != null) {
-                feed.setProvider(result.provider());
+            if (stored.result().provider() != null) {
+                feed.setProvider(stored.result().provider());
             }
             repository.save(feed);
-            return result;
         } catch (RuntimeException e) {
             recordFailure(feed, e, now);
             throw e;
         }
+        announce(feed, stored);
+        return stored.result();
+    }
+
+    private void announce(SchoolFeed feed, StoredImport stored) {
+        Long importId = stored.result().importId();
+        if (importId == null) {
+            return;
+        }
+        try {
+            String label = providerLabel(stored.payload().provider());
+            dispatcher.dispatch(feed.getUser(), NotificationType.FEED_REVIEW, importId,
+                    "feed-import:" + importId + ":" + fingerprint(stored.payload()),
+                    "New courses and deadlines from " + label, announcement(stored.payload(), label),
+                    "/imports/" + importId);
+        } catch (RuntimeException e) {
+            log.warn("Could not notify user {} about feed import {}: {}", feed.getUser().getId(), importId,
+                    e.getClass().getSimpleName());
+        }
+    }
+
+    static String providerLabel(String provider) {
+        if ("D2L".equals(provider)) {
+            return "Brightspace";
+        }
+        return "MOODLE".equals(provider) ? "Moodle" : "Canvas";
+    }
+
+    static String announcement(StagedPayload payload, String label) {
+        long courses = payload.courses().stream().filter(c -> c.linkedCourseId() == null).count();
+        int items = payload.courses().stream().mapToInt(c -> c.items().size()).sum();
+        String things = items + (items == 1 ? " new deadline or event" : " new deadlines and events");
+        if (courses > 0) {
+            things = courses + (courses == 1 ? " new course and " : " new courses and ") + things;
+        }
+        return things + " from " + label + " are ready to review.";
+    }
+
+    static String fingerprint(StagedPayload payload) {
+        List<String> keys = new ArrayList<>();
+        for (StagedCourse course : payload.courses()) {
+            keys.add(course.key());
+            course.items().forEach(item -> keys.add(course.key() + "/" + item.key()));
+        }
+        keys.sort(null);
+        return sha256(String.join("|", keys)).substring(0, 12);
     }
 
     private void recordFailure(SchoolFeed feed, RuntimeException e, Instant now) {

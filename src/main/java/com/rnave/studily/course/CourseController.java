@@ -36,18 +36,27 @@ public class CourseController {
 
     private final CourseService courseService;
     private final CourseMatchService courseMatchService;
+    private final CourseMatcher courseMatcher;
     private final CurrentUser currentUser;
 
     public CourseController(CourseService courseService, CourseMatchService courseMatchService,
-                            CurrentUser currentUser) {
+                            CourseMatcher courseMatcher, CurrentUser currentUser) {
         this.courseService = courseService;
         this.courseMatchService = courseMatchService;
+        this.courseMatcher = courseMatcher;
         this.currentUser = currentUser;
     }
 
     @GetMapping
     public List<CourseDto> list(@RequestParam(required = false) Long semesterId) {
         return courseService.list(semesterId);
+    }
+
+    @GetMapping("/similar")
+    public List<CourseDto> similar(@RequestParam(required = false) String name,
+                                   @RequestParam(required = false) String code,
+                                   @RequestParam(required = false) Long semesterId) {
+        return courseMatcher.similarDtos(currentUser.id(), name, code, semesterId);
     }
 
     @GetMapping("/{id}")
