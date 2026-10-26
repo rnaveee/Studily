@@ -32,8 +32,7 @@ export default function SchoolPage({ slug }: { slug: string }) {
         <div>
           <h1 className="text-xl font-semibold text-fg">Studily for {school.short} students</h1>
           <p className="mt-1 text-[13px] text-fg-3">
-            A free planner for students at {school.theName} in {school.city}: your {school.lms}
-            deadlines, flashcards and a study timer in one place.
+            A free planner for students at {school.theName} in {school.city}: your {school.lms} deadlines, flashcards and a study timer in one place.
           </p>
         </div>
       </div>
