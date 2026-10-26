@@ -24,7 +24,7 @@ public final class IcsParser {
     }
 
     public record ParsedEvent(String uid, String title, String place, Instant startAt, boolean recurring,
-                              String url, String description) {
+                              String url, String description, String categories) {
     }
 
     public record ParsedCalendar(String name, List<ParsedEvent> events, int skipped, boolean truncated) {
@@ -117,6 +117,11 @@ public final class IcsParser {
                 ? null
                 : trimTo(unescape(descProp.value()), 2000);
 
+        Prop categoriesProp = props.get("CATEGORIES");
+        String categories = categoriesProp == null || categoriesProp.value().isBlank()
+                ? null
+                : trimTo(unescape(categoriesProp.value()), 255);
+
         Set<Instant> exdates = new HashSet<>();
         for (Prop ex : exdateProps) {
             ZoneId exZone = zoneOf(ex, zone);
@@ -135,7 +140,7 @@ public final class IcsParser {
 
         List<ParsedEvent> events = new ArrayList<>(starts.size());
         for (Instant at : starts) {
-            events.add(new ParsedEvent(uid, title, place, at, rrule != null, url, description));
+            events.add(new ParsedEvent(uid, title, place, at, rrule != null, url, description, categories));
         }
         return events;
     }

@@ -605,6 +605,7 @@ export interface CanvasFeedResult {
   eventsUpdated: number;
   skipped: number;
   truncated: boolean;
+  provider: "CANVAS" | "D2L" | "MOODLE";
 }
 
 export interface AdminStatus {

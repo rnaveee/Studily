@@ -513,7 +513,7 @@ function ItemRow({
             {item.gradeCategoryName && `${item.gradeCategoryName} · `}
             {formatDateTime(item.dueAt)}
             {item.canvasSynced && (
-              <span title="Title and due date are kept in sync with Canvas"> · from Canvas</span>
+              <span title="Title and due date are kept in sync with your school calendar"> · from school calendar</span>
             )}
           </div>
         </div>

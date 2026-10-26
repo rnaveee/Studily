@@ -19,6 +19,7 @@ public class CanvasDtos {
             int eventsImported,
             int eventsUpdated,
             int skipped,
-            boolean truncated) {
+            boolean truncated,
+            String provider) {
     }
 }

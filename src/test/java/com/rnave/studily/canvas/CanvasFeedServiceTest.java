@@ -9,7 +9,6 @@ import com.rnave.studily.calendar.CalendarEventRepository;
 import com.rnave.studily.canvas.CanvasDtos.FeedRequest;
 import com.rnave.studily.canvas.CanvasDtos.FeedResult;
 import com.rnave.studily.config.BadRequestException;
-import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.course.Course;
 import com.rnave.studily.course.CourseRepository;
 import com.rnave.studily.ics.IcsFetcher;
@@ -50,11 +49,9 @@ class CanvasFeedServiceTest {
         eventRepository = mock(CalendarEventRepository.class);
         semesterRepository = mock(SemesterRepository.class);
         IcsFetcher fetcher = mock(IcsFetcher.class);
-        CurrentUser currentUser = mock(CurrentUser.class);
 
         user = new User();
         user.setId(7L);
-        when(currentUser.entity()).thenReturn(user);
 
         when(courseRepository.findByUserIdAndCanvasCourseId(anyLong(), anyLong())).thenReturn(Optional.empty());
         when(courseRepository.findFirstByUserIdAndCodeKeyOrderByIdAsc(anyLong(), anyString()))
@@ -71,7 +68,7 @@ class CanvasFeedServiceTest {
                 .thenReturn(Optional.empty());
 
         service = new CanvasFeedService(courseRepository, itemRepository, eventRepository,
-                semesterRepository, fetcher, currentUser);
+                semesterRepository, fetcher);
     }
 
     private static String feed(String body) {
@@ -84,7 +81,7 @@ class CanvasFeedServiceTest {
     }
 
     private FeedResult importText(String text) {
-        return service.importFeed(new FeedRequest(text, "America/Toronto", null));
+        return service.importFeed(user, new FeedRequest(text, "America/Toronto", null));
     }
 
     @Test
@@ -207,7 +204,7 @@ class CanvasFeedServiceTest {
 
         assertThatThrownBy(() -> importText(text))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("no Canvas coursework");
+                .hasMessageContaining("no Canvas, Brightspace or Moodle coursework");
         verify(itemRepository, never()).save(any());
     }
 
@@ -215,6 +212,6 @@ class CanvasFeedServiceTest {
     void importFeed_rejectsSomethingThatIsNotACalendar() {
         assertThatThrownBy(() -> importText("<html>Not a calendar</html>"))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Canvas calendar feed");
+                .hasMessageContaining("calendar feed from Canvas");
     }
 }

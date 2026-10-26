@@ -61,7 +61,7 @@ export default function ItemModal({
 
       {item?.canvasSynced && (
         <p className="text-[12px] text-fg-3">
-          Synced from Canvas — your next sync may overwrite changes made here.
+          Synced from your school calendar — your next sync may overwrite changes made here.
         </p>
       )}
 

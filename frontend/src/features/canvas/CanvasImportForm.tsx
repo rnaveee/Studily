@@ -7,7 +7,7 @@ import type { CanvasFeedResult } from "../../types";
 export default function CanvasImportForm({
   onImported,
   autoFocus,
-  submitLabel = "Import from Canvas",
+  submitLabel = "Import courses",
 }: {
   onImported?: (result: CanvasFeedResult) => void;
   autoFocus?: boolean;
@@ -54,21 +54,32 @@ export default function CanvasImportForm({
       }}
     >
       <div>
-        <label className="field-label">Canvas calendar feed link</label>
+        <label className="field-label">Canvas / Brightspace / Moodle calendar link</label>
         <input
           className="input"
           value={source}
           onChange={(e) => setSource(e.target.value)}
-          placeholder="https://yourschool.instructure.com/feeds/calendars/user_….ics"
+          placeholder="Paste your school calendar link"
           autoFocus={autoFocus}
           required
         />
       </div>
+      <ul className="space-y-1 text-[11px] leading-relaxed text-fg-3">
+        <li>
+          <span className="text-fg-2">Canvas:</span> Calendar, then Calendar Feed.
+        </li>
+        <li>
+          <span className="text-fg-2">Brightspace:</span> Calendar, then Subscribe (turn on
+          calendar feeds in Settings first).
+        </li>
+        <li>
+          <span className="text-fg-2">Moodle:</span> Calendar, then Import or export calendars,
+          then Export.
+        </li>
+      </ul>
       <p className="text-[11px] leading-relaxed text-fg-3">
-        In Canvas, open <span className="text-fg-2">Calendar</span> and click{" "}
-        <span className="text-fg-2">Calendar Feed</span> at the bottom right, then paste the link
-        here. Re-import any time to pick up new assignments — your grades, weights and progress stay
-        untouched.
+        Copy the link and paste it here. Re-import any time to pick up new assignments — your
+        grades, weights and progress stay untouched.
       </p>
       <button type="submit" disabled={runImport.isPending} className="btn btn-primary">
         {runImport.isPending ? "Importing…" : submitLabel}

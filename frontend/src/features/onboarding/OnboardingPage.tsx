@@ -142,7 +142,7 @@ export default function OnboardingPage() {
             id="courses"
             icon={BookOpen}
             title="Add your courses"
-            hint="Import them from Canvas, or add them by hand"
+            hint="Import them from Canvas, Brightspace or Moodle, or add them by hand"
             done={status.courses}
             doneHint={
               status.courseCount > 0
@@ -161,7 +161,8 @@ export default function OnboardingPage() {
                 Fastest way
               </div>
               <p className="mt-1 text-[12px] leading-relaxed text-fg-2">
-                One link from Canvas brings in your courses, assignments and exams at once.
+                One calendar link from Canvas, Brightspace or Moodle brings in your courses,
+                assignments and exams at once.
               </p>
               <div className="mt-3">
                 <CanvasImportForm submitLabel="Import my semester" />

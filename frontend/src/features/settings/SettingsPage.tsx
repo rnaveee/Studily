@@ -361,9 +361,9 @@ function IntegrationsSection() {
         <div className="p-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="text-[14px] font-medium text-fg">Canvas</div>
+              <div className="text-[14px] font-medium text-fg">Canvas / Brightspace / Moodle</div>
               <div className="mt-0.5 text-[12px] text-fg-3">
-                Pull your courses, assignments and quizzes in from Canvas
+                Pull your courses, assignments and quizzes in from your school calendar link
               </div>
             </div>
             <button

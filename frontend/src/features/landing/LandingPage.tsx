@@ -51,7 +51,7 @@ const EXTRAS = [
   {
     icon: CalendarSync,
     title: "Bring the calendar you already have",
-    body: "Paste your Canvas calendar feed and your due dates come with you, or an .ics link from Google Calendar, Apple Calendar, Outlook, or your school's timetable. Export yours back out the same way.",
+    body: "Paste your Canvas, Brightspace or Moodle calendar link and your due dates come with you, or an .ics link from Google Calendar, Apple Calendar, Outlook, or your school's timetable. Export yours back out the same way.",
   },
   {
     icon: Timer,

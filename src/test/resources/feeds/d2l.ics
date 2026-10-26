@@ -1,0 +1,60 @@
+BEGIN:VCALENDAR
+PRODID:-//D2L//Brightspace Calendar//EN
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Brightspace Calendar
+BEGIN:VEVENT
+UID:7a3c9a52-0b1e-4f0e-9f43-2d1f6a5c1e01@brightspace.example.edu
+DTSTAMP:20260901T120000Z
+DTSTART:20261002T063000Z
+DTEND:20261002T063000Z
+SUMMARY:Assignment 1 - Due
+LOCATION:CSC 225 A01 - Algorithms and Data Structures
+URL:https://brightspace.example.edu/d2l/lms/dropbox/user/folder_submit_files.d2l?db=41001&grpid=0&isprv=0&bp=0&ou=60614
+END:VEVENT
+BEGIN:VEVENT
+UID:7a3c9a52-0b1e-4f0e-9f43-2d1f6a5c1e02@brightspace.example.edu
+DTSTAMP:20260901T120000Z
+DTSTART:20260925T150000Z
+DTEND:20260925T150000Z
+SUMMARY:Assignment 1 - Availability Starts
+LOCATION:CSC 225 A01 - Algorithms and Data Structures
+URL:https://brightspace.example.edu/d2l/lms/dropbox/user/folder_submit_files.d2l?db=41001&grpid=0&isprv=0&bp=0&ou=60614
+END:VEVENT
+BEGIN:VEVENT
+UID:7a3c9a52-0b1e-4f0e-9f43-2d1f6a5c1e03@brightspace.example.edu
+DTSTAMP:20260901T120000Z
+DTSTART:20261009T063000Z
+DTEND:20261009T063000Z
+SUMMARY:Assignment 1 - Availability Ends
+LOCATION:CSC 225 A01 - Algorithms and Data Structures
+URL:https://brightspace.example.edu/d2l/lms/dropbox/user/folder_submit_files.d2l?db=41001&grpid=0&isprv=0&bp=0&ou=60614
+END:VEVENT
+BEGIN:VEVENT
+UID:7a3c9a52-0b1e-4f0e-9f43-2d1f6a5c1e04@brightspace.example.edu
+DTSTAMP:20260901T120000Z
+DTSTART:20261015T170000Z
+DTEND:20261015T170000Z
+SUMMARY:Midterm Quiz - Due
+LOCATION:CSC 225 A01 - Algorithms and Data Structures
+URL:https://brightspace.example.edu/d2l/lms/quizzing/user/quiz_summary.d2l?qi=52002&ou=60614
+END:VEVENT
+BEGIN:VEVENT
+UID:7a3c9a52-0b1e-4f0e-9f43-2d1f6a5c1e05@brightspace.example.edu
+DTSTAMP:20260901T120000Z
+DTSTART:20261020T063000Z
+DTEND:20261020T063000Z
+SUMMARY:Reading Reflection - Due
+LOCATION:ENGL 135 A02 - Academic Writing
+URL:https://brightspace.example.edu/d2l/lms/dropbox/user/folder_submit_files.d2l?db=41007&grpid=0&isprv=0&bp=0&ou=60790
+END:VEVENT
+BEGIN:VEVENT
+UID:7a3c9a52-0b1e-4f0e-9f43-2d1f6a5c1e06@brightspace.example.edu
+DTSTAMP:20260901T120000Z
+DTSTART:20261022T180000Z
+DTEND:20261022T190000Z
+SUMMARY:Study group
+LOCATION:Library
+END:VEVENT
+END:VCALENDAR

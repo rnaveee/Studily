@@ -9,7 +9,6 @@ import com.rnave.studily.calendar.CalendarEventRepository;
 import com.rnave.studily.canvas.CanvasDtos.FeedRequest;
 import com.rnave.studily.canvas.CanvasDtos.FeedResult;
 import com.rnave.studily.config.BadRequestException;
-import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.MatchKeys;
 import com.rnave.studily.course.Course;
 import com.rnave.studily.course.CourseRepository;
@@ -23,11 +22,16 @@ import com.rnave.studily.user.User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -50,43 +54,61 @@ public class CanvasFeedService {
     private final CalendarEventRepository eventRepository;
     private final SemesterRepository semesterRepository;
     private final IcsFetcher fetcher;
-    private final CurrentUser currentUser;
 
     Clock clock = Clock.systemDefaultZone();
 
     public CanvasFeedService(CourseRepository courseRepository, AcademicItemRepository itemRepository,
                              CalendarEventRepository eventRepository, SemesterRepository semesterRepository,
-                             IcsFetcher fetcher, CurrentUser currentUser) {
+                             IcsFetcher fetcher) {
         this.courseRepository = courseRepository;
         this.itemRepository = itemRepository;
         this.eventRepository = eventRepository;
         this.semesterRepository = semesterRepository;
         this.fetcher = fetcher;
-        this.currentUser = currentUser;
     }
 
     @Transactional
-    public FeedResult importFeed(FeedRequest req) {
+    public FeedResult importFeed(User user, FeedRequest req) {
         String text = resolve(req.source());
         if (!text.toUpperCase(Locale.ROOT).contains("BEGIN:VCALENDAR")) {
-            throw new BadRequestException("That does not look like a Canvas calendar feed");
+            throw new BadRequestException("That does not look like a calendar feed from Canvas, "
+                    + "Brightspace or Moodle");
         }
 
         ParsedCalendar parsed = IcsParser.parse(text, zoneOf(req.timeZone()), MAX_EVENTS);
         if (parsed.events().isEmpty()) {
             throw new BadRequestException("No events were found in that calendar. Make sure you copied the "
-                    + "Calendar Feed link from the Canvas calendar page.");
+                    + "calendar feed link from your Canvas, Brightspace or Moodle calendar page.");
         }
 
-        User user = currentUser.entity();
+        LmsProvider provider = LmsProvider.detect(req.source(), parsed.events());
         Semester semester = resolveSemester(user.getId(), req.semesterId());
         Counters counters = new Counters();
         counters.skipped = parsed.skipped();
-        Map<Long, Course> courses = new HashMap<>();
         Set<String> seen = new HashSet<>();
-        boolean sawCanvasRef = false;
 
-        for (ParsedEvent event : parsed.events()) {
+        if (provider == LmsProvider.D2L || provider == LmsProvider.MOODLE) {
+            importLms(user, provider, parsed.events(), semester, seen, counters);
+        } else if (importCanvas(user, parsed.events(), semester, seen, counters)) {
+            provider = LmsProvider.CANVAS;
+        }
+
+        if (provider == null) {
+            throw new BadRequestException("That feed has no Canvas, Brightspace or Moodle coursework in it. "
+                    + "Use the calendar feed link from your school's learning system, or use "
+                    + "Calendar > Import for a plain calendar.");
+        }
+
+        return new FeedResult(counters.coursesCreated, counters.coursesMatched, counters.itemsImported,
+                counters.itemsUpdated, counters.eventsImported, counters.eventsUpdated,
+                counters.skipped, parsed.truncated(), provider.name());
+    }
+
+    private boolean importCanvas(User user, List<ParsedEvent> events, Semester semester,
+                                 Set<String> seen, Counters counters) {
+        Map<Long, Course> courses = new HashMap<>();
+        boolean sawCanvasRef = false;
+        for (ParsedEvent event : events) {
             CanvasRef ref = CanvasRef.parse(event.url());
             if (ref == null) {
                 ref = CanvasRef.parse(event.description());
@@ -108,15 +130,119 @@ public class CanvasFeedService {
                     ref.courseId(), id -> resolveCourse(user, id, event.title(), semester, counters));
             importItem(course, ref, event, counters);
         }
+        return sawCanvasRef;
+    }
 
-        if (!sawCanvasRef && !looksLikeCanvasUrl(req.source())) {
-            throw new BadRequestException("That feed has no Canvas coursework in it. Use the Calendar Feed link "
-                    + "from your Canvas calendar, or import it as a plain calendar instead.");
+    private void importLms(User user, LmsProvider provider, List<ParsedEvent> events, Semester semester,
+                           Set<String> seen, Counters counters) {
+        List<LmsRef> refs = new ArrayList<>(events.size());
+        Set<String> dueGroups = new HashSet<>();
+        for (ParsedEvent event : events) {
+            LmsRef ref = provider == LmsProvider.D2L ? D2lRefParser.parse(event) : MoodleRefParser.parse(event);
+            refs.add(ref);
+            if (ref != null && ref.kind() == LmsRef.Kind.ITEM && !ref.closing()) {
+                dueGroups.add(ref.groupKey());
+            }
         }
 
-        return new FeedResult(counters.coursesCreated, counters.coursesMatched, counters.itemsImported,
-                counters.itemsUpdated, counters.eventsImported, counters.eventsUpdated,
-                counters.skipped, parsed.truncated());
+        Map<String, Course> courses = new HashMap<>();
+        for (int i = 0; i < events.size(); i++) {
+            ParsedEvent event = events.get(i);
+            LmsRef ref = refs.get(i);
+            if (ref == null) {
+                importPlainEvent(user, event, seen, counters);
+                continue;
+            }
+            if (ref.kind() == LmsRef.Kind.SKIP || (ref.closing() && dueGroups.contains(ref.groupKey()))) {
+                counters.skipped++;
+                continue;
+            }
+            String uid = capUid(ref.uid());
+            if (!seen.add(uid)) {
+                counters.skipped++;
+                continue;
+            }
+            Course course = courses.computeIfAbsent(
+                    ref.courseKey(), key -> resolveLmsCourse(user, provider, ref, semester, counters));
+            importLmsItem(course, ref, uid, event, counters);
+        }
+    }
+
+    private void importLmsItem(Course course, LmsRef ref, String uid, ParsedEvent event, Counters counters) {
+        AcademicItem existing = itemRepository
+                .findFirstByCourseUserIdAndExternalUidOrderByIdAsc(course.getUser().getId(), uid)
+                .orElse(null);
+        if (existing == null) {
+            AcademicItem item = new AcademicItem();
+            item.setCourse(course);
+            item.setExternalUid(uid);
+            item.setType(ref.typeHint() != null ? ref.typeHint() : ItemTypes.fromName(ref.title()));
+            item.setTitle(ref.title());
+            item.setDueAt(event.startAt());
+            itemRepository.save(item);
+            counters.itemsImported++;
+            return;
+        }
+        existing.setCourse(course);
+        existing.setTitle(ref.title());
+        existing.setDueAt(event.startAt());
+        itemRepository.save(existing);
+        counters.itemsUpdated++;
+    }
+
+    private Course resolveLmsCourse(User user, LmsProvider provider, LmsRef ref,
+                                    Semester semester, Counters counters) {
+        String providerName = provider.name();
+        Course byLms = courseRepository
+                .findByUserIdAndLmsProviderAndLmsCourseId(user.getId(), providerName, ref.courseKey()).orElse(null);
+        if (byLms != null) {
+            counters.coursesMatched++;
+            return byLms;
+        }
+
+        String code = ref.courseCode();
+        String codeKey = MatchKeys.codeKey(code);
+        if (codeKey != null) {
+            Course byCode = courseRepository
+                    .findFirstByUserIdAndCodeKeyOrderByIdAsc(user.getId(), codeKey).orElse(null);
+            if (byCode != null && byCode.getCanvasCourseId() == null && byCode.getLmsCourseId() == null) {
+                byCode.setLmsProvider(providerName);
+                byCode.setLmsCourseId(ref.courseKey());
+                counters.coursesMatched++;
+                return courseRepository.save(byCode);
+            }
+        }
+
+        String fallback = (provider == LmsProvider.D2L ? "Brightspace" : "Moodle") + " course " + ref.courseKey();
+        String name = ref.courseName() == null || ref.courseName().isBlank() ? fallback : ref.courseName();
+        Course course = new Course();
+        course.setUser(user);
+        course.setSemester(semester);
+        course.setName(name.length() <= 255 ? name : name.substring(0, 255));
+        course.setCode(code);
+        course.setCodeKey(codeKey);
+        course.setColor(COLORS[Math.floorMod(ref.courseKey().hashCode(), COLORS.length)]);
+        course.setLmsProvider(providerName);
+        course.setLmsCourseId(ref.courseKey());
+        counters.coursesCreated++;
+        return courseRepository.save(course);
+    }
+
+    private String capUid(String uid) {
+        return uid.length() <= 200 ? uid : uid.substring(0, uid.indexOf('-') + 1) + sha256(uid);
+    }
+
+    private String sha256(String value) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder(64);
+            for (byte b : digest) {
+                sb.append(Character.forDigit((b >> 4) & 0xF, 16)).append(Character.forDigit(b & 0xF, 16));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private void importItem(Course course, CanvasRef ref, ParsedEvent event, Counters counters) {
@@ -244,11 +370,6 @@ public class CanvasFeedService {
                 : event.uid();
         String key = event.recurring() ? base + "#" + event.startAt().getEpochSecond() : base;
         return key.length() <= 255 ? key : key.substring(0, 255);
-    }
-
-    private boolean looksLikeCanvasUrl(String source) {
-        String lower = source.trim().toLowerCase(Locale.ROOT);
-        return lower.contains("/feeds/calendars/") || lower.contains("instructure.com");
     }
 
     private String resolve(String source) {

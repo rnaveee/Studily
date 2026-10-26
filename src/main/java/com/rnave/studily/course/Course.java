@@ -55,6 +55,12 @@ public class Course {
     @Column(name = "canvas_synced_at")
     private Instant canvasSyncedAt;
 
+    @Column(name = "lms_provider")
+    private String lmsProvider;
+
+    @Column(name = "lms_course_id")
+    private String lmsCourseId;
+
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<MeetingBlock> meetingBlocks = new ArrayList<>();
 
