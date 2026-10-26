@@ -27,6 +27,7 @@ import EditSetModal from "./EditSetModal";
 import MoveToFolderModal from "./MoveToFolderModal";
 import { VisibilityBadge } from "./visibility";
 import { readJson, writeJson } from "./studyStorage";
+import { useLongPressDrag } from "./useLongPressDrag";
 import { SkeletonList } from "../../components/Skeleton";
 import QueryError from "../../components/QueryError";
 
@@ -59,6 +60,7 @@ export default function FlashcardsPage() {
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [draggingId, setDraggingId] = useState<number | null>(null);
+  const [touchOver, setTouchOver] = useState<string | null>(null);
 
   const sets = useQuery({
     queryKey: ["flashcards", "sets"],
@@ -122,6 +124,27 @@ export default function FlashcardsPage() {
       toast.error("Couldn't move that set");
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ["flashcards"] }),
+  });
+
+  function dropSet(setId: number, folderId: number | null) {
+    setDraggingId(null);
+    const current = (sets.data ?? []).find((x) => x.id === setId);
+    if (!current || (current.folderId ?? null) === folderId) return;
+    requireAuth(() => moveSet.mutate({ setId, folderId }));
+  }
+
+  const touchDrag = useLongPressDrag({
+    enabled: grouping === "folder",
+    onStart: setDraggingId,
+    onHover: setTouchOver,
+    onCancel: () => setDraggingId(null),
+    onDrop: (setId, target) => {
+      if (target == null) {
+        setDraggingId(null);
+        return;
+      }
+      dropSet(setId, target === "none" ? null : Number(target));
+    },
   });
 
   function setGrouping(next: Grouping) {
@@ -223,7 +246,7 @@ export default function FlashcardsPage() {
       ) : sets.isError && !sets.data ? (
         <QueryError onRetry={() => sets.refetch()} />
       ) : list.length > 0 ? (
-        <div className="space-y-7">
+        <div className="space-y-1">
           {sections.map((section) => (
             <SectionBlock
               key={section.key}
@@ -255,12 +278,9 @@ export default function FlashcardsPage() {
               draggingId={draggingId}
               onDragStart={setDraggingId}
               onDragEnd={() => setDraggingId(null)}
-              onDropSet={(setId, folderId) => {
-                setDraggingId(null);
-                const current = list.find((x) => x.id === setId);
-                if (!current || (current.folderId ?? null) === folderId) return;
-                requireAuth(() => moveSet.mutate({ setId, folderId }));
-              }}
+              onDropSet={dropSet}
+              touchOver={touchOver}
+              touchDrag={touchDrag}
               onEdit={(s) => requireAuth(() => setEditingSet(s))}
               onMove={(s) => requireAuth(() => setMovingSet(s))}
               onDelete={async (s) => {
@@ -279,6 +299,22 @@ export default function FlashcardsPage() {
         <div className="card p-10 text-center">
           <Layers className="mx-auto mb-2 text-fg-3" size={28} strokeWidth={1.5} />
           <p className="text-sm text-fg-3">You have no flashcards. Create one!</p>
+        </div>
+      )}
+
+      {touchDrag.ghost && (
+        <div
+          className="card pointer-events-none fixed z-[200] flex items-center gap-3 p-4 shadow-2xl"
+          style={{
+            left: touchDrag.ghost.x,
+            top: touchDrag.ghost.y,
+            width: touchDrag.ghost.width,
+            transform: "translate(-50%, -60%) scale(1.04) rotate(-1.5deg)",
+            borderLeft: "4px solid var(--accent)",
+          }}
+        >
+          <Layers size={16} className="shrink-0 text-fg-3" />
+          <span className="truncate text-[14px] font-medium text-fg">{touchDrag.ghost.title}</span>
         </div>
       )}
 
@@ -346,6 +382,8 @@ function SectionBlock({
   onDragStart,
   onDragEnd,
   onDropSet,
+  touchOver,
+  touchDrag,
   onEdit,
   onMove,
   onDelete,
@@ -364,6 +402,8 @@ function SectionBlock({
   onDragStart: (id: number) => void;
   onDragEnd: () => void;
   onDropSet: (setId: number, folderId: number | null) => void;
+  touchOver: string | null;
+  touchDrag: ReturnType<typeof useLongPressDrag>;
   onEdit: (s: FlashcardSet) => void;
   onMove: (s: FlashcardSet) => void;
   onDelete: (s: FlashcardSet) => void;
@@ -375,16 +415,18 @@ function SectionBlock({
   const headerColor = section.color ?? "var(--fg-3)";
 
   const dropActive = dragEnabled && draggingId != null;
+  const dropId = folder ? String(folder.id) : "none";
+  const hot = over || (dropActive && touchOver === dropId);
 
   return (
     <section
-      className="space-y-3 rounded-2xl transition-colors"
+      className="-mx-3 space-y-3 rounded-2xl p-3 transition-colors"
+      data-drop-target={dragEnabled ? dropId : undefined}
       style={
         dropActive
           ? {
-              outline: over ? "2px solid var(--accent)" : "2px dashed var(--line)",
-              outlineOffset: 6,
-              background: over ? "color-mix(in srgb, var(--accent) 6%, transparent)" : undefined,
+              outline: hot ? "2px solid var(--accent)" : "2px dashed var(--line)",
+              background: hot ? "color-mix(in srgb, var(--accent) 6%, transparent)" : undefined,
             }
           : undefined
       }
@@ -500,6 +542,7 @@ function SectionBlock({
               dragging={draggingId === s.id}
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
+              touchDrag={touchDrag}
               onEdit={onEdit}
               onMove={onMove}
               onDelete={onDelete}
@@ -518,12 +561,14 @@ function SetCard({
   dragging,
   onDragStart,
   onDragEnd,
+  touchDrag,
   onEdit,
   onMove,
   onDelete,
 }: {
   set: FlashcardSet;
   color: string;
+  touchDrag: ReturnType<typeof useLongPressDrag>;
   draggable: boolean;
   dragging: boolean;
   onDragStart: (id: number) => void;
@@ -532,11 +577,27 @@ function SetCard({
   onMove: (s: FlashcardSet) => void;
   onDelete: (s: FlashcardSet) => void;
 }) {
+  const touchScreen = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+
   return (
     <li
       className={`card flex items-center justify-between gap-3 p-4 animate-fade ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
-      style={{ borderLeft: `4px solid ${color}`, opacity: dragging ? 0.45 : 1 }}
-      draggable={draggable}
+      style={{
+        borderLeft: `4px solid ${color}`,
+        opacity: dragging ? 0.45 : 1,
+        ...(draggable ? { WebkitTouchCallout: "none", userSelect: "none" } : null),
+      }}
+      draggable={draggable && !touchScreen}
+      onPointerDown={(e) => touchDrag.begin(e, s.id, s.title)}
+      onContextMenu={(e) => {
+        if (draggable && touchDrag.blocksContextMenu()) e.preventDefault();
+      }}
+      onClickCapture={(e) => {
+        if (touchDrag.blocksClick()) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
       onDragStart={(e) => {
         if (!draggable) return;
         e.dataTransfer.effectAllowed = "move";
