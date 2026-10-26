@@ -6,7 +6,6 @@ import {
   Check,
   ClipboardPaste,
   Folder,
-  FolderInput,
   FolderPlus,
   Layers,
   Pencil,
@@ -24,7 +23,6 @@ import { toast } from "../../lib/toast";
 import type { Course, FlashcardFolder, FlashcardSet } from "../../types";
 import NewFlashcardSetModal from "./NewFlashcardSetModal";
 import EditSetModal from "./EditSetModal";
-import MoveToFolderModal from "./MoveToFolderModal";
 import { VisibilityBadge } from "./visibility";
 import { readJson, writeJson } from "./studyStorage";
 import { useLongPressDrag } from "./useLongPressDrag";
@@ -50,7 +48,6 @@ export default function FlashcardsPage() {
   const requireAuth = useRequireAuth();
   const confirm = useConfirm();
   const [editingSet, setEditingSet] = useState<FlashcardSet | null>(null);
-  const [movingSet, setMovingSet] = useState<FlashcardSet | null>(null);
   const [showCreate, setShowCreate] = useState<"blank" | "import" | null>(null);
   const [grouping, setGroupingState] = useState<Grouping>(() =>
     readJson<Grouping>(GROUPING_KEY) === "course" ? "course" : "folder",
@@ -282,7 +279,6 @@ export default function FlashcardsPage() {
               touchOver={touchOver}
               touchDrag={touchDrag}
               onEdit={(s) => requireAuth(() => setEditingSet(s))}
-              onMove={(s) => requireAuth(() => setMovingSet(s))}
               onDelete={async (s) => {
                 const ok = await confirm({
                   title: `Delete ${s.title}?`,
@@ -319,7 +315,6 @@ export default function FlashcardsPage() {
       )}
 
       {editingSet && <EditSetModal set={editingSet} onClose={() => setEditingSet(null)} />}
-      {movingSet && <MoveToFolderModal set={movingSet} onClose={() => setMovingSet(null)} />}
 
       {showCreate && (
         <NewFlashcardSetModal importing={showCreate === "import"} onClose={() => setShowCreate(null)} />
@@ -385,7 +380,6 @@ function SectionBlock({
   touchOver,
   touchDrag,
   onEdit,
-  onMove,
   onDelete,
 }: {
   section: Section;
@@ -405,7 +399,6 @@ function SectionBlock({
   touchOver: string | null;
   touchDrag: ReturnType<typeof useLongPressDrag>;
   onEdit: (s: FlashcardSet) => void;
-  onMove: (s: FlashcardSet) => void;
   onDelete: (s: FlashcardSet) => void;
 }) {
   const navigate = useNavigate();
@@ -529,7 +522,7 @@ function SectionBlock({
 
       {section.sets.length === 0 ? (
         <p className="card px-4 py-5 text-center text-[13px] text-fg-3">
-          This folder is empty. Drag a set here, or use the move button on a set.
+          This folder is empty. Drag a set here to put it in this folder.
         </p>
       ) : (
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -544,7 +537,6 @@ function SectionBlock({
               onDragEnd={onDragEnd}
               touchDrag={touchDrag}
               onEdit={onEdit}
-              onMove={onMove}
               onDelete={onDelete}
             />
           ))}
@@ -563,7 +555,6 @@ function SetCard({
   onDragEnd,
   touchDrag,
   onEdit,
-  onMove,
   onDelete,
 }: {
   set: FlashcardSet;
@@ -574,7 +565,6 @@ function SetCard({
   onDragStart: (id: number) => void;
   onDragEnd: () => void;
   onEdit: (s: FlashcardSet) => void;
-  onMove: (s: FlashcardSet) => void;
   onDelete: (s: FlashcardSet) => void;
 }) {
   const touchScreen = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
@@ -633,13 +623,6 @@ function SetCard({
         </div>
       </Link>
       <div className="flex shrink-0 items-center">
-        <button
-          onClick={() => onMove(s)}
-          className="shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
-          aria-label="Move to folder"
-        >
-          <FolderInput size={15} />
-        </button>
         <button
           onClick={() => onEdit(s)}
           className="shrink-0 rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"

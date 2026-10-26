@@ -25,9 +25,10 @@ export default function StreakWeek({ data }: { data: StreakWeekDto }) {
           >
             <StreakFlame streak={0} size={56} />
             <div className="min-w-0 flex-1">
-              <p className="leading-none text-fg-3 line-through">
+              <p className="relative inline-block leading-none text-fg-3">
                 <span className="text-[24px] font-bold tabular-nums">{broken.lostStreak}</span>{" "}
                 <span className="text-[13px] font-medium">day streak</span>
+                <span aria-hidden className="absolute inset-x-0 top-1/2 h-[2px] -translate-y-1/2 rounded bg-current" />
               </p>
               <p className="mt-1 text-[11.5px] font-semibold leading-snug text-red">Oh no! You've lost your streak.</p>
             </div>
