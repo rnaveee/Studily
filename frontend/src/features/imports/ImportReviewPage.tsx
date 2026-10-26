@@ -11,8 +11,10 @@ import type {
   ApplyResult,
   CourseDecision,
   FeedImportView,
+  ImportConflict,
   ItemDecision,
 } from "../../types";
+import ConflictSolver from "./ConflictSolver";
 import CourseConfirmModal from "./CourseConfirmModal";
 import { providerLabel } from "./stagedSummary";
 
@@ -43,6 +45,7 @@ export default function ImportReviewPage() {
   const [step, setStep] = useState<Step>("courses");
   const [open, setOpen] = useState(true);
   const [courseDecisions, setCourseDecisions] = useState<CourseDecision[]>([]);
+  const [conflicts, setConflicts] = useState<ImportConflict[]>([]);
   const autoApplied = useRef(false);
 
   const { data: view, isLoading, isError, error, refetch } = useQuery({
@@ -82,10 +85,41 @@ export default function ImportReviewPage() {
     apply.mutate({ courses: decisions, items: itemDecisions });
   }
 
+  const findConflicts = useMutation({
+    mutationFn: (decisions: CourseDecision[]) =>
+      api.post<ImportConflict[]>(`/imports/${id}/conflicts`, { courses: decisions }),
+    onSuccess: (found, decisions) => {
+      if (!view) return;
+      if (found.length === 0) {
+        applyImport(decisions, addAllItems(view, decisions));
+        return;
+      }
+      setConflicts(found);
+      setStep("conflicts");
+    },
+    onError: (e) => {
+      setStep("courses");
+      setOpen(true);
+      toast.error(e instanceof ApiError ? e.message : "Could not check your deadlines");
+    },
+  });
+
   function coursesDecided(decisions: CourseDecision[]) {
     if (!view) return;
     setCourseDecisions(decisions);
-    applyImport(decisions, addAllItems(view, decisions));
+    findConflicts.mutate(decisions);
+  }
+
+  function conflictsSolved(solved: ItemDecision[]) {
+    if (!view) return;
+    const byKey = new Map(solved.map((d) => [d.key, d]));
+    const merged = addAllItems(view, courseDecisions).map((d) => byKey.get(d.key) ?? d);
+    applyImport(courseDecisions, merged);
+  }
+
+  function cancelConflicts() {
+    setStep("courses");
+    setOpen(false);
   }
 
   const needsReview = view?.courses.some((c) => c.linkedCourseId == null) ?? false;
@@ -110,6 +144,18 @@ export default function ImportReviewPage() {
       );
     }
     return <QueryError onRetry={() => refetch()} />;
+  }
+
+  if (step === "conflicts" && conflicts.length > 0) {
+    return (
+      <ConflictSolver
+        conflicts={conflicts}
+        providerName={providerLabel(view.provider)}
+        busy={apply.isPending}
+        onDone={conflictsSolved}
+        onCancel={cancelConflicts}
+      />
+    );
   }
 
   const itemCount = view.courses.reduce((n, c) => n + c.items.length, 0);
@@ -148,9 +194,14 @@ export default function ImportReviewPage() {
           Nothing is added until you confirm. Your own courses and grades stay as they are.
         </p>
         <div className="flex flex-wrap justify-center gap-2">
-          {needsReview && !apply.isPending && (
+          {needsReview && !apply.isPending && !findConflicts.isPending && (
             <button type="button" className="btn btn-checkin" onClick={() => setOpen(true)}>
               {step === "courses" && courseDecisions.length === 0 ? "Review courses" : "Resume review"}
+            </button>
+          )}
+          {!needsReview && !apply.isPending && !findConflicts.isPending && (
+            <button type="button" className="btn btn-checkin" onClick={() => coursesDecided([])}>
+              Review deadlines
             </button>
           )}
           <button type="button" className="btn btn-ghost" onClick={() => navigate("/dashboard")}>
@@ -159,7 +210,7 @@ export default function ImportReviewPage() {
           <button
             type="button"
             className="btn btn-ghost"
-            disabled={dismiss.isPending || apply.isPending}
+            disabled={dismiss.isPending || apply.isPending || findConflicts.isPending}
             onClick={() => dismiss.mutate()}
           >
             Dismiss import
@@ -170,7 +221,7 @@ export default function ImportReviewPage() {
       {step === "courses" && needsReview && open && (
         <CourseConfirmModal
           view={view}
-          busy={apply.isPending}
+          busy={apply.isPending || findConflicts.isPending}
           onDone={coursesDecided}
           onClose={() => setOpen(false)}
         />
