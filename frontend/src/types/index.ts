@@ -1361,3 +1361,29 @@ export interface AdminSurveyContact {
   email: string;
   createdAt: string;
 }
+
+export type NotificationKind =
+  | "DEADLINE_REMINDER"
+  | "CLASS_REMINDER"
+  | "EVENT_TODAY"
+  | "ITEM_WEEK_AHEAD"
+  | "EXAM_TODAY"
+  | "EXAM_COUNTDOWN"
+  | "ANNOUNCEMENT"
+  | "FRIEND_REQUEST"
+  | "FEED_REVIEW";
+
+export interface AppNotification {
+  id: number;
+  type: NotificationKind;
+  title: string | null;
+  message: string;
+  url: string | null;
+  relatedItemId: number | null;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface UnreadCount {
+  count: number;
+}

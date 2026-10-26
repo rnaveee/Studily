@@ -1,29 +1,13 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { useIsDesktop } from "../../../lib/useIsDesktop";
 import { releaseProgressMoments } from "../../../lib/progressDelta";
 import { useActiveSession, useProgressEnabled } from "../../progress/useProgress";
 import { BlockRow, PrimaryAction, Ring, TaskList } from "./SessionParts";
 import SessionSummaryModal from "./SessionSummaryModal";
 import { useSessionControls } from "./useSessionControls";
 import type { StudySessionDto } from "../../../types";
-
-const DESKTOP_QUERY = "(min-width: 768px)";
-
-function subscribeDesktop(cb: () => void) {
-  if (typeof window === "undefined") return () => {};
-  const mq = window.matchMedia(DESKTOP_QUERY);
-  mq.addEventListener("change", cb);
-  return () => mq.removeEventListener("change", cb);
-}
-
-function useIsDesktop() {
-  return useSyncExternalStore(
-    subscribeDesktop,
-    () => window.matchMedia(DESKTOP_QUERY).matches,
-    () => true,
-  );
-}
 
 export function SessionHost() {
   const enabled = useProgressEnabled();

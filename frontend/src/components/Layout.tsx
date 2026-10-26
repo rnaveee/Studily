@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -16,9 +16,12 @@ import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { useKeyboardViewport } from "../lib/keyboardDock";
 import { prefersReducedMotion } from "../lib/motion";
+import { useIsDesktop } from "../lib/useIsDesktop";
 import Avatar from "./Avatar";
 import ClientOnly from "./ClientOnly";
 import Banners from "./Banners";
+import NotificationBell from "./NotificationBell";
+import NotificationPanel from "./NotificationPanel";
 import ProgressWhatsNew from "../features/progress/ProgressWhatsNew";
 import StartSessionHost from "../features/learn/sessions/StartSessionHost";
 import SurveyPrompt from "../features/survey/SurveyPrompt";
@@ -77,6 +80,11 @@ export default function Layout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const tourStep = useWelcomeTourStep();
+  const desktop = useIsDesktop();
+  const [notifOpen, setNotifOpen] = useState(false);
+  const closeNotifs = useCallback(() => setNotifOpen(false), []);
+
+  useEffect(() => setNotifOpen(false), [pathname]);
 
   useEffect(() => {
     if (user && user.welcomed === false && tourStep === null) navigate("/welcome", { replace: true });
@@ -147,14 +155,21 @@ export default function Layout() {
         className="hidden md:flex w-[220px] shrink-0 flex-col"
         style={{ background: "var(--surface)", borderRight: "1px solid var(--line)" }}
       >
-        <div className="flex items-center justify-between gap-2 py-4 pl-5 pr-3">
+        <div className="flex items-center justify-between gap-1 py-4 pl-4 pr-2">
           <Link to="/onboarding" className="flex min-w-0 items-center gap-1.5">
             <img src="/studily-3a.svg" alt="" className="h-8 w-8 shrink-0" />
             <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
           </Link>
-          <ClientOnly>
-            <CoinBalance />
-          </ClientOnly>
+          <div className="flex items-center gap-0.5">
+            <ClientOnly>
+              <CoinBalance />
+            </ClientOnly>
+            {user && (
+              <ClientOnly>
+                <NotificationBell compact open={notifOpen} onToggle={() => setNotifOpen((o) => !o)} />
+              </ClientOnly>
+            )}
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -276,6 +291,7 @@ export default function Layout() {
             {user && (
               <ClientOnly>
                 <CoinBalance />
+                <NotificationBell open={notifOpen} onToggle={() => setNotifOpen((o) => !o)} />
               </ClientOnly>
             )}
             <NavLink
@@ -316,6 +332,14 @@ export default function Layout() {
           </div>
         </header>
 
+        {user && notifOpen && !desktop && (
+          <ClientOnly>
+            <div className="relative z-50 shrink-0">
+              <NotificationPanel variant="dropdown" onClose={closeNotifs} />
+            </div>
+          </ClientOnly>
+        )}
+
         <ClientOnly>
           <SessionDock placement="bar" />
           <Banners />
@@ -350,6 +374,11 @@ export default function Layout() {
           onCopyrightTap={handleDebugTap}
         />
       </div>
+      {user && notifOpen && desktop && (
+        <ClientOnly>
+          <NotificationPanel variant="flyout" onClose={closeNotifs} />
+        </ClientOnly>
+      )}
       <ClientOnly>
         {debug && <ViewportDebug />}
         <ProgressHost />

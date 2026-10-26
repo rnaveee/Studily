@@ -1,84 +1,14 @@
-  import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation } from "react-router-dom";
-import { Eye, FileText, Gift, MailWarning, Percent, Timer, Trophy, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Eye, MailWarning, Timer, X } from "lucide-react";
 import { useAuth } from "../lib/auth";
-import { api } from "../lib/api";
-import type { ParseAvailability, SurveyDto } from "../types";
 import { formatMs, pomodoroColor, usePomodoro } from "../lib/pomodoro";
-import { openProgressWhatsNew } from "../features/progress/ProgressWhatsNew";
-import { openSurveyPrompt } from "../features/survey/SurveyPrompt";
-
-const PARSER_KEY = "studily.banner.parser";
-const PROGRESS_KEY = "studily.banner.progress";
-const GRADECALC_KEY = "studily.banner.gradecalc";
-const NEW_ACCOUNT_MS = 24 * 60 * 60 * 1000;
-const SURVEY_KEY = "studily.banner.survey.fall-2026";
 
 export default function Banners() {
   const { user, guest } = useAuth();
-  const { pathname } = useLocation();
-  const [parserDismissed, setParserDismissed] = useState(
-    () => localStorage.getItem(PARSER_KEY) === "1",
-  );
-  const [progressDismissed, setProgressDismissed] = useState(
-    () => localStorage.getItem(PROGRESS_KEY) === "1",
-  );
-  const [surveyDismissed, setSurveyDismissed] = useState(
-    () => localStorage.getItem(SURVEY_KEY) === "1",
-  );
-
-  const [gradeCalcDismissed, setGradeCalcDismissed] = useState(
-    () => localStorage.getItem(GRADECALC_KEY) === "1",
-  );
-
-  const { data: parseAvailability } = useQuery({
-    queryKey: ["course-parse-enabled"],
-    queryFn: () => api.get<ParseAvailability>("/courses/parse/enabled"),
-    staleTime: 5 * 60_000,
-    enabled: !!user && !parserDismissed,
-  });
-  const showParser = !parserDismissed && !!user && (parseAvailability?.enabled ?? false);
-  const showProgress = !progressDismissed && !!user;
-
-  const { data: survey } = useQuery({
-    queryKey: ["survey"],
-    queryFn: () => api.get<SurveyDto>("/survey"),
-    enabled: !!user && !guest && !!user.emailVerified && !surveyDismissed,
-  });
-  const showSurvey =
-    !surveyDismissed &&
-    !!survey &&
-    survey.open &&
-    survey.eligible &&
-    !survey.completed &&
-    !pathname.startsWith("/survey");
-
-  const showGradeCalc =
-    !gradeCalcDismissed &&
-    !!user &&
-    !showParser &&
-    !showProgress &&
-    !showSurvey &&
-    Date.now() - new Date(user.createdAt).getTime() >= NEW_ACCOUNT_MS;
-
-  function dismiss(key: string, set: (v: boolean) => void) {
-    localStorage.setItem(key, "1");
-    set(true);
-  }
-
   const unverified = !!user && !user.emailVerified;
   const pomo = usePomodoro();
 
-  if (
-    !showParser &&
-    !showProgress &&
-    !showSurvey &&
-    !showGradeCalc &&
-    !unverified &&
-    !pomo.running &&
-    !guest
-  ) {
+  if (!unverified && !pomo.running && !guest) {
     return null;
   }
 
@@ -110,68 +40,6 @@ export default function Banners() {
             Verify now
           </Link>
           .
-        </Banner>
-      )}
-      {showSurvey && (
-        <Banner
-          icon={<Gift size={13} className="shrink-0" />}
-          onDismiss={() => dismiss(SURVEY_KEY, setSurveyDismissed)}
-          wrap
-        >
-          Help shape Studily and earn a diamond chest!{" "}
-          <button
-            type="button"
-            onClick={() => openSurveyPrompt()}
-            className="font-medium underline underline-offset-2"
-          >
-            Take the survey
-          </button>
-          .
-        </Banner>
-      )}
-      {showProgress && (
-        <Banner
-          icon={<Trophy size={13} className="shrink-0" />}
-          onDismiss={() => dismiss(PROGRESS_KEY, setProgressDismissed)}
-          wrap
-        >
-          Your studying now earns XP, badges and chests!{" "}
-          <Link
-            to="/learn"
-            onClick={() => openProgressWhatsNew()}
-            className="font-medium underline underline-offset-2"
-          >
-            See what's new
-          </Link>
-          .
-        </Banner>
-      )}
-      {showGradeCalc && (
-        <Banner
-          icon={<Percent size={13} className="shrink-0" />}
-          onDismiss={() => dismiss(GRADECALC_KEY, setGradeCalcDismissed)}
-          wrap
-        >
-          New: a grade calculator. See what you need on your final.{" "}
-          <Link to="/grade-calculator" className="font-medium underline underline-offset-2">
-            Try it
-          </Link>
-          .
-        </Banner>
-      )}
-      {showParser && (
-        <Banner
-          icon={<FileText size={13} className="shrink-0" />}
-          color="var(--orange)"
-          onDismiss={() => dismiss(PARSER_KEY, setParserDismissed)}
-          wrap
-        >
-          New: build a course straight from your outline.{" "}
-          <Link to="/courses" className="font-medium underline underline-offset-2">
-            Upload a syllabus
-          </Link>{" "}
-          and we'll fill in the times and deadlines. It's in beta and won't always get it right, so
-          check everything before you save.
         </Banner>
       )}
     </div>

@@ -311,6 +311,10 @@ summary,
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+@keyframes flyout-in {
+  from { opacity: 0; transform: translateX(-18px); }
+  to   { opacity: 1; transform: none; }
+}
 @keyframes sheet-up {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
@@ -320,6 +324,7 @@ summary,
 .animate-fade { animation: fade-in   0.15s ease-out both; }
 .animate-slide { animation: slide-down 0.14s ease-out both; }
 .animate-sheet { animation: sheet-up 0.22s ease-out both; }
+.animate-flyout { animation: flyout-in 0.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 @layer components {
 .input {
@@ -1079,6 +1084,7 @@ button.streak-tint:hover {
   .animate-in,
   .animate-fade,
   .animate-slide,
+  .animate-flyout,
   .animate-sheet {
     opacity: 1;
     transform: none;
