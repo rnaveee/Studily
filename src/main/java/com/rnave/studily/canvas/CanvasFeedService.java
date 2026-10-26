@@ -114,18 +114,22 @@ public class CanvasFeedService {
                 ref = CanvasRef.parse(event.description());
             }
             if (ref == null) {
-                importPlainEvent(user, event, seen, counters);
+                importPlainEvent(user, event, courseFromTitle(user, event.title()), seen, counters);
                 continue;
             }
             sawCanvasRef = true;
             if (ref.kind() == CanvasRef.Kind.CALENDAR_EVENT) {
-                importPlainEvent(user, event, seen, counters);
+                Course eventCourse = courses.computeIfAbsent(
+                        ref.courseId(), id -> resolveCourse(user, id, event.title(), semester, counters));
+                importPlainEvent(user, event, eventCourse, seen, counters);
                 continue;
             }
             if (!seen.add(ref.externalUid())) {
                 counters.skipped++;
                 continue;
             }
+            eventRepository.findByUserIdAndExternalUid(user.getId(), externalUid(event))
+                    .ifPresent(eventRepository::delete);
             Course course = courses.computeIfAbsent(
                     ref.courseId(), id -> resolveCourse(user, id, event.title(), semester, counters));
             importItem(course, ref, event, counters);
@@ -150,7 +154,7 @@ public class CanvasFeedService {
             ParsedEvent event = events.get(i);
             LmsRef ref = refs.get(i);
             if (ref == null) {
-                importPlainEvent(user, event, seen, counters);
+                importPlainEvent(user, event, courseFromTitle(user, event.title()), seen, counters);
                 continue;
             }
             if (ref.kind() == LmsRef.Kind.SKIP || (ref.closing() && dueGroups.contains(ref.groupKey()))) {
@@ -271,7 +275,16 @@ public class CanvasFeedService {
         counters.itemsUpdated++;
     }
 
-    private void importPlainEvent(User user, ParsedEvent event, Set<String> seen, Counters counters) {
+    private Course courseFromTitle(User user, String title) {
+        String codeKey = MatchKeys.codeKey(courseCode(title));
+        if (codeKey == null) {
+            return null;
+        }
+        return courseRepository.findFirstByUserIdAndCodeKeyOrderByIdAsc(user.getId(), codeKey).orElse(null);
+    }
+
+    private void importPlainEvent(User user, ParsedEvent event, Course course, Set<String> seen,
+                                  Counters counters) {
         String uid = externalUid(event);
         if (!seen.add(uid)) {
             counters.skipped++;
@@ -284,6 +297,7 @@ public class CanvasFeedService {
             created.setTitle(stripCourseCode(event.title()));
             created.setPlace(event.place());
             created.setStartAt(event.startAt());
+            created.setCourse(course);
             created.setExternalUid(uid);
             eventRepository.save(created);
             counters.eventsImported++;
@@ -292,6 +306,9 @@ public class CanvasFeedService {
         existing.setTitle(stripCourseCode(event.title()));
         existing.setPlace(event.place());
         existing.setStartAt(event.startAt());
+        if (course != null) {
+            existing.setCourse(course);
+        }
         eventRepository.save(existing);
         counters.eventsUpdated++;
     }

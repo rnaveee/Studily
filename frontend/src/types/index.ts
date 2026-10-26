@@ -325,6 +325,10 @@ export interface CalendarEvent {
   categoryId?: number | null;
   categoryName?: string | null;
   categoryColor?: string | null;
+  courseId?: number | null;
+  courseName?: string | null;
+  courseCode?: string | null;
+  courseColor?: string | null;
   startAt: string;
 }
 

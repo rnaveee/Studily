@@ -199,6 +199,41 @@ class CanvasFeedServiceTest {
     }
 
     @Test
+    void importFeed_tiesACourseCalendarEventToItsCourse() {
+        String lecture = "BEGIN:VEVENT\r\nUID:event-calendar-event-9\r\nSUMMARY:Office hours [CMPT 225]\r\n"
+                + "DTSTART:20261003T180000Z\r\nURL:" + HOST + "/courses/88/calendar_events/9\r\nEND:VEVENT\r\n";
+
+        FeedResult result = importText(feed(
+                assignment("event-assignment-55", "Problem Set 3 [CMPT 225]", 88, 55, "20261001T035900Z") + lecture));
+
+        assertThat(result.eventsImported()).isEqualTo(1);
+        ArgumentCaptor<CalendarEvent> events = ArgumentCaptor.forClass(CalendarEvent.class);
+        verify(eventRepository).save(events.capture());
+        assertThat(events.getValue().getCourse()).isNotNull();
+        assertThat(events.getValue().getCourse().getCanvasCourseId()).isEqualTo(88L);
+    }
+
+    @Test
+    void importFeed_tiesAnEventWithoutALinkToAnExistingCourseByItsCodeInTheTitle() {
+        Course existing = new Course();
+        existing.setName("Algorithms");
+        existing.setCode("CMPT 225");
+        existing.setCodeKey("CMPT225");
+        when(courseRepository.findFirstByUserIdAndCodeKeyOrderByIdAsc(7L, "CMPT225"))
+                .thenReturn(Optional.of(existing));
+        String plain = "BEGIN:VEVENT\r\nUID:plain-1\r\nSUMMARY:Review session [CMPT 225]\r\n"
+                + "DTSTART:20261004T180000Z\r\nEND:VEVENT\r\n";
+
+        importText(feed(assignment("event-assignment-55", "Problem Set 3 [ENGL 101]", 4, 55, "20261001T035900Z")
+                + plain));
+
+        ArgumentCaptor<CalendarEvent> events = ArgumentCaptor.forClass(CalendarEvent.class);
+        verify(eventRepository).save(events.capture());
+        assertThat(events.getValue().getTitle()).isEqualTo("Review session");
+        assertThat(events.getValue().getCourse()).isSameAs(existing);
+    }
+
+    @Test
     void importFeed_rejectsAFeedWithNoCanvasCourseworkFromANonCanvasSource() {
         String text = feed("BEGIN:VEVENT\r\nUID:x-1\r\nSUMMARY:Dentist\r\nDTSTART:20261001T180000Z\r\nEND:VEVENT\r\n");
 

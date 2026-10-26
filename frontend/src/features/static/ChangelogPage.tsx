@@ -7,6 +7,7 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
+  { version: 73, date: "2026-10-25", summary: "Imported calendar events from Canvas, Brightspace and Moodle now show their course." },
   { version: 73, date: "2026-10-25", summary: "You can now pick which pages or slides of a PDF or PowerPoint to read when making flashcards or a course, like pages 8 to 11 or 9 to the end." },
   { version: 72, date: "2026-10-25", summary: "UI updates." },
   { version: 71, date: "2026-10-25", summary: "Added exam countdowns and study plans that spread your flashcards over the days before each exam." },

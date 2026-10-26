@@ -94,7 +94,7 @@ export default function CalendarEntryModal({
   const busy = saveItem.isPending || saveEvent.isPending
     || deleteEvent.isPending || deleteItem.isPending;
   const color = event
-    ? (event.categoryColor ?? "var(--accent)")
+    ? (event.courseColor ?? event.categoryColor ?? "var(--accent)")
     : item
       ? itemColor(item)
       : "var(--accent)";
@@ -182,6 +182,17 @@ export default function CalendarEntryModal({
                     className="truncate font-medium text-accent transition-colors hover:text-accent-2"
                   >
                     {item.courseName}
+                  </Link>
+                </div>
+              )}
+              {event?.courseId != null && (
+                <div className="flex justify-between gap-3">
+                  <span className="text-fg-3">Course</span>
+                  <Link
+                    to={`/courses/${event.courseId}`}
+                    className="truncate font-medium text-accent transition-colors hover:text-accent-2"
+                  >
+                    {event.courseCode || event.courseName}
                   </Link>
                 </div>
               )}

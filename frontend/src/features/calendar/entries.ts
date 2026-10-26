@@ -30,7 +30,7 @@ export function itemEntry(it: AcademicItem): Entry {
 }
 
 export function eventEntry(ev: CalendarEvent): Entry {
-  const color = ev.categoryColor || "var(--accent)";
+  const color = ev.courseColor || ev.categoryColor || "var(--accent)";
   return {
     key: `event-${ev.id}`,
     title: ev.title,
@@ -38,7 +38,7 @@ export function eventEntry(ev: CalendarEvent): Entry {
     tint: color,
     badge: ev.categoryName || "Event",
     when: ev.startAt,
-    subtitle: ev.categoryName,
+    subtitle: ev.courseCode || ev.courseName || ev.categoryName,
     place: ev.place,
     event: ev,
   };

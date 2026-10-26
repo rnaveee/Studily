@@ -1,5 +1,6 @@
 package com.rnave.studily.calendar;
 
+import com.rnave.studily.course.Course;
 import com.rnave.studily.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -38,6 +39,10 @@ public class CalendarEvent {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id")
     private EventCategory category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "course_id")
+    private Course course;
 
     @Column(nullable = false)
     private Instant startAt;

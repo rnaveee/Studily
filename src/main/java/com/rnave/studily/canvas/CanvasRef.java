@@ -13,17 +13,23 @@ public record CanvasRef(Kind kind, long courseId, long itemId) {
     private static final Pattern COURSE_PATH = Pattern.compile(
             "/courses/(\\d+)/(assignments|quizzes|calendar_events)/(\\d+)");
 
+    private static final Pattern CALENDAR_QUERY = Pattern.compile(
+            "include_contexts=course_(\\d+)[^#\\s]*#(assignment|quiz|calendar_event)_(\\d+)");
+
     public static CanvasRef parse(String url) {
         if (url == null) {
             return null;
         }
         Matcher m = COURSE_PATH.matcher(url);
         if (!m.find()) {
-            return null;
+            m = CALENDAR_QUERY.matcher(url);
+            if (!m.find()) {
+                return null;
+            }
         }
         Kind kind = switch (m.group(2).toLowerCase(Locale.ROOT)) {
-            case "assignments" -> Kind.ASSIGNMENT;
-            case "quizzes" -> Kind.QUIZ;
+            case "assignments", "assignment" -> Kind.ASSIGNMENT;
+            case "quizzes", "quiz" -> Kind.QUIZ;
             default -> Kind.CALENDAR_EVENT;
         };
         try {
