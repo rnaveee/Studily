@@ -2,11 +2,13 @@ import {
   DEMO_SEMESTER,
   demoCourses,
   demoFlashcardSets,
+  demoExamPlan,
   demoItems,
   demoNotes,
   demoStats,
   demoTodoCategories,
   demoTodos,
+  demoUpcomingExams,
   demoWeek,
   demoWeights,
 } from "./demo";
@@ -80,6 +82,7 @@ function guestStub(path: string): unknown {
   if (p === "/semesters") return [DEMO_SEMESTER];
   if (p === "/semesters/current") return DEMO_SEMESTER;
   if (p === "/semesters/stats") return demoStats();
+  if (p === "/exams/upcoming") return demoUpcomingExams();
   if (p === "/courses") return demoCourses();
   if (p === "/dashboard/week") return demoWeek();
   if (p === "/calendar") return demoItems();
@@ -92,7 +95,7 @@ function guestStub(path: string): unknown {
   if (p === "/settings/gpa-scale") return { scale: "FOUR_POINT", defaultScale: "FOUR_POINT", explicit: false };
   if (p === "/settings/privacy") return { readReceipts: true, scheduleVisibility: "FRIENDS" };
   if (p === "/settings/notifications")
-    return { messages: true, classReminders: true, eventDayOf: true, itemWeekAhead: true, examDayOf: true };
+    return { messages: true, classReminders: true, eventDayOf: true, itemWeekAhead: true, examDayOf: true, examCountdown: true };
 
   const course = p.match(/^\/courses\/(\d+)(\/\w+)?$/);
   if (course) {
@@ -121,6 +124,8 @@ function guestStub(path: string): unknown {
       cards: sets.flatMap((s) => s.cards.map((c) => ({ ...c, setId: s.id }))),
     };
   }
+  const plan = p.match(/^\/exams\/(\d+)\/plan$/);
+  if (plan) return demoExamPlan(Number(plan[1]));
 
   const set = p.match(/^\/flashcard-sets\/(\d+)$/);
   if (set) return demoFlashcardSets().find((s) => s.id === Number(set[1])) ?? null;

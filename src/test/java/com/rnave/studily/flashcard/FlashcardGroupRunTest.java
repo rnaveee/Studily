@@ -3,6 +3,7 @@ package com.rnave.studily.flashcard;
 import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.course.CourseService;
+import com.rnave.studily.exam.ExamStudyLinkRepository;
 import com.rnave.studily.flashcard.FlashcardRunDtos.CardResult;
 import com.rnave.studily.flashcard.FlashcardRunDtos.FlashcardRunResult;
 import com.rnave.studily.flashcard.FlashcardRunDtos.XpReason;
@@ -181,7 +182,8 @@ class FlashcardGroupRunTest {
                 mock(FlairService.class), currentUser, clock, random);
         FlashcardSetService setService = new FlashcardSetService(setRepository, currentUser,
                 mock(CourseService.class), mock(FriendRequestRepository.class), mock(Flairs.class),
-                mock(FlashcardImageRepository.class));
+                mock(FlashcardImageRepository.class), mock(ExamStudyLinkRepository.class),
+                mock(UserTimeZones.class));
         service = new FlashcardRunService(runRepository, setService, progressService, chestService,
                 new ProgressRateLimiter(), currentUser, clock, new ObjectMapper());
     }

@@ -34,6 +34,7 @@ public class NotificationPrefsController {
         updated.setEventDayOf(body.eventDayOf());
         updated.setItemWeekAhead(body.itemWeekAhead());
         updated.setExamDayOf(body.examDayOf());
+        updated.setExamCountdown(body.examCountdown() == null || body.examCountdown());
         return PrefsDto.from(prefsService.update(currentUser.id(), updated));
     }
 
@@ -42,11 +43,13 @@ public class NotificationPrefsController {
             @NotNull Boolean classReminders,
             @NotNull Boolean eventDayOf,
             @NotNull Boolean itemWeekAhead,
-            @NotNull Boolean examDayOf) {
+            @NotNull Boolean examDayOf,
+            Boolean examCountdown) {
 
         static PrefsDto from(NotificationPrefs prefs) {
             return new PrefsDto(prefs.isMessages(), prefs.isClassReminders(),
-                    prefs.isEventDayOf(), prefs.isItemWeekAhead(), prefs.isExamDayOf());
+                    prefs.isEventDayOf(), prefs.isItemWeekAhead(), prefs.isExamDayOf(),
+                    prefs.isExamCountdown());
         }
     }
 }

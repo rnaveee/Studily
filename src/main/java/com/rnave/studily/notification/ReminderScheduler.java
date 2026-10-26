@@ -8,6 +8,7 @@ import com.rnave.studily.calendar.CalendarEvent;
 import com.rnave.studily.calendar.CalendarEventRepository;
 import com.rnave.studily.course.MeetingBlock;
 import com.rnave.studily.course.MeetingBlockRepository;
+import com.rnave.studily.exam.ExamService;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserTimeZones;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -35,6 +36,8 @@ public class ReminderScheduler {
     private static final int CLASS_LEAD_MINUTES = 15;
     private static final int CLASS_WINDOW_MINUTES = 2;
     private static final int DAY_OF_START_HOUR = 7;
+    private static final int COUNTDOWN_START_HOUR = 8;
+    private static final Set<Integer> COUNTDOWN_DAYS = Set.of(7, 3, 1);
 
     private final MeetingBlockRepository meetingBlockRepository;
     private final CalendarEventRepository calendarEventRepository;
@@ -42,6 +45,7 @@ public class ReminderScheduler {
     private final NotificationPrefsService prefsService;
     private final NotificationDispatcher dispatcher;
     private final UserTimeZones timeZones;
+    private final ExamService examService;
     Clock clock;
 
     public ReminderScheduler(MeetingBlockRepository meetingBlockRepository,
@@ -49,13 +53,15 @@ public class ReminderScheduler {
                              AcademicItemRepository itemRepository,
                              NotificationPrefsService prefsService,
                              NotificationDispatcher dispatcher,
-                             UserTimeZones timeZones) {
+                             UserTimeZones timeZones,
+                             ExamService examService) {
         this.meetingBlockRepository = meetingBlockRepository;
         this.calendarEventRepository = calendarEventRepository;
         this.itemRepository = itemRepository;
         this.prefsService = prefsService;
         this.dispatcher = dispatcher;
         this.timeZones = timeZones;
+        this.examService = examService;
         this.clock = Clock.system(timeZones.fallback());
     }
 
@@ -161,6 +167,9 @@ public class ReminderScheduler {
                 if (days == 0 && item.getType() == ItemType.EXAM) {
                     continue;
                 }
+                if (item.getType() == ItemType.EXAM && prefsService.prefsFor(user.getId()).isExamCountdown()) {
+                    continue;
+                }
                 String kind = item.getType() == ItemType.EXAM ? "Exam" : "Assignment";
                 String when = switch ((int) days) {
                     case 0 -> "due today";
@@ -174,6 +183,40 @@ public class ReminderScheduler {
                                 item.getTitle(), item.getCourse().getName(),
                                 DATE_FMT.format(due), TIME_FMT.format(due)),
                         "/courses/" + item.getCourse().getId());
+            }
+        }
+    }
+
+    @Scheduled(fixedRate = 1_800_000, initialDelay = 80_000)
+    @Transactional(readOnly = true)
+    public void examCountdownReminders() {
+        Instant instant = clock.instant();
+        for (ZoneId zone : zones()) {
+            ZonedDateTime now = instant.atZone(zone);
+            if (now.getHour() < COUNTDOWN_START_HOUR) {
+                continue;
+            }
+            LocalDate today = now.toLocalDate();
+            Instant until = today.plusDays(8).atStartOfDay(zone).toInstant();
+
+            for (AcademicItem exam : itemRepository.findByTypeAndStatusNotAndDueAtBetween(
+                    ItemType.EXAM, ItemStatus.DONE, instant, until)) {
+                User user = exam.getCourse().getUser();
+                if (!livesIn(user, zone) || !prefsService.prefsFor(user.getId()).isExamCountdown()) {
+                    continue;
+                }
+                long days = ChronoUnit.DAYS.between(today, exam.getDueAt().atZone(zone).toLocalDate());
+                if (!COUNTDOWN_DAYS.contains((int) days)) {
+                    continue;
+                }
+                String target = examService.todayTarget(exam, zone, instant);
+                String body = "%s · %s".formatted(exam.getCourse().getName(),
+                        DATE_FMT.format(exam.getDueAt().atZone(zone)));
+                safeDispatch(user, NotificationType.EXAM_COUNTDOWN, exam.getId(),
+                        "EXAMCD:%d:%d".formatted(exam.getId(), days),
+                        "%s in %d day%s".formatted(exam.getTitle(), days, days == 1 ? "" : "s"),
+                        target == null ? body : body + ". " + target,
+                        "/courses/" + exam.getCourse().getId());
             }
         }
     }

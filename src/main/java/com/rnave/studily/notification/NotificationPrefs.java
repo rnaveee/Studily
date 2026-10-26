@@ -31,4 +31,7 @@ public class NotificationPrefs {
 
     @Column(nullable = false)
     private boolean examDayOf = true;
+
+    @Column(nullable = false)
+    private boolean examCountdown = true;
 }

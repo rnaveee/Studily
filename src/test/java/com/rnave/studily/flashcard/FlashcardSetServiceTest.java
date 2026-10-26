@@ -17,7 +17,10 @@ import com.rnave.studily.progress.Flair;
 import com.rnave.studily.progress.FlairRepository;
 import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
+import com.rnave.studily.exam.ExamStudyLinkRepository;
 import com.rnave.studily.flashcard.Sm2.Grade;
+import com.rnave.studily.user.UserRepository;
+import com.rnave.studily.user.UserTimeZones;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -43,6 +46,7 @@ class FlashcardSetServiceTest {
     private FriendRequestRepository friendRequestRepository;
     private FlairRepository flairRepository;
     private FlashcardImageRepository imageRepository;
+    private ExamStudyLinkRepository examLinkRepository;
     private FlashcardSetService service;
 
     @BeforeEach
@@ -52,10 +56,12 @@ class FlashcardSetServiceTest {
         friendRequestRepository = mock(FriendRequestRepository.class);
         flairRepository = mock(FlairRepository.class);
         imageRepository = mock(FlashcardImageRepository.class);
+        examLinkRepository = mock(ExamStudyLinkRepository.class);
         service = new FlashcardSetService(flashcardSetRepository, currentUser, mock(CourseService.class),
                 friendRequestRepository,
                 new Flairs(flairRepository, Clock.systemUTC(), "https://badges.studily.ca/flairs/v1"),
-                imageRepository);
+                imageRepository, examLinkRepository,
+                new UserTimeZones(mock(UserRepository.class), "UTC"));
         when(friendRequestRepository.findBetween(any(), any())).thenReturn(Optional.empty());
         when(currentUser.id()).thenReturn(1L);
         when(currentUser.maybe()).thenReturn(Optional.of(user(1L)));
@@ -127,6 +133,47 @@ class FlashcardSetServiceTest {
         assertThat(card.getLastReviewedAt()).isNotNull();
         assertThat(card.getDueAt()).isAfter(Instant.now().plus(23, ChronoUnit.HOURS));
         assertThat(dto.intervalDays()).isEqualTo(1);
+    }
+
+    @Test
+    void reviewCapsTheNextDueDateAtTheDayBeforeALinkedExam() {
+        FlashcardSet set = ownedSetWithCard(10L, 100L);
+        Instant before = Instant.now();
+        Instant exam = before.plus(26, ChronoUnit.HOURS);
+        when(examLinkRepository.soonestExamForSet(eq(10L), any())).thenReturn(Optional.of(exam));
+
+        service.review(10L, 100L, Grade.GOOD);
+
+        Flashcard card = set.getCards().get(0);
+        assertThat(card.getDueAt()).isBefore(before.plus(24, ChronoUnit.HOURS));
+        assertThat(card.getDueAt()).isAfterOrEqualTo(before);
+        assertThat(card.getIntervalDays()).isEqualTo(1);
+        assertThat(card.getRepetitions()).isEqualTo(1);
+    }
+
+    @Test
+    void reviewDoesNotCapWithoutALinkedExam() {
+        FlashcardSet set = ownedSetWithCard(10L, 100L);
+        Instant before = Instant.now();
+        when(examLinkRepository.soonestExamForSet(eq(10L), any())).thenReturn(Optional.empty());
+
+        service.review(10L, 100L, Grade.GOOD);
+
+        assertThat(set.getCards().get(0).getDueAt()).isAfterOrEqualTo(before.plus(24, ChronoUnit.HOURS));
+    }
+
+    @Test
+    void reviewPullsADueDateThatWouldLandAfterTheExamBackToNow() {
+        FlashcardSet set = ownedSetWithCard(10L, 100L);
+        Instant before = Instant.now();
+        when(examLinkRepository.soonestExamForSet(eq(10L), any()))
+                .thenReturn(Optional.of(before.plus(12, ChronoUnit.HOURS)));
+
+        service.review(10L, 100L, Grade.GOOD);
+
+        assertThat(set.getCards().get(0).getDueAt())
+                .isAfterOrEqualTo(before)
+                .isBeforeOrEqualTo(Instant.now());
     }
 
     @Test

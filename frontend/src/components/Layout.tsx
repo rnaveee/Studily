@@ -20,6 +20,7 @@ import Avatar from "./Avatar";
 import ClientOnly from "./ClientOnly";
 import Banners from "./Banners";
 import ProgressWhatsNew from "../features/progress/ProgressWhatsNew";
+import StartSessionHost from "../features/learn/sessions/StartSessionHost";
 import SurveyPrompt from "../features/survey/SurveyPrompt";
 import InstallPrompt from "./InstallPrompt";
 import ProgressHost from "../features/progress/ProgressHost";
@@ -319,6 +320,7 @@ export default function Layout() {
           <SessionDock placement="bar" />
           <Banners />
           <ProgressWhatsNew />
+          <StartSessionHost />
           <SurveyPrompt />
           <InstallPrompt />
         </ClientOnly>

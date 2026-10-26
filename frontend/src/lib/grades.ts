@@ -146,6 +146,28 @@ export function neededOnRemaining(summary: GradeProjection, target: number): num
   return ((target - earned) / remaining) * 100;
 }
 
+export function neededOnExam(
+  percent: number | null | undefined,
+  totalWeight: number,
+  examWeight: number | null | undefined,
+  target: number | null | undefined,
+): number | null {
+  if (percent == null || target == null || examWeight == null || examWeight <= 0) return null;
+  const base = Math.max(100, totalWeight);
+  if (examWeight > base) return null;
+  return (target * base - percent * (base - examWeight)) / examWeight;
+}
+
+export function describeExamNeeded(
+  needed: number | null | undefined,
+  target: number | null | undefined,
+): { kind: NeededKind; needed: number | null } {
+  if (needed == null || target == null) return { kind: "unknown", needed: null };
+  if (needed > 100) return { kind: "impossible", needed };
+  if (needed <= 0) return { kind: "safe", needed };
+  return { kind: "needed", needed };
+}
+
 export function runningGrades(items: AcademicItem[], categories: GradeCategory[] = []): number[] {
   const graded = items
     .filter((item) => itemPercent(item) != null)

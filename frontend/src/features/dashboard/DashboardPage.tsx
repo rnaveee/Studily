@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { X, BookOpen, CalendarDays, Brain, User, ArrowRight, Pencil, Percent } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth, useRequireAuth } from "../../lib/auth";
-import { countdown, dueUrgency, formatDateTime, hhmm } from "../../lib/format";
+import { dueUrgency, formatDateTime, hhmm } from "../../lib/format";
 import { itemColor } from "../../lib/itemType";
 import { staggerDelay } from "../../lib/motion";
 import {
@@ -26,6 +26,7 @@ import TodoQuickView from "../todos/TodoQuickView";
 import { priorityLabel, priorityTone } from "../todos/priority";
 import DashboardStreak from "./DashboardStreak";
 import GradesCard from "./GradesCard";
+import ExamsCard from "../exams/ExamsCard";
 import { quoteOfTheDay } from "./quotes";
 import QueryError from "../../components/QueryError";
 import { readableOn } from "../../lib/courseColors";
@@ -269,11 +270,6 @@ export default function DashboardPage() {
         {data?.semester && (
           <span className="badge badge-accent">{data.semester.label}</span>
         )}
-        {data?.nextExam && (
-          <span className="badge badge-soft">
-            Next exam: {data.nextExam.title} · {countdown(data.nextExam.dueAt)}
-          </span>
-        )}
       </div>
 
       {isLoading && (
@@ -500,6 +496,8 @@ export default function DashboardPage() {
             </div>
             <MiniMonth marked={new Set(dueThisWeek.map((e) => e.dueAt.slice(0, 10)))} />
           </Link>
+
+          <ExamsCard semesterId={semesterId} />
 
           <GradesCard />
 

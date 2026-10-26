@@ -612,6 +612,60 @@ export interface NotificationPrefs {
   eventDayOf: boolean;
   itemWeekAhead: boolean;
   examDayOf: boolean;
+  examCountdown: boolean;
+}
+
+export interface UpcomingExam {
+  id: number;
+  title: string;
+  dueAt: string;
+  courseId: number;
+  courseName: string;
+  courseCode?: string | null;
+  courseColor?: string | null;
+  daysLeft: number;
+  weight?: number | null;
+  currentPercent?: number | null;
+  targetGrade?: number | null;
+  neededPercent?: number | null;
+  linkedSets: number;
+  linkedTodos: number;
+}
+
+export interface ExamPlanSet {
+  linkId: number;
+  setId: number;
+  title: string;
+  totalCards: number;
+  remainingCards: number;
+}
+
+export interface ExamPlanTodo {
+  linkId: number;
+  todoId: number;
+  title: string;
+  completed: boolean;
+}
+
+export interface ExamPlanDay {
+  date: string;
+  cards: number;
+  todos: { todoId: number; title: string }[];
+  today: boolean;
+}
+
+export interface ExamPlan {
+  examId: number;
+  title: string;
+  dueAt: string;
+  courseId: number;
+  courseName: string;
+  daysLeft: number;
+  remainingCards: number;
+  todayCards: number;
+  sets: ExamPlanSet[];
+  todos: ExamPlanTodo[];
+  days: ExamPlanDay[];
 }
 
 

@@ -1,6 +1,6 @@
 import { gpaFrom, letterFor, pointsFor } from "./gpa";
 import { DAYS } from "../types";
-import { courseGrade } from "./grades";
+import { courseGrade, effectiveWeights, neededOnExam } from "./grades";
 import type {
   AcademicItem,
   Course,
@@ -12,8 +12,10 @@ import type {
   FlashcardSet,
   Note,
   ScheduledMeeting,
+  ExamPlan,
   Semester,
   SemesterStats,
+  UpcomingExam,
   WeekView,
 } from "../types";
 
@@ -467,4 +469,61 @@ export function demoFlashcardSets(): FlashcardSet[] {
       ],
     },
   ];
+}
+
+function daysUntil(dueAt: string): number {
+  const now = new Date();
+  const due = new Date(dueAt);
+  const a = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const b = new Date(due.getFullYear(), due.getMonth(), due.getDate()).getTime();
+  return Math.round((b - a) / 86400000);
+}
+
+export function demoUpcomingExams(): UpcomingExam[] {
+  const items = demoItems();
+  const now = Date.now();
+  return items
+    .filter((it) => it.type === "EXAM" && it.status !== "DONE" && new Date(it.dueAt).getTime() > now)
+    .sort((a, b) => a.dueAt.localeCompare(b.dueAt))
+    .map((exam) => {
+      const course = demoCourses().find((c) => c.id === exam.courseId);
+      const mine = items.filter((it) => it.courseId === exam.courseId);
+      const cats = demoWeights(exam.courseId);
+      const summary = courseGrade(mine, cats);
+      const weight = effectiveWeights(mine, cats).get(exam.id) ?? null;
+      return {
+        id: exam.id,
+        title: exam.title,
+        dueAt: exam.dueAt,
+        courseId: exam.courseId,
+        courseName: exam.courseName,
+        courseCode: course?.code ?? null,
+        courseColor: exam.courseColor ?? null,
+        daysLeft: daysUntil(exam.dueAt),
+        weight,
+        currentPercent: summary.percent,
+        targetGrade: course?.targetGrade ?? null,
+        neededPercent: neededOnExam(summary.percent, summary.totalWeight, weight, course?.targetGrade),
+        linkedSets: 0,
+        linkedTodos: 0,
+      };
+    });
+}
+
+export function demoExamPlan(examId: number): ExamPlan | null {
+  const exam = demoUpcomingExams().find((e) => e.id === examId);
+  if (!exam) return null;
+  return {
+    examId: exam.id,
+    title: exam.title,
+    dueAt: exam.dueAt,
+    courseId: exam.courseId,
+    courseName: exam.courseName,
+    daysLeft: exam.daysLeft,
+    remainingCards: 0,
+    todayCards: 0,
+    sets: [],
+    todos: [],
+    days: [],
+  };
 }

@@ -25,6 +25,7 @@ import { staggerDelay } from "../../lib/motion";
 import { invalidateItemQueries } from "../../lib/invalidateItems";
 import ItemModal from "./ItemModal";
 import { GradingFields, NeededGradeText } from "../../components/NeededGrade";
+import ExamPlansSection from "../exams/ExamPlansSection";
 import {
   courseGrade,
   effectiveWeights,
@@ -196,6 +197,7 @@ export default function CourseDetailPage() {
       )}
 
       <GradeCard course={course} items={itemsQ.data ?? []} categories={weightsQ.data ?? []} />
+      <ExamPlansSection items={itemsQ.data ?? []} />
       <WeightsSection
         courseId={courseId}
         categories={weightsQ.data ?? []}

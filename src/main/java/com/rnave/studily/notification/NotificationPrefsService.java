@@ -29,6 +29,7 @@ public class NotificationPrefsService {
         prefs.setEventDayOf(updated.isEventDayOf());
         prefs.setItemWeekAhead(updated.isItemWeekAhead());
         prefs.setExamDayOf(updated.isExamDayOf());
+        prefs.setExamCountdown(updated.isExamCountdown());
         return prefsRepository.save(prefs);
     }
 }

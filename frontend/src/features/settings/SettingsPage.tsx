@@ -34,6 +34,7 @@ const PREF_ROWS: { key: keyof NotificationPrefs; label: string; hint: string }[]
   { key: "eventDayOf", label: "Day of events", hint: "The morning of a calendar event" },
   { key: "itemWeekAhead", label: "Assignments and exams", hint: "7 days before a due date" },
   { key: "examDayOf", label: "Day of exams", hint: "The morning of an exam" },
+  { key: "examCountdown", label: "Exam countdowns", hint: "7, 3 and 1 days before" },
 ];
 
 const SCHEDULE_VISIBILITY_OPTIONS: { value: ScheduleVisibility; label: string }[] = [

@@ -37,6 +37,12 @@ public interface AcademicItemRepository extends JpaRepository<AcademicItem, Long
     Optional<AcademicItem> findFirstByCourseUserIdAndCourseSemesterIdAndTypeAndDueAtAfterOrderByDueAtAsc(
             Long userId, Long semesterId, ItemType type, Instant after);
 
+    List<AcademicItem> findByCourseUserIdAndTypeAndStatusNotAndDueAtAfterOrderByDueAtAsc(
+            Long userId, ItemType type, ItemStatus status, Instant after);
+
+    List<AcademicItem> findByCourseUserIdAndCourseSemesterIdAndTypeAndStatusNotAndDueAtAfterOrderByDueAtAsc(
+            Long userId, Long semesterId, ItemType type, ItemStatus status, Instant after);
+
     List<AcademicItem> findByCourseUserIdAndSeriesId(Long userId, UUID seriesId);
 
     List<AcademicItem> findByGradeCategoryId(Long gradeCategoryId);

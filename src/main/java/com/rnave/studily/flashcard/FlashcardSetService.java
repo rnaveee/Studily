@@ -13,10 +13,13 @@ import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetSummaryDto;
 import com.rnave.studily.flashcard.FlashcardDtos.SetOwnerDto;
 import com.rnave.studily.flashcard.FlashcardDtos.SetPagePreview;
 import com.rnave.studily.flashcard.FlashcardDtos.SharedFlashcardSetDto;
+import com.rnave.studily.exam.ExamDueCap;
+import com.rnave.studily.exam.ExamStudyLinkRepository;
 import com.rnave.studily.friend.FriendRequestRepository;
 import com.rnave.studily.friend.FriendRequestStatus;
 import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
+import com.rnave.studily.user.UserTimeZones;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,16 +43,21 @@ public class FlashcardSetService {
     private final FriendRequestRepository friendRequestRepository;
     private final Flairs flairs;
     private final FlashcardImageRepository imageRepository;
+    private final ExamStudyLinkRepository examLinkRepository;
+    private final UserTimeZones timeZones;
 
     public FlashcardSetService(FlashcardSetRepository flashcardSetRepository, CurrentUser currentUser,
                                @Lazy CourseService courseService, FriendRequestRepository friendRequestRepository,
-                               Flairs flairs, FlashcardImageRepository imageRepository) {
+                               Flairs flairs, FlashcardImageRepository imageRepository,
+                               ExamStudyLinkRepository examLinkRepository, UserTimeZones timeZones) {
         this.flashcardSetRepository = flashcardSetRepository;
         this.currentUser = currentUser;
         this.courseService = courseService;
         this.friendRequestRepository = friendRequestRepository;
         this.flairs = flairs;
         this.imageRepository = imageRepository;
+        this.examLinkRepository = examLinkRepository;
+        this.timeZones = timeZones;
     }
 
     @Transactional(readOnly = true)
@@ -231,7 +239,12 @@ public class FlashcardSetService {
         card.setEaseFactor(result.easeFactor());
         card.setIntervalDays(result.intervalDays());
         card.setLastReviewedAt(now);
-        card.setDueAt(now.plus(result.intervalDays(), ChronoUnit.DAYS));
+        Instant dueAt = now.plus(result.intervalDays(), ChronoUnit.DAYS);
+        Instant exam = examLinkRepository.soonestExamForSet(setId, now).orElse(null);
+        if (exam != null) {
+            dueAt = ExamDueCap.apply(dueAt, now, exam, timeZones.zoneFor(currentUser.entity()));
+        }
+        card.setDueAt(dueAt);
         return FlashcardDto.from(card);
     }
 

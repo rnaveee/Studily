@@ -6,6 +6,7 @@ public enum NotificationType {
     EVENT_TODAY(21_600),
     ITEM_WEEK_AHEAD(86_400),
     EXAM_TODAY(21_600),
+    EXAM_COUNTDOWN(43_200),
     ANNOUNCEMENT(86_400);
 
     private final int pushTtlSeconds;

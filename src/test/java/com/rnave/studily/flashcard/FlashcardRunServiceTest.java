@@ -157,7 +157,8 @@ class FlashcardRunServiceTest {
                 currentUser, clock, random);
         FlashcardSetService setService = new FlashcardSetService(flashcardSetRepository, currentUser,
                 mock(CourseService.class), friendRequestRepository, mock(Flairs.class),
-                mock(FlashcardImageRepository.class));
+                mock(FlashcardImageRepository.class), mock(com.rnave.studily.exam.ExamStudyLinkRepository.class),
+                mock(com.rnave.studily.user.UserTimeZones.class));
         service = new FlashcardRunService(runRepository, setService, progressService, chestService, rateLimiter,
                 currentUser, clock, new ObjectMapper());
     }

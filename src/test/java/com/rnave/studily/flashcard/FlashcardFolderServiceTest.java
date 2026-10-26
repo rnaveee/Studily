@@ -6,6 +6,7 @@ import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.course.Course;
 import com.rnave.studily.course.CourseService;
+import com.rnave.studily.exam.ExamStudyLinkRepository;
 import com.rnave.studily.flashcard.FlashcardDtos.FlashcardSetDto;
 import com.rnave.studily.flashcard.FlashcardDtos.FolderDto;
 import com.rnave.studily.flashcard.FlashcardDtos.FolderRequest;
@@ -13,6 +14,7 @@ import com.rnave.studily.flashcard.FlashcardDtos.StudyGroupDto;
 import com.rnave.studily.friend.FriendRequestRepository;
 import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
+import com.rnave.studily.user.UserTimeZones;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -53,7 +55,8 @@ class FlashcardFolderServiceTest {
         when(currentUser.id()).thenReturn(1L);
         when(currentUser.entity()).thenReturn(me);
         FlashcardSetService setService = new FlashcardSetService(setRepository, currentUser, courseService,
-                mock(FriendRequestRepository.class), mock(Flairs.class), mock(FlashcardImageRepository.class));
+                mock(FriendRequestRepository.class), mock(Flairs.class), mock(FlashcardImageRepository.class),
+                mock(ExamStudyLinkRepository.class), mock(UserTimeZones.class));
         folders = new FlashcardFolderService(folderRepository, setRepository, setService, currentUser);
         study = new FlashcardStudyService(setService, folders, courseService);
 

@@ -24,26 +24,38 @@ const TIMER_OPTIONS = [30, 60, 90, 120, 150, 180];
 const MAX_TASKS = 10;
 const MAX_TASK_LEN = 200;
 
-export default function StartSessionModal({ onClose }: { onClose: () => void }) {
+export default function StartSessionModal({
+  onClose,
+  initialTasks,
+}: {
+  onClose: () => void;
+  initialTasks?: string[];
+}) {
   return (
     <Modal onClose={onClose} title="Start a study session" variant="sheet" size="md">
-      <StartForm />
+      <StartForm initialTasks={initialTasks} />
     </Modal>
   );
 }
 
-function StartForm() {
+function StartForm({ initialTasks }: { initialTasks?: string[] }) {
   const qc = useQueryClient();
   const close = useModalClose();
   const [mode, setMode] = useState<StudySessionMode>("POMODORO");
   const [blocks, setBlocks] = useState(5);
   const [minutes, setMinutes] = useState(120);
-  const [tasks, setTasks] = useState<{ id: number; text: string }[]>([]);
+  const [tasks, setTasks] = useState<{ id: number; text: string }[]>(() =>
+    (initialTasks ?? [])
+      .map((text) => text.trim().slice(0, MAX_TASK_LEN))
+      .filter(Boolean)
+      .slice(0, MAX_TASKS)
+      .map((text, id) => ({ id, text })),
+  );
   const [draft, setDraft] = useState("");
   const [soundsOpen, setSoundsOpen] = useState(false);
   const sounds = useSessionSounds();
   const draftRef = useRef<HTMLInputElement>(null);
-  const nextId = useRef(0);
+  const nextId = useRef(MAX_TASKS);
 
   const start = useMutation({
     mutationFn: (req: StartStudySessionRequest) => api.post<StudySessionDto>("/study-sessions", req),

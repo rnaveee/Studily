@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, Play } from "lucide-react";
 import { Skeleton } from "../../../components/Skeleton";
@@ -7,7 +6,7 @@ import StreakFlame from "../../progress/StreakFlame";
 import { useActiveSession, useProgressEnabled, useSessionHistory, useStreakWeek } from "../../progress/useProgress";
 import ActiveSessionCard from "./ActiveSessionCard";
 import SessionHistoryList from "./SessionHistoryList";
-import StartSessionModal from "./StartSessionModal";
+import { openStartSession } from "./StartSessionHost";
 import StreakWeek, { StreakWeekSkeleton } from "./StreakWeek";
 
 export default function StudySessionsPanel() {
@@ -58,7 +57,6 @@ function PanelBody() {
   const active = useActiveSession();
   const streak = useStreakWeek();
   const history = useSessionHistory();
-  const [starting, setStarting] = useState(false);
 
   const recent = (history.data?.pages[0]?.items ?? []).filter(
     (s) => s.status !== "ACTIVE" && s.status !== "PAUSED",
@@ -77,7 +75,7 @@ function PanelBody() {
           <button
             onClick={() => {
               unlockAudio();
-              setStarting(true);
+              openStartSession();
             }}
             className="btn btn-primary btn-lg w-full sm:max-w-sm"
             style={{ minHeight: 52, fontSize: 15 }}
@@ -130,7 +128,6 @@ function PanelBody() {
         </div>
       </div>
 
-      {starting && <StartSessionModal onClose={() => setStarting(false)} />}
     </div>
   );
 }
