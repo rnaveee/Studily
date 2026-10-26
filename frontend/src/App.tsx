@@ -44,6 +44,7 @@ import FlashcardSetPage from "./features/learn/FlashcardSetPage";
 import SharedSetPage from "./features/learn/SharedSetPage";
 import AiChatPage from "./features/learn/AiChatPage";
 import PomodoroPage from "./features/learn/PomodoroPage";
+import SchoolPage from "./features/schools/SchoolPage";
 import GradeCalculatorPage from "./features/tools/GradeCalculatorPage";
 import SettingsPage from "./features/settings/SettingsPage";
 import SurveyPage from "./features/survey/SurveyPage";
@@ -193,6 +194,9 @@ export const appRoutes = (
       <Route path="/changelog" element={<ChangelogPage />} />
       <Route path="/pomodoro" element={<PomodoroPage />} />
       <Route path="/grade-calculator" element={<GradeCalculatorPage />} />
+      <Route path="/uvic" element={<SchoolPage slug="uvic" />} />
+      <Route path="/sfu" element={<SchoolPage slug="sfu" />} />
+      <Route path="/ubc" element={<SchoolPage slug="ubc" />} />
       <Route
         path="/periodic-table"
         element={

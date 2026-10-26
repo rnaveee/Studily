@@ -75,6 +75,33 @@
       "path": "/privacy",
       "title": "Privacy Policy · Studily",
       "description": "What Studily collects, how it's used and where it's stored. Your data is never sold, and Studily uses no analytics or advertising trackers."
+    },
+    {
+      "path": "/uvic",
+      "title": "Studily for UVic: Brightspace Planner, Flashcards & Study Timer",
+      "description": "A free planner for University of Victoria students: import your Brightspace calendar for deadlines and exams, then study with flashcards, a Pomodoro timer and a grade calculator.",
+      "structuredData": {
+        "type": "WebApplication",
+        "name": "Studily for UVic"
+      }
+    },
+    {
+      "path": "/sfu",
+      "title": "Studily for SFU: Canvas Planner, Flashcards & Study Timer",
+      "description": "A free planner for Simon Fraser University students: import your Canvas calendar for deadlines and exams, then study with flashcards, a Pomodoro timer and a grade calculator.",
+      "structuredData": {
+        "type": "WebApplication",
+        "name": "Studily for SFU"
+      }
+    },
+    {
+      "path": "/ubc",
+      "title": "Studily for UBC: Canvas Planner, Flashcards & Study Timer",
+      "description": "A free planner for University of British Columbia students: import your Canvas calendar for deadlines and exams, then study with flashcards, a Pomodoro timer and a grade calculator.",
+      "structuredData": {
+        "type": "WebApplication",
+        "name": "Studily for UBC"
+      }
     }
   ],
   "app": [
