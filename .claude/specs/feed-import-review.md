@@ -72,7 +72,7 @@ If nothing new is staged, no import row and no notification.
 
 ```
 CourseDecisions { courses: CourseDecision[] }
-CourseDecision  { key, decision: "ADD" | "MERGE" | "SKIP", overrides: CourseRequest | null }
+CourseDecision  { key, decision: "ADD" | "MERGE" | "SKIP", targetCourseId: Long | null, overrides: CourseRequest | null }
 ApplyRequest    { courses: CourseDecision[], items: ItemDecision[] }
 ItemDecision    { key, decision: "ADD" | "REPLACE" | "SKIP" }
 Conflict        { itemKey, courseKey, incoming: StagedItem,

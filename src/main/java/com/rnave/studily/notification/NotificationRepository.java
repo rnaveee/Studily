@@ -35,4 +35,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             + "where n.type = :type and n.relatedItemId = :relatedItemId and n.read = false")
     int markReadByTypeAndRelatedItemId(
             @Param("type") NotificationType type, @Param("relatedItemId") Long relatedItemId);
+
+    @Modifying
+    @Query("update Notification n set n.read = true "
+            + "where n.user.id = :userId and n.type = :type and n.relatedItemId = :relatedItemId")
+    int markRead(@Param("userId") Long userId, @Param("type") NotificationType type,
+                 @Param("relatedItemId") Long relatedItemId);
 }

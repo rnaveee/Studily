@@ -117,6 +117,7 @@
     "/courses/new/auto",
     "/courses/new/schedule",
     "/courses/:id",
+    "/imports/:id",
     "/messages",
     "/messages/:id",
     "/learn",

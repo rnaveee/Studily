@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { CalendarDays, Plus } from "lucide-react";
 import { api } from "../../lib/api";
 import BackButton from "../../components/BackButton";
 import { SkeletonCards } from "../../components/Skeleton";
 import { staggerDelay } from "../../lib/motion";
 import { useRequireAuth } from "../../lib/auth";
+import { toast } from "../../lib/toast";
 import type { Course, CourseRequest, Semester } from "../../types";
-import { courseLocations, hhmm } from "../../lib/format";
+import CourseCard from "./CourseCard";
 import CourseForm from "./CourseForm";
+import DuplicateCoursePrompt from "./DuplicateCoursePrompt";
+import { findSimilarCourses } from "./similarCourses";
 import NewCourseChooser from "./NewCourseChooser";
 import Modal from "../../components/Modal";
 import QueryError from "../../components/QueryError";
@@ -20,6 +23,7 @@ export default function CoursesPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"chooser" | "manual" | null>(null);
   const [semesterFilter, setSemesterFilter] = useState<number | null>(null);
+  const [duplicate, setDuplicate] = useState<{ req: CourseRequest; existing: Course } | null>(null);
 
   const { data: semesters } = useQuery({
     queryKey: ["semesters"],
@@ -40,6 +44,15 @@ export default function CoursesPage() {
       setMode(null);
     },
   });
+
+  async function submitManual(req: CourseRequest) {
+    const similar = await findSimilarCourses(req.name, req.code, req.semesterId);
+    if (similar.length > 0) {
+      setDuplicate({ req, existing: similar[0] });
+      return;
+    }
+    await create.mutateAsync(req);
+  }
 
   return (
     <div className="space-y-4">
@@ -86,7 +99,7 @@ export default function CoursesPage() {
             <CourseForm
               bare
               submitLabel="Create course"
-              onSubmit={(req) => create.mutateAsync(req)}
+              onSubmit={submitManual}
               onCancel={() => setMode(null)}
               onImported={() => {
                 qc.invalidateQueries({ queryKey: ["courses"] });
@@ -98,6 +111,24 @@ export default function CoursesPage() {
         </Modal>
       )}
 
+      {duplicate && (
+        <DuplicateCoursePrompt
+          incoming={{ ...duplicate.req, meetingBlocks: duplicate.req.meetingBlocks ?? [] }}
+          existing={duplicate.existing}
+          busy={create.isPending}
+          onClose={() => setDuplicate(null)}
+          onAddAnyway={async () => {
+            try {
+              await create.mutateAsync(duplicate.req);
+              setDuplicate(null);
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Failed to save");
+            }
+          }}
+          onUseExisting={() => navigate(`/courses/${duplicate.existing.id}`)}
+        />
+      )}
+
       {isLoading ? (
         <SkeletonCards count={4} className="stagger-item grid-cols-1 sm:grid-cols-2" style={staggerDelay(1)} />
       ) : isError && !courses ? (
@@ -106,41 +137,11 @@ export default function CoursesPage() {
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {courses.map((c, index) => (
             <li key={c.id} className="stagger-item" style={staggerDelay(index + 1, 45)}>
-              <Link to={`/courses/${c.id}`} className="card card-lift block p-4">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: c.color ?? "var(--accent)" }}
-                  />
-                  <span className="min-w-0 flex-1 truncate font-semibold text-fg">{c.name}</span>
-                  {c.code && (
-                    <span className="shrink-0 ml-auto rounded bg-surface-hi px-1.5 py-0.5 text-[11px] font-mono text-fg-3">
-                      {c.code}
-                    </span>
-                  )}
-                </div>
-                {(c.professor || courseLocations(c.meetingBlocks, c.location).length > 0) && (
-                  <p className="mt-1.5 text-[13px] text-fg-2">
-                    {[c.professor, ...courseLocations(c.meetingBlocks, c.location)]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                )}
-                {c.meetingBlocks.length > 0 && (
-                  <p className="mt-1 text-[12px] text-fg-3">
-                    {c.meetingBlocks
-                      .map((b) => `${b.dayOfWeek} ${hhmm(b.startTime)}–${hhmm(b.endTime)}`)
-                      .join("  ·  ")}
-                  </p>
-                )}
-                {c.semesterId && semesters && (
-                  <div className="mt-2">
-                    <span className="badge badge-soft text-[11px]">
-                      {semesters.find((s) => s.id === c.semesterId)?.label}
-                    </span>
-                  </div>
-                )}
-              </Link>
+              <CourseCard
+                course={c}
+                to={`/courses/${c.id}`}
+                semesterLabel={c.semesterId && semesters ? semesters.find((s) => s.id === c.semesterId)?.label : null}
+              />
             </li>
           ))}
         </ul>

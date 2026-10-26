@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { AlertTriangle, Sparkles } from "lucide-react";
 import CourseForm from "./CourseForm";
+import DuplicateCoursePrompt from "./DuplicateCoursePrompt";
+import { findSimilarCourses } from "./similarCourses";
 import DraftItemRows, {
   postRows,
   saveable,
@@ -27,6 +30,8 @@ interface Props {
 }
 
 export default function CourseDraftReview({ draft, semesterId, onSaved, onCancel }: Props) {
+  const navigate = useNavigate();
+  const [duplicate, setDuplicate] = useState<{ req: CourseRequest; existing: Course } | null>(null);
   const [rows, setRows] = useState<ReviewRow[]>(() => toRows(draft.items));
   const [catRows, setCatRows] = useState<CategoryRow[]>(() =>
     toCategoryRows(draft.gradeCategories ?? [], draft.items),
@@ -59,6 +64,15 @@ export default function CourseDraftReview({ draft, semesterId, onSaved, onCancel
       onSaved(course);
     },
   });
+
+  async function submit(req: CourseRequest) {
+    const similar = await findSimilarCourses(req.name, req.code, req.semesterId);
+    if (similar.length > 0) {
+      setDuplicate({ req, existing: similar[0] });
+      return;
+    }
+    await save.mutateAsync(req);
+  }
 
   function patch(id: string, next: Partial<ReviewRow>) {
     setRows((list) => list.map((row) => (row.id === id ? { ...row, ...next } : row)));
@@ -101,7 +115,7 @@ export default function CourseDraftReview({ draft, semesterId, onSaved, onCancel
         initial={initial}
         prefill
         submitLabel={included > 0 ? `Save course and ${included} item${included > 1 ? "s" : ""}` : "Save course"}
-        onSubmit={(req) => save.mutateAsync(req)}
+        onSubmit={submit}
         onCancel={onCancel}
         onImported={onSaved}
         extra={
@@ -133,6 +147,24 @@ export default function CourseDraftReview({ draft, semesterId, onSaved, onCancel
           </div>
         }
       />
+
+      {duplicate && (
+        <DuplicateCoursePrompt
+          incoming={{ ...duplicate.req, meetingBlocks: duplicate.req.meetingBlocks ?? [] }}
+          existing={duplicate.existing}
+          busy={save.isPending}
+          onClose={() => setDuplicate(null)}
+          onAddAnyway={async () => {
+            try {
+              await save.mutateAsync(duplicate.req);
+              setDuplicate(null);
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "Failed to save");
+            }
+          }}
+          onUseExisting={() => navigate(`/courses/${duplicate.existing.id}`)}
+        />
+      )}
     </div>
   );
 }

@@ -11,16 +11,4 @@ public class CanvasDtos {
             Long semesterId,
             Boolean keepSynced) {
     }
-
-    public record FeedResult(
-            int coursesCreated,
-            int coursesMatched,
-            int itemsImported,
-            int itemsUpdated,
-            int eventsImported,
-            int eventsUpdated,
-            int skipped,
-            boolean truncated,
-            String provider) {
-    }
 }

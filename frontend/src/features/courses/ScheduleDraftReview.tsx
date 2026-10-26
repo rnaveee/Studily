@@ -4,12 +4,13 @@ import { AlertTriangle, Check } from "lucide-react";
 import { api } from "../../lib/api";
 import { toast } from "../../lib/toast";
 import { assignCourseColors } from "./scheduleColors";
+import { findSimilarCourses } from "./similarCourses";
 import { MEETING_KIND_LABEL, type Course, type CourseRequest, type ScheduleDraft } from "../../types";
 
 interface Row {
   key: string;
   on: boolean;
-  duplicate: boolean;
+  duplicate: Course | null;
   name: string;
   code: string;
   color: string;
@@ -26,10 +27,6 @@ const DAY_LABEL: Record<string, string> = {
   SAT: "Sat",
 };
 const DAY_ORDER = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
-
-function normalizeCode(code: string | null | undefined): string {
-  return (code ?? "").replace(/\s+/g, "").toLowerCase();
-}
 
 function clock(time: string): string {
   const [h, m] = time.split(":").map(Number);
@@ -59,20 +56,31 @@ export default function ScheduleDraftReview({
     [existing, semesterId],
   );
 
+  const { data: matches } = useQuery({
+    queryKey: ["schedule-draft-matches", semesterId, draft.courses.map((c) => `${c.code}|${c.name}`)],
+    queryFn: async () =>
+      Promise.all(
+        draft.courses.map(async (c) => {
+          const found = await findSimilarCourses(c.name, c.code, semesterId);
+          return found.find((m) => semesterId == null || m.semesterId === semesterId) ?? null;
+        }),
+      ),
+    staleTime: Infinity,
+  });
+
   const [rows, setRows] = useState<Row[] | null>(null);
-  const ready = existing !== undefined;
+  const ready = existing !== undefined && matches !== undefined;
 
   const current: Row[] =
     rows ??
     (ready
       ? (() => {
-          const codes = new Set(inSemester.map((c) => normalizeCode(c.code)).filter(Boolean));
           const colors = assignCourseColors(
             draft.courses.map((c) => c.color),
             inSemester.map((c) => c.color).filter((c): c is string => !!c),
           );
           return draft.courses.map((c, i) => {
-            const duplicate = !!c.code && codes.has(normalizeCode(c.code));
+            const duplicate = matches?.[i] ?? null;
             return {
               key: `${i}`,
               on: !duplicate,
@@ -192,7 +200,9 @@ export default function ScheduleDraftReview({
                     />
                   </div>
                   {row.duplicate && (
-                    <span className="badge badge-muted">Already in this semester</span>
+                    <span className="badge badge-muted">
+                      Looks like {row.duplicate.code || row.duplicate.name} in your courses
+                    </span>
                   )}
                   {row.blocks.length > 0 ? (
                     <ul className="space-y-0.5 text-[12.5px] text-fg-2">

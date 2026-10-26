@@ -35,6 +35,7 @@ import ProfileEditPage from "./features/profile/ProfileEditPage";
 import FriendsPage from "./features/friends/FriendsPage";
 import SchoolmatesPage from "./features/friends/SchoolmatesPage";
 import UserProfilePage from "./features/friends/UserProfilePage";
+import ImportReviewPage from "./features/imports/ImportReviewPage";
 import SemestersPage from "./features/semesters/SemestersPage";
 import GradesPage from "./features/semesters/GradesPage";
 import MessagesPage from "./features/messages/MessagesPage";
@@ -149,6 +150,7 @@ export const appRoutes = (
       <Route path="/courses/new/auto" element={<CourseAutoImportPage />} />
       <Route path="/courses/new/schedule" element={<ScheduleImportPage />} />
       <Route path="/courses/:id" element={<CourseDetailPage />} />
+      <Route path="/imports/:id" element={<ImportReviewPage />} />
       <Route path="/messages" element={<VerifyGate><MessagesPage /></VerifyGate>} />
       <Route path="/messages/:id" element={<VerifyGate><ConversationPage /></VerifyGate>} />
       <Route path="/learn" element={<LearnPage />} />
