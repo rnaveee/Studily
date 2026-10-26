@@ -169,14 +169,14 @@ export default function NotificationPanel({ variant, onClose }: Props) {
             </p>
           </div>
         ) : (
-          <ul className="px-2 pb-3">
+          <ul className="divide-y divide-line px-2 pb-3">
             {rows.map((row) => {
               const lit = highlight.has(row.key);
               if (row.kind === "feature") {
                 const n = row.item;
                 const Icon = n.icon;
                 return (
-                  <li key={row.key}>
+                  <li key={row.key} className="py-1">
                     <NoticeRow
                       lit={lit}
                       icon={<Icon size={16} strokeWidth={1.9} />}
@@ -194,7 +194,7 @@ export default function NotificationPanel({ variant, onClose }: Props) {
               const style = TYPE_STYLE[n.type] ?? TYPE_STYLE.ANNOUNCEMENT!;
               const Icon = style.icon;
               return (
-                <li key={row.key}>
+                <li key={row.key} className="py-1">
                   <NoticeRow
                     lit={lit}
                     icon={<Icon size={16} strokeWidth={1.9} />}

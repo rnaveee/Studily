@@ -155,21 +155,14 @@ export default function Layout() {
         className="hidden md:flex w-[220px] shrink-0 flex-col"
         style={{ background: "var(--surface)", borderRight: "1px solid var(--line)" }}
       >
-        <div className="flex items-center justify-between gap-1 py-4 pl-4 pr-2">
+        <div className="flex items-center justify-between gap-2 py-4 pl-5 pr-3">
           <Link to="/onboarding" className="flex min-w-0 items-center gap-1.5">
             <img src="/studily-3a.svg" alt="" className="h-8 w-8 shrink-0" />
             <div className="font-mono text-[15px] font-bold tracking-tight text-fg">Studily</div>
           </Link>
-          <div className="flex items-center gap-0.5">
-            <ClientOnly>
-              <CoinBalance />
-            </ClientOnly>
-            {user && (
-              <ClientOnly>
-                <NotificationBell compact open={notifOpen} onToggle={() => setNotifOpen((o) => !o)} />
-              </ClientOnly>
-            )}
-          </div>
+          <ClientOnly>
+            <CoinBalance />
+          </ClientOnly>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -209,6 +202,11 @@ export default function Layout() {
               {label}
             </NavLink>
           ))}
+          {user && (
+            <ClientOnly>
+              <NotificationBell variant="nav" open={notifOpen} onToggle={() => setNotifOpen((o) => !o)} />
+            </ClientOnly>
+          )}
         </nav>
         <ClientOnly>
           <SessionDock placement="sidebar" />
