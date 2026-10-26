@@ -20,6 +20,9 @@ export interface CourseGrade {
   code?: string | null;
   color?: string | null;
   grade?: number | null;
+  credits?: number | null;
+  letter?: string | null;
+  points?: number | null;
   gradedWeight: number;
   totalWeight: number;
   gradedCount: number;
@@ -36,7 +39,19 @@ export interface SemesterStats {
   itemsGraded: number;
   upcomingCount: number;
   nextDueAt?: string | null;
+  termGpa?: number | null;
+  cumulativeGpa?: number | null;
+  gpaScale: GpaScaleName;
+  creditsMissing: boolean;
   courses: CourseGrade[];
+}
+
+export type GpaScaleName = "FOUR_POINT" | "FOUR_THREE_THREE" | "NINE_POINT" | "UBC_PERCENT";
+
+export interface GpaScalePrefs {
+  scale: GpaScaleName;
+  defaultScale: GpaScaleName;
+  explicit: boolean;
 }
 
 export interface SemesterRequest {
@@ -120,6 +135,8 @@ export interface Course {
   professor?: string | null;
   location?: string | null;
   color?: string | null;
+  credits?: number | null;
+  targetGrade?: number | null;
   meetingBlocks: MeetingBlock[];
 }
 
@@ -130,6 +147,8 @@ export interface CourseRequest {
   professor?: string | null;
   location?: string | null;
   color?: string | null;
+  credits?: number | null;
+  targetGrade?: number | null;
   meetingBlocks: MeetingBlock[];
 }
 

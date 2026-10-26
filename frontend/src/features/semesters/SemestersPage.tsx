@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { BookOpen, Edit2, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Edit2, LineChart, Plus, Trash2 } from "lucide-react";
 import { SkeletonList } from "../../components/Skeleton";
 import { api } from "../../lib/api";
 import { useRequireAuth } from "../../lib/auth";
@@ -9,7 +9,10 @@ import { useConfirm } from "../../lib/confirm";
 import { staggerDelay } from "../../lib/motion";
 import { toast } from "../../lib/toast";
 import { MONTHS, formatDate, formatMonth } from "../../lib/format";
-import { formatPercent, gradeColor, neededOnRemaining, remainingWeight } from "../../lib/grades";
+import { formatPercent, gradeColor } from "../../lib/grades";
+import { formatGpa } from "../../lib/gpa";
+import { NeededGradeText } from "../../components/NeededGrade";
+import GpaScalePicker from "../../components/GpaScalePicker";
 import type {
   Course,
   CourseGrade,
@@ -90,6 +93,17 @@ export default function SemestersPage() {
       </Link>
       </div>
 
+      <div className="stagger-item flex flex-wrap items-center justify-between gap-3" style={staggerDelay(1)}>
+        <Link to="/grades" className="btn btn-soft">
+          <LineChart size={14} />
+          Grades overview
+        </Link>
+        <label className="flex items-center gap-2 text-[12px] text-fg-3">
+          GPA scale
+          <GpaScalePicker />
+        </label>
+      </div>
+
       {showForm && (
         <SemesterForm
           onSubmit={(req) => create.mutateAsync(req)}
@@ -150,7 +164,6 @@ function SemesterRow({
   index: number;
 }) {
   const [editing, setEditing] = useState(false);
-  const [target, setTarget] = useState("80");
   const qc = useQueryClient();
 
   const update = useMutation({
@@ -201,29 +214,12 @@ function SemesterRow({
         <div className="mt-3 space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-medium uppercase tracking-wider text-fg-3">Courses</span>
-            {stats?.average != null && (
-              <label className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-fg-3">
-                Target
-                <input
-                  className="input py-0.5 text-center text-[12px]"
-                  style={{ width: "4.5rem", paddingLeft: 6, paddingRight: 6 }}
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  max={100}
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  aria-label={`Target grade for ${semester.label}`}
-                />
-              </label>
-            )}
           </div>
           {courses.map((c) => (
             <CourseGradeRow
               key={c.id}
               course={c}
               grade={stats?.courses.find((cg) => cg.courseId === c.id)}
-              target={Number(target)}
             />
           ))}
         </div>
@@ -242,18 +238,13 @@ function SemesterRow({
 function CourseGradeRow({
   course,
   grade,
-  target,
 }: {
   course: Course;
   grade?: CourseGrade;
-  target: number;
 }) {
   const percent = grade?.grade ?? null;
   const scale = Math.max(100, grade?.totalWeight ?? 0);
   const graded = grade?.gradedWeight ?? 0;
-  const remaining = grade ? remainingWeight({ percent, ...grade }) : 0;
-  const needed =
-    grade && Number.isFinite(target) ? neededOnRemaining({ percent, ...grade }, target) : null;
 
   return (
     <Link
@@ -277,6 +268,7 @@ function CourseGradeRow({
             style={{ color: gradeColor(percent) }}
           >
             {formatPercent(percent, 1)}
+            {grade?.letter && <span className="ml-1 text-fg-3">{grade.letter}</span>}
           </span>
         )}
       </div>
@@ -300,20 +292,10 @@ function CourseGradeRow({
           </div>
           <div className="mt-1 text-[11px] text-fg-3">
             {graded > 0 ? `${Math.round(graded)}% of the course graded` : "No weights set"}
-            {needed != null && (
+            {course.targetGrade != null && grade && (
               <>
                 {" · "}
-                {needed > 100 ? (
-                  <span className="text-red">a {target} is out of reach</span>
-                ) : needed <= 0 ? (
-                  <span className="text-green">{target} already locked in</span>
-                ) : (
-                  <>
-                    need{" "}
-                    <span style={{ color: gradeColor(needed) }}>{formatPercent(needed, 0)}</span> on
-                    the remaining {Math.round(remaining)}% for a {target}
-                  </>
-                )}
+                <NeededGradeText summary={{ percent, ...grade }} target={course.targetGrade} />
               </>
             )}
           </div>
@@ -327,7 +309,7 @@ function SemesterStatsStrip({ stats }: { stats: SemesterStats }) {
   const done = stats.itemsTotal > 0 ? Math.round((stats.itemsDone / stats.itemsTotal) * 100) : 0;
 
   return (
-    <div className="mt-3 grid grid-cols-3 gap-2">
+    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
       <StatTile
         label="Average"
         value={stats.average != null ? formatPercent(stats.average, 1) : "—"}
@@ -336,6 +318,17 @@ function SemesterStatsStrip({ stats }: { stats: SemesterStats }) {
           stats.average != null
             ? `${stats.gradedCourseCount} of ${stats.courseCount} courses`
             : "No scores yet"
+        }
+      />
+      <StatTile
+        label="GPA"
+        value={formatGpa(stats.termGpa, stats.gpaScale)}
+        sub={
+          stats.termGpa == null
+            ? "No scores yet"
+            : stats.creditsMissing
+              ? "Add credits for an accurate GPA"
+              : `Overall ${formatGpa(stats.cumulativeGpa, stats.gpaScale)}`
         }
       />
       <StatTile

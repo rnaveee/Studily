@@ -87,6 +87,7 @@ function guestStub(path: string): unknown {
   if (p === "/todo-categories") return demoTodoCategories();
   if (p === "/calendar/feed-link") return { exists: false, createdAt: null, lastFetchedAt: null };
   if (p === "/push/public-key") return { publicKey: null };
+  if (p === "/settings/gpa-scale") return { scale: "FOUR_POINT", defaultScale: "FOUR_POINT", explicit: false };
   if (p === "/settings/privacy") return { readReceipts: true, scheduleVisibility: "FRIENDS" };
   if (p === "/settings/notifications")
     return { messages: true, classReminders: true, eventDayOf: true, itemWeekAhead: true, examDayOf: true };

@@ -18,6 +18,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +49,12 @@ public class Course {
     private String professor;
     private String location;
     private String color;
+
+    @Column(precision = 4, scale = 2)
+    private BigDecimal credits;
+
+    @Column(name = "target_grade")
+    private Double targetGrade;
 
     @Column(name = "canvas_course_id")
     private Long canvasCourseId;

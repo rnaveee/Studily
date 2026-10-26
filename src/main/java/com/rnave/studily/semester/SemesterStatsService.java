@@ -9,6 +9,8 @@ import com.rnave.studily.academic.ItemStatus;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.course.Course;
 import com.rnave.studily.course.CourseRepository;
+import com.rnave.studily.gpa.GpaMath;
+import com.rnave.studily.gpa.GpaScale;
 import com.rnave.studily.semester.SemesterDtos.CourseGradeDto;
 import com.rnave.studily.semester.SemesterDtos.SemesterStatsDto;
 import org.springframework.stereotype.Service;
@@ -62,16 +64,32 @@ public class SemesterStatsService {
             }
         }
 
+        GpaScale scale = GpaScale.resolve(currentUser.entity().getGpaScale(), currentUser.entity().getSchoolKey());
+        List<GpaMath.Entry> cumulativeEntries = new ArrayList<>();
+        for (List<Course> semesterCourses : coursesBySemester.values()) {
+            for (Course course : semesterCourses) {
+                Grades.CourseGrade grade = Grades.of(itemsByCourse.getOrDefault(course.getId(), List.of()),
+                        categoriesByCourse.getOrDefault(course.getId(), List.of()));
+                if (grade.percent() != null) {
+                    cumulativeEntries.add(entryOf(course, grade.percent()));
+                }
+            }
+        }
+        Double cumulativeGpa = GpaMath.gpa(scale, cumulativeEntries);
+        boolean creditsMissing = GpaMath.anyMissingCredits(cumulativeEntries);
+
         Instant now = Instant.now();
         return semesterRepository.findByUserIdOrderByYearDescTermAsc(userId).stream()
                 .map(s -> statsFor(s.getId(), coursesBySemester.getOrDefault(s.getId(), List.of()),
-                        itemsByCourse, categoriesByCourse, now))
+                        itemsByCourse, categoriesByCourse, now, scale, cumulativeGpa, creditsMissing))
                 .toList();
     }
 
     private SemesterStatsDto statsFor(Long semesterId, List<Course> courses,
                                       Map<Long, List<AcademicItem>> itemsByCourse,
-                                      Map<Long, List<GradeCategory>> categoriesByCourse, Instant now) {
+                                      Map<Long, List<GradeCategory>> categoriesByCourse, Instant now,
+                                      GpaScale scale, Double cumulativeGpa, boolean creditsMissing) {
+        List<GpaMath.Entry> termEntries = new ArrayList<>();
         List<CourseGradeDto> grades = new ArrayList<>();
         double gradeSum = 0;
         int gradedCourses = 0;
@@ -88,12 +106,16 @@ public class SemesterStatsService {
 
             grades.add(new CourseGradeDto(
                     course.getId(), course.getName(), course.getCode(), course.getColor(),
-                    grade.percent(), grade.gradedWeight(), grade.totalWeight(),
+                    grade.percent(), creditsOf(course),
+                    grade.percent() == null ? null : scale.letterFor(grade.percent()),
+                    grade.percent() == null ? null : scale.pointsFor(grade.percent()),
+                    grade.gradedWeight(), grade.totalWeight(),
                     grade.gradedCount(), grade.itemCount()));
 
             if (grade.percent() != null) {
                 gradeSum += grade.percent();
                 gradedCourses++;
+                termEntries.add(entryOf(course, grade.percent()));
             }
             itemsTotal += items.size();
             itemsGraded += grade.gradedCount();
@@ -112,6 +134,15 @@ public class SemesterStatsService {
 
         Double average = gradedCourses > 0 ? gradeSum / gradedCourses : null;
         return new SemesterStatsDto(semesterId, average, courses.size(), gradedCourses,
-                itemsTotal, itemsDone, itemsGraded, upcoming, nextDueAt, grades);
+                itemsTotal, itemsDone, itemsGraded, upcoming, nextDueAt,
+                GpaMath.gpa(scale, termEntries), cumulativeGpa, scale, creditsMissing, grades);
+    }
+
+    private static Double creditsOf(Course course) {
+        return course.getCredits() == null ? null : course.getCredits().doubleValue();
+    }
+
+    private static GpaMath.Entry entryOf(Course course, double percent) {
+        return new GpaMath.Entry(percent, creditsOf(course));
     }
 }

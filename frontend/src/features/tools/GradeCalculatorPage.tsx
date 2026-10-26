@@ -4,6 +4,8 @@ import { Plus, RotateCcw, Trash2, UserPlus } from "lucide-react";
 import BackButton from "../../components/BackButton";
 import { useHydrated } from "../../components/ClientOnly";
 import { useAuth } from "../../lib/auth";
+import CourseLoadPanel from "./CourseLoadPanel";
+import type { LoadedCourse } from "./courseCalc";
 import { formatPercent, gradeColor, neededOnRemaining, remainingWeight } from "../../lib/grades";
 import {
   EXAMPLE,
@@ -55,6 +57,7 @@ export default function GradeCalculatorPage() {
   const hydrated = useHydrated();
   const [state, setState] = useState<CalcState>(EXAMPLE);
   const [loaded, setLoaded] = useState(false);
+  const [loadedCourse, setLoadedCourse] = useState<LoadedCourse | null>(null);
   const [focusId, setFocusId] = useState<number | null>(null);
   const idRef = useRef(100);
   const nextId = () => idRef.current++;
@@ -74,13 +77,13 @@ export default function GradeCalculatorPage() {
   }, []);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || loadedCourse) return;
     try {
       localStorage.setItem(STORAGE_KEY, serialize(state));
     } catch {
       return;
     }
-  }, [state, loaded]);
+  }, [state, loaded, loadedCourse]);
 
   const summary = useMemo(() => summarize(state), [state]);
 
@@ -136,6 +139,19 @@ export default function GradeCalculatorPage() {
   const setFinal = (patch: Partial<FinalExam>) =>
     setState((s) => (s.final ? { ...s, final: { ...s.final, ...patch } } : s));
 
+  const leaveCourse = () => {
+    let saved: CalcState | null = null;
+    try {
+      saved = parseSaved(localStorage.getItem(STORAGE_KEY));
+    } catch {
+      saved = null;
+    }
+    const restored = saved ?? EXAMPLE;
+    idRef.current = Math.max(100, idRef.current, maxId(restored) + 1);
+    setState(restored);
+    setLoadedCourse(null);
+  };
+
   const reset = () => setState(EXAMPLE);
 
   const clear = () => setState(blankState(nextId, state.target));
@@ -154,6 +170,21 @@ export default function GradeCalculatorPage() {
           </p>
         </div>
       </div>
+
+      {hydrated && user && (
+        <CourseLoadPanel
+          state={state}
+          loaded={loadedCourse}
+          ready={loaded}
+          nextId={nextId}
+          onLoad={(course, built) => {
+            setState(built.state);
+            setLoadedCourse({ course, links: built.links });
+          }}
+          onUnload={leaveCourse}
+          onSaved={setLoadedCourse}
+        />
+      )}
 
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0 space-y-4">
@@ -202,13 +233,17 @@ export default function GradeCalculatorPage() {
                 Add final exam
               </button>
             )}
-            <button type="button" className="btn btn-ghost" onClick={reset}>
-              <RotateCcw size={13} />
-              Reset to example
-            </button>
-            <button type="button" className="btn btn-ghost" onClick={clear}>
-              Clear
-            </button>
+            {!loadedCourse && (
+              <>
+                <button type="button" className="btn btn-ghost" onClick={reset}>
+                  <RotateCcw size={13} />
+                  Reset to example
+                </button>
+                <button type="button" className="btn btn-ghost" onClick={clear}>
+                  Clear
+                </button>
+              </>
+            )}
             <span
               className="ml-auto text-[12px] font-medium tabular-nums"
               style={{ color: weightsOk ? "var(--green)" : "var(--orange)" }}

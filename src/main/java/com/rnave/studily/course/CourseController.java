@@ -6,6 +6,7 @@ import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.course.CourseDtos.CourseDto;
 import com.rnave.studily.course.CourseDtos.CourseMatchDto;
 import com.rnave.studily.course.CourseDtos.CourseRequest;
+import com.rnave.studily.course.CourseDtos.GradingRequest;
 import com.rnave.studily.course.CourseDtos.ImportRequest;
 import com.rnave.studily.friend.FriendDtos.PublicUserDto;
 import jakarta.validation.Valid;
@@ -85,6 +86,11 @@ public class CourseController {
     @PutMapping("/{id}")
     public CourseDto update(@PathVariable Long id, @Valid @RequestBody CourseRequest req) {
         return courseService.update(id, req);
+    }
+
+    @PutMapping("/{id}/grading")
+    public CourseDto updateGrading(@PathVariable Long id, @Valid @RequestBody GradingRequest req) {
+        return courseService.updateGrading(id, req);
     }
 
     @DeleteMapping("/{id}")

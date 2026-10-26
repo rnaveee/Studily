@@ -36,6 +36,7 @@ import FriendsPage from "./features/friends/FriendsPage";
 import SchoolmatesPage from "./features/friends/SchoolmatesPage";
 import UserProfilePage from "./features/friends/UserProfilePage";
 import SemestersPage from "./features/semesters/SemestersPage";
+import GradesPage from "./features/semesters/GradesPage";
 import MessagesPage from "./features/messages/MessagesPage";
 import ConversationPage from "./features/messages/ConversationPage";
 import LearnPage from "./features/learn/LearnPage";
@@ -165,6 +166,7 @@ export const appRoutes = (
       />
       <Route path="/todos" element={<TodosPage />} />
       <Route path="/semesters" element={<SemestersPage />} />
+      <Route path="/grades" element={<GradesPage />} />
       <Route path="/friends" element={<VerifyGate><FriendsPage /></VerifyGate>} />
       <Route path="/friends/schoolmates" element={<VerifyGate><SchoolmatesPage /></VerifyGate>} />
       <Route path="/profile" element={<ProfilePage />} />

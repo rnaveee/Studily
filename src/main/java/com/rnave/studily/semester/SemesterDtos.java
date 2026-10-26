@@ -1,5 +1,6 @@
 package com.rnave.studily.semester;
 
+import com.rnave.studily.gpa.GpaScale;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -42,6 +43,9 @@ public class SemesterDtos {
             String code,
             String color,
             Double grade,
+            Double credits,
+            String letter,
+            Double points,
             double gradedWeight,
             double totalWeight,
             int gradedCount,
@@ -58,6 +62,10 @@ public class SemesterDtos {
             int itemsGraded,
             int upcomingCount,
             Instant nextDueAt,
+            Double termGpa,
+            Double cumulativeGpa,
+            GpaScale gpaScale,
+            boolean creditsMissing,
             List<CourseGradeDto> courses) {
     }
 

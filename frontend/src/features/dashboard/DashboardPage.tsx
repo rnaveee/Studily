@@ -25,6 +25,7 @@ import { SkeletonBlock } from "../../components/Skeleton";
 import TodoQuickView from "../todos/TodoQuickView";
 import { priorityLabel, priorityTone } from "../todos/priority";
 import DashboardStreak from "./DashboardStreak";
+import GradesCard from "./GradesCard";
 import { quoteOfTheDay } from "./quotes";
 import QueryError from "../../components/QueryError";
 import { readableOn } from "../../lib/courseColors";
@@ -499,6 +500,8 @@ export default function DashboardPage() {
             </div>
             <MiniMonth marked={new Set(dueThisWeek.map((e) => e.dueAt.slice(0, 10)))} />
           </Link>
+
+          <GradesCard />
 
           <TodoQuickView />
 

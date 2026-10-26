@@ -1,3 +1,4 @@
+import GpaScalePicker from "../../components/GpaScalePicker";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -174,6 +175,20 @@ export default function SettingsPage() {
       </h2>
 
       <PrivacySection />
+
+      <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
+        Grades
+      </h2>
+
+      <div className="card mt-3 flex flex-wrap items-center justify-between gap-3 p-4">
+        <div>
+          <div className="text-[14px] font-medium text-fg">GPA scale</div>
+          <div className="mt-0.5 text-[12px] text-fg-3">
+            How your course grades turn into a GPA. Match my school picks it from your school.
+          </div>
+        </div>
+        <GpaScalePicker />
+      </div>
 
       <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
         Preferences

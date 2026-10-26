@@ -3,6 +3,8 @@ package com.rnave.studily.course;
 import com.rnave.studily.academic.AcademicItem;
 import com.rnave.studily.academic.ItemType;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -36,6 +38,8 @@ public class CourseDtos {
             String professor,
             String location,
             String color,
+            Double credits,
+            Double targetGrade,
             List<MeetingBlockDto> meetingBlocks) {
 
         public static CourseDto from(Course c) {
@@ -43,6 +47,7 @@ public class CourseDtos {
                     c.getId(),
                     c.getSemester() != null ? c.getSemester().getId() : null,
                     c.getName(), c.getCode(), c.getProfessor(), c.getLocation(), c.getColor(),
+                    c.getCredits() == null ? null : c.getCredits().doubleValue(), c.getTargetGrade(),
                     c.getMeetingBlocks().stream().map(MeetingBlockDto::from).toList());
         }
     }
@@ -54,7 +59,14 @@ public class CourseDtos {
             @Size(max = 255) String professor,
             @Size(max = 255) String location,
             @Size(max = 50) String color,
+            @DecimalMin("0") @DecimalMax("30") Double credits,
+            @DecimalMin("0") @DecimalMax("150") Double targetGrade,
             @Valid List<MeetingBlockDto> meetingBlocks) {
+    }
+
+    public record GradingRequest(
+            @DecimalMin("0") @DecimalMax("30") Double credits,
+            @DecimalMin("0") @DecimalMax("150") Double targetGrade) {
     }
 
     public record MatchItemDto(

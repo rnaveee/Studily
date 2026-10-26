@@ -1,5 +1,6 @@
 package com.rnave.studily.user;
 
+import com.rnave.studily.gpa.GpaScale;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -62,6 +63,10 @@ public class User {
 
     @Column(length = 64)
     private String timezone;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "gpa_scale", length = 16)
+    private GpaScale gpaScale;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

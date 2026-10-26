@@ -46,6 +46,80 @@ class CourseServiceTest {
     }
 
     @Test
+    void updateGrading_savesCreditsAndTarget() {
+        when(currentUser.id()).thenReturn(1L);
+        Course course = new Course();
+        course.setId(99L);
+        when(courseRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.of(course));
+        when(courseRepository.save(course)).thenReturn(course);
+
+        CourseDtos.CourseDto dto = courseService.updateGrading(99L, new CourseDtos.GradingRequest(3.0, 85.5));
+
+        assertThat(dto.credits()).isEqualTo(3.0);
+        assertThat(dto.targetGrade()).isEqualTo(85.5);
+    }
+
+    @Test
+    void updateGrading_nullClearsBothValues() {
+        when(currentUser.id()).thenReturn(1L);
+        Course course = new Course();
+        course.setId(99L);
+        course.setCredits(java.math.BigDecimal.valueOf(3));
+        course.setTargetGrade(80.0);
+        when(courseRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.of(course));
+        when(courseRepository.save(course)).thenReturn(course);
+
+        courseService.updateGrading(99L, new CourseDtos.GradingRequest(null, null));
+
+        assertThat(course.getCredits()).isNull();
+        assertThat(course.getTargetGrade()).isNull();
+    }
+
+    @Test
+    void updateGrading_rejectsAnotherUsersCourse() {
+        when(currentUser.id()).thenReturn(1L);
+        when(courseRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> courseService.updateGrading(99L, new CourseDtos.GradingRequest(3.0, 80.0)))
+                .isInstanceOf(NotFoundException.class);
+        org.mockito.Mockito.verify(courseRepository, org.mockito.Mockito.never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void update_withoutGradingFieldsKeepsExistingValues() {
+        when(currentUser.id()).thenReturn(1L);
+        Course course = new Course();
+        course.setId(99L);
+        course.setName("Calc");
+        course.setCredits(java.math.BigDecimal.valueOf(1.5));
+        course.setTargetGrade(90.0);
+        when(courseRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.of(course));
+        when(courseRepository.save(course)).thenReturn(course);
+
+        courseService.update(99L, new CourseDtos.CourseRequest("Calc II", null, null, null, null, null,
+                null, null, null));
+
+        assertThat(course.getName()).isEqualTo("Calc II");
+        assertThat(course.getCredits()).isEqualByComparingTo("1.5");
+        assertThat(course.getTargetGrade()).isEqualTo(90.0);
+    }
+
+    @Test
+    void update_withGradingFieldsOverwrites() {
+        when(currentUser.id()).thenReturn(1L);
+        Course course = new Course();
+        course.setId(99L);
+        when(courseRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.of(course));
+        when(courseRepository.save(course)).thenReturn(course);
+
+        courseService.update(99L, new CourseDtos.CourseRequest("Calc", null, null, null, null, null,
+                4.0, 75.0, null));
+
+        assertThat(course.getCredits()).isEqualByComparingTo("4");
+        assertThat(course.getTargetGrade()).isEqualTo(75.0);
+    }
+
+    @Test
     void delete_onlyDeletesWhenOwned() {
         when(currentUser.id()).thenReturn(1L);
         when(courseRepository.findByIdAndUserId(99L, 1L)).thenReturn(Optional.empty());

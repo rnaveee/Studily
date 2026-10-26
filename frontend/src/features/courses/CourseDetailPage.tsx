@@ -24,6 +24,7 @@ import { itemColor } from "../../lib/itemType";
 import { staggerDelay } from "../../lib/motion";
 import { invalidateItemQueries } from "../../lib/invalidateItems";
 import ItemModal from "./ItemModal";
+import { GradingFields, NeededGradeText } from "../../components/NeededGrade";
 import {
   courseGrade,
   effectiveWeights,
@@ -31,7 +32,6 @@ import {
   formatScore,
   gradeColor,
   itemPercent,
-  neededOnRemaining,
   parseScoreInput,
 } from "../../lib/grades";
 import Avatar from "../../components/Avatar";
@@ -195,7 +195,7 @@ export default function CourseDetailPage() {
         </div>
       )}
 
-      <GradeCard items={itemsQ.data ?? []} categories={weightsQ.data ?? []} courseId={courseId} />
+      <GradeCard course={course} items={itemsQ.data ?? []} categories={weightsQ.data ?? []} />
       <WeightsSection
         courseId={courseId}
         categories={weightsQ.data ?? []}
@@ -220,15 +220,14 @@ export default function CourseDetailPage() {
 }
 
 function GradeCard({
+  course,
   items,
   categories,
-  courseId,
 }: {
+  course: Course;
   items: AcademicItem[];
   categories: GradeCategory[];
-  courseId: number;
 }) {
-  const [target, setTarget] = useState("80");
   const summary = courseGrade(items, categories);
 
   if (items.length === 0) return null;
@@ -240,17 +239,14 @@ function GradeCard({
         <p className="mt-1.5 text-[13px] text-fg-2">
           Tap the score chip on any item below to enter what you got. Your grade updates as you go.
         </p>
+        <div className="mt-3">
+          <GradingFields course={course} />
+        </div>
       </div>
     );
   }
 
   const scale = Math.max(100, summary.totalWeight);
-  const remaining = Math.max(0, scale - summary.gradedWeight);
-  const targetValue = Number(target);
-  const needed =
-    summary.gradedWeight > 0 && remaining > 0.01 && Number.isFinite(targetValue)
-      ? neededOnRemaining(summary, targetValue)
-      : null;
 
   return (
     <div className="card p-4">
@@ -284,33 +280,17 @@ function GradeCard({
         </div>
       )}
 
-      {needed != null && (
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[12px] text-fg-2">
-          <span>To finish at</span>
-          <input
-            className="input py-0.5 text-center"
-            style={{ width: "4.5rem", paddingLeft: 6, paddingRight: 6 }}
-            type="number"
-            inputMode="decimal"
-            min={0}
-            max={100}
-            value={target}
-            onChange={(e) => setTarget(e.target.value)}
-            aria-label="Target grade"
-          />
-          <span>
-            you need{" "}
-            {needed > 100 ? (
-              <strong className="text-red">more than 100%</strong>
-            ) : needed <= 0 ? (
-              <strong className="text-green">nothing</strong>
-            ) : (
-              <strong style={{ color: gradeColor(needed) }}>{formatPercent(needed, 0)}</strong>
-            )}{" "}
-            on the remaining {Math.round(remaining)}%.
-          </span>
-        </div>
-      )}
+      <div className="mt-3 space-y-1.5">
+        <GradingFields course={course} />
+        {summary.gradedWeight > 0 && course.targetGrade != null && (
+          <p className="text-[12px] text-fg-2">
+            <NeededGradeText summary={summary} target={course.targetGrade} />
+          </p>
+        )}
+        {course.credits == null && (
+          <p className="text-[11px] text-fg-3">Add credits for an accurate GPA.</p>
+        )}
+      </div>
 
       {summary.gradedWeight === 0 && (
         <p className="mt-2 text-[12px] text-fg-3">
@@ -319,7 +299,7 @@ function GradeCard({
       )}
 
       <Link
-        to={`/grade-calculator?course=${courseId}`}
+        to={`/grade-calculator?course=${course.id}`}
         className="mt-3 inline-block text-[12px] font-medium text-accent underline underline-offset-2"
       >
         Open in grade calculator

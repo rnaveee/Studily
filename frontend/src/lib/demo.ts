@@ -1,3 +1,4 @@
+import { gpaFrom, letterFor, pointsFor } from "./gpa";
 import { DAYS } from "../types";
 import { courseGrade } from "./grades";
 import type {
@@ -56,6 +57,8 @@ export function demoCourses(): Course[] {
       professor: "Dr. R. Alvarez",
       location: "Hall 210",
       color: "#7968dc",
+      credits: 3,
+      targetGrade: 85,
       meetingBlocks: [
         { id: 1, dayOfWeek: "MON", kind: "LECTURE", startTime: "09:30", endTime: "10:20", location: "Hall 210" },
         { id: 2, dayOfWeek: "WED", kind: "LECTURE", startTime: "09:30", endTime: "10:20", location: "Hall 210" },
@@ -365,6 +368,9 @@ export function demoCourseGrades(): CourseGrade[] {
       code: c.code,
       color: c.color,
       grade: summary.percent,
+      credits: 3,
+      letter: summary.percent == null ? null : letterFor("FOUR_POINT", summary.percent),
+      points: summary.percent == null ? null : pointsFor("FOUR_POINT", summary.percent),
       gradedWeight: summary.gradedWeight,
       totalWeight: summary.totalWeight,
       gradedCount: summary.gradedCount,
@@ -395,6 +401,16 @@ export function demoStats(): SemesterStats[] {
       itemsGraded: items.filter((it) => it.score != null).length,
       upcomingCount: upcoming.length,
       nextDueAt: upcoming[0]?.dueAt ?? null,
+      termGpa: gpaFrom(
+        "FOUR_POINT",
+        graded.map((c) => ({ percent: c.grade!, credits: c.credits })),
+      ),
+      cumulativeGpa: gpaFrom(
+        "FOUR_POINT",
+        graded.map((c) => ({ percent: c.grade!, credits: c.credits })),
+      ),
+      gpaScale: "FOUR_POINT",
+      creditsMissing: false,
       courses,
     },
   ];

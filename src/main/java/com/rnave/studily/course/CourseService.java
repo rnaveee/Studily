@@ -6,6 +6,7 @@ import com.rnave.studily.config.MatchKeys;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.course.CourseDtos.CourseDto;
 import com.rnave.studily.course.CourseDtos.CourseRequest;
+import com.rnave.studily.course.CourseDtos.GradingRequest;
 import com.rnave.studily.course.CourseDtos.MeetingBlockDto;
 import com.rnave.studily.semester.Semester;
 import com.rnave.studily.semester.SemesterService;
@@ -13,6 +14,8 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 @Service
@@ -67,6 +70,14 @@ public class CourseService {
     }
 
     @Transactional
+    public CourseDto updateGrading(Long id, GradingRequest req) {
+        Course course = requireOwned(id);
+        course.setCredits(toCredits(req.credits()));
+        course.setTargetGrade(req.targetGrade());
+        return CourseDto.from(courseRepository.save(course));
+    }
+
+    @Transactional
     public void delete(Long id) {
         Course course = requireOwned(id);
         courseRepository.delete(course);
@@ -79,6 +90,12 @@ public class CourseService {
         course.setProfessor(trimToNull(req.professor()));
         course.setLocation(trimToNull(req.location()));
         course.setColor(trimToNull(req.color()));
+        if (req.credits() != null) {
+            course.setCredits(toCredits(req.credits()));
+        }
+        if (req.targetGrade() != null) {
+            course.setTargetGrade(req.targetGrade());
+        }
 
         if (req.semesterId() != null) {
             Semester semester = semesterService.requireOwned(req.semesterId());
@@ -103,6 +120,10 @@ public class CourseService {
                 course.getMeetingBlocks().add(mb);
             }
         }
+    }
+
+    private static BigDecimal toCredits(Double credits) {
+        return credits == null ? null : BigDecimal.valueOf(credits).setScale(2, RoundingMode.HALF_UP);
     }
 
     private static String trimToNull(String s) {

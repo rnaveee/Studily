@@ -146,6 +146,42 @@ export function neededOnRemaining(summary: GradeProjection, target: number): num
   return ((target - earned) / remaining) * 100;
 }
 
+export function runningGrades(items: AcademicItem[], categories: GradeCategory[] = []): number[] {
+  const graded = items
+    .filter((item) => itemPercent(item) != null)
+    .sort((a, b) => a.dueAt.localeCompare(b.dueAt));
+  const out: number[] = [];
+  for (let k = 1; k <= graded.length; k++) {
+    const revealed = new Set(graded.slice(0, k).map((item) => item.id));
+    const masked = items.map((item) =>
+      itemPercent(item) != null && !revealed.has(item.id)
+        ? { ...item, score: null, maxScore: null }
+        : item,
+    );
+    const percent = courseGrade(masked, categories).percent;
+    if (percent != null) out.push(percent);
+  }
+  return out;
+}
+
+export type NeededKind = "unknown" | "impossible" | "safe" | "needed";
+
+export interface NeededResult {
+  kind: NeededKind;
+  needed: number | null;
+  remaining: number;
+}
+
+export function describeNeeded(summary: GradeProjection, target: number | null | undefined): NeededResult {
+  const remaining = remainingWeight(summary);
+  if (target == null || !Number.isFinite(target)) return { kind: "unknown", needed: null, remaining };
+  const needed = neededOnRemaining(summary, target);
+  if (needed == null) return { kind: "unknown", needed: null, remaining };
+  if (needed > 100) return { kind: "impossible", needed, remaining };
+  if (needed <= 0) return { kind: "safe", needed, remaining };
+  return { kind: "needed", needed, remaining };
+}
+
 function trim(n: number): string {
   return String(Math.round(n * 100) / 100);
 }
