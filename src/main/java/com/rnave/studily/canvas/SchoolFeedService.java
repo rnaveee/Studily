@@ -10,6 +10,10 @@ import com.rnave.studily.canvas.FeedImportDtos.StoredImport;
 import com.rnave.studily.canvas.SchoolFeedDtos.SchoolFeedList;
 import com.rnave.studily.canvas.SchoolFeedDtos.SchoolFeedView;
 import com.rnave.studily.config.BadRequestException;
+import com.rnave.studily.ics.IcsDtos.AddedEvent;
+import com.rnave.studily.ics.IcsDtos.ImportResult;
+import com.rnave.studily.ics.IcsDtos.SyncResult;
+import com.rnave.studily.ics.IcsService;
 import com.rnave.studily.config.DeadLinkException;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.config.SlidingWindowRateLimiter;
@@ -43,6 +47,7 @@ public class SchoolFeedService {
 
     private static final Logger log = LoggerFactory.getLogger(SchoolFeedService.class);
     static final int MAX_FEEDS_PER_USER = 5;
+    public static final String CALENDAR_PROVIDER = "ICS";
     static final int MAX_FAILURES = 5;
     static final int BATCH_SIZE = 20;
     static final long SYNC_NOW_WINDOW_MS = Duration.ofMinutes(5).toMillis();
@@ -54,14 +59,16 @@ public class SchoolFeedService {
     private final CanvasFeedService canvasFeedService;
     private final FeedImportStore importStore;
     private final NotificationDispatcher dispatcher;
+    private final IcsService icsService;
     private final Clock clock;
     private final Duration staleAfter;
     private final SlidingWindowRateLimiter syncNowLimiter = new SlidingWindowRateLimiter(1, SYNC_NOW_WINDOW_MS);
 
     public SchoolFeedService(SchoolFeedRepository repository, FeedUrlCipher cipher,
                              CanvasFeedService canvasFeedService, FeedImportStore importStore,
-                             NotificationDispatcher dispatcher, Clock clock,
+                             NotificationDispatcher dispatcher, IcsService icsService, Clock clock,
                              @Value("${app.feeds.stale-after-hours:6}") long staleAfterHours) {
+        this.icsService = icsService;
         this.repository = repository;
         this.cipher = cipher;
         this.canvasFeedService = canvasFeedService;
@@ -162,6 +169,9 @@ public class SchoolFeedService {
     }
 
     private FeedStageResult sync(SchoolFeed feed) {
+        if (CALENDAR_PROVIDER.equals(feed.getProvider())) {
+            return syncCalendar(feed);
+        }
         Instant now = clock.instant();
         StoredImport stored;
         StageOutcome outcome;
@@ -185,6 +195,83 @@ public class SchoolFeedService {
         announce(feed, stored);
         announceChanges(feed, outcome.changes(), stored.payload().provider());
         return stored.result();
+    }
+
+    private FeedStageResult syncCalendar(SchoolFeed feed) {
+        Instant now = clock.instant();
+        SyncResult result;
+        String url;
+        try {
+            url = cipher.decrypt(feed.getUrlCiphertext());
+            result = icsService.sync(feed.getUser(), icsService.fetchText(url), feed.getTimeZone(), feed.getId(),
+                    icsService.isPublicGoogleFeed(url));
+            feed.setLastSyncedAt(now);
+            feed.setLastSuccessAt(now);
+            feed.setFailureCount(0);
+            feed.setLastError(null);
+            repository.save(feed);
+        } catch (RuntimeException e) {
+            recordFailure(feed, e, now);
+            throw e;
+        }
+        announceCalendar(feed, result);
+        ImportResult r = result.result();
+        return new FeedStageResult(null, CALENDAR_PROVIDER, 0, 0, r.updated(), r.imported(), r.truncated());
+    }
+
+    private void announceCalendar(SchoolFeed feed, SyncResult result) {
+        int removed = result.result().removed();
+        if (result.added().isEmpty() && result.changes().isEmpty() && removed == 0) {
+            return;
+        }
+        try {
+            ZoneId zone = zoneOf(feed.getTimeZone());
+            List<String> keys = new ArrayList<>();
+            result.added().forEach(a -> keys.add("+" + a.title() + "@" + a.at()));
+            result.changes().forEach(c -> keys.add(c.uid() + "@" + c.at() + "#" + c.title()));
+            keys.add("-" + removed);
+            keys.sort(null);
+            String label = calendarLabel(feed.getHost());
+            dispatcher.dispatch(feed.getUser(), NotificationType.FEED_UPDATE, feed.getId(),
+                    "feed-update:" + feed.getId() + ":" + sha256(String.join("|", keys)).substring(0, 12),
+                    label + " updated", describeCalendar(result.added(), result.changes(), removed, zone),
+                    "/calendar");
+        } catch (RuntimeException e) {
+            log.warn("Could not notify user {} about calendar changes: {}", feed.getUser().getId(),
+                    e.getClass().getSimpleName());
+        }
+    }
+
+    static String calendarLabel(String host) {
+        return host != null && host.toLowerCase(Locale.ROOT).endsWith("calendar.google.com")
+                ? "Google Calendar" : "Your calendar";
+    }
+
+    static String describeCalendar(List<AddedEvent> added, List<FeedChange> changes, int removed, ZoneId zone) {
+        DateTimeFormatter when = DateTimeFormatter.ofPattern("EEE MMM d, h:mm a", Locale.ENGLISH).withZone(zone);
+        List<String> parts = new ArrayList<>();
+        if (!added.isEmpty()) {
+            List<String> names = new ArrayList<>();
+            for (AddedEvent a : added.subList(0, Math.min(added.size(), 2))) {
+                names.add(a.title() + " (" + when.format(a.at()) + ")");
+            }
+            String more = added.size() > 2 ? " and " + (added.size() - 2) + " more" : "";
+            parts.add((added.size() == 1 ? "New event: " : added.size() + " new events: ")
+                    + String.join(", ", names) + more);
+        }
+        for (FeedChange c : changes.subList(0, Math.min(changes.size(), 2))) {
+            parts.add(c.previousAt() != null
+                    ? c.title() + " moved to " + when.format(c.at())
+                    : c.previousTitle() + " was renamed to " + c.title());
+        }
+        if (changes.size() > 2) {
+            parts.add((changes.size() - 2) + " more changed");
+        }
+        if (removed > 0) {
+            parts.add(removed == 1 ? "1 event removed" : removed + " events removed");
+        }
+        String text = String.join(". ", parts) + ".";
+        return text.length() <= 255 ? text : text.substring(0, 252) + "...";
     }
 
     private void announce(SchoolFeed feed, StoredImport stored) {

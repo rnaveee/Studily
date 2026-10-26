@@ -1,6 +1,7 @@
 package com.rnave.studily.ics;
 
 import com.rnave.studily.config.BadRequestException;
+import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.ics.IcsDtos.ImportRequest;
 import com.rnave.studily.ics.IcsDtos.ImportResult;
 import jakarta.validation.Valid;
@@ -22,14 +23,18 @@ import java.io.IOException;
 public class IcsController {
 
     private final IcsService icsService;
+    private final CalendarLinkService calendarLinkService;
+    private final CurrentUser currentUser;
 
-    public IcsController(IcsService icsService) {
+    public IcsController(IcsService icsService, CalendarLinkService calendarLinkService, CurrentUser currentUser) {
         this.icsService = icsService;
+        this.calendarLinkService = calendarLinkService;
+        this.currentUser = currentUser;
     }
 
     @PostMapping("/import")
     public ImportResult importCalendar(@Valid @RequestBody ImportRequest req) {
-        return icsService.importCalendar(req.source(), req.timeZone());
+        return calendarLinkService.importLink(currentUser.entity(), req.source(), req.timeZone());
     }
 
     @PostMapping(value = "/import-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

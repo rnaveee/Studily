@@ -50,6 +50,9 @@ public class CalendarEvent {
     @Column(name = "external_uid")
     private String externalUid;
 
+    @Column(name = "feed_id")
+    private Long feedId;
+
     @Column(name = "series_id")
     private UUID seriesId;
 

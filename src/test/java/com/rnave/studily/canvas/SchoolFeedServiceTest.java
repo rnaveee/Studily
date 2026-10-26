@@ -14,6 +14,10 @@ import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.DeadLinkException;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.config.TooManyRequestsException;
+import com.rnave.studily.ics.IcsDtos.AddedEvent;
+import com.rnave.studily.ics.IcsDtos.ImportResult;
+import com.rnave.studily.ics.IcsDtos.SyncResult;
+import com.rnave.studily.ics.IcsService;
 import com.rnave.studily.notification.NotificationDispatcher;
 import com.rnave.studily.notification.NotificationType;
 import com.rnave.studily.user.User;
@@ -53,6 +57,7 @@ class SchoolFeedServiceTest {
     private FeedImportStore importStore;
     private NotificationDispatcher dispatcher;
     private FeedUrlCipher cipher;
+    private IcsService icsService;
     private SchoolFeedService service;
     private User user;
     private List<SchoolFeed> saved;
@@ -63,6 +68,7 @@ class SchoolFeedServiceTest {
         canvasFeedService = mock(CanvasFeedService.class);
         importStore = mock(FeedImportStore.class);
         dispatcher = mock(NotificationDispatcher.class);
+        icsService = mock(IcsService.class);
         cipher = new FeedUrlCipher(FeedUrlCipherTest.keyOf(3));
         service = newService(cipher);
         user = new User();
@@ -79,7 +85,7 @@ class SchoolFeedServiceTest {
     }
 
     private SchoolFeedService newService(FeedUrlCipher c) {
-        return new SchoolFeedService(repository, c, canvasFeedService, importStore, dispatcher,
+        return new SchoolFeedService(repository, c, canvasFeedService, importStore, dispatcher, icsService,
                 Clock.fixed(NOW, ZoneOffset.UTC), 6);
     }
 
@@ -428,6 +434,61 @@ class SchoolFeedServiceTest {
         assertThat(SchoolFeedService.headline(payload, "Canvas")).isEqualTo("New deadlines from Canvas");
         assertThat(SchoolFeedService.announcement(payload, "Canvas"))
                 .isEqualTo("Lab 7 (ENSC252 D100) was added on Canvas. Tap to review before it shows up in Studily.");
+    }
+
+    private SchoolFeed calendarFeed() {
+        SchoolFeed feed = storedFeed(3L);
+        feed.setProvider("ICS");
+        feed.setHost("calendar.google.com");
+        feed.setTimeZone("America/Vancouver");
+        when(repository.findById(3L)).thenReturn(Optional.of(feed));
+        when(icsService.fetchText(URL)).thenReturn("BEGIN:VCALENDAR");
+        return feed;
+    }
+
+    private static SyncResult calendarResult(List<AddedEvent> added, List<FeedChange> changes, int removed) {
+        return new SyncResult(new ImportResult("Personal", added.size(), 4, 0, false, removed, true), added,
+                changes);
+    }
+
+    @Test
+    void calendarLinksSyncThroughTheCalendarImporterAndReportEverything() {
+        SchoolFeed feed = calendarFeed();
+        Instant at = Instant.parse("2026-10-30T22:00:00Z");
+        when(icsService.sync(eq(user), eq("BEGIN:VCALENDAR"), eq("America/Vancouver"), eq(3L), eq(false)))
+                .thenReturn(calendarResult(List.of(new AddedEvent("Dentist", at)),
+                        List.of(new FeedChange("u1", "Club", null, null, at.plusSeconds(3600), at)), 1));
+
+        service.syncDue(3L);
+
+        verify(canvasFeedService, never()).stage(any(), any());
+        verify(dispatcher).dispatch(eq(user), eq(NotificationType.FEED_UPDATE), eq(3L),
+                startsWith("feed-update:3:"), eq("Google Calendar updated"),
+                eq("New event: Dentist (Fri Oct 30, 3:00 PM). Club moved to Fri Oct 30, 4:00 PM. 1 event removed."),
+                eq("/calendar"));
+        assertThat(feed.getLastSuccessAt()).isEqualTo(NOW);
+    }
+
+    @Test
+    void calendarSyncWithNothingNewSendsNoNotification() {
+        calendarFeed();
+        when(icsService.sync(any(), any(), any(), any(), eq(false)))
+                .thenReturn(calendarResult(List.of(), List.of(), 0));
+
+        service.syncDue(3L);
+
+        verify(dispatcher, never()).dispatch(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void describesManyNewCalendarEventsCompactly() {
+        Instant at = Instant.parse("2026-11-02T17:00:00Z");
+        String text = SchoolFeedService.describeCalendar(List.of(new AddedEvent("A", at), new AddedEvent("B", at),
+                new AddedEvent("C", at)), List.of(), 2, java.time.ZoneId.of("America/Vancouver"));
+
+        assertThat(text).isEqualTo("3 new events: A (Mon Nov 2, 9:00 AM), B (Mon Nov 2, 9:00 AM) and 1 more. "
+                + "2 events removed.");
+        assertThat(SchoolFeedService.calendarLabel("example.com")).isEqualTo("Your calendar");
     }
 
     @Test

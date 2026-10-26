@@ -382,6 +382,12 @@ function IntegrationsSection() {
               <div className="mt-0.5 text-[12px] text-fg-3">
                 Pull your courses, assignments and quizzes in from your school calendar link
               </div>
+              <div className="mt-1 text-[12px] text-fg-3">
+                Using Google Calendar?{" "}
+                <Link to="/calendar" className="font-medium text-accent hover:text-accent-2">
+                  Add its link on the Calendar page
+                </Link>
+              </div>
             </div>
             <button
               onClick={() => setOpen((v) => !v)}

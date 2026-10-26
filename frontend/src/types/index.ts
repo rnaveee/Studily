@@ -679,6 +679,8 @@ export interface IcsImportResult {
   updated: number;
   skipped: number;
   truncated: boolean;
+  removed: number;
+  synced: boolean;
 }
 
 export interface CalendarFeedCreated {
@@ -793,7 +795,7 @@ export interface ApplyResult {
 
 export interface SchoolFeedView {
   id: number;
-  provider: "CANVAS" | "D2L" | "MOODLE" | null;
+  provider: "CANVAS" | "D2L" | "MOODLE" | "ICS" | null;
   host: string;
   lastSyncedAt: string | null;
   lastSuccessAt: string | null;

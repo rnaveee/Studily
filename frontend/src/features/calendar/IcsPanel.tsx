@@ -5,6 +5,7 @@ import { api } from "../../lib/api";
 import { useRequireAuth } from "../../lib/auth";
 import { toast } from "../../lib/toast";
 import CalendarFeedLink from "./CalendarFeedLink";
+import SchoolFeedsList from "../canvas/SchoolFeedsList";
 import type { IcsImportResult } from "../../types";
 
 const FILE_STEPS = [
@@ -34,12 +35,13 @@ export default function IcsPanel() {
     qc.invalidateQueries({ queryKey: ["calendar"] });
     qc.invalidateQueries({ queryKey: ["calendar-events"] });
     qc.invalidateQueries({ queryKey: ["dashboard"] });
+    qc.invalidateQueries({ queryKey: ["school-feeds"] });
 
     const from = result.calendarName ? ` from ${result.calendarName}` : "";
     const parts = [`Added ${result.imported} event${result.imported === 1 ? "" : "s"}${from}`];
     if (result.updated > 0) parts.push(`${result.updated} updated`);
     if (result.skipped > 0) parts.push(`${result.skipped} skipped`);
-    toast.success(parts.join(" · "));
+    toast.success(parts.join(" · ") + (result.synced ? ". It will stay in sync." : ""));
     if (result.truncated) {
       toast.info("That calendar was large, so only the first 2000 events were imported.");
     }
@@ -146,8 +148,10 @@ export default function IcsPanel() {
       />
 
       <p className="mt-2 text-[11px] text-fg-3">
-        Sync your calendars by pasting an .ics link, or import an .ics or .zip file.
+        Paste an .ics link to keep a calendar in sync every few hours, or import an .ics or .zip file once.
       </p>
+
+      <SchoolFeedsList kind="calendar" title="Synced calendars" />
 
       <div className="mt-2">
         <button

@@ -11,6 +11,13 @@ const PROVIDER_LABELS: Record<string, string> = {
   MOODLE: "Moodle",
 };
 
+function feedLabel(feed: SchoolFeedView): string {
+  if (feed.provider === "ICS") {
+    return feed.host.toLowerCase().endsWith("calendar.google.com") ? "Google Calendar" : "Calendar link";
+  }
+  return (feed.provider && PROVIDER_LABELS[feed.provider]) || "School calendar";
+}
+
 function ago(iso: string): string {
   const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
   if (minutes < 1) return "just now";
@@ -40,6 +47,8 @@ function FeedRow({ feed }: { feed: SchoolFeedView }) {
       if (result.importId != null) {
         toast.success("Synced · new things are ready to review");
         navigate(`/imports/${result.importId}`);
+      } else if (feed.provider === "ICS" && result.eventsImported > 0) {
+        toast.success(`Synced · ${result.eventsImported} new event${result.eventsImported === 1 ? "" : "s"}`);
       } else {
         toast.success("Already up to date");
       }
@@ -59,11 +68,11 @@ function FeedRow({ feed }: { feed: SchoolFeedView }) {
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Could not stop syncing"),
   });
 
-  const label = (feed.provider && PROVIDER_LABELS[feed.provider]) || "School calendar";
+  const label = feedLabel(feed);
 
   return (
     <li className="rounded-lg p-3" style={{ border: "1px solid var(--line)" }}>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0">
           <div className="text-[13px] font-medium text-fg">{label}</div>
           <div className="truncate text-[12px] text-fg-3">{feed.host}</div>
@@ -109,20 +118,27 @@ function FeedRow({ feed }: { feed: SchoolFeedView }) {
   );
 }
 
-export default function SchoolFeedsList() {
+export default function SchoolFeedsList({
+  kind = "all",
+  title = "Saved links",
+}: {
+  kind?: "all" | "calendar";
+  title?: string;
+}) {
   const feedsQ = useQuery({
     queryKey: ["school-feeds"],
     queryFn: () => api.get<SchoolFeedList>("/school-feeds"),
   });
 
   const data = feedsQ.data;
-  if (!data || !data.available || data.feeds.length === 0) return null;
+  const feeds = (data?.feeds ?? []).filter((f) => kind === "all" || f.provider === "ICS");
+  if (!data || !data.available || feeds.length === 0) return null;
 
   return (
     <div className="mt-4">
-      <div className="text-[12px] font-medium text-fg-2">Saved links</div>
+      <div className="text-[12px] font-medium text-fg-2">{title}</div>
       <ul className="mt-2 space-y-2">
-        {data.feeds.map((feed) => (
+        {feeds.map((feed) => (
           <FeedRow key={feed.id} feed={feed} />
         ))}
       </ul>
