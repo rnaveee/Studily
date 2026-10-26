@@ -19,6 +19,7 @@ import Toggle from "../../components/Toggle";
 import SegmentedToggle from "../../components/SegmentedToggle";
 import DeleteAccountForm from "../../components/DeleteAccountForm";
 import CanvasImportForm from "../canvas/CanvasImportForm";
+import SchoolFeedsList from "../canvas/SchoolFeedsList";
 import type {
   AuthResponse,
   NotificationPrefs,
@@ -394,6 +395,8 @@ function IntegrationsSection() {
               <CanvasImportForm autoFocus onImported={() => setOpen(false)} />
             </div>
           )}
+
+          <SchoolFeedsList />
         </div>
       </div>
     </>

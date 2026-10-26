@@ -50,6 +50,9 @@ public class PublicUrlFetcher {
             }
             if (status != 200) {
                 close(response);
+                if (status == 401 || status == 403 || status == 404 || status == 410) {
+                    throw new DeadLinkException("That link returned HTTP " + status);
+                }
                 throw new BadRequestException("That link returned HTTP " + status);
             }
             String contentType = response.headers().firstValue("content-type").orElse("");

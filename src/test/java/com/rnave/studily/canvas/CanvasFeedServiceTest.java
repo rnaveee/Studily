@@ -81,7 +81,7 @@ class CanvasFeedServiceTest {
     }
 
     private FeedResult importText(String text) {
-        return service.importFeed(user, new FeedRequest(text, "America/Toronto", null));
+        return service.importFeed(user, new FeedRequest(text, "America/Toronto", null, false));
     }
 
     @Test

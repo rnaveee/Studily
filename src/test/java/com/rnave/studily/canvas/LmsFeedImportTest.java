@@ -90,7 +90,7 @@ class LmsFeedImportTest {
     }
 
     private FeedResult importText(String text) {
-        return service.importFeed(user, new FeedRequest(text, "America/Vancouver", null));
+        return service.importFeed(user, new FeedRequest(text, "America/Vancouver", null, false));
     }
 
     private static List<ParsedEvent> events(String name) {
@@ -290,7 +290,7 @@ class LmsFeedImportTest {
                 mock(SemesterRepository.class), fetcher);
 
         FeedResult result = fetching.importFeed(user, new FeedRequest(
-                "https://brightspace.example.edu/d2l/le/calendar/feed/user/feed.ics?token=t", null, null));
+                "https://brightspace.example.edu/d2l/le/calendar/feed/user/feed.ics?token=t", null, null, false));
 
         assertThat(result.provider()).isEqualTo("D2L");
         assertThat(result.eventsImported()).isEqualTo(1);

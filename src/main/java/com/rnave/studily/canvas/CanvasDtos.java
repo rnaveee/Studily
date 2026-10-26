@@ -8,7 +8,8 @@ public class CanvasDtos {
     public record FeedRequest(
             @NotBlank @Size(max = 4_000_000) String source,
             @Size(max = 64) String timeZone,
-            Long semesterId) {
+            Long semesterId,
+            Boolean keepSynced) {
     }
 
     public record FeedResult(

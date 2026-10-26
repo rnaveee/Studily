@@ -16,7 +16,7 @@ const IMPORTS = [
   "Your courses",
   "Assignments and their due dates",
   "Exams and quizzes",
-  "Updates whenever you import again",
+  "New assignments every few hours, automatically",
 ];
 
 export default function SchoolPage({ slug }: { slug: string }) {

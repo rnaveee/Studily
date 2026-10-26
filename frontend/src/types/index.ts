@@ -647,6 +647,21 @@ export interface CanvasFeedResult {
   provider: "CANVAS" | "D2L" | "MOODLE";
 }
 
+export interface SchoolFeedView {
+  id: number;
+  provider: "CANVAS" | "D2L" | "MOODLE" | null;
+  host: string;
+  lastSyncedAt: string | null;
+  lastSuccessAt: string | null;
+  lastError: string | null;
+  enabled: boolean;
+}
+
+export interface SchoolFeedList {
+  available: boolean;
+  feeds: SchoolFeedView[];
+}
+
 export interface AdminStatus {
   unlocked: boolean;
   totpEnabled: boolean;

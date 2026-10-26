@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "../../lib/api";
 import { toast } from "../../lib/toast";
-import type { CanvasFeedResult } from "../../types";
+import type { CanvasFeedResult, SchoolFeedList } from "../../types";
 
 export default function CanvasImportForm({
   onImported,
@@ -15,6 +15,12 @@ export default function CanvasImportForm({
 }) {
   const qc = useQueryClient();
   const [source, setSource] = useState("");
+
+  const feedsQ = useQuery({
+    queryKey: ["school-feeds"],
+    queryFn: () => api.get<SchoolFeedList>("/school-feeds"),
+  });
+  const autoSync = feedsQ.data?.available === true;
 
   const runImport = useMutation({
     mutationFn: () =>
@@ -30,6 +36,7 @@ export default function CanvasImportForm({
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["semesters"] });
       qc.invalidateQueries({ queryKey: ["onboarding"] });
+      qc.invalidateQueries({ queryKey: ["school-feeds"] });
 
       const courses = result.coursesCreated + result.coursesMatched;
       const parts = [`${courses} course${courses === 1 ? "" : "s"}`];
@@ -78,8 +85,9 @@ export default function CanvasImportForm({
         </li>
       </ul>
       <p className="text-[11px] leading-relaxed text-fg-3">
-        Copy the link and paste it here. Re-import any time to pick up new assignments — your
-        grades, weights and progress stay untouched.
+        {autoSync
+          ? "Copy the link and paste it here. Studily checks your link for new assignments every few hours. Your grades, weights and progress stay untouched."
+          : "Copy the link and paste it here. Re-import any time to pick up new assignments. Your grades, weights and progress stay untouched."}
       </p>
       <button type="submit" disabled={runImport.isPending} className="btn btn-primary">
         {runImport.isPending ? "Importing…" : submitLabel}
