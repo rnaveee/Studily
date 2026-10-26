@@ -50,6 +50,15 @@ class IcsWriterTest {
     }
 
     @Test
+    void write_declaresAnHourlyRefreshHintAndCalendarName() {
+        String ics = IcsWriter.write(List.of(), List.of());
+
+        assertThat(ics).contains("X-WR-CALNAME:Studily\r\n")
+                .contains("REFRESH-INTERVAL;VALUE=DURATION:PT1H\r\n")
+                .contains("X-PUBLISHED-TTL:PT1H\r\n");
+    }
+
+    @Test
     void write_escapesBareCarriageReturnsSoTitlesCannotInjectProperties() {
         CalendarEvent event = event();
         event.setTitle("Study\rATTENDEE:mailto:someone@example.com\rX-INJECTED:1");

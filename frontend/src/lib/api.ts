@@ -85,6 +85,7 @@ function guestStub(path: string): unknown {
   if (p === "/flashcard-sets") return demoFlashcardSets();
   if (p === "/todos") return demoTodos();
   if (p === "/todo-categories") return demoTodoCategories();
+  if (p === "/calendar/feed-link") return { exists: false, createdAt: null, lastFetchedAt: null };
   if (p === "/push/public-key") return { publicKey: null };
   if (p === "/settings/privacy") return { readReceipts: true, scheduleVisibility: "FRIENDS" };
   if (p === "/settings/notifications")

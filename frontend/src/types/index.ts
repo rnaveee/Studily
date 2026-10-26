@@ -584,6 +584,18 @@ export interface IcsImportResult {
   truncated: boolean;
 }
 
+export interface CalendarFeedCreated {
+  httpsUrl: string;
+  webcalUrl: string;
+  createdAt: string;
+}
+
+export interface CalendarFeedStatus {
+  exists: boolean;
+  createdAt: string | null;
+  lastFetchedAt: string | null;
+}
+
 export interface CanvasFeedResult {
   coursesCreated: number;
   coursesMatched: number;

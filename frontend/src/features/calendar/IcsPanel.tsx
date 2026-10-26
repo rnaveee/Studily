@@ -4,6 +4,7 @@ import { CalendarPlus, ChevronRight, Download, Upload } from "lucide-react";
 import { api } from "../../lib/api";
 import { useRequireAuth } from "../../lib/auth";
 import { toast } from "../../lib/toast";
+import CalendarFeedLink from "./CalendarFeedLink";
 import type { IcsImportResult } from "../../types";
 
 const FILE_STEPS = [
@@ -193,6 +194,8 @@ export default function IcsPanel() {
           </div>
         )}
       </div>
+
+      <CalendarFeedLink />
     </div>
   );
 }

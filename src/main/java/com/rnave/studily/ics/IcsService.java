@@ -97,7 +97,11 @@ public class IcsService {
 
     @Transactional(readOnly = true)
     public String export() {
-        Long userId = currentUser.id();
+        return exportFor(currentUser.id());
+    }
+
+    @Transactional(readOnly = true)
+    public String exportFor(Long userId) {
         return IcsWriter.write(
                 itemRepository.findByCourseUserId(userId),
                 eventRepository.findByUserIdOrderByStartAtAsc(userId));

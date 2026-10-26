@@ -27,6 +27,8 @@ public final class IcsWriter {
         line(sb, "CALSCALE", "GREGORIAN");
         line(sb, "METHOD", "PUBLISH");
         line(sb, "X-WR-CALNAME", "Studily");
+        line(sb, "REFRESH-INTERVAL;VALUE=DURATION", "PT1H");
+        line(sb, "X-PUBLISHED-TTL", "PT1H");
 
         String stamp = stamp(Instant.now());
 

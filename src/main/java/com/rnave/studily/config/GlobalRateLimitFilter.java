@@ -19,8 +19,12 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
 
     private static final String FLASHCARD_IMAGES = "/api/public/flashcard-images/";
 
+    private static final String CALENDAR_FEED = "/api/public/calendar/";
+
     private final SlidingWindowRateLimiter limiter = new SlidingWindowRateLimiter(120, WINDOW_MS);
     private final SlidingWindowRateLimiter imageLimiter = new SlidingWindowRateLimiter(600, WINDOW_MS);
+    private final SlidingWindowRateLimiter feedTokenLimiter = new SlidingWindowRateLimiter(30, WINDOW_MS);
+    private final SlidingWindowRateLimiter feedIpLimiter = new SlidingWindowRateLimiter(600, WINDOW_MS);
 
     @Override
     protected void doFilterInternal(
@@ -34,12 +38,34 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
+        String feedToken = feedToken(uri);
+        if (feedToken != null) {
+            if (!feedIpLimiter.tryConsume("ip:" + clientIp(request))
+                    || !feedTokenLimiter.tryConsume("feed:" + feedToken)) {
+                RateLimitResponses.reject(response, "Too many requests, please slow down.");
+                return;
+            }
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         SlidingWindowRateLimiter bucket = uri.startsWith(FLASHCARD_IMAGES) ? imageLimiter : limiter;
         if (!bucket.tryConsume(rateLimitKey(request))) {
             RateLimitResponses.reject(response, "Too many requests, please slow down.");
             return;
         }
         filterChain.doFilter(request, response);
+    }
+
+    static String feedToken(String uri) {
+        if (!uri.startsWith(CALENDAR_FEED)) {
+            return null;
+        }
+        String rest = uri.substring(CALENDAR_FEED.length());
+        if (rest.endsWith(".ics")) {
+            rest = rest.substring(0, rest.length() - 4);
+        }
+        return rest.length() > 128 ? rest.substring(0, 128) : rest;
     }
 
     private String rateLimitKey(HttpServletRequest request) {
@@ -63,5 +89,7 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
     void evictStale() {
         limiter.evictStale();
         imageLimiter.evictStale();
+        feedTokenLimiter.evictStale();
+        feedIpLimiter.evictStale();
     }
 }

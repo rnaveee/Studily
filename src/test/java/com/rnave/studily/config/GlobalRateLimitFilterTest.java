@@ -136,6 +136,56 @@ class GlobalRateLimitFilterTest {
         verify(filterChain).doFilter(freshIp, response);
     }
 
+    @Test
+    void calendarFeed_isKeyedPerTokenNotPerSharedIp() throws Exception {
+        for (int i = 0; i < 30; i++) {
+            filter.doFilterInternal(requestFor("/api/public/calendar/tokenA.ics", "64.233.0.1"),
+                    mock(HttpServletResponse.class), filterChain);
+        }
+        HttpServletResponse blocked = mock(HttpServletResponse.class);
+        when(blocked.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+        filter.doFilterInternal(requestFor("/api/public/calendar/tokenA.ics", "64.233.0.1"), blocked, filterChain);
+        verify(blocked).setStatus(429);
+
+        HttpServletRequest otherToken = requestFor("/api/public/calendar/tokenB.ics", "64.233.0.1");
+        HttpServletResponse ok = mock(HttpServletResponse.class);
+        filter.doFilterInternal(otherToken, ok, filterChain);
+        verify(ok, never()).setStatus(429);
+        verify(filterChain).doFilter(otherToken, ok);
+    }
+
+    @Test
+    void calendarFeed_doesNotDrainTheAnonymousIpBucket() throws Exception {
+        for (int i = 0; i < 100; i++) {
+            filter.doFilterInternal(requestFor("/api/public/calendar/t" + i + ".ics", "17.0.0.1"),
+                    mock(HttpServletResponse.class), filterChain);
+        }
+        HttpServletRequest api = requestFor("/api/courses", "17.0.0.1");
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        filter.doFilterInternal(api, response, filterChain);
+        verify(response, never()).setStatus(429);
+        verify(filterChain).doFilter(api, response);
+    }
+
+    @Test
+    void calendarFeed_floodOfRandomTokensFromOneIpIsStillBounded() throws Exception {
+        for (int i = 0; i < 700; i++) {
+            HttpServletResponse response = mock(HttpServletResponse.class);
+            when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+            filter.doFilterInternal(requestFor("/api/public/calendar/rand" + i + ".ics", "99.1.1.1"),
+                    response, filterChain);
+        }
+        verify(filterChain, times(600)).doFilter(any(), any());
+    }
+
+    @Test
+    void feedToken_extractsTheTokenOnlyForFeedPaths() {
+        org.assertj.core.api.Assertions.assertThat(GlobalRateLimitFilter.feedToken("/api/public/calendar/abc-_1.ics"))
+                .isEqualTo("abc-_1");
+        org.assertj.core.api.Assertions.assertThat(GlobalRateLimitFilter.feedToken("/api/courses")).isNull();
+        org.assertj.core.api.Assertions.assertThat(GlobalRateLimitFilter.feedToken("/api/public/flashcard-images/x")).isNull();
+    }
+
     private HttpServletRequest requestFor(String uri, String ip) {
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getRequestURI()).thenReturn(uri);

@@ -3,6 +3,8 @@ package com.rnave.studily.ics;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+import java.time.Instant;
+
 public class IcsDtos {
 
     public record ImportRequest(
@@ -16,5 +18,11 @@ public class IcsDtos {
             int updated,
             int skipped,
             boolean truncated) {
+    }
+
+    public record FeedLinkCreated(String httpsUrl, String webcalUrl, Instant createdAt) {
+    }
+
+    public record FeedLinkStatus(boolean exists, Instant createdAt, Instant lastFetchedAt) {
     }
 }
