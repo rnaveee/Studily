@@ -1,19 +1,21 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
 import { toast } from "../../lib/toast";
-import type { CanvasFeedResult, SchoolFeedList } from "../../types";
+import type { FeedStageResult, SchoolFeedList } from "../../types";
 
 export default function CanvasImportForm({
   onImported,
   autoFocus,
   submitLabel = "Import courses",
 }: {
-  onImported?: (result: CanvasFeedResult) => void;
+  onImported?: (result: FeedStageResult) => void;
   autoFocus?: boolean;
   submitLabel?: string;
 }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [source, setSource] = useState("");
 
   const feedsQ = useQuery({
@@ -24,7 +26,7 @@ export default function CanvasImportForm({
 
   const runImport = useMutation({
     mutationFn: () =>
-      api.post<CanvasFeedResult>("/canvas/feed", {
+      api.post<FeedStageResult>("/canvas/feed", {
         source: source.trim(),
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       }),
@@ -38,16 +40,19 @@ export default function CanvasImportForm({
       qc.invalidateQueries({ queryKey: ["onboarding"] });
       qc.invalidateQueries({ queryKey: ["school-feeds"] });
 
-      const courses = result.coursesCreated + result.coursesMatched;
-      const parts = [`${courses} course${courses === 1 ? "" : "s"}`];
-      if (result.itemsImported > 0) parts.push(`${result.itemsImported} added`);
-      if (result.itemsUpdated > 0) parts.push(`${result.itemsUpdated} updated`);
-      if (result.eventsImported > 0) parts.push(`${result.eventsImported} events`);
-      toast.success(parts.join(" · "));
       if (result.truncated) {
-        toast.info("That feed was large, so only the first 2000 entries were imported.");
+        toast.info("That feed was large, so only the first 2000 entries were read.");
       }
       onImported?.(result);
+      if (result.importId != null) {
+        navigate(`/imports/${result.importId}`);
+      } else {
+        toast.success(
+          result.itemsUpdated + result.eventsImported > 0
+            ? "Everything is already up to date. Changed deadlines were refreshed."
+            : "Everything is already up to date",
+        );
+      }
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Import failed"),
   });

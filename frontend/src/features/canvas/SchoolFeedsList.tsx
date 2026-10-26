@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { api, ApiError } from "../../lib/api";
 import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
-import type { CanvasFeedResult, SchoolFeedList, SchoolFeedView } from "../../types";
+import type { FeedStageResult, SchoolFeedList, SchoolFeedView } from "../../types";
 
 const PROVIDER_LABELS: Record<string, string> = {
   CANVAS: "Canvas",
@@ -22,6 +23,7 @@ function ago(iso: string): string {
 function FeedRow({ feed }: { feed: SchoolFeedView }) {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const navigate = useNavigate();
 
   const refreshAll = () => {
     qc.invalidateQueries({ queryKey: ["school-feeds"] });
@@ -32,11 +34,15 @@ function FeedRow({ feed }: { feed: SchoolFeedView }) {
   };
 
   const sync = useMutation({
-    mutationFn: () => api.post<CanvasFeedResult>(`/school-feeds/${feed.id}/sync`),
+    mutationFn: () => api.post<FeedStageResult>(`/school-feeds/${feed.id}/sync`),
     onSuccess: (result) => {
       refreshAll();
-      const changed = result.itemsImported + result.itemsUpdated + result.eventsImported;
-      toast.success(changed > 0 ? `Synced · ${result.itemsImported} added` : "Already up to date");
+      if (result.importId != null) {
+        toast.success("Synced · new things are ready to review");
+        navigate(`/imports/${result.importId}`);
+      } else {
+        toast.success("Already up to date");
+      }
     },
     onError: (e) => {
       qc.invalidateQueries({ queryKey: ["school-feeds"] });

@@ -693,16 +693,78 @@ export interface CalendarFeedStatus {
   lastFetchedAt: string | null;
 }
 
-export interface CanvasFeedResult {
-  coursesCreated: number;
-  coursesMatched: number;
-  itemsImported: number;
+export type FeedProvider = "CANVAS" | "D2L" | "MOODLE";
+
+export interface FeedStageResult {
+  importId: number | null;
+  provider: FeedProvider;
+  newCourses: number;
+  newItems: number;
   itemsUpdated: number;
   eventsImported: number;
-  eventsUpdated: number;
-  skipped: number;
   truncated: boolean;
-  provider: "CANVAS" | "D2L" | "MOODLE";
+}
+
+export interface StagedItem {
+  key: string;
+  externalUid: string;
+  kind: "ITEM" | "EVENT";
+  type: ItemType | null;
+  title: string;
+  dueAt: string;
+  place: string | null;
+}
+
+export interface StagedCourseView {
+  key: string;
+  canvasCourseId: number | null;
+  lmsProvider: string | null;
+  lmsCourseId: string | null;
+  name: string;
+  code: string | null;
+  color: string;
+  semesterId: number | null;
+  linkedCourseId: number | null;
+  matchCourseId: number | null;
+  items: StagedItem[];
+  match: Course | null;
+  linked: Course | null;
+}
+
+export interface FeedImportView {
+  id: number;
+  provider: FeedProvider | null;
+  status: "PENDING" | "APPLIED" | "DISMISSED";
+  createdAt: string;
+  courses: StagedCourseView[];
+}
+
+export type CourseChoice = "ADD" | "MERGE" | "SKIP";
+export type ItemChoice = "ADD" | "REPLACE" | "SKIP";
+
+export interface CourseDecision {
+  key: string;
+  decision: CourseChoice;
+  overrides?: CourseRequest | null;
+  targetCourseId?: number | null;
+}
+
+export interface ItemDecision {
+  key: string;
+  decision: ItemChoice;
+}
+
+export interface ApplyRequest {
+  courses: CourseDecision[];
+  items: ItemDecision[];
+}
+
+export interface ApplyResult {
+  coursesCreated: number;
+  coursesMerged: number;
+  itemsAdded: number;
+  itemsReplaced: number;
+  itemsSkipped: number;
 }
 
 export interface SchoolFeedView {

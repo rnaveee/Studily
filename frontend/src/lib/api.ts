@@ -65,6 +65,7 @@ const GUEST_EMPTY_LISTS = new Set([
   "/calendar/events",
   "/calendar/categories",
   "/courses/matches",
+  "/courses/similar",
   "/friends",
   "/friends/incoming",
   "/friends/pending",
@@ -96,6 +97,11 @@ function guestStub(path: string): unknown {
   if (p === "/settings/privacy") return { readReceipts: true, scheduleVisibility: "FRIENDS" };
   if (p === "/settings/notifications")
     return { messages: true, classReminders: true, eventDayOf: true, itemWeekAhead: true, examDayOf: true, examCountdown: true };
+
+  const feedImport = p.match(/^\/imports\/(\d+)$/);
+  if (feedImport) {
+    return { id: Number(feedImport[1]), provider: "CANVAS", status: "APPLIED", createdAt: new Date().toISOString(), courses: [] };
+  }
 
   const course = p.match(/^\/courses\/(\d+)(\/\w+)?$/);
   if (course) {
