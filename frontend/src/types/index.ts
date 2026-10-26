@@ -752,6 +752,30 @@ export interface CourseDecision {
 export interface ItemDecision {
   key: string;
   decision: ItemChoice;
+  existingId?: number | null;
+  existingKind?: "ITEM" | "EVENT" | null;
+}
+
+export interface CourseDecisions {
+  courses: CourseDecision[];
+}
+
+export interface ExistingItem {
+  id: number;
+  kind: "ITEM" | "EVENT";
+  title: string;
+  type: ItemType | null;
+  dueAt: string;
+  courseId: number;
+  courseName: string;
+  courseCode: string | null;
+}
+
+export interface ImportConflict {
+  itemKey: string;
+  courseKey: string;
+  incoming: StagedItem;
+  existing: ExistingItem;
 }
 
 export interface ApplyRequest {

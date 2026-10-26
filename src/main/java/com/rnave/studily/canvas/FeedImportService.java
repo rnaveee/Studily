@@ -41,6 +41,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 @Service
 public class FeedImportService {
@@ -104,19 +106,17 @@ public class FeedImportService {
         for (CourseDecision d : req.courses()) {
             courseDecisions.put(d.key(), d);
         }
-        Map<String, ItemChoice> itemDecisions = new HashMap<>();
+        Map<String, ItemDecision> itemDecisions = new HashMap<>();
         if (req.items() != null) {
             for (ItemDecision d : req.items()) {
-                if (d.decision() == ItemChoice.REPLACE) {
-                    throw new BadRequestException("Replacing an existing deadline is not supported yet");
-                }
-                itemDecisions.put(d.key(), d.decision());
+                itemDecisions.put(d.key(), d);
             }
         }
 
         int created = 0;
         int merged = 0;
         int added = 0;
+        int replaced = 0;
         int skipped = 0;
         for (StagedCourse staged : payload.courses()) {
             Course target = staged.linkedCourseId() == null ? null
@@ -143,9 +143,15 @@ public class FeedImportService {
                 }
             }
             for (StagedItem item : staged.items()) {
-                if (itemDecisions.get(item.key()) == ItemChoice.SKIP) {
+                ItemDecision itemDecision = itemDecisions.get(item.key());
+                ItemChoice choice = itemDecision == null ? ItemChoice.ADD : itemDecision.decision();
+                if (choice == ItemChoice.SKIP) {
                     ignore(userId, FeedIgnoredRef.Kind.ITEM, item.externalUid());
                     skipped++;
+                } else if (choice == ItemChoice.REPLACE) {
+                    if (replaceItem(user, target, item, itemDecision)) {
+                        replaced++;
+                    }
                 } else if (addItem(user, target, item)) {
                     added++;
                 }
@@ -156,7 +162,7 @@ public class FeedImportService {
         entity.setUpdatedAt(Instant.now());
         importRepository.save(entity);
         notificationRepository.markRead(userId, NotificationType.FEED_REVIEW, id);
-        return new ApplyResult(created, merged, added, 0, skipped);
+        return new ApplyResult(created, merged, added, replaced, skipped);
     }
 
     private Course addCourse(Long userId, StagedCourse staged, CourseRequest overrides) {
@@ -266,6 +272,66 @@ public class FeedImportService {
         created.setDueAt(item.dueAt());
         itemRepository.save(created);
         return true;
+    }
+
+    private boolean replaceItem(User user, Course target, StagedItem incoming, ItemDecision decision) {
+        if (decision.existingId() == null || decision.existingKind() == null) {
+            throw new BadRequestException("Choose which existing deadline to replace");
+        }
+        Long userId = user.getId();
+        AcademicItem existingItem = null;
+        CalendarEvent existingEvent = null;
+        if (decision.existingKind() == StagedKind.ITEM) {
+            existingItem = itemRepository.findByIdAndCourseUserId(decision.existingId(), userId)
+                    .orElseThrow(() -> new NotFoundException("Item not found"));
+        } else {
+            existingEvent = eventRepository.findByIdAndUserId(decision.existingId(), userId)
+                    .orElseThrow(() -> new NotFoundException("Event not found"));
+        }
+        if (uidUsedElsewhere(userId, incoming.externalUid(), decision)) {
+            return false;
+        }
+        if (existingItem != null && incoming.kind() == StagedKind.ITEM) {
+            existingItem.setTitle(incoming.title());
+            existingItem.setDueAt(incoming.dueAt());
+            existingItem.setExternalUid(incoming.externalUid());
+            if (!Objects.equals(existingItem.getCourse().getId(), target.getId())) {
+                existingItem.setCourse(target);
+                existingItem.setGradeCategory(null);
+            }
+            itemRepository.save(existingItem);
+            return true;
+        }
+        if (existingEvent != null && incoming.kind() == StagedKind.EVENT) {
+            existingEvent.setTitle(incoming.title());
+            existingEvent.setStartAt(incoming.dueAt());
+            if (incoming.place() != null) {
+                existingEvent.setPlace(incoming.place());
+            }
+            existingEvent.setExternalUid(incoming.externalUid());
+            existingEvent.setCourse(target);
+            eventRepository.save(existingEvent);
+            return true;
+        }
+        if (existingItem != null) {
+            itemRepository.delete(existingItem);
+        } else {
+            eventRepository.delete(existingEvent);
+        }
+        addItem(user, target, incoming);
+        return true;
+    }
+
+    private boolean uidUsedElsewhere(Long userId, String externalUid, ItemDecision decision) {
+        Optional<AcademicItem> item = itemRepository
+                .findFirstByCourseUserIdAndExternalUidOrderByIdAsc(userId, externalUid);
+        if (item.isPresent() && !(decision.existingKind() == StagedKind.ITEM
+                && Objects.equals(item.get().getId(), decision.existingId()))) {
+            return true;
+        }
+        Optional<CalendarEvent> event = eventRepository.findByUserIdAndExternalUid(userId, externalUid);
+        return event.isPresent() && !(decision.existingKind() == StagedKind.EVENT
+                && Objects.equals(event.get().getId(), decision.existingId()));
     }
 
     private void ignore(Long userId, FeedIgnoredRef.Kind kind, String ref) {

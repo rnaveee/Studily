@@ -96,7 +96,26 @@ public class FeedImportDtos {
 
     public record ItemDecision(
             @NotBlank @Size(max = 255) String key,
-            @NotNull ItemChoice decision) {
+            @NotNull ItemChoice decision,
+            Long existingId,
+            StagedKind existingKind) {
+    }
+
+    public record CourseDecisions(@Valid @NotNull @Size(max = 500) List<CourseDecision> courses) {
+    }
+
+    public record ExistingItem(
+            Long id,
+            StagedKind kind,
+            String title,
+            ItemType type,
+            Instant dueAt,
+            Long courseId,
+            String courseName,
+            String courseCode) {
+    }
+
+    public record Conflict(String itemKey, String courseKey, StagedItem incoming, ExistingItem existing) {
     }
 
     public record ApplyRequest(
