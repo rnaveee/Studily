@@ -6,7 +6,7 @@ import { formatGpa } from "../../lib/gpa";
 import { formatPercent, gradeColor } from "../../lib/grades";
 import type { Semester, SemesterStats } from "../../types";
 
-export default function GradesCard() {
+export default function GradesCard({ className = "" }: { className?: string }) {
   const statsQ = useQuery({
     queryKey: ["semesters", "stats"],
     queryFn: () => api.get<SemesterStats[]>("/semesters/stats"),
@@ -19,7 +19,7 @@ export default function GradesCard() {
   const stats = statsQ.data?.find((s) => s.semesterId === currentQ.data?.id) ?? statsQ.data?.[0];
 
   return (
-    <Link to="/grades" className="card flex items-center gap-3 p-4 transition-colors hover:bg-surface-hi">
+    <Link to="/grades" className={`card flex items-center gap-3 p-4 transition-colors hover:bg-surface-hi ${className}`}>
       <span
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
         style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}

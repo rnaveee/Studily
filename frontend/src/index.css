@@ -444,6 +444,47 @@ textarea.input { resize: vertical; }
 }
 }
 
+.dash-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 48rem) {
+  .dash-grid {
+    grid-template-columns: 14rem minmax(0, 1fr);
+    grid-template-rows: 1fr auto;
+    grid-template-areas:
+      "today week"
+      "cal   week"
+      "due   due"
+      "exams exams"
+      "todo  todo"
+      "side  side";
+  }
+}
+
+@media (min-width: 64rem) {
+  .dash-grid {
+    grid-template-columns: 14rem minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "today week week"
+      "cal   week week"
+      "due   due  exams"
+      "todo  todo side";
+  }
+}
+
+@media (min-width: 96rem) {
+  .dash-grid {
+    grid-template-columns: 14rem minmax(0, 1fr) minmax(0, 1fr) 22rem;
+    grid-template-areas:
+      "today week week  due"
+      "cal   week week  due"
+      "todo  todo exams side";
+  }
+}
+
 .pomo-ring {
   transition: stroke-dashoffset 0.35s linear, stroke 0.4s ease;
 }

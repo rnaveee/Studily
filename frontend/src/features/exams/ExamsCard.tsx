@@ -43,18 +43,47 @@ function urgencyColor(daysLeft: number): string {
   return "var(--fg-2)";
 }
 
-export default function ExamsCard({ semesterId }: { semesterId?: number | null }) {
-  const examsQ = useQuery({
+export function useUpcomingExams(semesterId?: number | null) {
+  return useQuery({
     queryKey: ["exams", "upcoming", semesterId ?? null],
     queryFn: () =>
       api.get<UpcomingExam[]>(semesterId != null ? `/exams/upcoming?semesterId=${semesterId}` : "/exams/upcoming"),
   });
+}
 
+export default function ExamsCard({
+  semesterId,
+  className = "",
+}: {
+  semesterId?: number | null;
+  className?: string;
+}) {
+  const examsQ = useUpcomingExams(semesterId);
   const exams = examsQ.data ?? [];
-  if (exams.length === 0) return null;
+
+  if (exams.length === 0) {
+    return (
+      <div className={`card p-4 ${className}`}>
+        <div className="flex items-center gap-3">
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+            style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}
+          >
+            <GraduationCap size={16} className="text-accent" />
+          </span>
+          <div className="min-w-0">
+            <div className="text-[14px] font-medium text-fg">Upcoming exams</div>
+            <div className="text-[12px] text-fg-3">
+              {examsQ.isLoading ? "Loading…" : "No exams coming up. Exams in your courses get countdowns here."}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="card p-4">
+    <div className={`card p-4 ${className}`}>
       <div className="mb-3 flex items-center gap-3">
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"

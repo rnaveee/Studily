@@ -329,7 +329,11 @@ export default function Layout() {
           <div
             ref={outletRef}
             className={`mx-auto flex min-h-full ${
-              pathname === "/learn" ? "max-w-[96rem] xl:pb-16" : "max-w-5xl"
+              pathname === "/learn"
+                ? "max-w-[96rem] xl:pb-16"
+                : pathname === "/dashboard" || pathname === "/calendar"
+                  ? "max-w-5xl xl:max-w-[96rem] xl:pb-16"
+                  : "max-w-5xl"
             } flex-col px-4 pt-6 md:px-10 md:pt-8 md:pb-24 ${
               typing ? "pb-0" : "pb-24"
             }`}

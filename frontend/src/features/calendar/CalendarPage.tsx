@@ -121,113 +121,125 @@ export default function CalendarPage() {
         />
       )}
 
-      <IcsPanel />
-
-      <div className="card overflow-hidden">
-        <div className="grid grid-cols-7 border-b border-line">
-          {DAY_LABELS.map((d) => (
-            <div
-              key={d}
-              className="px-1 py-2 text-center text-[11px] font-semibold uppercase tracking-wider text-fg-3"
-            >
-              {d}
+      <div className="flex flex-col gap-5">
+        <div
+          className={`flex flex-col gap-5 xl:grid ${
+            entries.length > 0 ? "xl:grid-cols-[minmax(0,1fr)_24rem]" : ""
+          }`}
+        >
+          <div className="card overflow-hidden">
+            <div className="grid grid-cols-7 border-b border-line">
+              {DAY_LABELS.map((d) => (
+                <div
+                  key={d}
+                  className="px-1 py-2 text-center text-[11px] font-semibold uppercase tracking-wider text-fg-3"
+                >
+                  {d}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        <div className="grid grid-cols-7">
-          {cells.map((day, i) => {
-            const isToday = isCurrentMonth && day === today.getDate();
-            const dayEntries = day ? (byDay.get(toDayStr(day)) ?? []) : [];
-            return (
-              <div
-                key={i}
-                onClick={() => day && requireAuth(() => setSelectedDay(toDayStr(day)))}
-                className={[
-                  "min-h-[6.5rem] border-b border-r border-line p-1 transition-colors",
-                  day
-                    ? "cursor-pointer hover:bg-surface-hi"
-                    : "pointer-events-none bg-surface-hi/40",
-                ].join(" ")}
-              >
-                {day && (
-                  <>
-                    <div
-                      className={[
-                        "mb-1 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-medium",
-                        isToday ? "bg-accent text-accent-fg" : "text-fg-2",
-                      ].join(" ")}
-                    >
-                      {day}
-                    </div>
-                    <div className="space-y-1">
-                      {dayEntries.slice(0, MAX_BLOCKS_PER_DAY).map((en) => (
+            <div className="grid grid-cols-7">
+              {cells.map((day, i) => {
+                const isToday = isCurrentMonth && day === today.getDate();
+                const dayEntries = day ? (byDay.get(toDayStr(day)) ?? []) : [];
+                return (
+                  <div
+                    key={i}
+                    onClick={() => day && requireAuth(() => setSelectedDay(toDayStr(day)))}
+                    className={[
+                      "min-h-[6.5rem] border-b border-r border-line p-1 transition-colors",
+                      day
+                        ? "cursor-pointer hover:bg-surface-hi"
+                        : "pointer-events-none bg-surface-hi/40",
+                    ].join(" ")}
+                  >
+                    {day && (
+                      <>
                         <div
-                          key={en.key}
-                          className="flex items-center gap-1 overflow-hidden rounded-[4px] py-[3px] pr-1"
-                          style={{ background: tintBackground(en.tint) }}
-                          title={en.subtitle ? `${en.title} · ${en.subtitle}` : en.title}
+                          className={[
+                            "mb-1 flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-medium",
+                            isToday ? "bg-accent text-accent-fg" : "text-fg-2",
+                          ].join(" ")}
                         >
-                          <span
-                            className="h-3.5 w-[3px] shrink-0 rounded-full"
-                            style={{ background: en.accent }}
-                          />
-                          <span className="truncate text-[10px] font-medium leading-tight text-fg">
+                          {day}
+                        </div>
+                        <div className="space-y-1">
+                          {dayEntries.slice(0, MAX_BLOCKS_PER_DAY).map((en) => (
+                            <div
+                              key={en.key}
+                              className="flex items-center gap-1 overflow-hidden rounded-[4px] py-[3px] pr-1"
+                              style={{ background: tintBackground(en.tint) }}
+                              title={en.subtitle ? `${en.title} · ${en.subtitle}` : en.title}
+                            >
+                              <span
+                                className="h-3.5 w-[3px] shrink-0 rounded-full"
+                                style={{ background: en.accent }}
+                              />
+                              <span className="truncate text-[10px] font-medium leading-tight text-fg">
+                                {en.title}
+                              </span>
+                            </div>
+                          ))}
+                          {dayEntries.length > MAX_BLOCKS_PER_DAY && (
+                            <div className="pl-0.5 text-[10px] text-fg-3">
+                              +{dayEntries.length - MAX_BLOCKS_PER_DAY} more
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {entries.length > 0 && (
+            <div className="relative">
+              <div className="flex flex-col xl:absolute xl:inset-0">
+                <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
+                  {label}
+                </h2>
+                <ul className="card min-h-0 flex-1 divide-y divide-line overflow-y-auto">
+                  {entries.map((en) => (
+                    <li key={en.key}>
+                      <button
+                        onClick={() => setSelectedEntry(en)}
+                        className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-surface-hi"
+                      >
+                        <span
+                          className="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                          style={{ backgroundColor: en.accent, color: readableOn(en.accent) }}
+                        >
+                          {en.badge}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[14px] font-medium leading-snug text-fg">
                             {en.title}
                           </span>
-                        </div>
-                      ))}
-                      {dayEntries.length > MAX_BLOCKS_PER_DAY && (
-                        <div className="pl-0.5 text-[10px] text-fg-3">
-                          +{dayEntries.length - MAX_BLOCKS_PER_DAY} more
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
+                          {(en.subtitle ?? en.place) && (
+                            <span className="mt-0.5 block truncate text-[12px] text-fg-3">
+                              {en.subtitle ?? en.place}
+                            </span>
+                          )}
+                        </span>
+                        <span className="shrink-0 whitespace-nowrap pt-0.5 text-[12px] tabular-nums text-fg-3">
+                          {formatDateTime(en.when)}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            );
-          })}
+            </div>
+          )}
+        </div>
+
+        <div className="order-first xl:order-none">
+          <IcsPanel />
         </div>
       </div>
-
-      {entries.length > 0 && (
-        <div>
-          <h2 className="mb-3 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
-            {label}
-          </h2>
-          <ul className="card divide-y divide-line">
-            {entries.map((en) => (
-              <li key={en.key}>
-                <button
-                  onClick={() => setSelectedEntry(en)}
-                  className="flex w-full items-start gap-3 px-4 py-3.5 text-left transition-colors hover:bg-surface-hi"
-                >
-                  <span
-                    className="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                    style={{ backgroundColor: en.accent, color: readableOn(en.accent) }}
-                  >
-                    {en.badge}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-medium leading-snug text-fg">
-                      {en.title}
-                    </span>
-                    {(en.subtitle ?? en.place) && (
-                      <span className="mt-0.5 block truncate text-[12px] text-fg-3">
-                        {en.subtitle ?? en.place}
-                      </span>
-                    )}
-                  </span>
-                  <span className="shrink-0 whitespace-nowrap pt-0.5 text-[12px] tabular-nums text-fg-3">
-                    {formatDateTime(en.when)}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       {selectedDay && (
         <DayModal
