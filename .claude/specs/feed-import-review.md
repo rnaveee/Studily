@@ -74,11 +74,22 @@ If nothing new is staged, no import row and no notification.
 CourseDecisions { courses: CourseDecision[] }
 CourseDecision  { key, decision: "ADD" | "MERGE" | "SKIP", targetCourseId: Long | null, overrides: CourseRequest | null }
 ApplyRequest    { courses: CourseDecision[], items: ItemDecision[] }
-ItemDecision    { key, decision: "ADD" | "REPLACE" | "SKIP" }
+ItemDecision    { key, decision: "ADD" | "REPLACE" | "SKIP",
+                  existingId: Long | null, existingKind: "ITEM" | "EVENT" | null }   // both required for REPLACE
 Conflict        { itemKey, courseKey, incoming: StagedItem,
                   existing: { id, kind: "ITEM"|"EVENT", title, type, dueAt, courseId, courseName, courseCode } }
 ApplyResult     { coursesCreated, coursesMerged, itemsAdded, itemsReplaced, itemsSkipped }
 ```
+
+Conflicts: for every staged item of a course that will be ADDed, MERGEd or is linked, existing AcademicItems and
+CalendarEvents of the target course(s) whose externalUid is null or different and whose normalized title (lowercase,
+punctuation to spaces, collapsed whitespace) equals the incoming one. ADD checks the courses CourseMatcher finds,
+MERGE the chosen target (targetCourseId ?? matchCourseId), linked the linked course; SKIPped courses and items already
+imported by externalUid are left out. Closest dueAt wins, each existing record is used once, sorted by existing dueAt.
+REPLACE: same-kind updates title/dueAt (events: place) and stamps externalUid, keeping grades/status/weight and moving the
+record to the target course (grade category cleared when the course changes); a different kind deletes the existing
+record and adds the incoming one. existingId must belong to the user, else 404. If the incoming externalUid already
+belongs to another record the replace does nothing. `ApplyResult.itemsReplaced` counts replacements.
 
 All `/api/imports/{id}` endpoints load with `FeedImportRepository.findByIdAndUserId` → 404 otherwise.
 Apply/dismiss on a non-PENDING import → 409. Linked courses (`linkedCourseId`) need no decision.

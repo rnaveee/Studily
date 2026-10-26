@@ -287,7 +287,7 @@ class FeedImportServiceTest {
         when(courseRepository.findByIdAndUserId(3L, 7L)).thenReturn(Optional.of(target));
 
         ApplyResult result = service.apply(user, 5L, request(decision(CourseChoice.MERGE),
-                new ItemDecision("canvas-assignment-1", ItemChoice.SKIP)));
+                new ItemDecision("canvas-assignment-1", ItemChoice.SKIP, null, null)));
 
         ArgumentCaptor<FeedIgnoredRef> refs = ArgumentCaptor.forClass(FeedIgnoredRef.class);
         verify(ignoredRefRepository).save(refs.capture());
@@ -345,9 +345,10 @@ class FeedImportServiceTest {
     }
 
     @Test
-    void replaceIsNotSupportedYet() {
-        assertThatThrownBy(() -> service.apply(user, 5L, request(decision(CourseChoice.ADD),
-                new ItemDecision("canvas-assignment-1", ItemChoice.REPLACE))))
+    void replaceWithoutAnExistingRecordIsABadRequest() {
+        when(courseRepository.findByIdAndUserId(3L, 7L)).thenReturn(Optional.of(existing(3L, "ENSC252", null)));
+        assertThatThrownBy(() -> service.apply(user, 5L, request(decision(CourseChoice.MERGE),
+                new ItemDecision("canvas-assignment-1", ItemChoice.REPLACE, null, null))))
                 .isInstanceOf(BadRequestException.class);
     }
 
