@@ -7,8 +7,7 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
-  { version: 73, date: "2026-10-25", summary: "Widened the calendar on desktop and put the month's list right beside it." },
-  { version: 72, date: "2026-10-25", summary: "Rearranged the dashboard so your week, deadlines, exams, to-dos and shortcuts fit with far less scrolling." },
+  { version: 72, date: "2026-10-25", summary: "UI updates." },
   { version: 71, date: "2026-10-25", summary: "Added exam countdowns and study plans that spread your flashcards over the days before each exam." },
   { version: 70, date: "2026-10-25", summary: "Imported Canvas, Brightspace and Moodle calendars now stay in sync on their own." },
   { version: 69, date: "2026-10-25", summary: "Added flashcard folders and studying a whole folder or course at once." },
