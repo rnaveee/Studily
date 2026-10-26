@@ -7,6 +7,14 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
+  { version: 71, date: "2026-10-25", summary: "Added exam countdowns and study plans that spread your flashcards over the days before each exam." },
+  { version: 70, date: "2026-10-25", summary: "Imported Canvas, Brightspace and Moodle calendars now stay in sync on their own." },
+  { version: 69, date: "2026-10-25", summary: "Added flashcard folders and studying a whole folder or course at once." },
+  { version: 68, date: "2026-10-25", summary: "Added a grades and GPA tracker with saved target grades and UVic, SFU and UBC GPA scales." },
+  { version: 67, date: "2026-10-25", summary: "Added Brightspace and Moodle import alongside Canvas." },
+  { version: 66, date: "2026-10-25", summary: "Added a calendar link you can subscribe to in Google or Apple Calendar so your deadlines show up there." },
+  { version: 65, date: "2026-10-25", summary: "Added pages for UVic, SFU and UBC students that show how to bring in your Brightspace or Canvas calendar." },
+  { version: 64, date: "2026-10-25", summary: "Made the grade calculator easier to find from the dashboard, course pages and the Study page." },
   { version: 63, date: "2026-10-25", summary: "Redesigned the Study page so your level, study sessions, flashcards, to-dos and tools fit on one screen." },
   { version: 62, date: "2026-10-24", summary: "Added an install prompt that shows what you get from installing Studily as an app." },
   { version: 61, date: "2026-10-23", summary: "Added a feedback survey. Answer it for a diamond chest and the Feedback badge." },
