@@ -8,6 +8,9 @@ import com.rnave.studily.config.ForbiddenException;
 import com.rnave.studily.friend.FriendDtos.FriendRequestDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipStatus;
+import com.rnave.studily.notification.NotificationDispatcher;
+import com.rnave.studily.notification.NotificationRepository;
+import com.rnave.studily.notification.NotificationType;
 import com.rnave.studily.progress.Flair;
 import com.rnave.studily.progress.FlairRepository;
 import com.rnave.studily.progress.ProgressService;
@@ -29,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -42,6 +46,8 @@ class FriendServiceTest {
     private CurrentUser currentUser;
     private ProgressService progressService;
     private FlairRepository flairRepository;
+    private NotificationDispatcher notificationDispatcher;
+    private NotificationRepository notificationRepository;
     private FriendService friendService;
 
     private User me;
@@ -54,8 +60,11 @@ class FriendServiceTest {
         currentUser = mock(CurrentUser.class);
         progressService = mock(ProgressService.class);
         flairRepository = mock(FlairRepository.class);
+        notificationDispatcher = mock(NotificationDispatcher.class);
+        notificationRepository = mock(NotificationRepository.class);
         friendService = new FriendService(friendRequestRepository, userRepository, currentUser, progressService,
-                new Flairs(flairRepository, Clock.systemUTC(), "https://badges.studily.ca/flairs/v1"));
+                new Flairs(flairRepository, Clock.systemUTC(), "https://badges.studily.ca/flairs/v1"),
+                notificationDispatcher, notificationRepository);
 
         me = new User();
         me.setId(1L);
@@ -199,6 +208,114 @@ class FriendServiceTest {
         assertThatThrownBy(() -> friendService.sendRequest(2L))
                 .isInstanceOf(ConflictException.class);
         verify(progressService, never()).onFriendshipAccepted(anyLong(), anyLong());
+    }
+
+    @Test
+    void sendRequest_newRequest_notifiesAddressee() {
+        when(currentUser.entity()).thenReturn(me);
+        me.setName("Ryan");
+        when(userRepository.findById(2L)).thenReturn(Optional.of(other));
+        when(friendRequestRepository.findBetween(1L, 2L)).thenReturn(Optional.empty());
+        when(friendRequestRepository.save(any())).thenAnswer(inv -> {
+            FriendRequest r = inv.getArgument(0);
+            r.setId(55L);
+            return r;
+        });
+
+        friendService.sendRequest(2L);
+
+        verify(notificationDispatcher).dispatch(other, NotificationType.FRIEND_REQUEST, 55L,
+                "FRIEND:55", "Ryan sent you a friend request", "Open Friends to accept or decline.", "/friends");
+    }
+
+    @Test
+    void sendRequest_withoutName_usesUsernameInTitle() {
+        when(currentUser.entity()).thenReturn(me);
+        me.setName(" ");
+        me.setUsername("ryan_n");
+        when(userRepository.findById(2L)).thenReturn(Optional.of(other));
+        when(friendRequestRepository.findBetween(1L, 2L)).thenReturn(Optional.empty());
+        when(friendRequestRepository.save(any())).thenAnswer(inv -> {
+            FriendRequest r = inv.getArgument(0);
+            r.setId(56L);
+            return r;
+        });
+
+        friendService.sendRequest(2L);
+
+        verify(notificationDispatcher).dispatch(eq(other), eq(NotificationType.FRIEND_REQUEST), eq(56L),
+                eq("FRIEND:56"), eq("ryan_n sent you a friend request"), any(), eq("/friends"));
+    }
+
+    @Test
+    void sendRequest_whenNotificationFails_stillCreatesRequest() {
+        when(currentUser.entity()).thenReturn(me);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(other));
+        when(friendRequestRepository.findBetween(1L, 2L)).thenReturn(Optional.empty());
+        when(friendRequestRepository.save(any())).thenAnswer(inv -> {
+            FriendRequest r = inv.getArgument(0);
+            r.setId(57L);
+            return r;
+        });
+        doThrow(new IllegalStateException("push down")).when(notificationDispatcher)
+                .dispatch(any(), any(), any(), any(), any(), any(), any());
+
+        FriendRequestDto result = friendService.sendRequest(2L);
+
+        assertThat(result.status()).isEqualTo(FriendRequestStatus.PENDING);
+        verify(friendRequestRepository).save(any());
+    }
+
+    @Test
+    void sendRequest_autoAccept_marksTheirRequestNotificationRead() {
+        when(currentUser.entity()).thenReturn(me);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(other));
+
+        FriendRequest existing = new FriendRequest();
+        existing.setId(12L);
+        existing.setRequester(other);
+        existing.setAddressee(me);
+        existing.setStatus(FriendRequestStatus.PENDING);
+        when(friendRequestRepository.findBetween(1L, 2L)).thenReturn(Optional.of(existing));
+        when(friendRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        friendService.sendRequest(2L);
+
+        verify(notificationRepository).markReadByTypeAndRelatedItemId(NotificationType.FRIEND_REQUEST, 12L);
+        verify(notificationDispatcher, never()).dispatch(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void accept_marksRequestNotificationRead() {
+        when(currentUser.id()).thenReturn(2L);
+
+        FriendRequest req = new FriendRequest();
+        req.setId(10L);
+        req.setRequester(me);
+        req.setAddressee(other);
+        req.setStatus(FriendRequestStatus.PENDING);
+        when(friendRequestRepository.findById(10L)).thenReturn(Optional.of(req));
+        when(friendRequestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        friendService.accept(10L);
+
+        verify(notificationRepository).markReadByTypeAndRelatedItemId(NotificationType.FRIEND_REQUEST, 10L);
+    }
+
+    @Test
+    void remove_marksRequestNotificationRead() {
+        when(currentUser.id()).thenReturn(2L);
+
+        FriendRequest req = new FriendRequest();
+        req.setId(10L);
+        req.setRequester(me);
+        req.setAddressee(other);
+        when(friendRequestRepository.findById(10L)).thenReturn(Optional.of(req));
+
+        friendService.remove(10L);
+
+        verify(friendRequestRepository).delete(req);
+        verify(notificationRepository).markReadByTypeAndRelatedItemId(NotificationType.FRIEND_REQUEST, 10L);
     }
 
     @Test

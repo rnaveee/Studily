@@ -38,6 +38,12 @@ public class Notification {
     @Column(nullable = false)
     private String message;
 
+    @Column(length = 160)
+    private String title;
+
+    @Column(length = 500)
+    private String url;
+
     private Long relatedItemId;
 
     @Column(length = 120)

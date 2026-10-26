@@ -43,6 +43,8 @@ class NotificationDispatcherTest {
         verify(notificationRepository).saveAndFlush(saved.capture());
         assertThat(saved.getValue().getDedupKey()).isEqualTo("KEY:1");
         assertThat(saved.getValue().getMessage()).isEqualTo("CMPT 300 starts at 10:30");
+        assertThat(saved.getValue().getTitle()).isEqualTo("Class in 1 hour");
+        assertThat(saved.getValue().getUrl()).isEqualTo("/");
 
         ArgumentCaptor<PushPayload> payload = ArgumentCaptor.forClass(PushPayload.class);
         verify(webPushSender).sendToUser(eq(1L), payload.capture(),

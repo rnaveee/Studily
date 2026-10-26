@@ -29,6 +29,7 @@ public class AdminOpsService {
 
     private static final int MAX_TITLE = 80;
     private static final int MAX_BODY = 240;
+    private static final int MAX_URL = 500;
 
     private final JdbcTemplate jdbc;
     private final UserRepository userRepository;
@@ -103,6 +104,9 @@ public class AdminOpsService {
         String title = trimmed(request.title(), MAX_TITLE, "Title");
         String body = trimmed(request.body(), MAX_BODY, "Message");
         String url = request.url() == null || request.url().isBlank() ? "/dashboard" : request.url().trim();
+        if (url.length() > MAX_URL) {
+            throw new BadRequestException("Link must be " + MAX_URL + " characters or fewer");
+        }
 
         List<Long> targets = request.onlyActive()
                 ? jdbc.queryForList(
@@ -120,6 +124,8 @@ public class AdminOpsService {
             notification.setUser(user);
             notification.setType(NotificationType.ANNOUNCEMENT);
             notification.setMessage(body);
+            notification.setTitle(title);
+            notification.setUrl(url);
             notification.setDedupKey(dedupKey);
             notificationRepository.save(notification);
             webPushSender.sendToUser(

@@ -16,10 +16,15 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/notifications")
 public class NotificationController {
+
+    static final List<NotificationType> CENTER_TYPES = List.of(
+            NotificationType.ANNOUNCEMENT, NotificationType.FRIEND_REQUEST, NotificationType.FEED_REVIEW);
 
     private final NotificationRepository notificationRepository;
     private final CurrentUser currentUser;
@@ -41,6 +46,31 @@ public class NotificationController {
                 slice.hasNext());
     }
 
+    @GetMapping("/center")
+    public PageResponse<NotificationDto> center(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Slice<Notification> slice = notificationRepository.findByUserIdAndTypeInOrderByCreatedAtDescIdDesc(
+                currentUser.id(), CENTER_TYPES,
+                PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
+        return new PageResponse<>(
+                slice.getContent().stream().map(NotificationDto::from).toList(),
+                slice.hasNext());
+    }
+
+    @GetMapping("/unread-count")
+    public Map<String, Long> unreadCount() {
+        return Map.of("count", notificationRepository.countByUserIdAndReadFalseAndTypeIn(
+                currentUser.id(), CENTER_TYPES));
+    }
+
+    @PostMapping("/read-all")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Transactional
+    public void readAll() {
+        notificationRepository.markAllRead(currentUser.id(), CENTER_TYPES);
+    }
+
     @PostMapping("/{id}/read")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Transactional
@@ -51,11 +81,11 @@ public class NotificationController {
     }
 
     public record NotificationDto(
-            Long id, NotificationType type, String message, Long relatedItemId,
-            boolean read, Instant createdAt) {
+            Long id, NotificationType type, String title, String message, String url,
+            Long relatedItemId, boolean read, Instant createdAt) {
 
         static NotificationDto from(Notification n) {
-            return new NotificationDto(n.getId(), n.getType(), n.getMessage(),
+            return new NotificationDto(n.getId(), n.getType(), n.getTitle(), n.getMessage(), n.getUrl(),
                     n.getRelatedItemId(), n.isRead(), n.getCreatedAt());
         }
     }

@@ -31,6 +31,8 @@ public class NotificationDispatcher {
         n.setRelatedItemId(relatedItemId);
         n.setDedupKey(dedupKey);
         n.setMessage(body);
+        n.setTitle(title);
+        n.setUrl(url);
         try {
             notificationRepository.saveAndFlush(n);
         } catch (DataIntegrityViolationException e) {

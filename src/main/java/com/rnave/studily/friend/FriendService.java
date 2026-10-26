@@ -10,6 +10,9 @@ import com.rnave.studily.friend.FriendDtos.FriendRequestDto;
 import com.rnave.studily.friend.FriendDtos.PublicUserDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipDto;
 import com.rnave.studily.friend.FriendDtos.RelationshipStatus;
+import com.rnave.studily.notification.NotificationDispatcher;
+import com.rnave.studily.notification.NotificationRepository;
+import com.rnave.studily.notification.NotificationType;
 import com.rnave.studily.progress.ProgressService;
 import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
@@ -28,19 +31,27 @@ import java.util.stream.Collectors;
 @Service
 public class FriendService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FriendService.class);
+
     private final FriendRequestRepository friendRequestRepository;
     private final UserRepository userRepository;
     private final CurrentUser currentUser;
     private final ProgressService progressService;
     private final Flairs flairs;
+    private final NotificationDispatcher notificationDispatcher;
+    private final NotificationRepository notificationRepository;
 
     public FriendService(FriendRequestRepository friendRequestRepository, UserRepository userRepository,
-                          CurrentUser currentUser, ProgressService progressService, Flairs flairs) {
+                          CurrentUser currentUser, ProgressService progressService, Flairs flairs,
+                          NotificationDispatcher notificationDispatcher,
+                          NotificationRepository notificationRepository) {
         this.friendRequestRepository = friendRequestRepository;
         this.userRepository = userRepository;
         this.currentUser = currentUser;
         this.progressService = progressService;
         this.flairs = flairs;
+        this.notificationDispatcher = notificationDispatcher;
+        this.notificationRepository = notificationRepository;
     }
 
     @Transactional(readOnly = true)
@@ -140,13 +151,16 @@ public class FriendService {
             req.setRespondedAt(Instant.now());
             FriendRequest saved = friendRequestRepository.save(req);
             progressService.onFriendshipAccepted(req.getRequester().getId(), req.getAddressee().getId());
+            markRequestNotificationRead(req.getId());
             return toDto(saved, me.getId());
         }
 
         FriendRequest req = new FriendRequest();
         req.setRequester(me);
         req.setAddressee(target);
-        return toDto(friendRequestRepository.save(req), me.getId());
+        FriendRequest saved = friendRequestRepository.save(req);
+        notifyAddressee(me, target, saved.getId());
+        return toDto(saved, me.getId());
     }
 
     @Transactional
@@ -163,13 +177,34 @@ public class FriendService {
         req.setRespondedAt(Instant.now());
         FriendRequest saved = friendRequestRepository.save(req);
         progressService.onFriendshipAccepted(req.getRequester().getId(), req.getAddressee().getId());
+        markRequestNotificationRead(req.getId());
         return toDto(saved, me);
     }
 
     @Transactional
     public void remove(Long requestId) {
         Long me = currentUser.id();
-        friendRequestRepository.delete(requireParticipant(requestId, me));
+        FriendRequest req = requireParticipant(requestId, me);
+        friendRequestRepository.delete(req);
+        markRequestNotificationRead(req.getId());
+    }
+
+    private void notifyAddressee(User requester, User addressee, Long requestId) {
+        String who = requester.getName() == null || requester.getName().isBlank()
+                ? requester.getUsername() : requester.getName();
+        try {
+            notificationDispatcher.dispatch(addressee, NotificationType.FRIEND_REQUEST, requestId,
+                    "FRIEND:" + requestId,
+                    who + " sent you a friend request",
+                    "Open Friends to accept or decline.",
+                    "/friends");
+        } catch (RuntimeException e) {
+            log.error("Could not send friend request notification {} to user {}", requestId, addressee.getId(), e);
+        }
+    }
+
+    private void markRequestNotificationRead(Long requestId) {
+        notificationRepository.markReadByTypeAndRelatedItemId(NotificationType.FRIEND_REQUEST, requestId);
     }
 
     private FriendRequest requireParticipant(Long requestId, Long me) {

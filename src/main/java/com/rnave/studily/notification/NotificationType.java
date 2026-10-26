@@ -7,7 +7,9 @@ public enum NotificationType {
     ITEM_WEEK_AHEAD(86_400),
     EXAM_TODAY(21_600),
     EXAM_COUNTDOWN(43_200),
-    ANNOUNCEMENT(86_400);
+    ANNOUNCEMENT(86_400),
+    FRIEND_REQUEST(86_400),
+    FEED_REVIEW(86_400);
 
     private final int pushTtlSeconds;
 
