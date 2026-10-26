@@ -90,8 +90,8 @@ public class CourseParseService {
         return new ParseAvailabilityDto(true, limits.monthlyLimit(), limits.remaining(), limits.paused());
     }
 
-    public CourseDraftDto parse(List<MultipartFile> files, String text, Long semesterId, String timeZone) {
-        ExtractedInput input = extractor.extract(files, text);
+    public CourseDraftDto parse(List<MultipartFile> files, String[] pages, String text, Long semesterId, String timeZone) {
+        ExtractedInput input = extractor.extract(files, text, pages);
         if (input.isEmpty()) {
             throw new BadRequestException("Add a file or paste some text first.");
         }
@@ -115,8 +115,8 @@ public class CourseParseService {
         return present(parseId, outcome.draft());
     }
 
-    public ScheduleDraftDto parseSchedule(List<MultipartFile> files, Long semesterId, String timeZone) {
-        ExtractedInput input = extractor.extract(files, null);
+    public ScheduleDraftDto parseSchedule(List<MultipartFile> files, String[] pages, Long semesterId, String timeZone) {
+        ExtractedInput input = extractor.extract(files, null, pages);
         if (input.isEmpty()) {
             throw new BadRequestException("Add a screenshot of your schedule first.");
         }

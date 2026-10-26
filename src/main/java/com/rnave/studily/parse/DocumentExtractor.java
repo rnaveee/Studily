@@ -30,6 +30,7 @@ public class DocumentExtractor {
     static final int MAX_FILES = 5;
     static final long MAX_TOTAL_BYTES = 8L * 1024 * 1024;
     static final int MAX_PDF_PAGES = 20;
+    static final int MAX_SOURCE_PAGES = 500;
     static final int MAX_TEXT_CHARS = 25_000;
     static final int MAX_SOURCE_DIMENSION = 10_000;
     static final long MAX_SOURCE_PIXELS = 40_000_000L;
@@ -48,9 +49,21 @@ public class DocumentExtractor {
     private static final byte[] WEBP_TAG = {0x57, 0x45, 0x42, 0x50};
 
     public ExtractedInput extract(List<MultipartFile> files, String pastedText) {
-        List<MultipartFile> present = files == null
-                ? List.of()
-                : files.stream().filter(f -> f != null && !f.isEmpty()).toList();
+        return extract(files, pastedText, null);
+    }
+
+    public ExtractedInput extract(List<MultipartFile> files, String pastedText, String[] pageSpecs) {
+        List<MultipartFile> sent = files == null ? List.of() : files;
+        List<PageSelection> allSelections = PageSelection.forFiles(pageSpecs, sent.size());
+        List<MultipartFile> present = new ArrayList<>();
+        List<PageSelection> selections = new ArrayList<>();
+        for (int i = 0; i < sent.size(); i++) {
+            MultipartFile f = sent.get(i);
+            if (f != null && !f.isEmpty()) {
+                present.add(f);
+                selections.add(allSelections.get(i));
+            }
+        }
 
         if (present.size() > MAX_FILES) {
             throw new BadRequestException("Please upload at most " + MAX_FILES + " files at a time.");
@@ -67,11 +80,11 @@ public class DocumentExtractor {
             text.append(truncate(pastedText.strip())).append("\n\n");
         }
 
-        for (MultipartFile file : present) {
-            byte[] bytes = read(file);
+        for (int i = 0; i < present.size(); i++) {
+            byte[] bytes = read(present.get(i));
             Kind kind = sniff(bytes);
             switch (kind) {
-                case PDF -> readPdf(bytes, text, images);
+                case PDF -> readPdf(bytes, selections.get(i), text, images);
                 case IMAGE -> {
                     if (images.size() < MAX_TOTAL_IMAGES) {
                         images.add(normalizeImage(bytes));
@@ -90,19 +103,29 @@ public class DocumentExtractor {
         return new ExtractedInput(joined.strip(), List.copyOf(images));
     }
 
-    private void readPdf(byte[] bytes, StringBuilder text, List<ExtractedImage> images) {
+    private void readPdf(byte[] bytes, PageSelection selection, StringBuilder text, List<ExtractedImage> images) {
         Extracted extracted = withTimeout(() -> {
             try (PDDocument doc = Loader.loadPDF(new RandomAccessReadBuffer(bytes))) {
-                int pages = doc.getNumberOfPages();
-                if (pages > MAX_PDF_PAGES) {
-                    throw new BadRequestException(
-                            "That PDF has " + pages + " pages. Upload one with at most " + MAX_PDF_PAGES + ".");
+                int count = doc.getNumberOfPages();
+                if (count > MAX_SOURCE_PAGES || (selection.all() && count > MAX_PDF_PAGES)) {
+                    throw new BadRequestException("That PDF has " + count + " pages. Pick at most " + MAX_PDF_PAGES
+                            + " pages to read, or upload a shorter file.");
+                }
+                List<Integer> pages = selection.resolve(count, "That PDF", "page");
+                if (pages.size() > MAX_PDF_PAGES) {
+                    throw new BadRequestException("You picked " + pages.size() + " pages. Pick at most "
+                            + MAX_PDF_PAGES + ".");
                 }
                 PDFTextStripper stripper = new PDFTextStripper();
                 stripper.setSortByPosition(true);
-                String body = stripper.getText(doc);
-                if (body != null && body.strip().length() >= (long) pages * MIN_CHARS_PER_PAGE) {
-                    return new Extracted(body, List.of());
+                StringBuilder body = new StringBuilder();
+                for (int page : pages) {
+                    stripper.setStartPage(page);
+                    stripper.setEndPage(page);
+                    body.append(stripper.getText(doc));
+                }
+                if (body.toString().strip().length() >= (long) pages.size() * MIN_CHARS_PER_PAGE) {
+                    return new Extracted(body.toString(), List.of());
                 }
                 return new Extracted(null, render(doc, pages, MAX_TOTAL_IMAGES - images.size()));
             }
@@ -114,12 +137,12 @@ public class DocumentExtractor {
         images.addAll(extracted.images());
     }
 
-    private List<ExtractedImage> render(PDDocument doc, int pages, int remaining) throws Exception {
+    private List<ExtractedImage> render(PDDocument doc, List<Integer> pages, int remaining) throws Exception {
         PDFRenderer renderer = new PDFRenderer(doc);
         List<ExtractedImage> out = new ArrayList<>();
-        int limit = Math.min(Math.min(pages, MAX_RENDERED_PAGES), Math.max(remaining, 0));
+        int limit = Math.min(Math.min(pages.size(), MAX_RENDERED_PAGES), Math.max(remaining, 0));
         for (int i = 0; i < limit; i++) {
-            BufferedImage page = renderer.renderImageWithDPI(i, RENDER_DPI);
+            BufferedImage page = renderer.renderImageWithDPI(pages.get(i) - 1, RENDER_DPI);
             out.add(encode(downscale(page)));
         }
         return out;

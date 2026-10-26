@@ -6,6 +6,7 @@ import com.rnave.studily.config.WebpSize;
 import com.rnave.studily.flashcard.generate.StudyDocument.Figure;
 import com.rnave.studily.flashcard.generate.StudyDocument.Page;
 import com.rnave.studily.flashcard.generate.StudyDocument.Picture;
+import com.rnave.studily.parse.PageSelection;
 import jakarta.annotation.PreDestroy;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.cos.COSName;
@@ -82,6 +83,7 @@ public class StudyDocumentReader {
 
     static final int READER_VERSION = 1;
     static final int MAX_PAGES = 80;
+    static final int MAX_SOURCE_PAGES = 500;
     static final int MAX_TEXT_CHARS = 150_000;
     static final int MAX_FIGURES = 30;
     static final int MAX_RENDERS = 40;
@@ -117,10 +119,14 @@ public class StudyDocumentReader {
     }
 
     public StudyDocument read(String fileName, byte[] bytes) {
+        return read(fileName, bytes, PageSelection.ALL);
+    }
+
+    public StudyDocument read(String fileName, byte[] bytes, PageSelection selection) {
         FileKind kind = FileSniffer.sniff(bytes);
         Future<StudyDocument> future;
         try {
-            future = executor.submit(() -> parse(fileName, kind, bytes));
+            future = executor.submit(() -> parse(fileName, kind, bytes, selection));
         } catch (RejectedExecutionException e) {
             throw new TooManyRequestsException("Lots of documents are being read right now. Try again in a minute.");
         }
@@ -142,10 +148,10 @@ public class StudyDocumentReader {
         }
     }
 
-    StudyDocument parse(String fileName, FileKind kind, byte[] bytes) throws Exception {
+    StudyDocument parse(String fileName, FileKind kind, byte[] bytes, PageSelection selection) throws Exception {
         StudyDocument doc = switch (kind) {
-            case PDF -> readPdf(fileName, bytes);
-            case PPTX -> readPptx(fileName, bytes);
+            case PDF -> readPdf(fileName, bytes, selection);
+            case PPTX -> readPptx(fileName, bytes, selection);
             case DOCX -> readDocx(fileName, bytes);
             case PNG, JPEG -> readPhoto(fileName, kind, bytes);
             case WEBP -> readWebp(fileName, bytes);
@@ -161,35 +167,32 @@ public class StudyDocumentReader {
         return doc;
     }
 
-    private StudyDocument readPdf(String fileName, byte[] bytes) throws IOException {
+    private StudyDocument readPdf(String fileName, byte[] bytes, PageSelection selection) throws IOException {
         try (PDDocument doc = Loader.loadPDF(new RandomAccessReadBuffer(bytes), "",
                 MemoryUsageSetting.setupMixed(PDF_MEMORY_BYTES).streamCache)) {
             int count = doc.getNumberOfPages();
             if (count == 0) {
                 throw new BadRequestException(fileName + " has no pages.");
             }
-            if (count > MAX_PAGES) {
-                throw new BadRequestException(fileName + " has " + count + " pages. Upload one with at most "
-                        + MAX_PAGES + ", or split it into parts.");
-            }
+            List<Integer> numbers = selected(fileName, count, selection, "page");
             PDFTextStripper stripper = new PDFTextStripper();
             stripper.setSortByPosition(true);
             List<String> texts = new ArrayList<>();
             List<List<Candidate>> candidates = new ArrayList<>();
             Map<String, Set<Integer>> pagesByHash = new HashMap<>();
-            for (int i = 0; i < count; i++) {
-                stripper.setStartPage(i + 1);
-                stripper.setEndPage(i + 1);
+            for (int number : numbers) {
+                stripper.setStartPage(number);
+                stripper.setEndPage(number);
                 texts.add(clean(stripper.getText(doc)));
-                List<Candidate> onPage = pdfImages(doc.getPage(i));
+                List<Candidate> onPage = pdfImages(doc.getPage(number - 1));
                 candidates.add(onPage);
                 for (Candidate c : onPage) {
-                    pagesByHash.computeIfAbsent(c.hash(), h -> new LinkedHashSet<>()).add(i + 1);
+                    pagesByHash.computeIfAbsent(c.hash(), h -> new LinkedHashSet<>()).add(number);
                 }
             }
             List<Figure> figures = new ArrayList<>();
             Set<String> seen = new LinkedHashSet<>();
-            for (int i = 0; i < count && figures.size() < MAX_FIGURES; i++) {
+            for (int i = 0; i < numbers.size() && figures.size() < MAX_FIGURES; i++) {
                 for (Candidate c : candidates.get(i)) {
                     if (figures.size() >= MAX_FIGURES) {
                         break;
@@ -199,16 +202,18 @@ public class StudyDocumentReader {
                     }
                     Picture picture = pdfPicture(c.image());
                     if (picture != null) {
-                        figures.add(new Figure(figures.size() + 1, i + 1, picture));
+                        figures.add(new Figure(figures.size() + 1, numbers.get(i), picture));
                     }
                 }
             }
-            Set<Integer> renderPages = visualPages(texts, figures);
+            Set<Integer> renderPages = visualPages(numbers, texts, figures);
             PDFRenderer renderer = new PDFRenderer(doc);
             List<Page> pages = new ArrayList<>();
-            for (int i = 0; i < count; i++) {
-                Picture render = renderPages.contains(i + 1) ? renderPdfPage(renderer, doc.getPage(i), i) : null;
-                pages.add(new Page(i + 1, texts.get(i), render));
+            for (int i = 0; i < numbers.size(); i++) {
+                int number = numbers.get(i);
+                Picture render = renderPages.contains(number)
+                        ? renderPdfPage(renderer, doc.getPage(number - 1), number - 1) : null;
+                pages.add(new Page(number, texts.get(i), render));
             }
             return new StudyDocument(fileName, FileKind.PDF, "Page", pages, figures);
         } catch (InvalidPasswordException e) {
@@ -275,21 +280,18 @@ public class StudyDocumentReader {
         }
     }
 
-    private StudyDocument readPptx(String fileName, byte[] bytes) throws IOException {
+    private StudyDocument readPptx(String fileName, byte[] bytes, PageSelection selection) throws IOException {
         try (XMLSlideShow show = new XMLSlideShow(new ByteArrayInputStream(bytes))) {
             List<XSLFSlide> slides = show.getSlides();
             if (slides.isEmpty()) {
                 throw new BadRequestException(fileName + " has no slides.");
             }
-            if (slides.size() > MAX_PAGES) {
-                throw new BadRequestException(fileName + " has " + slides.size() + " slides. Upload one with at most "
-                        + MAX_PAGES + ", or split it into parts.");
-            }
+            List<Integer> numbers = selected(fileName, slides.size(), selection, "slide");
             List<String> texts = new ArrayList<>();
             List<List<XSLFPictureData>> pictures = new ArrayList<>();
             Map<String, Set<Integer>> slidesByHash = new HashMap<>();
-            for (int i = 0; i < slides.size(); i++) {
-                XSLFSlide slide = slides.get(i);
+            for (int number : numbers) {
+                XSLFSlide slide = slides.get(number - 1);
                 StringBuilder text = new StringBuilder();
                 List<XSLFPictureData> onSlide = new ArrayList<>();
                 collect(slide.getShapes(), text, onSlide);
@@ -300,12 +302,12 @@ public class StudyDocumentReader {
                 texts.add(clean(text.toString()));
                 pictures.add(onSlide);
                 for (XSLFPictureData data : onSlide) {
-                    slidesByHash.computeIfAbsent(checksum(data), h -> new LinkedHashSet<>()).add(i + 1);
+                    slidesByHash.computeIfAbsent(checksum(data), h -> new LinkedHashSet<>()).add(number);
                 }
             }
             List<Figure> figures = new ArrayList<>();
             Set<String> seen = new LinkedHashSet<>();
-            for (int i = 0; i < slides.size() && figures.size() < MAX_FIGURES; i++) {
+            for (int i = 0; i < numbers.size() && figures.size() < MAX_FIGURES; i++) {
                 for (XSLFPictureData data : pictures.get(i)) {
                     if (figures.size() >= MAX_FIGURES) {
                         break;
@@ -316,16 +318,17 @@ public class StudyDocumentReader {
                     }
                     Picture picture = officePicture(data.getContentType(), data.getData());
                     if (picture != null) {
-                        figures.add(new Figure(figures.size() + 1, i + 1, picture));
+                        figures.add(new Figure(figures.size() + 1, numbers.get(i), picture));
                     }
                 }
             }
-            Set<Integer> renderSlides = visualPages(texts, figures);
+            Set<Integer> renderSlides = visualPages(numbers, texts, figures);
             Dimension size = show.getPageSize();
             List<Page> pages = new ArrayList<>();
-            for (int i = 0; i < slides.size(); i++) {
-                Picture render = renderSlides.contains(i + 1) ? renderSlide(slides.get(i), size) : null;
-                pages.add(new Page(i + 1, texts.get(i), render));
+            for (int i = 0; i < numbers.size(); i++) {
+                int number = numbers.get(i);
+                Picture render = renderSlides.contains(number) ? renderSlide(slides.get(number - 1), size) : null;
+                pages.add(new Page(number, texts.get(i), render));
             }
             return new StudyDocument(fileName, FileKind.PPTX, "Slide", pages, figures);
         }
@@ -533,17 +536,42 @@ public class StudyDocumentReader {
                 && (contentType.equals("image/png") || contentType.equals("image/jpeg"));
     }
 
+    private static List<Integer> selected(String fileName, int count, PageSelection selection, String unit) {
+        if (count > MAX_SOURCE_PAGES || (selection.all() && count > MAX_PAGES)) {
+            throw new BadRequestException(fileName + " has " + count + " " + unit + "s. Pick at most " + MAX_PAGES
+                    + " " + unit + "s to read, or split it into parts.");
+        }
+        List<Integer> numbers = selection.resolve(count, fileName, unit);
+        if (numbers.size() > MAX_PAGES) {
+            throw new BadRequestException("You picked " + numbers.size() + " " + unit + "s of " + fileName
+                    + ". Pick at most " + MAX_PAGES + ".");
+        }
+        return numbers;
+    }
+
     static Set<Integer> visualPages(List<String> texts, List<Figure> figures) {
+        List<Integer> numbers = new ArrayList<>();
+        for (int i = 0; i < texts.size(); i++) {
+            numbers.add(i + 1);
+        }
+        return visualPages(numbers, texts, figures);
+    }
+
+    static Set<Integer> visualPages(List<Integer> numbers, List<String> texts, List<Figure> figures) {
         Set<Integer> withFigures = new LinkedHashSet<>();
         figures.forEach(f -> withFigures.add(f.page()));
         List<Integer> visual = new ArrayList<>();
         for (int i = 0; i < texts.size(); i++) {
-            if (texts.get(i).length() < VISUAL_TEXT_CHARS || withFigures.contains(i + 1)) {
-                visual.add(i + 1);
+            if (texts.get(i).length() < VISUAL_TEXT_CHARS || withFigures.contains(numbers.get(i))) {
+                visual.add(i);
             }
         }
-        visual.sort(Comparator.comparingInt(page -> texts.get(page - 1).length()));
-        return new LinkedHashSet<>(visual.subList(0, Math.min(visual.size(), MAX_RENDERS)));
+        visual.sort(Comparator.comparingInt(i -> texts.get(i).length()));
+        Set<Integer> out = new LinkedHashSet<>();
+        for (int i : visual.subList(0, Math.min(visual.size(), MAX_RENDERS))) {
+            out.add(numbers.get(i));
+        }
+        return out;
     }
 
     static String clean(String text) {

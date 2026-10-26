@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FileText, Image as ImageIcon, Upload, X } from "lucide-react";
 import { formatBytes } from "../../lib/format";
+import { countPages } from "./pageCount";
 
 export const MAX_FILES = 5;
 export const MAX_TOTAL_BYTES = 8 * 1024 * 1024;
@@ -40,6 +41,57 @@ function extensionOf(name: string): string {
   return dot >= 0 ? name.slice(dot + 1).toLowerCase() : "";
 }
 
+interface PageRange {
+  start: string;
+  end: string;
+}
+
+const pageRanges = new WeakMap<File, PageRange>();
+const pageCounts = new WeakMap<File, number | null>();
+
+export function pageUnit(file: File): "page" | "slide" | null {
+  const ext = extensionOf(file.name);
+  if (file.type === "application/pdf" || ext === "pdf") return "page";
+  if (ext === "pptx") return "slide";
+  return null;
+}
+
+function rangeOf(file: File): PageRange {
+  return pageRanges.get(file) ?? { start: "", end: "" };
+}
+
+function resolveRange(file: File): { spec: string; error: string | null } {
+  const unit = pageUnit(file);
+  const { start, end } = rangeOf(file);
+  const s = start.trim();
+  const e = end.trim().toLowerCase();
+  if (!unit || (!s && !e)) return { spec: "", error: null };
+  if (s && !/^\d+$/.test(s)) return { spec: "", error: `The first box takes a ${unit} number.` };
+  if (e && e !== "end" && !/^\d+$/.test(e)) {
+    return { spec: "", error: `The second box takes a ${unit} number or "end".` };
+  }
+  const first = s ? Number(s) : 1;
+  const last = !e || e === "end" ? null : Number(e);
+  if (first < 1 || last === 0) return { spec: "", error: `${unit === "page" ? "Pages" : "Slides"} start at 1.` };
+  if (last !== null && last < first) return { spec: "", error: `The range can't end before ${unit} ${first}.` };
+  const count = pageCounts.get(file);
+  if (count && (first > count || (last !== null && last > count))) {
+    return { spec: "", error: `This file only has ${count} ${unit}${count === 1 ? "" : "s"}. Pick between 1 and ${count}.` };
+  }
+  return { spec: `${first}-${last ?? "end"}`, error: null };
+}
+
+export function appendFiles(form: FormData, files: File[]) {
+  files.forEach((file) => {
+    form.append("files", file);
+    form.append("pages", resolveRange(file).spec);
+  });
+}
+
+export function invalidPageRange(files: File[]): boolean {
+  return files.some((file) => resolveRange(file).error !== null);
+}
+
 export default function ParseDropzone({
   files,
   onChange,
@@ -52,6 +104,21 @@ export default function ParseDropzone({
   const [dragging, setDragging] = useState(false);
   const [pasted, setPasted] = useState(false);
   const addRef = useRef<(incoming: File[]) => void>(() => {});
+  const latest = useRef({ files, onChange });
+  latest.current = { files, onChange };
+
+  useEffect(() => {
+    for (const file of files) {
+      const unit = pageUnit(file);
+      if (!unit || pageCounts.has(file)) continue;
+      pageCounts.set(file, null);
+      countPages(file, unit).then((count) => {
+        pageCounts.set(file, count);
+        const { files: current, onChange: update } = latest.current;
+        if (count !== null && current.includes(file)) update([...current]);
+      });
+    }
+  }, [files]);
 
   function addFiles(incoming: File[]) {
     onError(null);
@@ -158,29 +225,99 @@ export default function ParseDropzone({
 
       {files.length > 0 && (
         <ul className="space-y-1.5">
-          {files.map((file, index) => (
+          {files.map((file, index) => {
+            const unit = pageUnit(file);
+            const range = rangeOf(file);
+            const error = unit ? resolveRange(file).error : null;
+            const count = pageCounts.get(file);
+            const setRange = (next: Partial<PageRange>) => {
+              pageRanges.set(file, { ...range, ...next });
+              onChange([...files]);
+            };
+            const boxStyle = (bad: boolean) => ({
+              width: 64,
+              padding: "3px 8px",
+              fontSize: 12,
+              textAlign: "center" as const,
+              borderColor: bad ? "var(--red)" : undefined,
+            });
+            return (
             <li
               key={`${file.name}-${index}`}
-              className="flex items-center gap-2 rounded-lg px-2.5 py-2"
+              className="rounded-lg px-2.5 py-2"
               style={{ background: "var(--surface-hi)" }}
             >
-              {file.type.startsWith("image/") ? (
-                <ImageIcon size={14} className="shrink-0 text-fg-3" />
-              ) : (
-                <FileText size={14} className="shrink-0 text-fg-3" />
+              <div className="flex items-center gap-2">
+                {file.type.startsWith("image/") ? (
+                  <ImageIcon size={14} className="shrink-0 text-fg-3" />
+                ) : (
+                  <FileText size={14} className="shrink-0 text-fg-3" />
+                )}
+                <span className="min-w-0 flex-1 truncate text-[12px] text-fg-2">{file.name}</span>
+                <span className="shrink-0 text-[11px] text-fg-3">{formatBytes(file.size)}</span>
+                <button
+                  type="button"
+                  onClick={() => onChange(files.filter((_, i) => i !== index))}
+                  aria-label={`Remove ${file.name}`}
+                  className="shrink-0 rounded p-1 text-fg-3 transition-colors hover:text-red"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+              {unit && (
+                <div className="mt-1.5 pl-[22px]">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span id={`pages-${index}`} className="text-[11px] text-fg-3">
+                      {unit === "page" ? "Pages" : "Slides"}
+                    </span>
+                    <input
+                      className="input"
+                      value={range.start}
+                      onChange={(e) => setRange({ start: e.target.value })}
+                      placeholder="1"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      aria-label={`First ${unit} of ${file.name}`}
+                      aria-describedby={`pages-${index}`}
+                      aria-invalid={!!error}
+                      style={boxStyle(!!error)}
+                    />
+                    <span className="text-[12px] text-fg-3" aria-hidden>
+                      –
+                    </span>
+                    <input
+                      className="input"
+                      value={range.end}
+                      onChange={(e) => setRange({ end: e.target.value })}
+                      placeholder="end"
+                      autoComplete="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
+                      aria-label={`Last ${unit} of ${file.name}, or end`}
+                      aria-describedby={`pages-${index}`}
+                      aria-invalid={!!error}
+                      style={boxStyle(!!error)}
+                    />
+                    {count ? (
+                      <span className="text-[11px] text-fg-3">
+                        of {count}
+                      </span>
+                    ) : null}
+                  </div>
+                  {error ? (
+                    <p className="mt-1 text-[11px] text-red" role="alert">
+                      {error}
+                    </p>
+                  ) : (
+                    !range.start.trim() && !range.end.trim() && (
+                      <p className="mt-1 text-[11px] text-fg-3">Leave both empty to read every {unit}.</p>
+                    )
+                  )}
+                </div>
               )}
-              <span className="min-w-0 flex-1 truncate text-[12px] text-fg-2">{file.name}</span>
-              <span className="shrink-0 text-[11px] text-fg-3">{formatBytes(file.size)}</span>
-              <button
-                type="button"
-                onClick={() => onChange(files.filter((_, i) => i !== index))}
-                aria-label={`Remove ${file.name}`}
-                className="shrink-0 rounded p-1 text-fg-3 transition-colors hover:text-red"
-              >
-                <X size={13} />
-              </button>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </div>

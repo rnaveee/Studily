@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ClipboardType, Loader2, Sparkles } from "lucide-react";
-import ParseDropzone from "../courses/ParseDropzone";
+import ParseDropzone, { appendFiles, invalidPageRange } from "../courses/ParseDropzone";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { DOCUMENT_RULES, GEN_AVAILABILITY_KEY, genBlocked, genQuotaText, useGenAvailability } from "./genAvailability";
@@ -39,7 +39,7 @@ export default function DocumentGenerator({
   const generate = useMutation({
     mutationFn: () => {
       const form = new FormData();
-      files.forEach((file) => form.append("files", file));
+      appendFiles(form, files);
       return api.post<GeneratedDeck>(setId ? `/flashcard-sets/${setId}/generate` : "/flashcard-sets/generate", form);
     },
     onSuccess: (deck) => onGenerated(deck),
@@ -77,7 +77,7 @@ export default function DocumentGenerator({
   const emptyMode = !!emptyAction && files.length === 0;
   const disabled = emptyMode
     ? emptyAction.disabled || !!emptyAction.pending
-    : files.length === 0 || generate.isPending || blocked || !verified || overQuota || !a?.enabled;
+    : files.length === 0 || invalidPageRange(files) || generate.isPending || blocked || !verified || overQuota || !a?.enabled;
   const atLimit = files.length >= DOCUMENT_RULES.maxFiles;
 
   function addText() {

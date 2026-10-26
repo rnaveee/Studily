@@ -1,6 +1,7 @@
 package com.rnave.studily.flashcard.generate;
 
 import com.rnave.studily.config.BadRequestException;
+import com.rnave.studily.parse.PageSelection;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -56,6 +57,26 @@ class StudyDocumentReaderTest {
         assertThat(Math.max(render.width(), render.height())).isBetween(StudyDocumentReader.RENDER_SIDE - 2,
                 StudyDocumentReader.RENDER_SIDE);
         assertThat(doc.pages().get(0).render()).isNotNull();
+    }
+
+    @Test
+    void pdf_readsOnlyThePickedPagesAndKeepsTheirNumbers() throws IOException {
+        byte[] pdf = pdf(StudyDocumentReader.MAX_PAGES + 20, false);
+
+        StudyDocument doc = reader.read("long.pdf", pdf, PageSelection.parse("8-11, 95-end"));
+
+        assertThat(doc.pages()).extracting(StudyDocument.Page::number).containsExactly(8, 9, 10, 11, 95, 96, 97, 98, 99, 100);
+        assertThat(doc.pages().get(0).text()).contains("Page 8 about mitochondria");
+        assertThat(doc.pages().get(9).text()).contains("Page 100 about mitochondria");
+    }
+
+    @Test
+    void pdf_rangePastTheLastPageIsRejected() throws IOException {
+        byte[] pdf = pdf(4, false);
+
+        assertThatThrownBy(() -> reader.read("short.pdf", pdf, PageSelection.parse("9-end")))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("only has 4 pages");
     }
 
     @Test

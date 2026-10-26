@@ -82,7 +82,7 @@ public class CourseParseController {
             throw new TooManyRequestsException(
                     "Too many automatic course requests from this network today. Add this one manually or try again tomorrow.");
         }
-        return courseParseService.parse(files, text, semesterId, timeZone);
+        return courseParseService.parse(files, request.getParameterValues("pages"), text, semesterId, timeZone);
     }
 
     @PostMapping(value = "/schedule", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -100,7 +100,7 @@ public class CourseParseController {
             throw new TooManyRequestsException(
                     "Too many automatic course requests from this network today. Add your courses manually or try again tomorrow.");
         }
-        return courseParseService.parseSchedule(files, semesterId, timeZone);
+        return courseParseService.parseSchedule(files, request.getParameterValues("pages"), semesterId, timeZone);
     }
 
     @Scheduled(fixedRate = 10 * PARSE_WINDOW_MS)

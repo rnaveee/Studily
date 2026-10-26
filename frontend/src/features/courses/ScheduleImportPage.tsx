@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import BackButton from "../../components/BackButton";
-import ParseDropzone from "./ParseDropzone";
+import ParseDropzone, { appendFiles, invalidPageRange } from "./ParseDropzone";
 import ScheduleDraftReview from "./ScheduleDraftReview";
 import { api } from "../../lib/api";
 import { staggerDelay } from "../../lib/motion";
@@ -32,7 +32,7 @@ export default function ScheduleImportPage() {
   const parse = useMutation({
     mutationFn: () => {
       const form = new FormData();
-      files.forEach((file) => form.append("files", file));
+      appendFiles(form, files);
       if (semesterId != null) form.append("semesterId", String(semesterId));
       form.append("timeZone", Intl.DateTimeFormat().resolvedOptions().timeZone);
       return api.post<ScheduleDraft>("/courses/parse/schedule", form);
@@ -123,7 +123,7 @@ export default function ScheduleImportPage() {
           <button
             type="button"
             onClick={() => parse.mutate()}
-            disabled={files.length === 0 || parse.isPending || blocked}
+            disabled={files.length === 0 || invalidPageRange(files) || parse.isPending || blocked}
             className="btn btn-primary"
           >
             <Sparkles size={13} />

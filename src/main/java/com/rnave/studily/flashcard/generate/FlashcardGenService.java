@@ -15,6 +15,7 @@ import com.rnave.studily.flashcard.generate.StudyDocument.Figure;
 import com.rnave.studily.flashcard.generate.StudyDocument.Picture;
 import com.rnave.studily.parse.AiFeature;
 import com.rnave.studily.parse.CourseParseCache;
+import com.rnave.studily.parse.PageSelection;
 import com.rnave.studily.parse.CourseParseUsage;
 import com.rnave.studily.parse.CourseParseUsageRepository;
 import com.rnave.studily.user.User;
@@ -94,7 +95,7 @@ public class FlashcardGenService {
                 enabled && limits.paused(), MAX_FILES, MAX_FILE_BYTES, MAX_TOTAL_BYTES);
     }
 
-    record Upload(String name, byte[] bytes) {
+    record Upload(String name, byte[] bytes, PageSelection pages) {
     }
 
     private record Prepared(Upload upload, StudyDocument doc, ModelInput input, String cacheKey) {
@@ -104,10 +105,14 @@ public class FlashcardGenService {
     }
 
     public GeneratedDeckDto generate(Long setId, List<MultipartFile> files) {
+        return generate(setId, files, null);
+    }
+
+    public GeneratedDeckDto generate(Long setId, List<MultipartFile> files, String[] pages) {
         if (!generator.enabled()) {
             throw new BadRequestException("Making flashcards from documents isn't available right now.");
         }
-        List<Upload> uploads = uploads(files);
+        List<Upload> uploads = uploads(files, pages);
         List<String> existingFronts = setId == null ? List.of() : setService.ownedCardFronts(setId);
         Long userId = currentUser.id();
         if (!inFlight.add(userId)) {
@@ -142,8 +147,8 @@ public class FlashcardGenService {
         }
         List<Prepared> prepared = new ArrayList<>();
         for (Upload upload : uploads) {
-            StudyDocument doc = reader.read(upload.name(), upload.bytes());
-            prepared.add(new Prepared(upload, doc, ClaudeFlashcardGenerator.select(doc), cacheKey(upload.bytes())));
+            StudyDocument doc = reader.read(upload.name(), upload.bytes(), upload.pages());
+            prepared.add(new Prepared(upload, doc, ClaudeFlashcardGenerator.select(doc), cacheKey(upload)));
         }
 
         List<Generated> generated = new ArrayList<>();
@@ -249,7 +254,8 @@ public class FlashcardGenService {
                 title = g.result().title().strip();
             }
             for (CardNormalizer.Card card : CardNormalizer.normalize(
-                    g.result(), g.prepared().input().references(), doc.pages().size())) {
+                    g.result(), g.prepared().input().references(),
+                    doc.pages().stream().mapToInt(StudyDocument.Page::number).max().orElse(0))) {
                 if (cards.size() >= MAX_CARDS) {
                     capped = true;
                     break;
@@ -334,9 +340,18 @@ public class FlashcardGenService {
                 .map(Figure::picture).orElse(null);
     }
 
-    private List<Upload> uploads(List<MultipartFile> files) {
-        List<MultipartFile> present = files == null ? List.of()
-                : files.stream().filter(f -> f != null && !f.isEmpty()).toList();
+    private List<Upload> uploads(List<MultipartFile> files, String[] pageSpecs) {
+        List<MultipartFile> sent = files == null ? List.of() : files;
+        List<PageSelection> selections = PageSelection.forFiles(pageSpecs, sent.size());
+        List<MultipartFile> present = new ArrayList<>();
+        List<PageSelection> presentPages = new ArrayList<>();
+        for (int i = 0; i < sent.size(); i++) {
+            MultipartFile f = sent.get(i);
+            if (f != null && !f.isEmpty()) {
+                present.add(f);
+                presentPages.add(selections.get(i));
+            }
+        }
         if (present.isEmpty()) {
             throw new BadRequestException("Add a file first.");
         }
@@ -345,7 +360,8 @@ public class FlashcardGenService {
         }
         long total = 0;
         List<Upload> uploads = new ArrayList<>();
-        for (MultipartFile file : present) {
+        for (int i = 0; i < present.size(); i++) {
+            MultipartFile file = present.get(i);
             if (file.getSize() > MAX_FILE_BYTES) {
                 throw new BadRequestException(name(file) + " is larger than 25 MB.");
             }
@@ -354,7 +370,7 @@ public class FlashcardGenService {
                 throw new BadRequestException("Those files add up to more than 50 MB. Upload fewer at a time.");
             }
             try {
-                uploads.add(new Upload(name(file), file.getBytes()));
+                uploads.add(new Upload(name(file), file.getBytes(), presentPages.get(i)));
             } catch (IOException e) {
                 throw new BadRequestException(name(file) + " could not be read.");
             }
@@ -373,11 +389,14 @@ public class FlashcardGenService {
         return name.length() > 100 ? name.substring(name.length() - 100) : name;
     }
 
-    private String cacheKey(byte[] bytes) {
+    private String cacheKey(Upload upload) {
         MessageDigest digest = sha256();
         digest.update(("flashcards:v" + ClaudeFlashcardGenerator.PROMPT_VERSION + ":r" + StudyDocumentReader.READER_VERSION
                 + ":" + generator.model() + ":").getBytes(StandardCharsets.UTF_8));
-        digest.update(bytes);
+        if (!upload.pages().all()) {
+            digest.update(("pages:" + upload.pages().key() + ":").getBytes(StandardCharsets.UTF_8));
+        }
+        digest.update(upload.bytes());
         return HexFormat.of().formatHex(digest.digest());
     }
 

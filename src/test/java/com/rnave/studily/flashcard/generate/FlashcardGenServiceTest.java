@@ -70,7 +70,7 @@ class FlashcardGenServiceTest {
         when(currentUser.entity()).thenReturn(new User());
         when(generator.enabled()).thenReturn(true);
         when(generator.model()).thenReturn("claude-haiku-5-5");
-        when(reader.read(anyString(), any())).thenReturn(doc);
+        when(reader.read(anyString(), any(), any())).thenReturn(doc);
         when(cache.lookup(anyString(), eq(GenResult.class))).thenReturn(Optional.empty());
         when(limits.remaining()).thenReturn(19);
         when(images.storeGenerated(eq(7L), anyString(), any()))
@@ -146,7 +146,7 @@ class FlashcardGenServiceTest {
     void generate_oneBadFileOfTwoBecomesAWarning() {
         StudyDocument other = new StudyDocument("b.txt", FileKind.TEXT, "Section",
                 List.of(new Page(1, "Other notes", null)), List.of());
-        when(reader.read(eq("b.txt"), any())).thenReturn(other);
+        when(reader.read(eq("b.txt"), any(), any())).thenReturn(other);
         when(generator.generate(eq(doc), any()))
                 .thenReturn(new Outcome(result(new GenCard("Q", "A", null, null, 1)), 100, 50, true, null));
         when(generator.generate(eq(other), any()))

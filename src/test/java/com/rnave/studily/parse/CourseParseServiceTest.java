@@ -62,7 +62,7 @@ class CourseParseServiceTest {
         service = new CourseParseService(
                 extractor, parser, semesterService, usageRepository, currentUser, limits, cache);
 
-        when(extractor.extract(any(), any()))
+        when(extractor.extract(any(), any(), any()))
                 .thenReturn(new ExtractedInput(OUTLINE_TEXT, List.of()));
         when(cache.lookup(anyString())).thenReturn(Optional.empty());
     }
@@ -70,7 +70,7 @@ class CourseParseServiceTest {
     private CourseDraftDto run(CourseDraft draft) {
         when(parser.parse(any(), anyString()))
                 .thenReturn(new ParseOutcome(draft, "claude-sonnet-5", 2400, 900));
-        return service.parse(List.of(), "x", null, ZONE);
+        return service.parse(List.of(), null, "x", null, ZONE);
     }
 
     @Test
@@ -344,10 +344,10 @@ class CourseParseServiceTest {
 
     @Test
     void parse_rejectsTextWithNoOutlineSignalsBeforeCallingTheModel() {
-        when(extractor.extract(any(), any()))
+        when(extractor.extract(any(), any(), any()))
                 .thenReturn(new ExtractedInput("Lorem ipsum dolor sit amet, consectetur adipiscing elit.", List.of()));
 
-        assertThatThrownBy(() -> service.parse(List.of(), "x", null, ZONE))
+        assertThatThrownBy(() -> service.parse(List.of(), null, "x", null, ZONE))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage(CourseParseService.NOT_AN_OUTLINE);
         verifyNoInteractions(parser, limits, usageRepository);
@@ -355,7 +355,7 @@ class CourseParseServiceTest {
 
     @Test
     void parse_skipsTheTextCheckForImages() {
-        when(extractor.extract(any(), any())).thenReturn(new ExtractedInput("",
+        when(extractor.extract(any(), any(), any())).thenReturn(new ExtractedInput("",
                 List.of(new ExtractedInput.ExtractedImage("image/png", new byte[]{1, 2, 3}))));
 
         CourseDraftDto dto = run(new CourseDraft(
@@ -369,7 +369,7 @@ class CourseParseServiceTest {
         when(cache.lookup(anyString())).thenReturn(Optional.of(new CourseDraft(
                 "Circuits", "ENSC 220", null, null, List.of(), List.of(), List.of(), List.of())));
 
-        CourseDraftDto dto = service.parse(List.of(), "x", null, ZONE);
+        CourseDraftDto dto = service.parse(List.of(), null, "x", null, ZONE);
 
         assertThat(dto.code()).isEqualTo("ENSC 220");
         assertThat(dto.parseId()).isNull();
@@ -390,7 +390,7 @@ class CourseParseServiceTest {
     void parse_overQuotaNeverCallsTheModel() {
         doThrow(new TooManyRequestsException("limit")).when(limits).check();
 
-        assertThatThrownBy(() -> service.parse(List.of(), "x", null, ZONE))
+        assertThatThrownBy(() -> service.parse(List.of(), null, "x", null, ZONE))
                 .isInstanceOf(TooManyRequestsException.class);
         verify(parser, never()).parse(any(), anyString());
         verify(cache, never()).store(anyString(), any(), anyString());
@@ -423,7 +423,7 @@ class CourseParseServiceTest {
         when(cache.lookup(anyString(), eq(ScheduleDraft.class))).thenReturn(Optional.empty());
         when(parser.parseSchedule(any(), anyString()))
                 .thenReturn(new ScheduleOutcome(draft, "claude-sonnet-5-5", 1800, 700));
-        return service.parseSchedule(List.of(), null, ZONE);
+        return service.parseSchedule(List.of(), null, null, ZONE);
     }
 
     private static ScheduleDraft.ScheduleCourse course(String name, String code, String color, DraftBlock... blocks) {
@@ -483,7 +483,7 @@ class CourseParseServiceTest {
         when(cache.lookup(anyString(), eq(ScheduleDraft.class))).thenReturn(Optional.of(
                 new ScheduleDraft(true, List.of(course("Circuits", "ENSC 220", null)), List.of())));
 
-        ScheduleDraftDto dto = service.parseSchedule(List.of(), null, ZONE);
+        ScheduleDraftDto dto = service.parseSchedule(List.of(), null, null, ZONE);
 
         assertThat(dto.courses()).hasSize(1);
         assertThat(dto.parseId()).isNull();

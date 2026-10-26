@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, Sparkles } from "lucide-react";
 import Modal from "../../components/Modal";
-import ParseDropzone from "./ParseDropzone";
+import ParseDropzone, { appendFiles, invalidPageRange } from "./ParseDropzone";
 import ParseFeedbackPrompt from "./ParseFeedbackPrompt";
 import DraftItemRows, {
   postRows,
@@ -67,7 +67,7 @@ export default function CourseDocumentImport({ course, items, onChange }: Props)
   const parse = useMutation({
     mutationFn: () => {
       const form = new FormData();
-      files.forEach((file) => form.append("files", file));
+      appendFiles(form, files);
       if (text.trim()) form.append("text", text.trim());
       if (course.semesterId != null) form.append("semesterId", String(course.semesterId));
       form.append("timeZone", Intl.DateTimeFormat().resolvedOptions().timeZone);
@@ -128,7 +128,7 @@ export default function CourseDocumentImport({ course, items, onChange }: Props)
           <button
             type="button"
             onClick={() => parse.mutate()}
-            disabled={(files.length === 0 && !text.trim()) || parse.isPending || blocked}
+            disabled={(files.length === 0 && !text.trim()) || invalidPageRange(files) || parse.isPending || blocked}
             className="btn btn-primary mt-3"
           >
             <Sparkles size={13} />

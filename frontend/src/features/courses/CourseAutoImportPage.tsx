@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Sparkles } from "lucide-react";
 import BackButton from "../../components/BackButton";
 import CourseDraftReview from "./CourseDraftReview";
-import ParseDropzone from "./ParseDropzone";
+import ParseDropzone, { appendFiles, invalidPageRange } from "./ParseDropzone";
 import ParseFeedbackPrompt from "./ParseFeedbackPrompt";
 import { api } from "../../lib/api";
 import { staggerDelay } from "../../lib/motion";
@@ -35,7 +35,7 @@ export default function CourseAutoImportPage() {
   const parse = useMutation({
     mutationFn: () => {
       const form = new FormData();
-      files.forEach((file) => form.append("files", file));
+      appendFiles(form, files);
       if (text.trim()) form.append("text", text.trim());
       if (semesterId != null) form.append("semesterId", String(semesterId));
       form.append("timeZone", Intl.DateTimeFormat().resolvedOptions().timeZone);
@@ -141,7 +141,7 @@ export default function CourseAutoImportPage() {
           <button
             type="button"
             onClick={() => parse.mutate()}
-            disabled={!hasInput || parse.isPending || blocked}
+            disabled={!hasInput || invalidPageRange(files) || parse.isPending || blocked}
             className="btn btn-primary"
           >
             <Sparkles size={13} />

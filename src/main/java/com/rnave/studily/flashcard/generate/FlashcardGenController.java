@@ -45,7 +45,7 @@ public class FlashcardGenController {
     public GeneratedDeckDto generate(@RequestParam(value = "files", required = false) List<MultipartFile> files,
                                      HttpServletRequest request) {
         limit(request);
-        return service.generate(null, files);
+        return service.generate(null, files, request.getParameterValues("pages"));
     }
 
     @PostMapping(value = "/api/flashcard-sets/{id}/generate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -53,7 +53,7 @@ public class FlashcardGenController {
                                          @RequestParam(value = "files", required = false) List<MultipartFile> files,
                                          HttpServletRequest request) {
         limit(request);
-        return service.generate(id, files);
+        return service.generate(id, files, request.getParameterValues("pages"));
     }
 
     private void limit(HttpServletRequest request) {
