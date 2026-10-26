@@ -6,7 +6,7 @@ import java.util.regex.Pattern;
 public final class ItemTypes {
 
     private static final Pattern EXAM_TITLE =
-            Pattern.compile("\\b(exam|midterm|final|test)\\b", Pattern.CASE_INSENSITIVE);
+            Pattern.compile("\\b(exams?|midterms?|finals?|tests?)\\b", Pattern.CASE_INSENSITIVE);
 
     private static final List<String> COLORS = List.of(
             "#3b82f6", "#ef4444", "#10b981", "#f59e0b",

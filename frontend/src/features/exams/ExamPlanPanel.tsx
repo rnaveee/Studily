@@ -78,9 +78,12 @@ export default function ExamPlanPanel({ examId }: { examId: number }) {
   function startSession() {
     if (!plan) return;
     const tasks: string[] = [];
-    if (plan.todayCards > 0) tasks.push(`Review ${plan.todayCards} cards: ${plan.title}`);
+    const exam = `${plan.courseName} ${plan.title}`;
+    if (plan.todayCards > 0) {
+      tasks.push(`Review ${plan.todayCards} card${plan.todayCards === 1 ? "" : "s"}: ${exam}`);
+    }
     for (const t of today?.todos ?? []) tasks.push(t.title);
-    if (tasks.length === 0) tasks.push(`Study for ${plan.title}`);
+    if (tasks.length === 0) tasks.push(`Study for ${exam}`);
     openStartSession({ tasks });
   }
 

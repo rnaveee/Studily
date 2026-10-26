@@ -30,13 +30,14 @@ export default function GpaScalePicker({ className }: { className?: string }) {
   return (
     <select
       className={`input w-auto ${className ?? ""}`}
+      style={{ maxWidth: "100%" }}
       aria-label="GPA scale"
       disabled={!prefs || save.isPending}
       value={prefs?.explicit ? prefs.scale : "AUTO"}
       onChange={(e) => save.mutate(e.target.value === "AUTO" ? null : (e.target.value as GpaScaleName))}
     >
       <option value="AUTO">
-        {prefs ? `Match my school (${GPA_SCALE_LABELS[prefs.defaultScale]})` : "Match my school"}
+        {prefs ? `Match my school: ${GPA_SCALE_LABELS[prefs.defaultScale]}` : "Match my school"}
       </option>
       {GPA_SCALES.map((s) => (
         <option key={s} value={s}>

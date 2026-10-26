@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { toast } from "../lib/toast";
@@ -87,16 +87,20 @@ export function GradingFields({
   const [target, setTarget] = useState(course.targetGrade != null ? String(course.targetGrade) : "");
   const [credits, setCredits] = useState(course.credits != null ? String(course.credits) : "");
 
+  const saved = useRef({ credits: course.credits ?? null, targetGrade: course.targetGrade ?? null });
+
   useEffect(() => {
+    saved.current.targetGrade = course.targetGrade ?? null;
     setTarget(course.targetGrade != null ? String(course.targetGrade) : "");
   }, [course.targetGrade]);
   useEffect(() => {
+    saved.current.credits = course.credits ?? null;
     setCredits(course.credits != null ? String(course.credits) : "");
   }, [course.credits]);
 
   function commit(field: "targetGrade" | "credits", raw: string) {
     const value = parseField(raw, field === "targetGrade" ? 150 : 30);
-    const current = field === "targetGrade" ? course.targetGrade ?? null : course.credits ?? null;
+    const current = saved.current[field];
     if (value === "invalid") {
       toast.error(field === "targetGrade" ? "Target must be between 0 and 150" : "Credits must be between 0 and 30");
       if (field === "targetGrade") setTarget(current != null ? String(current) : "");
@@ -104,7 +108,8 @@ export function GradingFields({
       return;
     }
     if (value === current) return;
-    save.mutate({ course, [field]: value });
+    saved.current = { ...saved.current, [field]: value };
+    save.mutate({ course, ...saved.current });
   }
 
   return (
