@@ -20,10 +20,15 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     boolean existsByUserIdAndDedupKey(Long userId, String dedupKey);
 
-    Slice<Notification> findByUserIdAndTypeInOrderByCreatedAtDescIdDesc(
+    Slice<Notification> findByUserIdAndTypeInAndDismissedFalseOrderByCreatedAtDescIdDesc(
             Long userId, Collection<NotificationType> types, Pageable pageable);
 
-    long countByUserIdAndReadFalseAndTypeIn(Long userId, Collection<NotificationType> types);
+    long countByUserIdAndReadFalseAndDismissedFalseAndTypeIn(Long userId, Collection<NotificationType> types);
+
+    @Modifying
+    @Query("update Notification n set n.dismissed = true, n.read = true "
+            + "where n.user.id = :userId and n.dismissed = false and n.type in :types")
+    int dismissAll(@Param("userId") Long userId, @Param("types") Collection<NotificationType> types);
 
     @Modifying
     @Query("update Notification n set n.read = true "

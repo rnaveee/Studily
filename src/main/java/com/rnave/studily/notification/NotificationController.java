@@ -51,7 +51,7 @@ public class NotificationController {
     public PageResponse<NotificationDto> center(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Slice<Notification> slice = notificationRepository.findByUserIdAndTypeInOrderByCreatedAtDescIdDesc(
+        Slice<Notification> slice = notificationRepository.findByUserIdAndTypeInAndDismissedFalseOrderByCreatedAtDescIdDesc(
                 currentUser.id(), CENTER_TYPES,
                 PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
         return new PageResponse<>(
@@ -61,7 +61,7 @@ public class NotificationController {
 
     @GetMapping("/unread-count")
     public Map<String, Long> unreadCount() {
-        return Map.of("count", notificationRepository.countByUserIdAndReadFalseAndTypeIn(
+        return Map.of("count", notificationRepository.countByUserIdAndReadFalseAndDismissedFalseAndTypeIn(
                 currentUser.id(), CENTER_TYPES));
     }
 
@@ -70,6 +70,13 @@ public class NotificationController {
     @Transactional
     public void readAll() {
         notificationRepository.markAllRead(currentUser.id(), CENTER_TYPES);
+    }
+
+    @PostMapping("/clear")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Transactional
+    public void clear() {
+        notificationRepository.dismissAll(currentUser.id(), CENTER_TYPES);
     }
 
     @PostMapping("/{id}/read")

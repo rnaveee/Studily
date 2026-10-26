@@ -7,6 +7,7 @@ import { useAuth } from "../lib/auth";
 import { formatDateTimeFull, timeAgo } from "../lib/format";
 import {
   markFeatureNoticesRead,
+  clearFeatureNotices,
   useFeatureNotices,
   type FeatureNoticeState,
 } from "../features/notifications/featureNotices";
@@ -121,6 +122,24 @@ export default function NotificationPanel({ variant, onClose }: Props) {
     return [...server, ...feature].sort((a, b) => b.at - a.at);
   }, [list.data, notices, highlight]);
 
+  const clear = useMutation({
+    mutationFn: () => api.post("/notifications/clear"),
+    onMutate: () => {
+      qc.setQueryData(CENTER_KEY, { pages: [{ items: [], hasMore: false }], pageParams: [0] });
+      qc.setQueryData<UnreadCount>(UNREAD_KEY, { count: 0 });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: CENTER_KEY });
+      qc.invalidateQueries({ queryKey: UNREAD_KEY });
+    },
+  });
+
+  function clearAll() {
+    clearFeatureNotices(notices.map((n) => n.storageKey));
+    setHighlight(new Set());
+    if (user?.emailVerified) clear.mutate();
+  }
+
   function go(url: string | null) {
     onClose();
     if (!url) return;
@@ -140,6 +159,16 @@ export default function NotificationPanel({ variant, onClose }: Props) {
     <>
       <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-3.5">
         <h2 className="text-[14px] font-semibold text-fg">Notifications</h2>
+        {rows.length > 0 && (
+          <button
+            type="button"
+            onClick={clearAll}
+            disabled={clear.isPending}
+            className="ml-auto rounded-lg px-2 py-1 text-[12px] font-medium text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg disabled:opacity-50"
+          >
+            Clear notifications
+          </button>
+        )}
         <button
           type="button"
           onClick={onClose}
@@ -233,8 +262,13 @@ export default function NotificationPanel({ variant, onClose }: Props) {
         ref={panelRef}
         role="dialog"
         aria-label="Notifications"
-        className="glass animate-flyout fixed bottom-0 top-0 z-40 flex w-[360px] max-w-[calc(100vw-220px)] flex-col"
-        style={{ left: 220, borderRadius: 0, borderWidth: "0 1px 0 0" }}
+        className="animate-flyout fixed bottom-0 top-0 z-40 flex w-[360px] max-w-[calc(100vw-220px)] flex-col"
+        style={{
+          left: 220,
+          background: "var(--surface)",
+          borderRight: "1px solid var(--line)",
+          boxShadow: "var(--glass-shadow)",
+        }}
       >
         {body}
       </div>

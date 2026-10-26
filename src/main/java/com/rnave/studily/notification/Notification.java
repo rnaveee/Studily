@@ -52,6 +52,9 @@ public class Notification {
     @Column(nullable = false)
     private boolean read = false;
 
+    @Column(nullable = false)
+    private boolean dismissed = false;
+
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 }

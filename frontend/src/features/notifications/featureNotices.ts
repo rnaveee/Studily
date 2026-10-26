@@ -67,6 +67,7 @@ const PARSER: FeatureNotice = {
 
 const listeners = new Set<() => void>();
 const memoryRead = new Set<string>();
+const memoryCleared = new Set<string>();
 let version = 0;
 
 function subscribe(cb: () => void) {
@@ -83,6 +84,29 @@ function isRead(key: string): boolean {
   } catch {
     return false;
   }
+}
+
+function isCleared(key: string): boolean {
+  if (memoryCleared.has(key)) return true;
+  try {
+    return localStorage.getItem(`${key}.cleared`) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function clearFeatureNotices(keys: string[]) {
+  for (const key of keys) {
+    memoryCleared.add(key);
+    memoryRead.add(key);
+    try {
+      localStorage.setItem(`${key}.cleared`, "1");
+      localStorage.setItem(key, "1");
+    } catch {
+    }
+  }
+  version += 1;
+  listeners.forEach((cb) => cb());
 }
 
 export function markFeatureNoticesRead(keys: string[]) {
@@ -125,7 +149,7 @@ export function useFeatureNotices(): FeatureNoticeState[] {
     visible.push(PROGRESS);
     if (createdAt && Date.now() - new Date(createdAt).getTime() >= NEW_ACCOUNT_MS) visible.push(GRADECALC);
     if (parseAvailability?.enabled) visible.push(PARSER);
-    return visible.map((n) => {
+    return visible.filter((n) => !isCleared(n.storageKey)).map((n) => {
       const read = isRead(n.storageKey);
       return { ...n, read, stale: read && Date.now() - new Date(n.date).getTime() > RECENT_MS };
     });

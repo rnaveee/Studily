@@ -42,7 +42,7 @@ class NotificationControllerTest {
         n.setMessage("Open Friends to accept or decline.");
         n.setUrl("/friends");
         n.setRelatedItemId(9L);
-        when(notificationRepository.findByUserIdAndTypeInOrderByCreatedAtDescIdDesc(
+        when(notificationRepository.findByUserIdAndTypeInAndDismissedFalseOrderByCreatedAtDescIdDesc(
                 7L, NotificationController.CENTER_TYPES, PageRequest.of(0, 20)))
                 .thenReturn(new SliceImpl<>(List.of(n), PageRequest.of(0, 20), false));
 
@@ -58,12 +58,12 @@ class NotificationControllerTest {
 
     @Test
     void center_clampsPageAndSize() {
-        when(notificationRepository.findByUserIdAndTypeInOrderByCreatedAtDescIdDesc(any(), any(), any()))
+        when(notificationRepository.findByUserIdAndTypeInAndDismissedFalseOrderByCreatedAtDescIdDesc(any(), any(), any()))
                 .thenReturn(new SliceImpl<>(List.of()));
 
         controller.center(-4, 5000);
 
-        verify(notificationRepository).findByUserIdAndTypeInOrderByCreatedAtDescIdDesc(
+        verify(notificationRepository).findByUserIdAndTypeInAndDismissedFalseOrderByCreatedAtDescIdDesc(
                 7L, NotificationController.CENTER_TYPES, PageRequest.of(0, 100));
     }
 
@@ -76,7 +76,7 @@ class NotificationControllerTest {
 
     @Test
     void unreadCount_countsUnreadCenterTypesForTheCaller() {
-        when(notificationRepository.countByUserIdAndReadFalseAndTypeIn(7L, NotificationController.CENTER_TYPES))
+        when(notificationRepository.countByUserIdAndReadFalseAndDismissedFalseAndTypeIn(7L, NotificationController.CENTER_TYPES))
                 .thenReturn(4L);
 
         assertThat(controller.unreadCount()).containsEntry("count", 4L);
@@ -87,5 +87,12 @@ class NotificationControllerTest {
         controller.readAll();
 
         verify(notificationRepository).markAllRead(7L, NotificationController.CENTER_TYPES);
+    }
+
+    @Test
+    void clear_hidesOnlyCenterTypesForTheCaller() {
+        controller.clear();
+
+        verify(notificationRepository).dismissAll(7L, NotificationController.CENTER_TYPES);
     }
 }
