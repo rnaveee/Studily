@@ -115,7 +115,7 @@ public final class IcsParser {
         Prop descProp = props.get("DESCRIPTION");
         String description = descProp == null || descProp.value().isBlank()
                 ? null
-                : trimTo(unescape(descProp.value()), 2000);
+                : trimTo(unescape(descProp.value()), 8000);
 
         Prop categoriesProp = props.get("CATEGORIES");
         String categories = categoriesProp == null || categoriesProp.value().isBlank()

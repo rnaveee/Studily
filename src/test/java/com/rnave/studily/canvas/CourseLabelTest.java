@@ -22,6 +22,14 @@ class CourseLabelTest {
     }
 
     @Test
+    void readsFourDigitCourseNumbersButNotTermsOrMonths() {
+        assertThat(CourseCodes.find("BIOL-1191-002 - Hlt Sci II")).isEqualTo("BIOL 1191");
+        assertThat(CourseCodes.find("CPSC 1150")).isEqualTo("CPSC 1150");
+        assertThat(CourseCodes.find("Fall 2026 orientation")).isNull();
+        assertThat(CourseCodes.find("Exams start Dec 2026 for MATH 1171")).isEqualTo("MATH 1171");
+    }
+
+    @Test
     void readsAShortNameBeforeTheCode() {
         CourseLabel label = CourseLabel.parse("Database Systems I - CMPT354 D100");
 

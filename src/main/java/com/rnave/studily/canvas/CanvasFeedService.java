@@ -31,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -51,6 +52,7 @@ public class CanvasFeedService {
 
     private static final int MAX_EVENTS = 2000;
     private static final int MAX_SOURCE_CHARS = 4_000_000;
+    private static final Duration STALE_PLAIN_EVENT = Duration.ofDays(30);
 
     private static final String[] COLORS = {
             "#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899", "#7968dc", "#0ea5e9"
@@ -239,10 +241,21 @@ public class CanvasFeedService {
     }
 
     private void stageLms(Staging s, LmsProvider provider, List<ParsedEvent> events) {
+        Map<String, String> placeCourseKeys = new HashMap<>();
+        if (provider == LmsProvider.D2L) {
+            for (ParsedEvent event : events) {
+                String key = D2lRefParser.linkedCourseKey(event);
+                if (key != null && event.place() != null) {
+                    placeCourseKeys.putIfAbsent(event.place(), key);
+                }
+            }
+        }
         List<LmsRef> refs = new ArrayList<>(events.size());
         Set<String> dueGroups = new HashSet<>();
         for (ParsedEvent event : events) {
-            LmsRef ref = provider == LmsProvider.D2L ? D2lRefParser.parse(event) : MoodleRefParser.parse(event);
+            LmsRef ref = provider == LmsProvider.D2L
+                    ? D2lRefParser.parse(event, event.place() == null ? null : placeCourseKeys.get(event.place()))
+                    : MoodleRefParser.parse(event);
             refs.add(ref);
             if (ref != null && ref.kind() == LmsRef.Kind.ITEM && !ref.closing()) {
                 dueGroups.add(ref.groupKey());
@@ -253,8 +266,20 @@ public class CanvasFeedService {
             ParsedEvent event = events.get(i);
             LmsRef ref = refs.get(i);
             if (ref == null) {
-                importPlainEvent(s, event, courseFromTitle(s, event.title()));
+                String code = CourseCodes.find(event.place());
+                if (code == null) {
+                    code = CourseLabel.parse(courseCode(event.title())).code();
+                }
+                if (code == null && event.startAt().isBefore(clock.instant().minus(STALE_PLAIN_EVENT))) {
+                    s.skipped++;
+                    continue;
+                }
+                importPlainEvent(s, event, courseFromCode(s, code));
                 continue;
+            }
+            if (ref.kind() == LmsRef.Kind.ITEM) {
+                eventRepository.findByUserIdAndExternalUid(s.user.getId(), externalUid(event))
+                        .ifPresent(eventRepository::delete);
             }
             if (ref.kind() == LmsRef.Kind.SKIP || (ref.closing() && dueGroups.contains(ref.groupKey()))) {
                 s.skipped++;
@@ -338,7 +363,10 @@ public class CanvasFeedService {
     }
 
     private Course courseFromTitle(Staging s, String title) {
-        String code = CourseLabel.parse(courseCode(title)).code();
+        return courseFromCode(s, CourseLabel.parse(courseCode(title)).code());
+    }
+
+    private Course courseFromCode(Staging s, String code) {
         if (code == null) {
             return null;
         }

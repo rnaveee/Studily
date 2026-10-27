@@ -1,0 +1,271 @@
+BEGIN:VCALENDAR
+PRODID:-//D2L//NONSGML v1.0//EN
+VERSION:2.0
+METHOD:PUBLISH
+X-WR-CALNAME:All Courses - Example College
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:test time zone shift
+LOCATION:Example College
+DESCRIPTION:test time zone shift
+CLASS:PUBLIC
+DTSTART:20241205T230000Z
+DTEND:20241205T233000Z
+UID:6606-3794972@brightspace.example.edu
+SEQUENCE:0
+LAST-MODIFIED:20241205T231917Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:Assignment: Nervous System worksheet (Ch 12) - Due
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+DESCRIPTION:Complete the Nervous System Worksheet by hand and upload a phot
+ o or PDF of your completed work to this folder by the due Filler instructo
+ r notes so the links land past two thousand characters. Filler instructor 
+ notes so the links land past two thousand characters. Filler instructor no
+ tes so the links land past two thousand characters. Filler instructor note
+ s so the links land past two thousand characters. Filler instructor notes 
+ so the links land past two thousand characters. Filler instructor notes so
+  the links land past two thousand characters. Filler instructor notes so t
+ he links land past two thousand characters. Filler instructor notes so the
+  links land past two thousand characters. Filler instructor notes so the l
+ inks land past two thousand characters. Filler instructor notes so the lin
+ ks land past two thousand characters. Filler instructor notes so the links
+  land past two thousand characters. Filler instructor notes so the links l
+ and past two thousand characters. Filler instructor notes so the links lan
+ d past two thousand characters. Filler instructor notes so the links land 
+ past two thousand characters. Filler instructor notes so the links land pa
+ st two thousand characters. Filler instructor notes so the links land past
+  two thousand characters. Filler instructor notes so the links land past t
+ wo thousand characters. Filler instructor notes so the links land past two
+  thousand characters. Filler instructor notes so the links land past two t
+ housand characters. Filler instructor notes so the links land past two tho
+ usand characters. Filler instructor notes so the links land past two thous
+ and characters. Filler instructor notes so the links land past two thousan
+ d characters. Filler instructor notes so the links land past two thousand 
+ characters. Filler instructor notes so the links land past two thousand ch
+ aracters. Filler instructor notes so the links land past two thousand char
+ acters. Filler instructor notes so the links land past two thousand charac
+ ters. Filler instructor notes so the links land past two thousand characte
+ rs. Filler instructor notes so the links land past two thousand characters
+ . Filler instructor notes so the links land past two thousand characters. 
+ Filler instructor notes so the links land past two thousand characters. Fi
+ ller instructor notes so the links land past two thousand characters. Fill
+ er instructor notes so the links land past two thousand characters. \n\n\n
+ Assignments:\nAssignment: Nervous System worksheet (Ch 12) - https://brigh
+ tspace.example.edu/d2l/lms/dropbox/user/folder_submit_files.d2l?ou=369909&
+ db=303026\n\n\nView event - https://brightspace.example.edu/d2l/le/calenda
+ r/369909/event/4054177/detailsview?ou=369909#4054177
+CLASS:PUBLIC
+DTSTART:20260919T000000Z
+DTEND:20260919T000000Z
+UID:6606-4054177@brightspace.example.edu
+SEQUENCE:6
+LAST-MODIFIED:20260916T220333Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:iClicker remote number - Due
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+DESCRIPTION:You are welcome to use your own iClicker or borrow one of mine 
+ for the semester.\n\n\nQuizzes:\niClicker remote number - https://brightsp
+ ace.example.edu/d2l/lms/quizzing/quizzing.d2l?ou=369909&qi=502337\n\n\nVie
+ w event - https://brightspace.example.edu/d2l/le/calendar/369909/event/405
+ 7750/detailsview?ou=369909#4057750
+CLASS:PUBLIC
+DTSTART:20260919T000000Z
+DTEND:20260919T000000Z
+UID:6606-4057750@brightspace.example.edu
+SEQUENCE:14
+LAST-MODIFIED:20260915T220659Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:Quiz #1 - Ch 12&13
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+DESCRIPTION:10-15 marks\, 15 min. \n5 M/C question\, rest a combination of 
+ fill-in-the-blank and short answer questions. 
+CLASS:PUBLIC
+DTSTART:20260925T193000Z
+DTEND:20260925T200000Z
+UID:6606-4059132@brightspace.example.edu
+SEQUENCE:0
+LAST-MODIFIED:20260916T221103Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:Assignment: AI fact-check challenge (Ch 13) - Due
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+DESCRIPTION:Complete the AI fact-check challenge and upload a photo or PDF 
+ of your completed\n\n\nAssignments:\nAssignment: AI fact-check challenge (
+ Ch 13) - https://brightspace.example.edu/d2l/lms/dropbox/user/folder_submi
+ t_files.d2l?ou=369909&db=303882\n\n\nView event - https://brightspace.exam
+ ple.edu/d2l/le/calendar/369909/event/4059130/detailsview?ou=369909#4059130
+CLASS:PUBLIC
+DTSTART:20260926T000000Z
+DTEND:20260926T000000Z
+UID:6606-4059130@brightspace.example.edu
+SEQUENCE:6
+LAST-MODIFIED:20260918T221618Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:1191 Lab 11 Review Quiz - Due
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+DESCRIPTION:Test your knowledge of the different reflex tests we did in the
+  lab 11.\n\n\n\n\n\nQuizzes:\n1191 Lab 11 Review Quiz - https://brightspac
+ e.example.edu/d2l/lms/quizzing/quizzing.d2l?ou=369909&qi=502299\n\n\nView 
+ event - https://brightspace.example.edu/d2l/le/calendar/369909/event/40582
+ 82/detailsview?ou=369909#4058282
+CLASS:PUBLIC
+DTSTART:20261005T193000Z
+DTEND:20261005T193000Z
+UID:6606-4058282@brightspace.example.edu
+SEQUENCE:1
+LAST-MODIFIED:20260914T221825Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:1191 Lab 12 Review Quiz - Due
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+DESCRIPTION:Quizzes:\n1191 Lab 12 Review Quiz - https://brightspace.example
+ .edu/d2l/lms/quizzing/quizzing.d2l?ou=369909&qi=502300\n\n\nView event - h
+ ttps://brightspace.example.edu/d2l/le/calendar/369909/event/4058283/detail
+ sview?ou=369909#4058283
+CLASS:PUBLIC
+DTSTART:20261005T193000Z
+DTEND:20261005T193000Z
+UID:6606-4058283@brightspace.example.edu
+SEQUENCE:1
+LAST-MODIFIED:20260914T221850Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:1191 Lab 13 Review Quiz - Due
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+DESCRIPTION:Quizzes:\n1191 Lab 13 Review Quiz - https://brightspace.example
+ .edu/d2l/lms/quizzing/quizzing.d2l?ou=369909&qi=502301\n\n\nView event - h
+ ttps://brightspace.example.edu/d2l/le/calendar/369909/event/4058284/detail
+ sview?ou=369909#4058284
+CLASS:PUBLIC
+DTSTART:20261005T193000Z
+DTEND:20261005T193000Z
+UID:6606-4058284@brightspace.example.edu
+SEQUENCE:3
+LAST-MODIFIED:20260928T190432Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:Assignment: Review Questions (Ch 14) - Due
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+DESCRIPTION:Complete the Ch 14 Review Questions and upload your answers to 
+ this folder by th\n\n\nAssignments:\nAssignment: Review Questions (Ch 14) 
+ - https://brightspace.example.edu/d2l/lms/dropbox/user/folder_submit_files
+ .d2l?ou=369909&db=304202\n\n\nView event - https://brightspace.example.edu
+ /d2l/le/calendar/369909/event/4061501/detailsview?ou=369909#4061501
+CLASS:PUBLIC
+DTSTART:20261006T040000Z
+DTEND:20261006T040000Z
+UID:6606-4061501@brightspace.example.edu
+SEQUENCE:5
+LAST-MODIFIED:20261014T214256Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:Quiz 2 - Ch 14
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+CLASS:PUBLIC
+DTSTART;VALUE=DATE:20261006
+DTEND;VALUE=DATE:20261007
+UID:6606-4061487@brightspace.example.edu
+SEQUENCE:2
+LAST-MODIFIED:20261014T213215Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:Lecture Midterm I
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+CLASS:PUBLIC
+DTSTART;VALUE=DATE:20261013
+DTEND;VALUE=DATE:20261014
+UID:6606-4050169@brightspace.example.edu
+SEQUENCE:0
+LAST-MODIFIED:20260906T083055Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:Lab Midterm
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+CLASS:PUBLIC
+DTSTART;VALUE=DATE:20261019
+DTEND;VALUE=DATE:20261020
+UID:6606-4050170@brightspace.example.edu
+SEQUENCE:0
+LAST-MODIFIED:20260906T083055Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:Steps of Vision Physiology - Due
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+DESCRIPTION:Complete the Vision Physiology assignment and then enter your c
+ hoices in this qu\n\n\nQuizzes:\nSteps of Vision Physiology - https://brig
+ htspace.example.edu/d2l/lms/quizzing/quizzing.d2l?ou=369909&qi=503914\n\n\
+ nView event - https://brightspace.example.edu/d2l/le/calendar/369909/event
+ /4064895/detailsview?ou=369909#4064895
+CLASS:PUBLIC
+DTSTART:20261027T000000Z
+DTEND:20261027T000000Z
+UID:6606-4064895@brightspace.example.edu
+SEQUENCE:21
+LAST-MODIFIED:20261021T003838Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:Quiz 3 - Ch 17
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+CLASS:PUBLIC
+DTSTART;VALUE=DATE:20261027
+DTEND;VALUE=DATE:20261028
+UID:6606-4063770@brightspace.example.edu
+SEQUENCE:0
+LAST-MODIFIED:20261014T213202Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:Hormone Matching - Due
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+DESCRIPTION:Complete the Hormone Matching assignment and then enter your ch
+ oices in this qui\n\n\nQuizzes:\nHormone Matching - https://brightspace.ex
+ ample.edu/d2l/lms/quizzing/quizzing.d2l?ou=369909&qi=503916\n\n\nView even
+ t - https://brightspace.example.edu/d2l/le/calendar/369909/event/4064902/d
+ etailsview?ou=369909#4064902
+CLASS:PUBLIC
+DTSTART:20261031T000000Z
+DTEND:20261031T000000Z
+UID:6606-4064902@brightspace.example.edu
+SEQUENCE:5
+LAST-MODIFIED:20261021T005937Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:Lecture Midterm II
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+CLASS:PUBLIC
+DTSTART;VALUE=DATE:20261110
+DTEND;VALUE=DATE:20261111
+UID:6606-4050171@brightspace.example.edu
+SEQUENCE:0
+LAST-MODIFIED:20260906T083055Z
+END:VEVENT
+BEGIN:VEVENT
+DTSTAMP:20261027T010251Z
+SUMMARY:Lab Final Exam
+LOCATION:BIOL-1191-002 - Hlt Sci II-Human Anat & Phy II
+CLASS:PUBLIC
+DTSTART;VALUE=DATE:20261123
+DTEND;VALUE=DATE:20261124
+UID:6606-4050172@brightspace.example.edu
+SEQUENCE:0
+LAST-MODIFIED:20260906T083055Z
+END:VEVENT
+END:VCALENDAR

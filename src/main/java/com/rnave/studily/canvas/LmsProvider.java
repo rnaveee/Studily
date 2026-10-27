@@ -36,7 +36,9 @@ public enum LmsProvider {
             if (CanvasRef.parse(event.url()) != null || CanvasRef.parse(event.description()) != null) {
                 return CANVAS;
             }
-            if (event.url() != null && event.url().toLowerCase(Locale.ROOT).contains("/d2l/")) {
+            if (event.url() != null && event.url().toLowerCase(Locale.ROOT).contains("/d2l/")
+                    || event.description() != null
+                    && event.description().toLowerCase(Locale.ROOT).contains("/d2l/")) {
                 d2l = true;
             }
             if (event.uid() != null && MOODLE_UID.matcher(event.uid()).matches()

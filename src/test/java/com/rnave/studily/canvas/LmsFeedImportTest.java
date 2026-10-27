@@ -25,7 +25,10 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -295,5 +298,65 @@ class LmsFeedImportTest {
         assertThat(outcome.payload().provider()).isEqualTo("D2L");
         assertThat(outcome.eventsImported()).isEqualTo(1);
         assertThat(outcome.payload().courses()).isEmpty();
+    }
+
+    @Test
+    void d2l_realFeedReadsLinksFromDescriptionsAndStagesExamEvents() {
+        service.clock = Clock.fixed(Instant.parse("2026-10-26T12:00:00Z"), ZoneOffset.UTC);
+
+        StageOutcome outcome = importText(fixture("d2l-real.ics"));
+
+        assertThat(outcome.payload().provider()).isEqualTo("D2L");
+        assertThat(outcome.eventsImported()).isZero();
+        assertThat(outcome.skipped()).isEqualTo(1);
+        assertThat(outcome.payload().courses()).hasSize(1);
+
+        StagedCourse biol = outcome.payload().courses().getFirst();
+        assertThat(biol.key()).isEqualTo("D2L:369909");
+        assertThat(biol.code()).isEqualTo("BIOL 1191");
+        assertThat(biol.items()).hasSize(16);
+        assertThat(biol.items()).extracting(StagedItem::externalUid)
+                .contains("d2l-369909-db303026", "d2l-369909-qi502337", "d2l-369909-ev4059132",
+                        "d2l-369909-ev4061487", "d2l-369909-ev4050172");
+        assertThat(biol.items()).extracting(StagedItem::title)
+                .contains("Nervous System worksheet (Ch 12)", "AI fact-check challenge (Ch 13)", "Quiz 2 - Ch 14")
+                .doesNotContain("test time zone shift");
+        assertThat(item(biol, "iClicker remote number").type()).isEqualTo(ItemType.ASSIGNMENT);
+        assertThat(item(biol, "Hormone Matching").type()).isEqualTo(ItemType.ASSIGNMENT);
+        assertThat(item(biol, "1191 Lab 11 Review Quiz").type()).isEqualTo(ItemType.EXAM);
+        assertThat(item(biol, "Quiz #1 - Ch 12&13").type()).isEqualTo(ItemType.EXAM);
+        assertThat(item(biol, "Lecture Midterm I").type()).isEqualTo(ItemType.EXAM);
+        assertThat(item(biol, "Lab Final Exam").type()).isEqualTo(ItemType.EXAM);
+        verify(eventRepository, never()).save(any(CalendarEvent.class));
+    }
+
+    @Test
+    void d2l_recentEventWithNoCourseStillImportsAsAPlainEvent() {
+        service.clock = Clock.fixed(Instant.parse("2024-12-10T12:00:00Z"), ZoneOffset.UTC);
+
+        StageOutcome outcome = importText(fixture("d2l-real.ics"));
+
+        assertThat(outcome.eventsImported()).isEqualTo(1);
+        assertThat(outcome.skipped()).isZero();
+    }
+
+    @Test
+    void d2l_removesAPlainCopyOfAnEventThatIsNowStagedAsADeadline() {
+        CalendarEvent plain = new CalendarEvent();
+        when(eventRepository.findByUserIdAndExternalUid(7L, "6606-4054177@brightspace.example.edu"))
+                .thenReturn(Optional.of(plain));
+
+        importText(fixture("d2l-real.ics"));
+
+        verify(eventRepository).delete(plain);
+    }
+
+    @Test
+    void detect_findsD2lFromDescriptionLinks() {
+        assertThat(LmsProvider.fromEvents(events("d2l-real.ics"))).isEqualTo(LmsProvider.D2L);
+    }
+
+    private static StagedItem item(StagedCourse course, String title) {
+        return course.items().stream().filter(i -> i.title().equals(title)).findFirst().orElseThrow();
     }
 }
