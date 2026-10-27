@@ -266,7 +266,8 @@ public final class AdminDtos {
             String timezone) {
     }
 
-    public record BroadcastRequest(String title, String body, String url, boolean onlyActive, String username) {
+    public record BroadcastRequest(String title, String body, String url, boolean onlyActive, String username,
+                                   Boolean push) {
     }
 
     public record BroadcastResult(int recipients) {

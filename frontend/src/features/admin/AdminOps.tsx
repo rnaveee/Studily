@@ -143,6 +143,7 @@ function BroadcastPanel() {
   const [onlyActive, setOnlyActive] = useState(true);
   const [audience, setAudience] = useState<"all" | "one">("all");
   const [username, setUsername] = useState("");
+  const [push, setPush] = useState(true);
   const recipient = username.trim().replace(/^@/, "");
   const single = audience === "one";
 
@@ -154,6 +155,7 @@ function BroadcastPanel() {
         url,
         onlyActive,
         username: single ? recipient : null,
+        push,
       }),
     onSuccess: (res) => {
       toast.success(`Sent to ${res.recipients} ${res.recipients === 1 ? "person" : "people"}`);
@@ -167,7 +169,7 @@ function BroadcastPanel() {
     e.preventDefault();
     const ok = await confirm({
       title: single ? `Send this to @${recipient}?` : "Send this to everyone?",
-      message: `"${title}" goes out as an in-app notification and a push notification to ${
+      message: `"${title}" goes out as an in-app notification${push ? " and a push notification" : ""} to ${
         single ? `@${recipient}` : onlyActive ? "everyone active in the last 30 days" : "every user"
       }. It can't be recalled.`,
       confirmLabel: "Send it",
@@ -187,14 +189,20 @@ function BroadcastPanel() {
               <button
                 type="button"
                 className={`btn ${single ? "btn-ghost" : "btn-primary"}`}
-                onClick={() => setAudience("all")}
+                onClick={() => {
+                  setAudience("all");
+                  setPush(true);
+                }}
               >
                 Everyone
               </button>
               <button
                 type="button"
                 className={`btn ${single ? "btn-primary" : "btn-ghost"}`}
-                onClick={() => setAudience("one")}
+                onClick={() => {
+                  setAudience("one");
+                  setPush(false);
+                }}
               >
                 One user
               </button>
@@ -240,6 +248,10 @@ function BroadcastPanel() {
           <div className="min-w-[160px] flex-1">
             <label className="field-label">Opens</label>
             <input className="input" value={url} onChange={(e) => setUrl(e.target.value)} />
+          </div>
+          <div className="flex items-center gap-2 pb-1.5">
+            <span className="text-[12px] text-fg-2">Send push</span>
+            <Toggle checked={push} onChange={setPush} />
           </div>
           {!single && (
             <div className="flex items-center gap-2 pb-1.5">

@@ -121,6 +121,7 @@ public class AdminOpsService {
             throw new NotFoundException("No user named @" + username);
         }
 
+        boolean push = request.push() == null || request.push();
         String dedupKey = "announce:" + Instant.now().toEpochMilli();
         int sent = 0;
         for (Long userId : targets) {
@@ -136,8 +137,10 @@ public class AdminOpsService {
             notification.setUrl(url);
             notification.setDedupKey(dedupKey);
             notificationRepository.save(notification);
-            webPushSender.sendToUser(
-                    userId, PushPayload.of(title, body, url), NotificationType.ANNOUNCEMENT.pushTtlSeconds());
+            if (push) {
+                webPushSender.sendToUser(
+                        userId, PushPayload.of(title, body, url), NotificationType.ANNOUNCEMENT.pushTtlSeconds());
+            }
             sent++;
         }
         return new BroadcastResult(sent);
