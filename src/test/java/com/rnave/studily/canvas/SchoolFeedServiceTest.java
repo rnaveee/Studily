@@ -418,7 +418,7 @@ class SchoolFeedServiceTest {
                 new FeedChange("u3", "Lab 7", null, "ENSC252 D100", at, at.minusSeconds(60)),
                 new FeedChange("u4", "Lab 8", null, "ENSC252 D100", at, at.minusSeconds(60)));
 
-        String text = SchoolFeedService.describeChanges(changes, ZoneId.of("America/Vancouver"));
+        String text = SchoolFeedService.describeChanges(changes, ZoneId.of("Etc/GMT+8"));
 
         assertThat(text).isEqualTo("Lab 5 was renamed to Lab 5 (updated) (ENSC252 D100). "
                 + "Lab 6 is now due Fri Nov 6, 12:00 AM. Lab 7 (ENSC252 D100) is now due Fri Nov 6, 12:00 AM. "
@@ -484,7 +484,7 @@ class SchoolFeedServiceTest {
     void describesManyNewCalendarEventsCompactly() {
         Instant at = Instant.parse("2026-11-02T17:00:00Z");
         String text = SchoolFeedService.describeCalendar(List.of(new AddedEvent("A", at), new AddedEvent("B", at),
-                new AddedEvent("C", at)), List.of(), 2, java.time.ZoneId.of("America/Vancouver"));
+                new AddedEvent("C", at)), List.of(), 2, java.time.ZoneId.of("Etc/GMT+8"));
 
         assertThat(text).isEqualTo("3 new events: A (Mon Nov 2, 9:00 AM), B (Mon Nov 2, 9:00 AM) and 1 more. "
                 + "2 events removed.");
