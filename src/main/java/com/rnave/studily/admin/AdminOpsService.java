@@ -6,6 +6,7 @@ import com.rnave.studily.admin.AdminDtos.BroadcastResult;
 import com.rnave.studily.admin.AdminDtos.Health;
 import com.rnave.studily.admin.AdminDtos.Paged;
 import com.rnave.studily.config.BadRequestException;
+import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.mail.MailService;
 import com.rnave.studily.notification.Notification;
 import com.rnave.studily.notification.NotificationRepository;
@@ -108,10 +109,17 @@ public class AdminOpsService {
             throw new BadRequestException("Link must be " + MAX_URL + " characters or fewer");
         }
 
-        List<Long> targets = request.onlyActive()
+        String username = request.username() == null ? "" : request.username().trim().replaceFirst("^@", "");
+        List<Long> targets = !username.isEmpty()
+                ? jdbc.queryForList("SELECT id FROM users WHERE lower(username) = lower(?)", Long.class, username)
+                : request.onlyActive()
                 ? jdbc.queryForList(
                         "SELECT id FROM users WHERE last_active_at >= now() - interval '30 days'", Long.class)
                 : jdbc.queryForList("SELECT id FROM users", Long.class);
+
+        if (!username.isEmpty() && targets.isEmpty()) {
+            throw new NotFoundException("No user named @" + username);
+        }
 
         String dedupKey = "announce:" + Instant.now().toEpochMilli();
         int sent = 0;

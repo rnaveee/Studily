@@ -141,9 +141,20 @@ function BroadcastPanel() {
   const [body, setBody] = useState("");
   const [url, setUrl] = useState("/dashboard");
   const [onlyActive, setOnlyActive] = useState(true);
+  const [audience, setAudience] = useState<"all" | "one">("all");
+  const [username, setUsername] = useState("");
+  const recipient = username.trim().replace(/^@/, "");
+  const single = audience === "one";
 
   const send = useMutation({
-    mutationFn: () => api.post<{ recipients: number }>("/admin/broadcast", { title, body, url, onlyActive }),
+    mutationFn: () =>
+      api.post<{ recipients: number }>("/admin/broadcast", {
+        title,
+        body,
+        url,
+        onlyActive,
+        username: single ? recipient : null,
+      }),
     onSuccess: (res) => {
       toast.success(`Sent to ${res.recipients} ${res.recipients === 1 ? "person" : "people"}`);
       setTitle("");
@@ -155,9 +166,9 @@ function BroadcastPanel() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const ok = await confirm({
-      title: "Send this to everyone?",
+      title: single ? `Send this to @${recipient}?` : "Send this to everyone?",
       message: `"${title}" goes out as an in-app notification and a push notification to ${
-        onlyActive ? "everyone active in the last 30 days" : "every user"
+        single ? `@${recipient}` : onlyActive ? "everyone active in the last 30 days" : "every user"
       }. It can't be recalled.`,
       confirmLabel: "Send it",
       danger: true,
@@ -169,6 +180,39 @@ function BroadcastPanel() {
     <section className="card p-4">
       <h2 className="text-[13px] font-semibold uppercase tracking-wider text-fg-3">Announcement</h2>
       <form className="mt-3 space-y-3" onSubmit={submit}>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="field-label">Send to</label>
+            <div className="flex gap-1.5">
+              <button
+                type="button"
+                className={`btn ${single ? "btn-ghost" : "btn-primary"}`}
+                onClick={() => setAudience("all")}
+              >
+                Everyone
+              </button>
+              <button
+                type="button"
+                className={`btn ${single ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => setAudience("one")}
+              >
+                One user
+              </button>
+            </div>
+          </div>
+          {single && (
+            <div className="min-w-[160px] flex-1">
+              <label className="field-label">Username</label>
+              <input
+                className="input"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="@username"
+                required
+              />
+            </div>
+          )}
+        </div>
         <div>
           <label className="field-label">Title</label>
           <input
@@ -197,14 +241,16 @@ function BroadcastPanel() {
             <label className="field-label">Opens</label>
             <input className="input" value={url} onChange={(e) => setUrl(e.target.value)} />
           </div>
-          <div className="flex items-center gap-2 pb-1.5">
-            <span className="text-[12px] text-fg-2">Active users only</span>
-            <Toggle checked={onlyActive} onChange={setOnlyActive} />
-          </div>
+          {!single && (
+            <div className="flex items-center gap-2 pb-1.5">
+              <span className="text-[12px] text-fg-2">Active users only</span>
+              <Toggle checked={onlyActive} onChange={setOnlyActive} />
+            </div>
+          )}
         </div>
         <button type="submit" className="btn btn-primary" disabled={send.isPending}>
           <Megaphone size={13} strokeWidth={1.8} />
-          {send.isPending ? "Sending…" : "Send announcement"}
+          {send.isPending ? "Sending…" : single ? "Send to user" : "Send announcement"}
         </button>
       </form>
     </section>

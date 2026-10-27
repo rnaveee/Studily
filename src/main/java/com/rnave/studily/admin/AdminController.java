@@ -254,7 +254,9 @@ public class AdminController {
 
     @PostMapping("/broadcast")
     public BroadcastResult broadcast(@RequestBody BroadcastRequest body, HttpServletRequest request) {
-        auditService.record(admin(request), request, "BROADCAST", body.title(), body.body());
+        auditService.record(admin(request), request, "BROADCAST",
+                body.username() == null || body.username().isBlank() ? body.title() : "@" + body.username().trim().replaceFirst("^@", "") + ": " + body.title(),
+                body.body());
         return opsService.broadcast(body);
     }
 
