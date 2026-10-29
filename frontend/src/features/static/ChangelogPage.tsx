@@ -7,6 +7,7 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
+  { version: 78, date: "2026-10-29", summary: "Redid the welcome setup for phones. Profile, semester and courses each get their own page, every page can be set up later, you can bring in courses from Canvas, Brightspace or Moodle with a step-by-step guide, and the tour cards no longer cover what they point at." },
   { version: 77, date: "2026-10-26", summary: "Brightspace imports now bring in your assignments, quizzes, midterms and finals as deadlines under the right course, including schools with four-digit course numbers like BIOL 1191." },
   { version: 76, date: "2026-10-26", summary: "Google Calendar and other calendar links now stay in sync on their own. New, moved and deleted events show up in Studily and in your notifications." },
   { version: 75, date: "2026-10-26", summary: "Canvas, Brightspace and Moodle imports now ask before adding anything. You confirm each course, merge it into one you already have, and choose what to do with deadlines you already entered." },

@@ -9,10 +9,14 @@ export default function CanvasImportForm({
   onImported,
   autoFocus,
   submitLabel = "Import courses",
+  hideHints = false,
+  returnTo,
 }: {
   onImported?: (result: FeedStageResult) => void;
   autoFocus?: boolean;
   submitLabel?: string;
+  hideHints?: boolean;
+  returnTo?: string;
 }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -45,7 +49,7 @@ export default function CanvasImportForm({
       }
       onImported?.(result);
       if (result.importId != null) {
-        navigate(`/imports/${result.importId}`);
+        navigate(`/imports/${result.importId}`, returnTo ? { state: { returnTo } } : undefined);
       } else {
         toast.success(
           result.itemsUpdated + result.eventsImported > 0
@@ -76,6 +80,7 @@ export default function CanvasImportForm({
           required
         />
       </div>
+      {!hideHints && (
       <ul className="space-y-1 text-[11px] leading-relaxed text-fg-3">
         <li>
           <span className="text-fg-2">Canvas:</span> Calendar, then Calendar Feed.
@@ -89,6 +94,7 @@ export default function CanvasImportForm({
           then Export.
         </li>
       </ul>
+      )}
       <p className="text-[11px] leading-relaxed text-fg-3">
         {autoSync
           ? "Copy the link and paste it here. Studily checks your link for new assignments every few hours. Your grades, weights and progress stay untouched."

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Inbox } from "lucide-react";
 import BackButton from "../../components/BackButton";
 import QueryError from "../../components/QueryError";
@@ -41,6 +41,8 @@ function resultText(result: ApplyResult): string {
 export default function ImportReviewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo;
   const qc = useQueryClient();
   const [step, setStep] = useState<Step>("courses");
   const [open, setOpen] = useState(true);
@@ -62,7 +64,7 @@ export default function ImportReviewPage() {
         qc.invalidateQueries({ queryKey: [key] });
       }
       toast.success(resultText(result));
-      navigate("/calendar", { replace: true });
+      navigate(returnTo ?? "/calendar", { replace: true });
     },
     onError: (e) => {
       setStep("courses");
@@ -76,7 +78,7 @@ export default function ImportReviewPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["notifications"] });
       qc.invalidateQueries({ queryKey: ["feed-import", id] });
-      navigate("/dashboard", { replace: true });
+      navigate(returnTo ?? "/dashboard", { replace: true });
     },
     onError: (e) => toast.error(e instanceof ApiError ? e.message : "Could not dismiss that import"),
   });
@@ -205,7 +207,7 @@ export default function ImportReviewPage() {
               Review deadlines
             </button>
           )}
-          <button type="button" className="btn btn-ghost" onClick={() => navigate("/dashboard")}>
+          <button type="button" className="btn btn-ghost" onClick={() => navigate(returnTo ?? "/dashboard")}>
             Not now
           </button>
           <button

@@ -78,7 +78,8 @@ function useTypingInField() {
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
+  const fromWelcome = (state as { returnTo?: string } | null)?.returnTo?.startsWith("/welcome") === true;
   const tourStep = useWelcomeTourStep();
   const desktop = useIsDesktop();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -87,8 +88,8 @@ export default function Layout() {
   useEffect(() => setNotifOpen(false), [pathname]);
 
   useEffect(() => {
-    if (user && user.welcomed === false && tourStep === null) navigate("/welcome", { replace: true });
-  }, [user, tourStep, navigate]);
+    if (user && user.welcomed === false && tourStep === null && !fromWelcome) navigate("/welcome", { replace: true });
+  }, [user, tourStep, fromWelcome, navigate]);
   const typing = useTypingInField();
   useKeyboardViewport();
   const outletRef = useRef<HTMLDivElement>(null);
