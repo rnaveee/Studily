@@ -43,6 +43,7 @@ import CourseForm from "./CourseForm";
 import ItemForm from "../../components/ItemForm";
 import WeightsSection from "./WeightsSection";
 import { useGradeCategories, trimPercent } from "./weights";
+import FileBankPanel from "../studilybot/FileBankPanel";
 
 const STATUSES: ItemStatus[] = ["TODO", "IN_PROGRESS", "DONE"];
 const STATUS_LABEL: Record<ItemStatus, string> = {
@@ -210,6 +211,7 @@ export default function CourseDetailPage() {
         categories={weightsQ.data ?? []}
         onChange={invalidateAll}
       />
+      <FileBankPanel courseId={courseId} />
       <CourseDocumentImport
         course={course}
         items={itemsQ.data ?? []}

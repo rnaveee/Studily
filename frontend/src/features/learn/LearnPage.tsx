@@ -1,12 +1,31 @@
 import { Link } from "react-router-dom";
-import { Atom, Calculator, Percent, Timer } from "lucide-react";
+import { Atom, Calculator, Percent, Timer, type LucideIcon } from "lucide-react";
 import { formatMs, pomodoroColor, usePomodoro } from "../../lib/pomodoro";
 import TodoQuickView from "../todos/TodoQuickView";
+import BotMascot from "../studilybot/BotMascot";
 import FlashcardsPanel from "./FlashcardsPanel";
 import ProgressPanel from "./ProgressPanel";
 import StudySessionsPanel from "./sessions/StudySessionsPanel";
 
-const TOOLS = [
+type Tool = {
+  to: string;
+  icon?: LucideIcon;
+  mascot?: boolean;
+  title: string;
+  label: string;
+  color: string;
+  description: string;
+};
+
+const TOOLS: Tool[] = [
+  {
+    to: "/study/studilybot",
+    mascot: true,
+    title: "StudilyBot",
+    label: "StudilyBot",
+    color: "var(--accent)",
+    description: "Ask, explain and practise with your own course files.",
+  },
   {
     to: "/pomodoro",
     icon: Timer,
@@ -32,7 +51,7 @@ const TOOLS = [
     description: "Work out your weighted grade and what you need on your final.",
   },
   {
-    to: "/learn/calculator",
+    to: "/study/calculator",
     icon: Calculator,
     title: "Calculator",
     label: "Calculator",
@@ -40,8 +59,6 @@ const TOOLS = [
     description: "Scientific calculator with fractions, units and history.",
   },
 ];
-
-type Tool = (typeof TOOLS)[number];
 
 export default function LearnPage() {
   const p = usePomodoro();
@@ -63,7 +80,7 @@ export default function LearnPage() {
 
       <div className="space-y-6 xl:hidden">
         <div className="pt-2">
-          <h2 className="text-xl font-semibold text-fg">Learn</h2>
+          <h2 className="text-xl font-semibold text-fg">Study</h2>
           <p className="mt-1 text-[13px] text-fg-3">
             Study tools to help you master your courses.
           </p>
@@ -156,7 +173,16 @@ function ToolIcon({
   liveColor: string;
   large?: boolean;
 }) {
+  if (tool.mascot) {
+    const size = large ? 48 : 44;
+    return (
+      <span className="flex shrink-0 items-center justify-center" style={{ width: size, height: size }}>
+        <BotMascot size={size - 4} />
+      </span>
+    );
+  }
   const Icon = tool.icon;
+  if (!Icon) return null;
   const color = live ? liveColor : tool.color;
   return (
     <span

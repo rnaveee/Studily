@@ -84,7 +84,7 @@ function StreakSummary({ data, cheer }: { data: StreakWeekDto; cheer: string }) 
   return (
     <>
       <Link
-        to="/learn"
+        to="/study"
         className={PANEL}
         style={flameTint(data.current)}
       >

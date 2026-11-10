@@ -40,7 +40,7 @@ const NAV = [
   { to: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard, end: true },
   { to: "/semesters",  label: "Semesters",  icon: GraduationCap },
   { to: "/messages",   label: "Messages",   icon: MessageSquare },
-  { to: "/learn",      label: "Study",      icon: Brain },
+  { to: "/study",      label: "Study",      icon: Brain },
   { to: "/friends",    label: "Friends",    icon: Users2 },
   { to: "/profile",    label: "Profile",    icon: User },
 ];
@@ -183,7 +183,7 @@ export default function Layout() {
               key={to}
               to={to}
               end={end}
-              data-tour={to === "/learn" ? "nav-study" : undefined}
+              data-tour={to === "/study" ? "nav-study" : undefined}
               className={({ isActive }) =>
                 [
                   "relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors duration-150 select-none",
@@ -351,7 +351,7 @@ export default function Layout() {
           <div
             ref={outletRef}
             className={`mx-auto flex min-h-full ${
-              pathname === "/learn"
+              pathname === "/study"
                 ? "max-w-[96rem] xl:pb-16"
                 : pathname === "/dashboard" || pathname === "/calendar"
                   ? "max-w-5xl xl:max-w-[96rem] xl:pb-16"

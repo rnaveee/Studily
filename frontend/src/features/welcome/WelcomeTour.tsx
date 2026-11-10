@@ -58,14 +58,14 @@ export const TOUR_STEPS: Step[] = [
 ];
 
 async function resolveRoute(route: Route): Promise<string> {
-  if (route === "learn") return "/learn";
+  if (route === "learn") return "/study";
   if (route === "friends") return "/friends";
   try {
     const sets = await api.get<FlashcardSet[]>("/flashcard-sets");
     const sample = sets.find((s) => s.title === SAMPLE_SET_TITLE) ?? sets[0];
-    return sample ? `/learn/flashcards/${sample.id}` : "/learn/flashcards";
+    return sample ? `/study/flashcards/${sample.id}` : "/study/flashcards";
   } catch {
-    return "/learn/flashcards";
+    return "/study/flashcards";
   }
 }
 

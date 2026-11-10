@@ -180,7 +180,7 @@ interface DueEntry {
 
 const EXPLORE = [
   { to: "/courses", icon: BookOpen, title: "Courses", color: "var(--green)", description: "Set your courses for this semester." },
-  { to: "/learn", icon: Brain, title: "Study", color: "var(--accent)", description: "Improve your learning in your classes." },
+  { to: "/study", icon: Brain, title: "Study", color: "var(--accent)", description: "Improve your learning in your classes." },
   { to: "/grade-calculator", icon: Percent, title: "Grade calculator", color: "var(--blue-vivid)", description: "See what you need on your final." },
   { to: "/profile", icon: User, title: "Profile", color: "var(--orange-vivid)", description: "Set your profile to connect with others." },
 ];

@@ -162,7 +162,7 @@ export default function GradeCalculatorPage() {
   return (
     <div className="space-y-5 stagger-children">
       <div className="flex items-center gap-3">
-        <BackButton fallback={user ? "/learn" : "/"} />
+        <BackButton fallback={user ? "/study" : "/"} />
         <div>
           <h1 className="text-xl font-semibold text-fg">Grade Calculator</h1>
           <p className="mt-1 text-[13px] text-fg-3">

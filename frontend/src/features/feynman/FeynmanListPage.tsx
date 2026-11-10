@@ -23,7 +23,7 @@ export default function FeynmanListPage() {
       files.forEach((f) => form.append("files", f));
       return api.post<FeynmanSession>("/feynman/sessions", form);
     },
-    onSuccess: (s) => navigate(`/learn/feynman/${s.id}`),
+    onSuccess: (s) => navigate(`/study/feynman/${s.id}`),
   });
 
   return (
@@ -66,7 +66,7 @@ export default function FeynmanListPage() {
       <ul>
         {sessions.data?.map((s) => (
           <li key={s.id}>
-            <Link to={`/learn/feynman/${s.id}`}>{s.title}</Link>{" "}
+            <Link to={`/study/feynman/${s.id}`}>{s.title}</Link>{" "}
             {s.status === "COMPLETE" ? `· ${s.score ?? 0}%` : "· in progress"}
           </li>
         ))}

@@ -11,7 +11,7 @@ export default function SessionHistoryPage() {
   return (
     <div className="mx-auto w-full max-w-2xl space-y-5 stagger-children">
       <div className="flex items-center gap-3">
-        <BackButton fallback="/learn" />
+        <BackButton fallback="/study" />
         <div className="min-w-0">
           <h1 className="text-xl font-semibold text-fg">Study sessions</h1>
           <p className="mt-0.5 text-[13px] text-fg-3">Every session you've started, newest first.</p>
@@ -54,7 +54,7 @@ function HistoryBody() {
         <History className="mx-auto mb-2 text-fg-3" size={28} strokeWidth={1.5} />
         <p className="text-sm font-medium text-fg">No study sessions yet</p>
         <p className="mt-1 text-[12px] text-fg-3">Start one from Study to build your streak and earn XP.</p>
-        <Link to="/learn" className="btn btn-soft mt-4 min-h-[40px]">
+        <Link to="/study" className="btn btn-soft mt-4 min-h-[40px]">
           Go to Study
         </Link>
       </div>
