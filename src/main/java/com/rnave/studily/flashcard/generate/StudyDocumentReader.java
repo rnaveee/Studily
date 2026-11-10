@@ -148,6 +148,24 @@ public class StudyDocumentReader {
         }
     }
 
+    public String readText(String fileName, byte[] bytes) {
+        StudyDocument doc = read(fileName, bytes, PageSelection.ALL);
+        StringBuilder out = new StringBuilder();
+
+        for (StudyDocument.Page page : doc.pages()) {
+            if(!page.text().isBlank()) {
+                out.append("=== ")
+                        .append(doc.unit())
+                        .append(' ')
+                        .append(page.number())
+                        .append(" ===\n")
+                        .append(page.text())
+                        .append("\n\n");
+            }
+        }
+        return out.toString().strip();
+    }
+
     StudyDocument parse(String fileName, FileKind kind, byte[] bytes, PageSelection selection) throws Exception {
         StudyDocument doc = switch (kind) {
             case PDF -> readPdf(fileName, bytes, selection);
@@ -155,7 +173,7 @@ public class StudyDocumentReader {
             case DOCX -> readDocx(fileName, bytes);
             case PNG, JPEG -> readPhoto(fileName, kind, bytes);
             case WEBP -> readWebp(fileName, bytes);
-            case TEXT -> readText(fileName, bytes);
+            case TEXT -> readPlainText(fileName, bytes);
         };
         if (doc.textChars() > MAX_TEXT_CHARS) {
             throw new BadRequestException(fileName + " is too long to turn into cards in one go. "
@@ -498,7 +516,7 @@ public class StudyDocumentReader {
                 List.of(new Figure(1, 1, picture)));
     }
 
-    private static StudyDocument readText(String fileName, byte[] bytes) {
+    private static StudyDocument readPlainText(String fileName, byte[] bytes) {
         String text = new String(bytes, StandardCharsets.UTF_8).replace("﻿", "").replace("\r\n", "\n");
         if (text.length() > MAX_TEXT_CHARS) {
             throw new BadRequestException(fileName + " is too long to turn into cards in one go. "

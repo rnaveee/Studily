@@ -69,3 +69,6 @@ example/
 .wrangler/
 
 frontend/tsconfig.tsbuildinfo
+
+# Python
+__pycache__/

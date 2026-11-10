@@ -1,0 +1,431 @@
+package com.rnave.studily.feynman;
+
+import com.rnave.studily.config.BadRequestException;
+import com.rnave.studily.config.CurrentUser;
+import com.rnave.studily.config.NotFoundException;
+import com.rnave.studily.config.TooManyRequestsException;
+import com.rnave.studily.feynman.ClaudeFeynmanTutor.Assessed;
+import com.rnave.studily.feynman.ClaudeFeynmanTutor.HistoryLine;
+import com.rnave.studily.feynman.ClaudeFeynmanTutor.Outcome;
+import com.rnave.studily.feynman.FeynmanDtos.AvailabilityDto;
+import com.rnave.studily.feynman.FeynmanDtos.ConceptScoreDto;
+import com.rnave.studily.feynman.FeynmanDtos.DocumentDto;
+import com.rnave.studily.feynman.FeynmanDtos.GapDto;
+import com.rnave.studily.feynman.FeynmanDtos.MessageDto;
+import com.rnave.studily.feynman.FeynmanDtos.ReportDto;
+import com.rnave.studily.feynman.FeynmanDtos.SessionDto;
+import com.rnave.studily.feynman.FeynmanDtos.SessionSummaryDto;
+import com.rnave.studily.feynman.FeynmanDtos.TurnDto;
+import com.rnave.studily.flashcard.generate.StudyDocumentReader;
+import com.rnave.studily.parse.AiFeature;
+import com.rnave.studily.parse.CourseParseUsage;
+import com.rnave.studily.parse.CourseParseUsageRepository;
+import com.rnave.studily.user.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
+
+@Service
+public class FeynmanService {
+
+    private static final Logger log = LoggerFactory.getLogger(FeynmanService.class);
+
+    static final int MAX_FILES = 3;
+    static final long MAX_FILE_BYTES = 25L * 1024 * 1024;
+    static final int MAX_MATERIAL_CHARS = 200_000;
+    static final int MAX_CONCEPTS = 15;
+    static final int MAX_TITLE = 120;
+    static final int MAX_FOCUS = 1000;
+
+    private final ClaudeFeynmanTutor tutor;
+    private final FeynmanLimits limits;
+    private final StudyDocumentReader reader;
+    private final FeynmanSessionRepository sessions;
+    private final FeynmanDocumentRepository documents;
+    private final FeynmanMessageRepository messages;
+    private final FeynmanAssessmentRepository assessments;
+    private final CourseParseUsageRepository usageRepository;
+    private final CurrentUser currentUser;
+    private final Set<Long> inFlight = ConcurrentHashMap.newKeySet();
+
+    public FeynmanService(ClaudeFeynmanTutor tutor, FeynmanLimits limits, StudyDocumentReader reader,
+                          FeynmanSessionRepository sessions, FeynmanDocumentRepository documents,
+                          FeynmanMessageRepository messages, FeynmanAssessmentRepository assessments,
+                          CourseParseUsageRepository usageRepository, CurrentUser currentUser) {
+        this.tutor = tutor;
+        this.limits = limits;
+        this.reader = reader;
+        this.sessions = sessions;
+        this.documents = documents;
+        this.messages = messages;
+        this.assessments = assessments;
+        this.usageRepository = usageRepository;
+        this.currentUser = currentUser;
+    }
+
+    public AvailabilityDto availability() {
+        boolean enabled = tutor.enabled();
+        return new AvailabilityDto(enabled, enabled && limits.paused(), enabled ? limits.remainingToday() : 0,
+                MAX_FILES, MAX_FILE_BYTES);
+    }
+
+    public List<SessionSummaryDto> list() {
+        return sessions.findByUserIdOrderByUpdatedAtDesc(currentUser.id()).stream()
+                .map(s -> new SessionSummaryDto(s.getId(), s.getTitle(), s.getStatus(), s.getScore(), s.getUpdatedAt()))
+                .toList();
+    }
+
+    public SessionDto get(Long id) {
+        return dto(owned(id));
+    }
+
+    record Material(String fileName, long sizeBytes, String text) {
+    }
+
+    public SessionDto start(String title, String focus, List<MultipartFile> files) {
+        requireEnabled();
+        List<Material> material = read(files, 0);
+        String cleanFocus = clip(focus, MAX_FOCUS);
+        User user = currentUser.entity();
+        return guarded(user.getId(), () -> {
+            limits.check();
+            FeynmanPlan plan = buildPlan(user, material, cleanFocus);
+
+            FeynmanSession session = new FeynmanSession();
+            session.setUser(user);
+            String chosen = clip(title, MAX_TITLE);
+            session.setTitle(chosen != null ? chosen : titleFrom(plan, material));
+            session.setFocus(cleanFocus);
+            session.setPlan(ClaudeFeynmanTutor.JSON.writeValueAsString(plan));
+            session = sessions.save(session);
+            for (Material m : material) {
+                saveDocument(session, m);
+            }
+            saveMessage(session, FeynmanRole.BOT, FeynmanKind.CHAT, opening(plan));
+            return dto(session);
+        });
+    }
+
+    public SessionDto addDocuments(Long id, List<MultipartFile> files) {
+        requireEnabled();
+        FeynmanSession session = owned(id);
+        requireActive(session);
+        if (messages.countBySessionIdAndRole(id, FeynmanRole.USER) > 0) {
+            throw new BadRequestException("You can only add files before you start explaining.");
+        }
+        List<FeynmanDocument> existing = documents.findBySessionIdOrderByIdAsc(id);
+        List<Material> added = read(files, existing.size());
+        List<Material> all = new ArrayList<>();
+        existing.forEach(d -> all.add(new Material(d.getFileName(), d.getSizeBytes(), d.getContent())));
+        all.addAll(added);
+        requireMaterialFits(all);
+        User user = currentUser.entity();
+        return guarded(user.getId(), () -> {
+            limits.check();
+            FeynmanPlan plan = buildPlan(user, all, session.getFocus());
+            for (Material m : added) {
+                saveDocument(session, m);
+            }
+            session.setPlan(ClaudeFeynmanTutor.JSON.writeValueAsString(plan));
+            touch(session);
+            for (FeynmanMessage m : messages.findBySessionIdOrderByIdAsc(id)) {
+                messages.delete(m);
+            }
+            saveMessage(session, FeynmanRole.BOT, FeynmanKind.CHAT, opening(plan));
+            return dto(session);
+        });
+    }
+
+    public TurnDto send(Long id, String body) {
+        requireEnabled();
+        FeynmanSession session = owned(id);
+        requireActive(session);
+        String text = body == null ? "" : body.strip();
+        if (text.isEmpty()) {
+            throw new BadRequestException("Write something to send.");
+        }
+        User user = currentUser.entity();
+        return guarded(user.getId(), () -> {
+            limits.check();
+            FeynmanPlan plan = plan(session);
+            List<FeynmanAssessment> past = assessments.findBySessionIdOrderByIdAsc(id);
+            List<HistoryLine> history = messages.findBySessionIdOrderByIdAsc(id).stream()
+                    .filter(m -> m.getKind() == FeynmanKind.CHAT)
+                    .map(m -> new HistoryLine(m.getRole(), m.getBody()))
+                    .toList();
+
+            Outcome<FeynmanTurn> outcome = tutor.turn(plan, assessed(past), history, text);
+            record(user, outcome);
+            if (!outcome.ok() || outcome.result().messages() == null || outcome.result().messages().isEmpty()) {
+                throw new BadRequestException(ClaudeFeynmanTutor.FAILED);
+            }
+            FeynmanTurn turn = outcome.result();
+
+            List<MessageDto> out = new ArrayList<>();
+            FeynmanMessage studentMessage = saveMessage(session, FeynmanRole.USER, FeynmanKind.CHAT, text);
+            out.add(dto(studentMessage));
+            for (String bubble : turn.messages()) {
+                if (bubble != null && !bubble.isBlank()) {
+                    out.add(dto(saveMessage(session, FeynmanRole.BOT, FeynmanKind.CHAT, bubble.strip())));
+                }
+            }
+            if (turn.assessed()) {
+                Optional<String> concept = FeynmanScoring.matchConcept(plan, turn.concept());
+                if (concept.isPresent()) {
+                    FeynmanAssessment a = new FeynmanAssessment();
+                    a.setSession(session);
+                    a.setMessage(studentMessage);
+                    a.setConcept(concept.get());
+                    a.setScore(FeynmanScoring.clamp(turn.score()));
+                    a.setGaps(turn.gaps() == null || turn.gaps().isEmpty() ? null : String.join("\n", turn.gaps()));
+                    a.setDidNotKnow(turn.didNotKnow());
+                    assessments.save(a);
+                } else {
+                    log.info("StudilyBot assessed a concept that isn't in the plan: {}", turn.concept());
+                }
+            }
+            touch(session);
+
+            if (turn.lectureComplete()) {
+                try {
+                    TurnDto report = complete(user, session, plan);
+                    out.addAll(report.messages());
+                    return new TurnDto(out, report.status(), report.score());
+                } catch (BadRequestException e) {
+                    log.warn("StudilyBot finished the lecture but the report failed: {}", e.getMessage());
+                }
+            }
+            return new TurnDto(out, session.getStatus(), session.getScore());
+        });
+    }
+
+    public TurnDto finish(Long id) {
+        requireEnabled();
+        FeynmanSession session = owned(id);
+        requireActive(session);
+        User user = currentUser.entity();
+        return guarded(user.getId(), () -> {
+            limits.check();
+            return complete(user, session, plan(session));
+        });
+    }
+
+    public void delete(Long id) {
+        sessions.delete(owned(id));
+    }
+
+    private TurnDto complete(User user, FeynmanSession session, FeynmanPlan plan) {
+        List<FeynmanAssessment> past = assessments.findBySessionIdOrderByIdAsc(session.getId());
+        if (past.isEmpty()) {
+            throw new BadRequestException("Explain at least one idea to StudilyBot before you finish.");
+        }
+        List<ConceptScoreDto> scores = FeynmanScoring.conceptScores(plan, past);
+        int score = FeynmanScoring.overall(scores);
+
+        Outcome<FeynmanReport> outcome = tutor.report(plan, assessed(past));
+        record(user, outcome);
+        if (!outcome.ok()) {
+            throw new BadRequestException(ClaudeFeynmanTutor.FAILED);
+        }
+        FeynmanReport report = outcome.result();
+        ReportDto dto = new ReportDto(score,
+                report.summary() == null ? "" : report.summary(),
+                report.strengths() == null ? List.of() : report.strengths(),
+                report.gaps() == null ? List.of()
+                        : report.gaps().stream().map(g -> new GapDto(g.concept(), g.detail())).toList(),
+                scores);
+        FeynmanMessage saved = saveMessage(session, FeynmanRole.BOT, FeynmanKind.REPORT,
+                ClaudeFeynmanTutor.JSON.writeValueAsString(dto));
+        session.setStatus(FeynmanStatus.COMPLETE);
+        session.setScore(score);
+        touch(session);
+        return new TurnDto(List.of(dto(saved)), FeynmanStatus.COMPLETE, score);
+    }
+
+    private FeynmanPlan buildPlan(User user, List<Material> material, String focus) {
+        StringBuilder text = new StringBuilder();
+        for (Material m : material) {
+            text.append("Document: ").append(m.fileName()).append("\n\n").append(m.text()).append("\n\n");
+        }
+        Outcome<FeynmanPlan> outcome = tutor.plan(text.toString().strip(), focus);
+        record(user, outcome);
+        if (!outcome.ok()) {
+            throw new BadRequestException("StudilyBot couldn't read a lecture from that. Try again, or try a different file.");
+        }
+        FeynmanPlan plan = outcome.result();
+        List<FeynmanPlan.Concept> concepts = plan.concepts() == null ? List.of() : plan.concepts().stream()
+                .filter(c -> c != null && c.name() != null && !c.name().isBlank())
+                .limit(MAX_CONCEPTS)
+                .toList();
+        if (concepts.isEmpty()) {
+            throw new BadRequestException("StudilyBot couldn't find anything to teach back in that. Try a file with more notes in it.");
+        }
+        return new FeynmanPlan(plan.topic(), concepts);
+    }
+
+    private List<Material> read(List<MultipartFile> files, int alreadyAttached) {
+        List<MultipartFile> uploads = files == null ? List.of()
+                : files.stream().filter(f -> f != null && !f.isEmpty()).toList();
+        if (uploads.isEmpty()) {
+            throw new BadRequestException("Add your lecture slides or notes to start.");
+        }
+        if (uploads.size() + alreadyAttached > MAX_FILES) {
+            throw new BadRequestException("A session can use up to " + MAX_FILES + " files.");
+        }
+        List<Material> material = new ArrayList<>();
+        for (MultipartFile file : uploads) {
+            String name = file.getOriginalFilename() == null ? "document" : file.getOriginalFilename();
+            if (file.getSize() > MAX_FILE_BYTES) {
+                throw new BadRequestException(name + " is too big. Files can be up to 25 MB.");
+            }
+            byte[] bytes;
+            try {
+                bytes = file.getBytes();
+            } catch (IOException e) {
+                throw new BadRequestException(name + " could not be read.");
+            }
+            String text = reader.readText(name, bytes);
+            if (text.isBlank()) {
+                throw new BadRequestException(name + " has no text StudilyBot can read.");
+            }
+            material.add(new Material(name, bytes.length, text));
+        }
+        requireMaterialFits(material);
+        return material;
+    }
+
+    private static void requireMaterialFits(List<Material> material) {
+        int chars = material.stream().mapToInt(m -> m.text().length()).sum();
+        if (chars > MAX_MATERIAL_CHARS) {
+            throw new BadRequestException("That's too much material for one session. Try one lecture at a time.");
+        }
+    }
+
+    private <T> T guarded(Long userId, Supplier<T> work) {
+        if (!inFlight.add(userId)) {
+            throw new TooManyRequestsException("StudilyBot is still answering. Wait for it to finish first.");
+        }
+        try {
+            return work.get();
+        } finally {
+            inFlight.remove(userId);
+        }
+    }
+
+    private void requireEnabled() {
+        if (!tutor.enabled()) {
+            throw new BadRequestException("StudilyBot isn't available right now.");
+        }
+    }
+
+    private static void requireActive(FeynmanSession session) {
+        if (session.getStatus() != FeynmanStatus.ACTIVE) {
+            throw new BadRequestException("This session is finished. Start a new one to keep going.");
+        }
+    }
+
+    private FeynmanSession owned(Long id) {
+        return sessions.findByIdAndUserId(id, currentUser.id())
+                .orElseThrow(() -> new NotFoundException("Session not found"));
+    }
+
+    private static FeynmanPlan plan(FeynmanSession session) {
+        return ClaudeFeynmanTutor.JSON.readValue(session.getPlan(), FeynmanPlan.class);
+    }
+
+    private static List<Assessed> assessed(List<FeynmanAssessment> past) {
+        return past.stream()
+                .map(a -> new Assessed(a.getConcept(), a.getScore(), a.getGaps(), a.isDidNotKnow()))
+                .toList();
+    }
+
+    static String opening(FeynmanPlan plan) {
+        String first = plan.concepts().get(0).name();
+        String topic = plan.topic() == null || plan.topic().isBlank() ? "this lecture" : plan.topic().strip();
+        int count = plan.concepts().size();
+        return "I read your material on " + topic + " and found " + count
+                + (count == 1 ? " idea" : " ideas") + " to go through. Pretend I've never heard of any of it. "
+                + "Let's start with " + first + ". How would you explain it to me?";
+    }
+
+    private static String titleFrom(FeynmanPlan plan, List<Material> material) {
+        String title = plan.topic();
+        if (title == null || title.isBlank()) {
+            String name = material.get(0).fileName();
+            title = name.contains(".") ? name.substring(0, name.lastIndexOf('.')) : name;
+        }
+        return clip(title, MAX_TITLE);
+    }
+
+    private static String clip(String value, int max) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String s = value.strip();
+        return s.length() > max ? s.substring(0, max).strip() : s;
+    }
+
+    private void touch(FeynmanSession session) {
+        session.setUpdatedAt(Instant.now());
+        sessions.save(session);
+    }
+
+    private void saveDocument(FeynmanSession session, Material m) {
+        FeynmanDocument doc = new FeynmanDocument();
+        doc.setSession(session);
+        doc.setFileName(clip(m.fileName(), 255));
+        doc.setSizeBytes(m.sizeBytes());
+        doc.setContent(m.text());
+        documents.save(doc);
+    }
+
+    private FeynmanMessage saveMessage(FeynmanSession session, FeynmanRole role, FeynmanKind kind, String body) {
+        FeynmanMessage message = new FeynmanMessage();
+        message.setSession(session);
+        message.setRole(role);
+        message.setKind(kind);
+        message.setBody(body);
+        return messages.save(message);
+    }
+
+    private void record(User user, Outcome<?> outcome) {
+        if (!outcome.billed()) {
+            return;
+        }
+        try {
+            CourseParseUsage usage = new CourseParseUsage();
+            usage.setUser(user);
+            usage.setModel(outcome.model());
+            usage.setInputTokens(outcome.inputTokens());
+            usage.setOutputTokens(outcome.outputTokens());
+            usage.setFeature(AiFeature.FEYNMAN);
+            usage.setSucceeded(outcome.ok());
+            usageRepository.save(usage);
+        } catch (RuntimeException e) {
+            log.warn("Could not record StudilyBot usage: {}", e.getMessage());
+        }
+    }
+
+    private SessionDto dto(FeynmanSession s) {
+        List<DocumentDto> docs = documents.findBySessionIdOrderByIdAsc(s.getId()).stream()
+                .map(d -> new DocumentDto(d.getId(), d.getFileName(), d.getSizeBytes(), d.getContent().length(),
+                        d.getCreatedAt()))
+                .toList();
+        List<MessageDto> msgs = messages.findBySessionIdOrderByIdAsc(s.getId()).stream().map(FeynmanService::dto).toList();
+        return new SessionDto(s.getId(), s.getTitle(), s.getFocus(), s.getStatus(), s.getScore(), docs, msgs);
+    }
+
+    private static MessageDto dto(FeynmanMessage m) {
+        return new MessageDto(m.getId(), m.getRole(), m.getKind(), m.getBody(), m.getCreatedAt());
+    }
+}
