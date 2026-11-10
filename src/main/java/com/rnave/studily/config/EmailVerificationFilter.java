@@ -22,11 +22,14 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
     static final String PARSE_MESSAGE = "Verify your email to build a course from an outline";
     static final String REPORT_MESSAGE = "Verify your email to send reports";
     static final String GENERATE_MESSAGE = "Verify your email to make flashcards from documents";
+    static final String BOT_MESSAGE = "Verify your email to use StudilyBot and course files";
 
     private static final List<String> LOCKED_PREFIXES = List.of("/api/friends", "/api/conversations", "/api/reports");
     private static final String PARSE_PATH = "/api/courses/parse";
     private static final String SCHEDULE_PARSE_PATH = "/api/courses/parse/schedule";
     private static final Pattern GENERATE_PATHS = Pattern.compile("^/api/flashcard-sets(/\\d+)?/generate/?$");
+    private static final Pattern BOT_PATHS = Pattern.compile("^/api/(bot|bank|feynman)(/.*)?$");
+    private static final Pattern BOT_OPEN_PATHS = Pattern.compile("^/api/(bot/status|bank/status|feynman/enabled)/?$");
     private static final Pattern LOCKED_USER_PATHS = Pattern.compile("^/api/users/[^/]+/(progress|badges)/?$");
 
     private final UserRepository userRepository;
@@ -43,7 +46,8 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
 
         String uri = request.getRequestURI();
         boolean generate = GENERATE_PATHS.matcher(uri).matches();
-        boolean locked = LOCKED_PREFIXES.stream().anyMatch(uri::startsWith) || isParse(uri) || generate
+        boolean bot = isBot(uri);
+        boolean locked = LOCKED_PREFIXES.stream().anyMatch(uri::startsWith) || isParse(uri) || generate || bot
                 || LOCKED_USER_PATHS.matcher(uri).matches();
         if (!locked) {
             filterChain.doFilter(request, response);
@@ -58,6 +62,7 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
                 response.setContentType("application/json");
                 String message = isParse(uri) ? PARSE_MESSAGE
                         : generate ? GENERATE_MESSAGE
+                        : bot ? BOT_MESSAGE
                         : uri.startsWith("/api/reports") ? REPORT_MESSAGE : MESSAGE;
                 response.getWriter().write(
                         "{\"status\":403,\"error\":\"Forbidden\",\"code\":\"EMAIL_UNVERIFIED\","
@@ -66,6 +71,10 @@ public class EmailVerificationFilter extends OncePerRequestFilter {
             }
         }
         filterChain.doFilter(request, response);
+    }
+
+    static boolean isBot(String uri) {
+        return BOT_PATHS.matcher(uri).matches() && !BOT_OPEN_PATHS.matcher(uri).matches();
     }
 
     private static boolean isParse(String uri) {

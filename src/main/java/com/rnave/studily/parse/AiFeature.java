@@ -3,5 +3,8 @@ package com.rnave.studily.parse;
 public enum AiFeature {
     COURSE,
     FLASHCARDS,
-    FEYNMAN
+    FEYNMAN,
+    BOT_CHAT,
+    BOT_PRACTICE,
+    EMBEDDINGS
 }
