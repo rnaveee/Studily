@@ -68,7 +68,7 @@ export default function WelcomePage() {
               onBack={() => go("profile")}
               onNext={() => {
                 welcomeTour.start();
-                navigate("/learn");
+                navigate("/study");
               }}
             />
           )}

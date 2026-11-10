@@ -99,7 +99,7 @@ function PanelBody() {
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-[13px] font-semibold text-fg">Recent sessions</h3>
             <Link
-              to="/learn/sessions"
+              to="/study/sessions"
               className="-mr-1.5 inline-flex min-h-[40px] items-center gap-0.5 rounded-lg px-1.5 text-[12.5px] font-medium text-accent transition-colors hover:bg-surface-hi"
             >
               See all

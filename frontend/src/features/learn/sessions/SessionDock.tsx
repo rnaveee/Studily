@@ -38,7 +38,7 @@ export default function SessionDock({ placement }: { placement: "sidebar" | "bar
   const { pathname } = useLocation();
   const active = useActiveSession();
 
-  if (!enabled || !active.data || pathname === "/learn") return null;
+  if (!enabled || !active.data || pathname === "/study") return null;
   if ((placement === "sidebar") !== desktop) return null;
 
   return placement === "sidebar" ? (
@@ -86,7 +86,7 @@ function SidebarSession({ session, receivedAt }: { session: StudySessionDto; rec
       <div className="mt-3 max-h-44 overflow-y-auto border-t border-line pt-2">
         <TaskList {...c.tasks} />
       </div>
-      <Link to="/learn" className="btn btn-ghost mt-3 w-full">
+      <Link to="/study" className="btn btn-ghost mt-3 w-full">
         Open Study page
       </Link>
     </div>
@@ -172,7 +172,7 @@ function MobileSessionBar({ session, receivedAt }: { session: StudySessionDto; r
             <div className="mt-3 border-t border-line pt-3">
               <TaskList {...c.tasks} />
             </div>
-            <Link to="/learn" className="btn btn-ghost mt-3 w-full" style={{ minHeight: 44 }}>
+            <Link to="/study" className="btn btn-ghost mt-3 w-full" style={{ minHeight: 44 }}>
               Open Study page
             </Link>
           </div>

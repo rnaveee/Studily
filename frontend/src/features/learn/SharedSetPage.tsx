@@ -38,7 +38,7 @@ export default function SharedSetPage() {
     onSuccess: (created) => {
       toast.success("Saved to your sets");
       qc.invalidateQueries({ queryKey: ["flashcards"] });
-      navigate(`/learn/flashcards/${created.id}`);
+      navigate(`/study/flashcards/${created.id}`);
     },
     onError: () => toast.error("Couldn't save a copy"),
   });
@@ -69,7 +69,7 @@ export default function SharedSetPage() {
               Log in
             </button>
           )}
-          <Link to={user ? "/learn/flashcards" : "/"} className="btn btn-soft inline-flex">
+          <Link to={user ? "/study/flashcards" : "/"} className="btn btn-soft inline-flex">
             {user ? "Back to your sets" : "Go to Studily"}
           </Link>
         </div>
@@ -78,7 +78,7 @@ export default function SharedSetPage() {
   }
 
   const data = set.data;
-  if (data.viewerIsOwner) return <Navigate to={`/learn/flashcards/${data.id}`} replace />;
+  if (data.viewerIsOwner) return <Navigate to={`/study/flashcards/${data.id}`} replace />;
 
   const viewerKey = user ? String(user.id) : "guest";
   const ownerName = data.owner.name || data.owner.username;
@@ -86,7 +86,7 @@ export default function SharedSetPage() {
   return (
     <div className="space-y-6 stagger-children">
       <div className="flex items-start gap-3">
-        <BackButton fallback={user ? "/learn/flashcards" : "/"} />
+        <BackButton fallback={user ? "/study/flashcards" : "/"} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="badge badge-accent inline-flex items-center gap-1">

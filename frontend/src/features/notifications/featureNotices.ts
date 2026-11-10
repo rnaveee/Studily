@@ -42,7 +42,7 @@ const PROGRESS: FeatureNotice = {
   title: "XP, badges and chests",
   body: "Your studying now earns XP, badges and chests!",
   icon: Trophy,
-  action: { label: "See what's new", to: "/learn", run: openProgressWhatsNew },
+  action: { label: "See what's new", to: "/study", run: openProgressWhatsNew },
 };
 
 const GRADECALC: FeatureNotice = {

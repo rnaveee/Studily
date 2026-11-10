@@ -194,7 +194,7 @@ function Slides() {
                     type="button"
                     tabIndex={i === index ? 0 : -1}
                     onClick={() => {
-                      navigate("/learn");
+                      navigate("/study");
                       close();
                     }}
                     className="btn btn-primary"

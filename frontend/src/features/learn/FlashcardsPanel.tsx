@@ -36,7 +36,7 @@ export default function FlashcardsPanel() {
 
   return (
     <Link
-      to="/learn/flashcards"
+      to="/study/flashcards"
       className="card card-raised card-lift group block p-5 xl:py-4"
       style={{
         borderColor: "color-mix(in srgb, var(--accent) 22%, var(--line))",

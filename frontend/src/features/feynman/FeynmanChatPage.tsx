@@ -57,7 +57,7 @@ export default function FeynmanChatPage() {
     mutationFn: () => api.del(`/feynman/sessions/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["feynman", "sessions"] });
-      navigate("/learn/feynman");
+      navigate("/study/feynman");
     },
   });
 
