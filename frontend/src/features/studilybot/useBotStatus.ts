@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { isGuestMode } from "../../lib/api";
+import { ApiError, isGuestMode } from "../../lib/api";
 import { botApi, type BotStatus } from "./api";
 
 export function useBotStatus() {
@@ -9,5 +9,6 @@ export function useBotStatus() {
     queryFn: () => botApi.status(),
     enabled: !guest,
     staleTime: 60_000,
+    retry: (count, err) => !(err instanceof ApiError && err.status === 403) && count < 3,
   });
 }

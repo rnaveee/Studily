@@ -1,4 +1,4 @@
-import { useRef, useState, type DragEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, RotateCw, Trash2, Upload } from "lucide-react";
@@ -69,6 +69,7 @@ export default function FileBankPanel({ courseId }: { courseId: number }) {
   const [dragging, setDragging] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [needsVerify, setNeedsVerify] = useState(false);
+  const dragDepth = useRef(0);
 
   const status = useQuery({
     queryKey: statusKey,
@@ -84,6 +85,12 @@ export default function FileBankPanel({ courseId }: { courseId: number }) {
     enabled: !guest && verified && bankOn,
     refetchInterval: (query) => (query.state.data?.some(isActive) ? 4000 : false),
   });
+
+  const statusUpdatedAt = status.dataUpdatedAt;
+  const filesUpdatedAt = files.dataUpdatedAt;
+  useEffect(() => {
+    if (statusUpdatedAt || filesUpdatedAt) setNeedsVerify(false);
+  }, [statusUpdatedAt, filesUpdatedAt]);
 
   function reportError(error: unknown, fallback: string) {
     if (isUnverified(error)) {
@@ -169,9 +176,22 @@ export default function FileBankPanel({ courseId }: { courseId: number }) {
     upload.mutate(picked);
   }
 
+  function onDragEnter(e: DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    dragDepth.current += 1;
+    setDragging(!upload.isPending);
+  }
+
+  function onDragLeave() {
+    dragDepth.current = Math.max(0, dragDepth.current - 1);
+    if (dragDepth.current === 0) setDragging(false);
+  }
+
   function onDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault();
+    dragDepth.current = 0;
     setDragging(false);
+    if (upload.isPending) return;
     addFiles(Array.from(e.dataTransfer.files));
   }
 
@@ -210,11 +230,9 @@ export default function FileBankPanel({ courseId }: { courseId: number }) {
     body = (
       <div className="space-y-4">
         <div
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragging(true);
-          }}
-          onDragLeave={() => setDragging(false)}
+          onDragEnter={onDragEnter}
+          onDragOver={(e) => e.preventDefault()}
+          onDragLeave={onDragLeave}
           onDrop={onDrop}
           className="rounded-xl border border-dashed p-5 text-center transition-colors"
           style={{
