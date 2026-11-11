@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 @Component
@@ -23,6 +24,7 @@ public class Retriever {
 
     static final int CANDIDATES_PER_METHOD = 40;
     static final int FUSED_CANDIDATES = 30;
+    static final int SAMPLE_MIN_CHARS = 200;
 
     private final VoyageClient voyage;
     private final ChunkStore chunkStore;
@@ -52,9 +54,14 @@ public class Retriever {
         if (!enabled()) {
             return new Retrieval(List.of());
         }
-        float[] vector = embedQuery(scope, query, feature);
-        List<ChunkStore.Hit> semantic = chunkStore.semanticSearch(scope, vector, CANDIDATES_PER_METHOD);
+        Optional<float[]> vector = embedQuery(scope, query, feature);
         List<ChunkStore.Hit> keyword = chunkStore.keywordSearch(scope, query, CANDIDATES_PER_METHOD);
+        if (vector.isEmpty()) {
+            return new Retrieval(Rrf.fuse(List.of(keyword), ChunkStore.Hit::chunkId, topK).stream()
+                    .map(hit -> RetrievedChunk.of(hit, null))
+                    .toList());
+        }
+        List<ChunkStore.Hit> semantic = chunkStore.semanticSearch(scope, vector.get(), CANDIDATES_PER_METHOD);
         List<ChunkStore.Hit> fused = Rrf.fuse(List.of(semantic, keyword), ChunkStore.Hit::chunkId,
                 Math.max(FUSED_CANDIDATES, topK));
         if (fused.isEmpty()) {
@@ -82,34 +89,40 @@ public class Retriever {
         if (count <= 0) {
             return List.of();
         }
+        Set<BankFileKind> preferred = preferKinds == null ? Set.of() : preferKinds;
+        List<Long> fileIds = chunkStore.sampleFileIds(scope, preferred, count * 2);
+        if (fileIds.isEmpty()) {
+            return List.of();
+        }
         Map<Long, List<ChunkStore.Hit>> byFile = new LinkedHashMap<>();
-        for (ChunkStore.Hit hit : chunkStore.randomChunksPerFile(scope, count)) {
+        for (ChunkStore.Hit hit : chunkStore.randomChunksPerFile(scope, fileIds, count, SAMPLE_MIN_CHARS)) {
             byFile.computeIfAbsent(hit.fileId(), id -> new ArrayList<>()).add(hit);
         }
         List<List<ChunkStore.Hit>> files = new ArrayList<>(byFile.values());
         Collections.shuffle(files);
-        List<List<ChunkStore.Hit>> preferred = files.stream()
-                .filter(file -> preferKinds.contains(file.getFirst().fileKind()))
+        List<List<ChunkStore.Hit>> prioritised = files.stream()
+                .filter(file -> preferred.contains(file.getFirst().fileKind()))
                 .toList();
         List<List<ChunkStore.Hit>> others = files.stream()
-                .filter(file -> !preferKinds.contains(file.getFirst().fileKind()))
+                .filter(file -> !preferred.contains(file.getFirst().fileKind()))
                 .toList();
         List<RetrievedChunk> picked = new ArrayList<>(count);
-        spread(preferred, count, picked);
+        spread(prioritised, count, picked);
         spread(others, count, picked);
         return picked;
     }
 
-    private float[] embedQuery(Scope scope, String query, AiFeature feature) {
+    private Optional<float[]> embedQuery(Scope scope, String query, AiFeature feature) {
         VoyageClient.Embedding embedding;
         try {
             embedding = voyage.embedQuery(query);
         } catch (RuntimeException e) {
+            log.warn("Query embedding failed, answering from keyword matches only: {}", e.getMessage());
             usage.record(scope.userId(), feature, voyage.embedModel(), 0, 0, false);
-            throw e;
+            return Optional.empty();
         }
         usage.record(scope.userId(), feature, embedding.model(), embedding.tokens(), 0, true);
-        return embedding.vector();
+        return Optional.of(embedding.vector());
     }
 
     private static void spread(List<List<ChunkStore.Hit>> files, int count, List<RetrievedChunk> out) {

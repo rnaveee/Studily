@@ -12,8 +12,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.InOrder;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
@@ -28,6 +31,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -46,6 +52,8 @@ class BankServiceTest {
     private CurrentUser currentUser;
     private InMemoryStorage storage;
     private PagePreviewRenderer previews;
+    private JdbcTemplate jdbc;
+    private PlatformTransactionManager transactionManager;
     private List<BankFile> saved;
     private BankService service;
 
@@ -57,6 +65,8 @@ class BankServiceTest {
         when(currentUser.id()).thenReturn(USER);
         storage = new InMemoryStorage(true);
         previews = mock(PagePreviewRenderer.class);
+        jdbc = mock(JdbcTemplate.class);
+        transactionManager = mock(PlatformTransactionManager.class);
         saved = new ArrayList<>();
         when(files.saveAndFlush(any(BankFile.class))).thenAnswer(invocation -> {
             BankFile file = invocation.getArgument(0);
@@ -276,6 +286,26 @@ class BankServiceTest {
         assertThat(storage.keys()).isEmpty();
     }
 
+    @Test
+    void uploadsTakeTheUsersAdvisoryLockBeforeCheckingTheLimits() {
+        service.upload(Scope.course(USER, COURSE), List.of(file("a.pdf", pdf("locked"))), null);
+
+        InOrder order = inOrder(jdbc, files);
+        order.verify(jdbc).queryForObject("SELECT pg_advisory_xact_lock(?)", Object.class, USER);
+        order.verify(files).countByUserId(USER);
+        order.verify(files).saveAndFlush(any(BankFile.class));
+    }
+
+    @Test
+    void aFailedLockStoresNothing() {
+        when(jdbc.queryForObject(anyString(), eq(Object.class), eq(USER))).thenThrow(new IllegalStateException("db"));
+
+        assertThatThrownBy(() -> service.upload(Scope.course(USER, COURSE), List.of(file("a.pdf", pdf("nolock"))), null))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(storage.keys()).isEmpty();
+        verify(files, never()).saveAndFlush(any());
+    }
+
     @ParameterizedTest
     @CsvSource({
             "midterm_review.pdf, PRACTICE_EXAM",
@@ -413,8 +443,8 @@ class BankServiceTest {
     }
 
     private BankService service(long maxFileBytes, int maxFilesPerRequest, int maxFilesPerUser, long quotaBytes) {
-        return new BankService(files, courses, currentUser, storage, new UploadInspector(), previews,
-                maxFileBytes, maxFilesPerRequest, maxFilesPerUser, quotaBytes);
+        return new BankService(files, courses, currentUser, storage, new UploadInspector(), previews, jdbc,
+                transactionManager, maxFileBytes, maxFilesPerRequest, maxFilesPerUser, quotaBytes);
     }
 
     private static BankFile fileWithId(long id) {

@@ -12,7 +12,7 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
-import org.apache.poi.openxml4j.util.ZipSecureFile;
+import com.rnave.studily.flashcard.generate.SafeZip;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFSlide;
 import org.slf4j.Logger;
@@ -45,16 +45,7 @@ public class PagePreviewRenderer {
     static final int RENDER_SIDE = 1280;
     static final double MAX_DPI = 300;
     static final long PDF_MEMORY_BYTES = 64L * 1024 * 1024;
-    static final long MAX_ENTRY_BYTES = 50L * 1024 * 1024;
-    static final int MAX_ZIP_ENTRIES = 2_000;
     static final int TIMEOUT_SECONDS = 30;
-
-    static {
-        ZipSecureFile.setMinInflateRatio(0.01);
-        ZipSecureFile.setMaxEntrySize(MAX_ENTRY_BYTES);
-        ZipSecureFile.setMaxFileCount(MAX_ZIP_ENTRIES);
-        ZipSecureFile.setMaxTextSize(20_000_000L);
-    }
 
     private final ThreadPoolExecutor executor = new ThreadPoolExecutor(
             2, 2, 0, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(6), runnable -> {
@@ -69,6 +60,7 @@ public class PagePreviewRenderer {
     }
 
     public byte[] render(BankFormat format, String fileName, byte[] bytes, int page) {
+        SafeZip.applyPoiLimits();
         Future<byte[]> future;
         try {
             future = executor.submit(() -> draw(format, fileName, bytes, page));

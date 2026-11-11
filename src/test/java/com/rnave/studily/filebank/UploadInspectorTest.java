@@ -1,6 +1,7 @@
 package com.rnave.studily.filebank;
 
 import com.rnave.studily.config.BadRequestException;
+import com.rnave.studily.flashcard.generate.SafeZip;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -33,6 +34,39 @@ class UploadInspectorTest {
     void rejectsOtherArchives() throws IOException {
         assertThatThrownBy(() -> inspector.inspect("photos.zip", zip("img/cat.jpg")))
                 .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void officePartsMustBeEntryNamesNotNestedPaths() throws IOException {
+        assertThatThrownBy(() -> inspector.inspect("notes.docx", zip("backup/word/document.xml")))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("archive");
+    }
+
+    @Test
+    void anOfficeFileThatInflatesIntoABombIsRejectedBeforeItIsParsed() throws IOException {
+        byte[] bomb = zipWithEntry("word/document.xml", new byte[8 * 1024 * 1024]);
+
+        assertThatThrownBy(() -> inspector.inspect("bomb.docx", bomb))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessage(SafeZip.BOMB);
+    }
+
+    @Test
+    void textNotesThatStartWithMzAreNotMistakenForPrograms() {
+        byte[] notes = "MZ is my initials. Lecture notes on Thevenin equivalents.".getBytes(StandardCharsets.UTF_8);
+
+        assertThat(inspector.inspect("notes.txt", notes)).isEqualTo(BankFormat.TEXT);
+        assertThat(inspector.inspect("notes.md", notes)).isEqualTo(BankFormat.MARKDOWN);
+    }
+
+    @Test
+    void aMzFileThatIsNotTextIsStillRejectedAsAProgram() {
+        byte[] windowsProgram = {'M', 'Z', (byte) 0x90, 0, 3, 0, 0, 0};
+
+        assertThatThrownBy(() -> inspector.inspect("report.pdf", windowsProgram))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Programs");
     }
 
     @Test
@@ -98,6 +132,19 @@ class UploadInspectorTest {
         assertThatThrownBy(() -> inspector.inspect("slides.pptm", plainPackage))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("macros");
+    }
+
+    private static byte[] zipWithEntry(String entryName, byte[] content) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(out)) {
+            zip.putNextEntry(new ZipEntry("[Content_Types].xml"));
+            zip.write("<Types/>".getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+            zip.putNextEntry(new ZipEntry(entryName));
+            zip.write(content);
+            zip.closeEntry();
+        }
+        return out.toByteArray();
     }
 
     private static byte[] zip(String... entryNames) throws IOException {

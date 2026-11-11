@@ -1,12 +1,13 @@
 package com.rnave.studily.rag;
 
 import com.rnave.studily.filebank.BankFormat;
+import com.rnave.studily.flashcard.generate.SafeZip;
 import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.io.MemoryUsageSetting;
 import org.apache.pdfbox.io.RandomAccessReadBuffer;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.encryption.InvalidPasswordException;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.sl.usermodel.Placeholder;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFGroupShape;
@@ -49,12 +50,9 @@ public class TextExtractor {
     static final long TIMEOUT_SECONDS = 90;
     static final int MIN_READABLE_CHARS = 25;
     static final int MAX_HEADING = 300;
+    static final long PDF_MEMORY_BYTES = 64L * 1024 * 1024;
 
     private static final Pattern MARKDOWN_HEADING = Pattern.compile("^#{1,6}\\s+(.+)$");
-
-    static {
-        ZipSecureFile.setMaxEntrySize(100L * 1024 * 1024);
-    }
 
     private final int maxPages;
 
@@ -63,6 +61,7 @@ public class TextExtractor {
     }
 
     public ExtractedDocument extract(byte[] bytes, BankFormat kind) {
+        SafeZip.applyPoiLimits();
         return withTimeout(() -> switch (kind) {
             case PDF -> pdf(bytes);
             case DOCX -> docx(bytes);
@@ -73,7 +72,8 @@ public class TextExtractor {
     }
 
     private ExtractedDocument pdf(byte[] bytes) throws IOException {
-        try (PDDocument doc = Loader.loadPDF(new RandomAccessReadBuffer(bytes))) {
+        try (PDDocument doc = Loader.loadPDF(new RandomAccessReadBuffer(bytes), "",
+                MemoryUsageSetting.setupMixed(PDF_MEMORY_BYTES).streamCache)) {
             int pages = doc.getNumberOfPages();
             requirePageLimit(pages);
             PDFTextStripper stripper = new PDFTextStripper();

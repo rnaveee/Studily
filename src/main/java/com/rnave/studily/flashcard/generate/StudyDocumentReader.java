@@ -22,7 +22,6 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFGroupShape;
 import org.apache.poi.xslf.usermodel.XSLFNotes;
@@ -99,13 +98,6 @@ public class StudyDocumentReader {
     static final int MAX_WEBP_SIDE = 8_000;
     static final int TIMEOUT_SECONDS = 30;
 
-    static {
-        ZipSecureFile.setMinInflateRatio(0.01);
-        ZipSecureFile.setMaxEntrySize(SafeZip.MAX_ENTRY_BYTES);
-        ZipSecureFile.setMaxFileCount(SafeZip.MAX_ENTRIES);
-        ZipSecureFile.setMaxTextSize(20_000_000L);
-    }
-
     private final ThreadPoolExecutor executor = new ThreadPoolExecutor(
             2, 2, 0, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(6), runnable -> {
                 Thread thread = new Thread(runnable, "flashcard-doc-reader");
@@ -123,6 +115,7 @@ public class StudyDocumentReader {
     }
 
     public StudyDocument read(String fileName, byte[] bytes, PageSelection selection) {
+        SafeZip.applyPoiLimits();
         FileKind kind = FileSniffer.sniff(bytes);
         Future<StudyDocument> future;
         try {

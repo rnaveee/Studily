@@ -1,19 +1,25 @@
 package com.rnave.studily.rag;
 
+import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.filebank.BankFileKind;
 import com.rnave.studily.filebank.BankFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -21,12 +27,20 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Component
 public class ChunkStore {
 
     private static final Logger log = LoggerFactory.getLogger(ChunkStore.class);
+
+    static final int MAX_CONCURRENT_SCANS = 4;
+    static final Duration SCAN_WAIT = Duration.ofSeconds(5);
+    static final int SCAN_FETCH_SIZE = 500;
+    static final String BUSY = "StudilyBot is busy, try again in a moment.";
 
     private static final String HIT_COLUMNS = """
             c.id AS chunk_id, c.file_id, f.name AS file_name, f.kind AS file_kind, f.format AS file_format,
@@ -49,9 +63,21 @@ public class ChunkStore {
             rs.getString("heading"), rs.getString("content"), rs.getDouble("score"));
 
     private final JdbcTemplate jdbc;
+    private final TransactionTemplate readOnly;
+    private final Semaphore scans;
+    private final Duration scanWait;
 
-    public ChunkStore(JdbcTemplate jdbc) {
+    @Autowired
+    public ChunkStore(JdbcTemplate jdbc, PlatformTransactionManager transactions) {
+        this(jdbc, transactions, new Semaphore(MAX_CONCURRENT_SCANS, true), SCAN_WAIT);
+    }
+
+    ChunkStore(JdbcTemplate jdbc, PlatformTransactionManager transactions, Semaphore scans, Duration scanWait) {
         this.jdbc = jdbc;
+        this.readOnly = new TransactionTemplate(transactions);
+        this.readOnly.setReadOnly(true);
+        this.scans = scans;
+        this.scanWait = scanWait;
     }
 
     public record Hit(long chunkId, long fileId, String fileName, BankFileKind fileKind, boolean previewable,
@@ -85,7 +111,7 @@ public class ChunkStore {
                 ps.setString(8, chunk.heading());
                 ps.setString(9, chunk.text());
                 ps.setInt(10, chunk.tokenEstimate());
-                ps.setArray(11, ps.getConnection().createArrayOf("float4", boxed(vectors.get(i))));
+                ps.setArray(11, ps.getConnection().createArrayOf("float4", boxed(unit(vectors.get(i)))));
             }
 
             @Override
@@ -103,12 +129,7 @@ public class ChunkStore {
 
     public List<Hit> semanticSearch(Scope scope, float[] query, int limit) {
         long started = System.nanoTime();
-        Nearest nearest = new Nearest(query, limit);
-        RowCallbackHandler scan = rs -> nearest.offer(rs.getLong("id"),
-                toPrimitive((Float[]) rs.getArray("embedding").getArray()));
-        jdbc.query("SELECT id, embedding FROM bank_chunks c WHERE " + where("c", scope), scan,
-                scope.userId(), scopeId(scope));
-        List<Nearest.Scored> best = nearest.best();
+        List<Nearest.Scored> best = scan(scope, new Nearest(query, limit));
         log.debug("Semantic search for scope {} finished in {} ms", scope,
                 (System.nanoTime() - started) / 1_000_000);
         return hydrate(best);
@@ -121,12 +142,32 @@ public class ChunkStore {
                 HIT, query, scope.userId(), scopeId(scope), limit);
     }
 
-    public List<Hit> randomChunksPerFile(Scope scope, int perFile) {
+    public List<Long> sampleFileIds(Scope scope, Set<BankFileKind> preferKinds, int limit) {
+        List<Object> args = new ArrayList<>(List.of(scope.userId(), scopeId(scope)));
+        String order = "random()";
+        if (!preferKinds.isEmpty()) {
+            order = "CASE WHEN f.kind IN (" + placeholders(preferKinds.size()) + ") THEN 0 ELSE 1 END, " + order;
+            preferKinds.forEach(kind -> args.add(kind.name()));
+        }
+        args.add(limit);
+        return jdbc.queryForList("SELECT f.id FROM bank_files f WHERE " + where("f", scope)
+                + " AND f.status = 'READY' ORDER BY " + order + " LIMIT ?", Long.class, args.toArray());
+    }
+
+    public List<Hit> randomChunksPerFile(Scope scope, List<Long> fileIds, int perFile, int minChars) {
+        if (fileIds.isEmpty()) {
+            return List.of();
+        }
+        List<Object> args = new ArrayList<>(List.of(scope.userId(), scopeId(scope)));
+        args.addAll(fileIds);
+        args.add(minChars);
+        args.add(perFile);
         return jdbc.query("SELECT * FROM (SELECT " + HIT_COLUMNS + ", 0.0 AS score,"
                         + " ROW_NUMBER() OVER (PARTITION BY c.file_id ORDER BY random()) AS pick "
                         + FROM_CHUNKS + " WHERE f.status = 'READY' AND " + where("c", scope)
-                        + ") picked WHERE picked.pick <= ?",
-                HIT, scope.userId(), scopeId(scope), perFile);
+                        + " AND c.file_id IN (" + placeholders(fileIds.size()) + ")"
+                        + " AND length(c.content) >= ?) picked WHERE picked.pick <= ?",
+                HIT, args.toArray());
     }
 
     public long readyFiles(Scope scope) {
@@ -141,13 +182,46 @@ public class ChunkStore {
         return count == null ? 0 : count;
     }
 
+    private List<Nearest.Scored> scan(Scope scope, Nearest nearest) {
+        if (!acquireScan()) {
+            throw new TooManyRequestsException(BUSY);
+        }
+        try {
+            RowCallbackHandler rows = rs -> nearest.offer(rs.getLong("id"),
+                    toPrimitive((Float[]) rs.getArray("embedding").getArray()));
+            return readOnly.execute(status -> {
+                jdbc.query(connection -> scanStatement(connection, scope), rows);
+                return nearest.best();
+            });
+        } finally {
+            scans.release();
+        }
+    }
+
+    private boolean acquireScan() {
+        try {
+            return scans.tryAcquire(scanWait.toMillis(), TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private static PreparedStatement scanStatement(Connection connection, Scope scope) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement(
+                "SELECT id, embedding FROM bank_chunks c WHERE " + where("c", scope));
+        statement.setFetchSize(SCAN_FETCH_SIZE);
+        statement.setLong(1, scope.userId());
+        statement.setLong(2, scopeId(scope));
+        return statement;
+    }
+
     private List<Hit> hydrate(List<Nearest.Scored> best) {
         if (best.isEmpty()) {
             return List.of();
         }
-        String placeholders = String.join(", ", Collections.nCopies(best.size(), "?"));
         Map<Long, Hit> byId = jdbc.query("SELECT " + HIT_COLUMNS + ", 0.0 AS score " + FROM_CHUNKS
-                        + " WHERE c.id IN (" + placeholders + ")", HIT,
+                        + " WHERE c.id IN (" + placeholders(best.size()) + ")", HIT,
                         best.stream().map(Nearest.Scored::id).toArray())
                 .stream()
                 .collect(Collectors.toMap(Hit::chunkId, hit -> hit));
@@ -165,6 +239,10 @@ public class ChunkStore {
         return scope.isCourse() ? scope.courseId() : scope.chatId();
     }
 
+    private static String placeholders(int count) {
+        return String.join(", ", Collections.nCopies(count, "?"));
+    }
+
     private static float[] toPrimitive(Float[] values) {
         float[] out = new float[values.length];
         for (int i = 0; i < values.length; i++) {
@@ -177,6 +255,22 @@ public class ChunkStore {
         Float[] out = new Float[values.length];
         Arrays.setAll(out, i -> values[i]);
         return out;
+    }
+
+    static float[] unit(float[] vector) {
+        double squares = 0;
+        for (float value : vector) {
+            squares += (double) value * value;
+        }
+        float[] unit = new float[vector.length];
+        if (squares == 0) {
+            return unit;
+        }
+        double scale = 1 / Math.sqrt(squares);
+        for (int i = 0; i < vector.length; i++) {
+            unit[i] = (float) (vector[i] * scale);
+        }
+        return unit;
     }
 
     static final class Nearest {
@@ -206,7 +300,9 @@ public class ChunkStore {
                 throw new IllegalArgumentException("Embedding has " + vector.length + " dimensions, expected "
                         + unitQuery.length);
             }
-            Scored candidate = new Scored(id, dot(unitQuery, vector));
+            double norm = norm(vector);
+            double score = norm == 0 ? 0 : dot(unitQuery, vector) / norm;
+            Scored candidate = new Scored(id, score);
             if (heap.size() < limit) {
                 heap.add(candidate);
             } else if (WORST_FIRST.compare(heap.peek(), candidate) < 0) {
@@ -221,20 +317,12 @@ public class ChunkStore {
             return sorted;
         }
 
-        private static float[] unit(float[] vector) {
+        private static double norm(float[] vector) {
             double squares = 0;
             for (float value : vector) {
                 squares += (double) value * value;
             }
-            float[] unit = new float[vector.length];
-            if (squares == 0) {
-                return unit;
-            }
-            double scale = 1 / Math.sqrt(squares);
-            for (int i = 0; i < vector.length; i++) {
-                unit[i] = (float) (vector[i] * scale);
-            }
-            return unit;
+            return Math.sqrt(squares);
         }
 
         private static double dot(float[] a, float[] b) {

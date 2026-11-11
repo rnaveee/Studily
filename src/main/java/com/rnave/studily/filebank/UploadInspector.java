@@ -1,6 +1,7 @@
 package com.rnave.studily.filebank;
 
 import com.rnave.studily.config.BadRequestException;
+import com.rnave.studily.flashcard.generate.SafeZip;
 import org.springframework.stereotype.Component;
 
 import java.nio.ByteBuffer;
@@ -26,11 +27,10 @@ public class UploadInspector {
     private static final byte[] PDF_MAGIC = "%PDF-".getBytes(StandardCharsets.US_ASCII);
     private static final byte[] ZIP_MAGIC = {0x50, 0x4B, 0x03, 0x04};
     private static final byte[] OLE_MAGIC = {(byte) 0xD0, (byte) 0xCF, 0x11, (byte) 0xE0};
-    private static final byte[] DOCX_MARKER = "word/document.xml".getBytes(StandardCharsets.US_ASCII);
-    private static final byte[] PPTX_MARKER = "ppt/presentation.xml".getBytes(StandardCharsets.US_ASCII);
-    private static final byte[] VBA_MARKER = "vbaproject.bin".getBytes(StandardCharsets.US_ASCII);
+    private static final byte[] DOS_MAGIC = {'M', 'Z'};
+    private static final String DOCX_PART = "word/document.xml";
+    private static final String PPTX_PART = "ppt/presentation.xml";
     private static final List<byte[]> PROGRAM_MAGIC = List.of(
-            new byte[] {'M', 'Z'},
             new byte[] {0x7F, 'E', 'L', 'F'},
             new byte[] {(byte) 0xFE, (byte) 0xED, (byte) 0xFA, (byte) 0xCE},
             new byte[] {(byte) 0xFE, (byte) 0xED, (byte) 0xFA, (byte) 0xCF},
@@ -38,6 +38,7 @@ public class UploadInspector {
             new byte[] {(byte) 0xCF, (byte) 0xFA, (byte) 0xED, (byte) 0xFE},
             new byte[] {(byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE});
     private static final Set<String> MACRO_EXTENSIONS = Set.of("docm", "dotm", "pptm", "potm", "ppsm", "xlsm");
+    private static final Set<String> TEXT_EXTENSIONS = Set.of("txt", "md", "markdown");
     private static final int TEXT_SAMPLE_BYTES = 64 * 1024;
 
     public BankFormat inspect(String filename, byte[] bytes) {
@@ -48,7 +49,9 @@ public class UploadInspector {
         if (MACRO_EXTENSIONS.contains(extension)) {
             throw new BadRequestException(MACROS);
         }
-        if (PROGRAM_MAGIC.stream().anyMatch(magic -> startsWith(bytes, magic))) {
+        boolean textUpload = TEXT_EXTENSIONS.contains(extension) && looksLikeText(bytes);
+        if (PROGRAM_MAGIC.stream().anyMatch(magic -> startsWith(bytes, magic))
+                || (!textUpload && startsWith(bytes, DOS_MAGIC))) {
             throw new BadRequestException(PROGRAM);
         }
         if (startsWith(bytes, PDF_MAGIC)) {
@@ -58,19 +61,9 @@ public class UploadInspector {
             throw new BadRequestException(LEGACY_OFFICE);
         }
         if (startsWith(bytes, ZIP_MAGIC)) {
-            if (containsIgnoreCase(bytes, VBA_MARKER)) {
-                throw new BadRequestException(MACROS);
-            }
-            if (contains(bytes, PPTX_MARKER)) {
-                return BankFormat.PPTX;
-            }
-            if (contains(bytes, DOCX_MARKER)) {
-                return BankFormat.DOCX;
-            }
-            throw new BadRequestException(ARCHIVE);
+            return office(bytes);
         }
-        if ((extension.equals("txt") || extension.equals("md") || extension.equals("markdown"))
-                && looksLikeText(bytes)) {
+        if (textUpload) {
             return extension.equals("txt") ? BankFormat.TEXT : BankFormat.MARKDOWN;
         }
         throw new BadRequestException(UNSUPPORTED);
@@ -88,6 +81,20 @@ public class UploadInspector {
         return !result.isError();
     }
 
+    private static BankFormat office(byte[] bytes) {
+        SafeZip.Inspection zip = SafeZip.inspect(bytes);
+        if (zip.hasMacros()) {
+            throw new BadRequestException(MACROS);
+        }
+        if (zip.names().contains(PPTX_PART)) {
+            return BankFormat.PPTX;
+        }
+        if (zip.names().contains(DOCX_PART)) {
+            return BankFormat.DOCX;
+        }
+        throw new BadRequestException(ARCHIVE);
+    }
+
     private static boolean startsWith(byte[] bytes, byte[] magic) {
         if (bytes.length < magic.length) {
             return false;
@@ -98,32 +105,6 @@ public class UploadInspector {
             }
         }
         return true;
-    }
-
-    private static boolean contains(byte[] bytes, byte[] needle) {
-        outer:
-        for (int i = 0; i <= bytes.length - needle.length; i++) {
-            for (int j = 0; j < needle.length; j++) {
-                if (bytes[i + j] != needle[j]) {
-                    continue outer;
-                }
-            }
-            return true;
-        }
-        return false;
-    }
-
-    private static boolean containsIgnoreCase(byte[] bytes, byte[] lowerNeedle) {
-        outer:
-        for (int i = 0; i <= bytes.length - lowerNeedle.length; i++) {
-            for (int j = 0; j < lowerNeedle.length; j++) {
-                if (Character.toLowerCase((char) (bytes[i + j] & 0xFF)) != (char) lowerNeedle[j]) {
-                    continue outer;
-                }
-            }
-            return true;
-        }
-        return false;
     }
 
     private static String extension(String filename) {

@@ -1,13 +1,107 @@
 package com.rnave.studily.rag;
 
+import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.rag.ChunkStore.Nearest;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.core.RowCallbackHandler;
+import org.springframework.transaction.PlatformTransactionManager;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.Semaphore;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 class ChunkStoreTest {
+
+    @Test
+    void aStoredVectorIsScoredByItsOwnLength() {
+        assertThat(score(new float[]{1, 0}, new float[]{3, 4})).isCloseTo(0.6, within(1e-6));
+    }
+
+    @Test
+    void aZeroStoredVectorScoresZero() {
+        assertThat(score(new float[]{1, 0}, new float[]{0, 0})).isZero();
+    }
+
+    @Test
+    void unitNormalisesToLengthOne() {
+        float[] unit = ChunkStore.unit(new float[]{3, 4});
+
+        assertThat(unit[0]).isCloseTo(0.6f, within(1e-6f));
+        assertThat(unit[1]).isCloseTo(0.8f, within(1e-6f));
+        assertThat(ChunkStore.unit(new float[]{0, 0})).containsExactly(0f, 0f);
+    }
+
+    @Test
+    void completeFileStoresEveryVectorAsUnitLength() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        ChunkStore store = new ChunkStore(jdbc, mock(PlatformTransactionManager.class));
+        Chunk chunk = new Chunk(0, "Power", 1, 1, "Power is the rate of doing work, measured in watts.");
+
+        store.completeFile(1L, 2L, 3L, null, List.of(chunk), List.<float[]>of(new float[]{3, 4}), 1, "voyage-4", null);
+
+        ArgumentCaptor<BatchPreparedStatementSetter> setter = ArgumentCaptor.forClass(BatchPreparedStatementSetter.class);
+        verify(jdbc).batchUpdate(anyString(), setter.capture());
+        PreparedStatement statement = mock(PreparedStatement.class);
+        Connection connection = mock(Connection.class);
+        when(statement.getConnection()).thenReturn(connection);
+        setter.getValue().setValues(statement, 0);
+        ArgumentCaptor<Object[]> elements = ArgumentCaptor.forClass(Object[].class);
+        verify(connection).createArrayOf(eq("float4"), elements.capture());
+        assertThat(((Float) elements.getValue()[0]).doubleValue()).isCloseTo(0.6, within(1e-6));
+        assertThat(((Float) elements.getValue()[1]).doubleValue()).isCloseTo(0.8, within(1e-6));
+    }
+
+    @Test
+    void aBusyStoreRefusesTheSearchWithoutTouchingTheDatabase() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        ChunkStore store = new ChunkStore(jdbc, mock(PlatformTransactionManager.class),
+                new Semaphore(0, true), Duration.ofMillis(10));
+
+        assertThatThrownBy(() -> store.semanticSearch(Scope.course(1L, 3L), new float[]{1, 0}, 5))
+                .isInstanceOf(TooManyRequestsException.class)
+                .hasMessage("StudilyBot is busy, try again in a moment.");
+        verifyNoInteractions(jdbc);
+    }
+
+    @Test
+    void aScanReleasesItsPermitEvenWhenItFails() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        doThrow(new IllegalStateException("db down")).when(jdbc)
+                .query(any(PreparedStatementCreator.class), any(RowCallbackHandler.class));
+        Semaphore permits = new Semaphore(1, true);
+        ChunkStore store = new ChunkStore(jdbc, mock(PlatformTransactionManager.class), permits, Duration.ofMillis(10));
+
+        assertThatThrownBy(() -> store.semanticSearch(Scope.course(1L, 3L), new float[]{1, 0}, 5))
+                .isInstanceOf(IllegalStateException.class);
+        assertThat(permits.availablePermits()).isEqualTo(1);
+    }
+
+    @Test
+    void theScanNeverRunsAgainstAnEmptyFileList() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        ChunkStore store = new ChunkStore(jdbc, mock(PlatformTransactionManager.class));
+
+        assertThat(store.randomChunksPerFile(Scope.course(1L, 3L), List.of(), 2, 200)).isEmpty();
+        verifyNoInteractions(jdbc);
+    }
 
     @Test
     void keepsOnlyTheBestMatchesInDescendingOrder() {

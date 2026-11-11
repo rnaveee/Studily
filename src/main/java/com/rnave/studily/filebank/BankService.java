@@ -13,9 +13,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -62,6 +65,8 @@ public class BankService {
     private final FileStorage storage;
     private final UploadInspector inspector;
     private final PagePreviewRenderer previews;
+    private final JdbcTemplate jdbc;
+    private final TransactionTemplate transactions;
     private final long maxFileBytes;
     private final int maxFilesPerRequest;
     private final int maxFilesPerUser;
@@ -69,6 +74,7 @@ public class BankService {
 
     public BankService(BankFileRepository files, CourseRepository courses, CurrentUser currentUser,
                        FileStorage storage, UploadInspector inspector, PagePreviewRenderer previews,
+                       JdbcTemplate jdbc, PlatformTransactionManager transactionManager,
                        @Value("${app.bank.max-file-bytes}") long maxFileBytes,
                        @Value("${app.bank.max-files-per-request}") int maxFilesPerRequest,
                        @Value("${app.bank.max-files-per-user}") int maxFilesPerUser,
@@ -79,6 +85,8 @@ public class BankService {
         this.storage = storage;
         this.inspector = inspector;
         this.previews = previews;
+        this.jdbc = jdbc;
+        this.transactions = new TransactionTemplate(transactionManager);
         this.maxFileBytes = maxFileBytes;
         this.maxFilesPerRequest = maxFilesPerRequest;
         this.maxFilesPerUser = maxFilesPerUser;
@@ -132,31 +140,44 @@ public class BankService {
         for (MultipartFile upload : uploads) {
             prepared.add(prepare(upload));
         }
+        return persist(scope, userId, kindOrNull, prepared, true);
+    }
 
-        Map<String, BankFile> reused = new HashMap<>();
-        Map<String, Prepared> fresh = new LinkedHashMap<>();
-        for (Prepared file : prepared) {
-            if (reused.containsKey(file.sha256()) || fresh.containsKey(file.sha256())) {
-                continue;
+    private List<BankFile> persist(Scope scope, Long userId, BankFileKind kindOrNull, List<Prepared> prepared,
+                                   boolean retryOnRace) {
+        List<String> stored = new ArrayList<>();
+        try {
+            return transactions.execute(status -> {
+                jdbc.queryForObject("SELECT pg_advisory_xact_lock(?)", Object.class, userId);
+                Map<String, BankFile> resolved = new HashMap<>();
+                Map<String, Prepared> fresh = new LinkedHashMap<>();
+                for (Prepared file : prepared) {
+                    if (resolved.containsKey(file.sha256()) || fresh.containsKey(file.sha256())) {
+                        continue;
+                    }
+                    Optional<BankFile> existing = existing(scope, file.sha256());
+                    if (existing.isPresent()) {
+                        resolved.put(file.sha256(), existing.get());
+                    } else {
+                        fresh.put(file.sha256(), file);
+                    }
+                }
+                enforceLimits(userId, fresh.values());
+                for (Prepared file : fresh.values()) {
+                    resolved.put(file.sha256(), store(scope, userId, kindOrNull, file, stored));
+                }
+                return prepared.stream().map(file -> resolved.get(file.sha256())).toList();
+            });
+        } catch (DataIntegrityViolationException e) {
+            stored.forEach(this::deleteQuietly);
+            if (retryOnRace) {
+                return persist(scope, userId, kindOrNull, prepared, false);
             }
-            Optional<BankFile> existing = existing(scope, file.sha256());
-            if (existing.isPresent()) {
-                reused.put(file.sha256(), existing.get());
-            } else {
-                fresh.put(file.sha256(), file);
-            }
+            throw new ConflictException("That file was just added. Refresh and try again.");
+        } catch (RuntimeException e) {
+            stored.forEach(this::deleteQuietly);
+            throw e;
         }
-        enforceLimits(userId, fresh.values());
-
-        Map<String, BankFile> created = new HashMap<>();
-        for (Prepared file : fresh.values()) {
-            created.put(file.sha256(), store(scope, userId, kindOrNull, file));
-        }
-        List<BankFile> out = new ArrayList<>();
-        for (Prepared file : prepared) {
-            out.add(reused.containsKey(file.sha256()) ? reused.get(file.sha256()) : created.get(file.sha256()));
-        }
-        return out;
     }
 
     @Transactional
@@ -274,9 +295,10 @@ public class BankService {
         }
     }
 
-    private BankFile store(Scope scope, Long userId, BankFileKind kindOrNull, Prepared file) {
+    private BankFile store(Scope scope, Long userId, BankFileKind kindOrNull, Prepared file, List<String> stored) {
         String key = "bank/" + userId + "/" + UUID.randomUUID();
         storage.put(key, file.bytes(), file.format().contentType());
+        stored.add(key);
 
         BankFile row = new BankFile();
         row.setUserId(userId);
@@ -289,16 +311,7 @@ public class BankService {
         row.setSizeBytes(file.bytes().length);
         row.setSha256(file.sha256());
         row.setStorageKey(key);
-        try {
-            return files.saveAndFlush(row);
-        } catch (DataIntegrityViolationException e) {
-            deleteQuietly(key);
-            return existing(scope, file.sha256())
-                    .orElseThrow(() -> new ConflictException("That file was just added. Refresh and try again."));
-        } catch (RuntimeException e) {
-            deleteQuietly(key);
-            throw e;
-        }
+        return files.saveAndFlush(row);
     }
 
     private Optional<BankFile> existing(Scope scope, String sha256) {

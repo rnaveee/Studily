@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -83,12 +82,18 @@ class RetrieverTest {
     }
 
     @Test
-    void aFailedEmbeddingRecordsFailedUsageAndRethrows() {
+    void aFailedEmbeddingFallsBackToKeywordMatchesWithoutRelevance() {
         when(voyage.embedQuery("boom")).thenThrow(new IllegalStateException("Voyage is down"));
+        when(chunkStore.keywordSearch(SCOPE, "boom", 40))
+                .thenReturn(List.of(hit(10, 1, BankFileKind.LECTURE), hit(10, 2, BankFileKind.LECTURE)));
 
-        assertThatThrownBy(() -> retriever.retrieve(SCOPE, "boom", 8, AiFeature.BOT_CHAT))
-                .isInstanceOf(IllegalStateException.class);
+        Retriever.Retrieval result = retriever.retrieve(SCOPE, "boom", 8, AiFeature.BOT_CHAT);
+
+        assertThat(result.chunks()).extracting(RetrievedChunk::chunkId).containsExactly(1L, 2L);
+        assertThat(result.chunks()).extracting(RetrievedChunk::relevance).containsOnlyNulls();
         verify(usage).record(1L, AiFeature.BOT_CHAT, "voyage-4", 0, 0, false);
+        verify(chunkStore, never()).semanticSearch(any(), any(), anyInt());
+        verify(voyage, never()).rerank(anyString(), anyList(), anyInt());
     }
 
     @Test
@@ -104,7 +109,7 @@ class RetrieverTest {
 
     @Test
     void sampleUsesOnlyPreferredKindsWhileTheyLastAndSpreadsAcrossFiles() {
-        when(chunkStore.randomChunksPerFile(SCOPE, 2)).thenReturn(sampleRows());
+        stubSampleFiles(Set.of(BankFileKind.LECTURE), 2);
 
         List<RetrievedChunk> sample = retriever.sample(SCOPE, 2, Set.of(BankFileKind.LECTURE));
 
@@ -116,7 +121,7 @@ class RetrieverTest {
 
     @Test
     void preferredKindsComeFirstAndOthersFillTheRest() {
-        when(chunkStore.randomChunksPerFile(SCOPE, 4)).thenReturn(sampleRows());
+        stubSampleFiles(Set.of(BankFileKind.ASSIGNMENT), 4);
 
         List<RetrievedChunk> sample = retriever.sample(SCOPE, 4, Set.of(BankFileKind.ASSIGNMENT));
 
@@ -127,7 +132,7 @@ class RetrieverTest {
 
     @Test
     void withNoPreferredKindsTheSpreadStillTakesOneFromEachFile() {
-        when(chunkStore.randomChunksPerFile(SCOPE, 2)).thenReturn(sampleRows());
+        stubSampleFiles(Set.of(BankFileKind.PRACTICE_EXAM), 2);
 
         List<RetrievedChunk> sample = retriever.sample(SCOPE, 2, Set.of(BankFileKind.PRACTICE_EXAM));
 
@@ -138,6 +143,38 @@ class RetrieverTest {
     @Test
     void askingForNoSamplesReturnsNone() {
         assertThat(retriever.sample(SCOPE, 0, Set.of())).isEmpty();
+    }
+
+    @Test
+    void aNullPreferenceIsTreatedAsNoPreference() {
+        when(chunkStore.sampleFileIds(SCOPE, Set.of(), 4)).thenReturn(List.of(10L));
+        when(chunkStore.randomChunksPerFile(SCOPE, List.of(10L), 2, Retriever.SAMPLE_MIN_CHARS))
+                .thenReturn(List.of(hit(10, 1, BankFileKind.LECTURE), hit(10, 2, BankFileKind.LECTURE)));
+
+        List<RetrievedChunk> sample = retriever.sample(SCOPE, 2, null);
+
+        assertThat(sample).extracting(RetrievedChunk::chunkId).containsExactlyInAnyOrder(1L, 2L);
+    }
+
+    @Test
+    void sampleOnlyLoadsAtMostTwiceTheCountInFiles() {
+        retriever.sample(SCOPE, 3, Set.of(BankFileKind.LECTURE));
+
+        verify(chunkStore).sampleFileIds(SCOPE, Set.of(BankFileKind.LECTURE), 6);
+    }
+
+    @Test
+    void sampleWithNoReadyFilesLoadsNoChunks() {
+        assertThat(retriever.sample(SCOPE, 3, Set.of())).isEmpty();
+
+        verify(chunkStore, never()).randomChunksPerFile(any(), any(), anyInt(), anyInt());
+    }
+
+    private void stubSampleFiles(Set<BankFileKind> preferred, int count) {
+        List<Long> fileIds = List.of(10L, 20L, 30L);
+        when(chunkStore.sampleFileIds(SCOPE, preferred, count * 2)).thenReturn(fileIds);
+        when(chunkStore.randomChunksPerFile(SCOPE, fileIds, count, Retriever.SAMPLE_MIN_CHARS))
+                .thenReturn(sampleRows());
     }
 
     private void searchFinds(List<ChunkStore.Hit> semantic, List<ChunkStore.Hit> keyword) {

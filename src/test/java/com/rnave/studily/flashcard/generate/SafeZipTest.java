@@ -1,6 +1,7 @@
 package com.rnave.studily.flashcard.generate;
 
 import com.rnave.studily.config.BadRequestException;
+import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -19,6 +20,18 @@ class SafeZipTest {
         assertThat(inspection.contentTypes()).contains("presentationml");
         assertThat(inspection.entries()).isEqualTo(2);
         assertThat(inspection.hasMacros()).isFalse();
+        assertThat(inspection.names()).containsExactly("[Content_Types].xml", "ppt/slides/slide1.xml");
+    }
+
+    @Test
+    void applyPoiLimitsSetsTheSharedLimitsAndIsSafeToRepeat() {
+        SafeZip.applyPoiLimits();
+        SafeZip.applyPoiLimits();
+
+        assertThat(ZipSecureFile.getMinInflateRatio()).isEqualTo(0.01);
+        assertThat(ZipSecureFile.getMaxEntrySize()).isEqualTo(50L * 1024 * 1024);
+        assertThat(ZipSecureFile.getMaxFileCount()).isEqualTo(2_000);
+        assertThat(ZipSecureFile.getMaxTextSize()).isEqualTo(20_000_000L);
     }
 
     @Test
