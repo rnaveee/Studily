@@ -7,7 +7,7 @@ import { Skeleton } from "../../components/Skeleton";
 import { ApiError } from "../../lib/api";
 import { toast } from "../../lib/toast";
 import Mascot, { useMascotReaction, type MascotState } from "./Mascot";
-import ChatThread, { type ThreadItem } from "./ChatThread";
+import ChatThread, { type MascotSpeech, type ThreadItem } from "./ChatThread";
 import Composer from "./Composer";
 import { botApi, streamAnswer, type BankFile, type BankFileStatus, type BotMessage } from "./api";
 import { useBotStatus } from "./useBotStatus";
@@ -17,6 +17,7 @@ export const BANK_ACCEPT = ".pdf,.docx,.pptx,.txt,.md,.markdown";
 const THINKING = "thinking";
 const PENDING = "pending";
 const STREAMING = "streaming";
+const SAY_MS = 5000;
 
 const STATUS_PILL: Record<BankFileStatus, { label: string; className: string }> = {
   QUEUED: { label: "Queued", className: "badge-muted" },
@@ -140,12 +141,20 @@ export default function ChatConversation({
   const [failure, setFailure] = useState<Failure | null>(null);
   const [needsVerify, setNeedsVerify] = useState(false);
   const [reaction, react] = useMascotReaction();
+  const [said, setSaid] = useState<MascotSpeech | null>(null);
   const sentInitial = useRef(false);
+
+  useEffect(() => {
+    if (!said?.open) return;
+    const t = window.setTimeout(() => setSaid((current) => current && { ...current, open: false }), SAY_MS);
+    return () => window.clearTimeout(t);
+  }, [said]);
 
   async function ask(question: string) {
     if (busy) return;
     setBusy(true);
     setFailure(null);
+    setSaid(null);
     setTurn({ question, reply: "", saved: null });
     let saved = false;
     let failed = false;
@@ -155,6 +164,7 @@ export default function ChatConversation({
         onDone: (message) => {
           saved = true;
           react("happy");
+          setSaid({ text: message.content, open: true });
           setTurn((current) => (current ? { ...current, saved: message } : current));
         },
         onError: (error) => {
@@ -270,6 +280,7 @@ export default function ChatConversation({
       <ChatThread
         items={rows}
         mascot={compact ? undefined : mascotStateFor({ busy, streaming: Boolean(live?.reply), failed: failure !== null, reaction })}
+        speech={compact ? null : (said ?? (busy ? { text: live?.reply ?? "", open: true } : null))}
         renderItem={(item) => (item.id === THINKING ? <ThinkingRow /> : undefined)}
         empty={
           <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">

@@ -916,6 +916,7 @@ textarea.input { resize: vertical; }
 }
 .tour-bubble[data-tail="right"]::after { right: -8px; transform: rotate(-45deg); }
 .tour-bubble[data-tail="left"]::after { left: -8px; transform: rotate(135deg); }
+.tour-bubble[data-tail="down"]::after { bottom: -8px; left: 34px; transform: rotate(45deg); }
 @keyframes tour-caret { 50% { opacity: 0; } }
 .tour-caret { animation: tour-caret 0.9s steps(1) infinite; }
 .chest-reveal { animation: level-pop 0.5s cubic-bezier(0.34, 1.32, 0.64, 1) both; }

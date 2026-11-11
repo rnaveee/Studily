@@ -1,4 +1,5 @@
 import { Fragment, useLayoutEffect, useRef, type ReactNode } from "react";
+import { usePresence } from "../../lib/motion";
 import type { Citation } from "./api";
 import CitationChip from "./CitationChip";
 import Mascot, { type MascotState } from "./Mascot";
@@ -96,23 +97,51 @@ export function Markdownish({ text }: { text: string }) {
   );
 }
 
+function Dots() {
+  return (
+    <span className="flex items-center gap-1.5">
+      {[0, 150, 300].map((delay) => (
+        <span
+          key={delay}
+          className="h-1.5 w-1.5 rounded-full bg-fg-3 animate-bounce motion-reduce:animate-none"
+          style={{ animationDelay: `${delay}ms` }}
+        />
+      ))}
+    </span>
+  );
+}
+
 function TypingRow({ label }: { label: string }) {
   return (
     <div className="chat-in flex items-end gap-2.5">
       <Avatar />
       <div
-        className="flex items-center gap-1.5 rounded-2xl rounded-bl-md px-4 py-3"
+        className="flex items-center rounded-2xl rounded-bl-md px-4 py-3"
         style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--card-shadow)" }}
         role="status"
         aria-label={label}
       >
-        {[0, 150, 300].map((delay) => (
-          <span
-            key={delay}
-            className="h-1.5 w-1.5 rounded-full bg-fg-3 animate-bounce motion-reduce:animate-none"
-            style={{ animationDelay: `${delay}ms` }}
-          />
-        ))}
+        <Dots />
+      </div>
+    </div>
+  );
+}
+
+export interface MascotSpeech {
+  text: string;
+  open: boolean;
+}
+
+function MascotBubble({ text, open }: MascotSpeech) {
+  const { mounted, state } = usePresence(open, 140);
+  if (!mounted) return null;
+  const line = text.replace(/\*\*|`/g, "").replace(/\s+/g, " ").trim();
+  return (
+    <div
+      className={`absolute bottom-full left-0 z-10 mb-2 w-max max-w-60 origin-bottom-left ${state === "in" ? "panel-in" : "overlay-out"}`}
+    >
+      <div data-tail="down" className="tour-bubble rounded-2xl px-3.5 py-2.5 text-[13px] leading-snug text-fg">
+        {line ? <p className="line-clamp-4 break-words">{line}</p> : <span className="block py-1"><Dots /></span>}
       </div>
     </div>
   );
@@ -171,6 +200,7 @@ export default function ChatThread<T extends ThreadItem>({
   typingLabel = "StudilyBot is thinking",
   empty,
   mascot,
+  speech = null,
 }: {
   items: T[];
   renderItem?: (item: T) => ReactNode | undefined;
@@ -178,6 +208,7 @@ export default function ChatThread<T extends ThreadItem>({
   typingLabel?: string;
   empty?: ReactNode;
   mascot?: MascotState;
+  speech?: MascotSpeech | null;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -218,7 +249,10 @@ export default function ChatThread<T extends ThreadItem>({
   return (
     <div className="flex min-h-0 flex-1">
       <div className="hidden w-28 shrink-0 flex-col items-center justify-end pb-4 pl-3 md:flex" aria-hidden="true">
-        <Mascot state={mascot} size={84} shadow />
+        <div className="relative">
+          {speech && <MascotBubble text={speech.text} open={speech.open} />}
+          <Mascot state={mascot} size={84} shadow />
+        </div>
       </div>
       {thread}
     </div>
