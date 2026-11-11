@@ -16,7 +16,7 @@ public final class GpaMath {
         }
     }
 
-    public static Double gpa(GpaScale scale, Collection<Entry> entries) {
+    public static Double gpa(GradingScale scale, Collection<Entry> entries) {
         double weighted = 0;
         double totalCredits = 0;
         for (Entry entry : entries) {

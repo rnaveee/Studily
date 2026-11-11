@@ -1,5 +1,7 @@
 package com.rnave.studily.gpa;
 
+import com.rnave.studily.gpa.GradingScale.Band;
+
 import java.util.List;
 
 public enum GpaScale {
@@ -26,10 +28,9 @@ public enum GpaScale {
             new Band(90, "A+", 0), new Band(85, "A", 0), new Band(80, "A-", 0),
             new Band(76, "B+", 0), new Band(72, "B", 0), new Band(68, "B-", 0),
             new Band(64, "C+", 0), new Band(60, "C", 0), new Band(55, "C-", 0),
-            new Band(50, "D", 0), new Band(0, "F", 0)));
+            new Band(50, "D", 0), new Band(0, "F", 0))),
 
-    public record Band(int minPercent, String letter, double points) {
-    }
+    CUSTOM(0, List.of());
 
     private final double maxPoints;
     private final List<Band> bands;
@@ -47,25 +48,19 @@ public enum GpaScale {
         return bands;
     }
 
+    public GradingScale preset() {
+        if (this == CUSTOM) {
+            throw new IllegalStateException("CUSTOM has no preset bands");
+        }
+        return new GradingScale(this, this == UBC_PERCENT ? GradingScale.Mode.PERCENT : GradingScale.Mode.POINTS, bands);
+    }
+
     public String letterFor(double percent) {
-        return bandFor(percent).letter();
+        return preset().letterFor(percent);
     }
 
     public double pointsFor(double percent) {
-        if (this == UBC_PERCENT) {
-            return Math.max(0, Math.min(100, percent));
-        }
-        return bandFor(percent).points();
-    }
-
-    private Band bandFor(double percent) {
-        long rounded = Math.round(percent);
-        for (Band band : bands) {
-            if (rounded >= band.minPercent()) {
-                return band;
-            }
-        }
-        return bands.get(bands.size() - 1);
+        return preset().pointsFor(percent);
     }
 
     public static GpaScale defaultFor(String schoolKey) {

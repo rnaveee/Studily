@@ -10,7 +10,8 @@ import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.course.Course;
 import com.rnave.studily.course.CourseRepository;
 import com.rnave.studily.gpa.GpaMath;
-import com.rnave.studily.gpa.GpaScale;
+import com.rnave.studily.gpa.GradingScale;
+import com.rnave.studily.gpa.GradingScaleService;
 import com.rnave.studily.semester.SemesterDtos.CourseGradeDto;
 import com.rnave.studily.semester.SemesterDtos.SemesterStatsDto;
 import org.springframework.stereotype.Service;
@@ -30,15 +31,18 @@ public class SemesterStatsService {
     private final AcademicItemRepository itemRepository;
     private final GradeCategoryRepository categoryRepository;
     private final CurrentUser currentUser;
+    private final GradingScaleService gradingScaleService;
 
     public SemesterStatsService(SemesterRepository semesterRepository, CourseRepository courseRepository,
                                 AcademicItemRepository itemRepository,
-                                GradeCategoryRepository categoryRepository, CurrentUser currentUser) {
+                                GradeCategoryRepository categoryRepository, CurrentUser currentUser,
+                                GradingScaleService gradingScaleService) {
         this.semesterRepository = semesterRepository;
         this.courseRepository = courseRepository;
         this.itemRepository = itemRepository;
         this.categoryRepository = categoryRepository;
         this.currentUser = currentUser;
+        this.gradingScaleService = gradingScaleService;
     }
 
     @Transactional(readOnly = true)
@@ -64,7 +68,7 @@ public class SemesterStatsService {
             }
         }
 
-        GpaScale scale = GpaScale.resolve(currentUser.entity().getGpaScale(), currentUser.entity().getSchoolKey());
+        GradingScale scale = gradingScaleService.scaleFor(currentUser.entity());
         List<GpaMath.Entry> cumulativeEntries = new ArrayList<>();
         for (List<Course> semesterCourses : coursesBySemester.values()) {
             for (Course course : semesterCourses) {
@@ -88,7 +92,7 @@ public class SemesterStatsService {
     private SemesterStatsDto statsFor(Long semesterId, List<Course> courses,
                                       Map<Long, List<AcademicItem>> itemsByCourse,
                                       Map<Long, List<GradeCategory>> categoriesByCourse, Instant now,
-                                      GpaScale scale, Double cumulativeGpa, boolean creditsMissing) {
+                                      GradingScale scale, Double cumulativeGpa, boolean creditsMissing) {
         List<GpaMath.Entry> termEntries = new ArrayList<>();
         List<CourseGradeDto> grades = new ArrayList<>();
         double gradeSum = 0;
@@ -135,7 +139,7 @@ public class SemesterStatsService {
         Double average = gradedCourses > 0 ? gradeSum / gradedCourses : null;
         return new SemesterStatsDto(semesterId, average, courses.size(), gradedCourses,
                 itemsTotal, itemsDone, itemsGraded, upcoming, nextDueAt,
-                GpaMath.gpa(scale, termEntries), cumulativeGpa, scale, creditsMissing, grades);
+                GpaMath.gpa(scale, termEntries), cumulativeGpa, scale.key(), creditsMissing, grades);
     }
 
     private static Double creditsOf(Course course) {

@@ -2,8 +2,11 @@ package com.rnave.studily.user;
 
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.gpa.GpaScale;
+import com.rnave.studily.gpa.GradingScaleService;
+import com.rnave.studily.gpa.GradingScaleService.CustomScaleRequest;
+import com.rnave.studily.gpa.GradingScaleService.GpaScaleDto;
 import jakarta.validation.Valid;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,36 +17,34 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/settings/gpa-scale")
 public class GpaScaleController {
 
-    private final UserRepository userRepository;
+    private final GradingScaleService gradingScaleService;
     private final CurrentUser currentUser;
 
-    public GpaScaleController(UserRepository userRepository, CurrentUser currentUser) {
-        this.userRepository = userRepository;
+    public GpaScaleController(GradingScaleService gradingScaleService, CurrentUser currentUser) {
+        this.gradingScaleService = gradingScaleService;
         this.currentUser = currentUser;
     }
 
     @GetMapping
-    @Transactional(readOnly = true)
     public GpaScaleDto get() {
-        return toDto(currentUser.entity());
+        return gradingScaleService.prefs(currentUser.entity());
     }
 
     @PutMapping
-    @Transactional
     public GpaScaleDto update(@Valid @RequestBody GpaScaleRequest body) {
-        User me = currentUser.entity();
-        me.setGpaScale(body.scale());
-        return toDto(userRepository.save(me));
+        return gradingScaleService.select(currentUser.entity(), body.scale());
     }
 
-    private static GpaScaleDto toDto(User user) {
-        return new GpaScaleDto(GpaScale.resolve(user.getGpaScale(), user.getSchoolKey()),
-                GpaScale.defaultFor(user.getSchoolKey()), user.getGpaScale() != null);
+    @PutMapping("/custom")
+    public GpaScaleDto saveCustom(@RequestBody CustomScaleRequest body) {
+        return gradingScaleService.saveCustom(currentUser.entity(), body);
+    }
+
+    @DeleteMapping("/custom")
+    public GpaScaleDto deleteCustom() {
+        return gradingScaleService.deleteCustom(currentUser.entity());
     }
 
     public record GpaScaleRequest(GpaScale scale) {
-    }
-
-    public record GpaScaleDto(GpaScale scale, GpaScale defaultScale, boolean explicit) {
     }
 }
