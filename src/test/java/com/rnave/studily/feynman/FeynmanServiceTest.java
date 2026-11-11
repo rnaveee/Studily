@@ -4,14 +4,20 @@ import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.config.TooManyRequestsException;
+import com.rnave.studily.course.Course;
+import com.rnave.studily.course.CourseRepository;
 import com.rnave.studily.feynman.ClaudeFeynmanTutor.Outcome;
+import com.rnave.studily.feynman.FeynmanDtos.DocumentDto;
 import com.rnave.studily.feynman.FeynmanDtos.ReportDto;
 import com.rnave.studily.feynman.FeynmanDtos.SessionDto;
+import com.rnave.studily.feynman.FeynmanDtos.SessionSummaryDto;
 import com.rnave.studily.feynman.FeynmanDtos.TurnDto;
+import com.rnave.studily.filebank.BankFile;
+import com.rnave.studily.filebank.BankService;
 import com.rnave.studily.flashcard.generate.StudyDocumentReader;
 import com.rnave.studily.parse.AiFeature;
-import com.rnave.studily.parse.CourseParseUsage;
-import com.rnave.studily.parse.CourseParseUsageRepository;
+import com.rnave.studily.parse.AiUsageRecorder;
+import com.rnave.studily.rag.Scope;
 import com.rnave.studily.user.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,9 +39,11 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -44,19 +52,24 @@ import static org.mockito.Mockito.when;
 
 class FeynmanServiceTest {
 
+    private static final byte[] TEXT = "Inertia means objects keep moving.".getBytes(StandardCharsets.UTF_8);
+
     private ClaudeFeynmanTutor tutor;
     private FeynmanLimits limits;
     private StudyDocumentReader reader;
+    private BankService bankService;
+    private CourseRepository courses;
     private FeynmanSessionRepository sessions;
     private FeynmanDocumentRepository documents;
     private FeynmanMessageRepository messages;
     private FeynmanAssessmentRepository assessments;
-    private CourseParseUsageRepository usage;
+    private AiUsageRecorder usage;
     private FeynmanService service;
 
     private final List<FeynmanDocument> savedDocs = new ArrayList<>();
     private final List<FeynmanMessage> savedMessages = new ArrayList<>();
     private final List<FeynmanAssessment> savedAssessments = new ArrayList<>();
+    private long nextBankId;
     private User user;
 
     private static final FeynmanPlan PLAN = new FeynmanPlan("Newton's laws", List.of(
@@ -68,18 +81,31 @@ class FeynmanServiceTest {
         tutor = mock(ClaudeFeynmanTutor.class);
         limits = mock(FeynmanLimits.class);
         reader = mock(StudyDocumentReader.class);
+        bankService = mock(BankService.class);
+        courses = mock(CourseRepository.class);
         sessions = mock(FeynmanSessionRepository.class);
         documents = mock(FeynmanDocumentRepository.class);
         messages = mock(FeynmanMessageRepository.class);
         assessments = mock(FeynmanAssessmentRepository.class);
-        usage = mock(CourseParseUsageRepository.class);
+        usage = mock(AiUsageRecorder.class);
         user = new User();
         user.setId(7L);
+        Course course = new Course();
+        course.setId(5L);
+        course.setName("Physics");
         CurrentUser currentUser = mock(CurrentUser.class);
         when(currentUser.id()).thenReturn(7L);
         when(currentUser.entity()).thenReturn(user);
         when(tutor.enabled()).thenReturn(true);
         when(reader.readText(anyString(), any())).thenReturn("=== Slide 1 ===\nInertia means objects keep moving.");
+        when(courses.findByIdAndUserId(5L, 7L)).thenReturn(Optional.of(course));
+        when(courses.findByUserIdOrderByNameAsc(7L)).thenReturn(List.of(course));
+        nextBankId = 100L;
+        when(bankService.upload(any(), anyList(), isNull())).thenAnswer(inv -> {
+            List<MultipartFile> uploads = inv.getArgument(1);
+            return uploads.stream().map(f -> bankFile(nextBankId++, 5L, f.getOriginalFilename())).toList();
+        });
+        when(bankService.content(any())).thenReturn(TEXT);
 
         when(sessions.save(any())).thenAnswer(inv -> {
             FeynmanSession s = inv.getArgument(0);
@@ -111,15 +137,33 @@ class FeynmanServiceTest {
         });
         when(assessments.findBySessionIdOrderByIdAsc(anyLong())).thenAnswer(inv -> List.copyOf(savedAssessments));
 
-        service = new FeynmanService(tutor, limits, reader, sessions, documents, messages, assessments, usage,
-                currentUser);
+        service = new FeynmanService(tutor, limits, reader, bankService, courses, sessions, documents, messages,
+                assessments, usage, currentUser);
     }
 
     private static List<MultipartFile> files(String... names) {
         return Arrays.stream(names)
-                .map(n -> (MultipartFile) new MockMultipartFile("files", n, "text/plain",
-                        "Inertia means objects keep moving.".getBytes(StandardCharsets.UTF_8)))
+                .map(n -> (MultipartFile) new MockMultipartFile("files", n, "text/plain", TEXT))
                 .toList();
+    }
+
+    private static BankFile bankFile(long id, long courseId, String name) {
+        BankFile file = new BankFile();
+        file.setId(id);
+        file.setUserId(7L);
+        file.setCourseId(courseId);
+        file.setName(name);
+        file.setSizeBytes(TEXT.length);
+        file.setStorageKey("bank/7/" + id);
+        return file;
+    }
+
+    private static FeynmanSession session(long id, Long courseId, String title) {
+        FeynmanSession session = new FeynmanSession();
+        session.setId(id);
+        session.setCourseId(courseId);
+        session.setTitle(title);
+        return session;
     }
 
     private static <T> Outcome<T> ok(T result, String model) {
@@ -136,10 +180,8 @@ class FeynmanServiceTest {
     }
 
     private FeynmanSession activeSession() {
-        FeynmanSession session = new FeynmanSession();
-        session.setId(1L);
+        FeynmanSession session = session(1L, 5L, "Newton's laws");
         session.setUser(user);
-        session.setTitle("Newton's laws");
         session.setPlan(ClaudeFeynmanTutor.JSON.writeValueAsString(PLAN));
         when(sessions.findByIdAndUserId(1L, 7L)).thenReturn(Optional.of(session));
         return session;
@@ -149,58 +191,141 @@ class FeynmanServiceTest {
     void start_rejectsWhenStudilyBotIsDisabled() {
         when(tutor.enabled()).thenReturn(false);
 
-        assertThatThrownBy(() -> service.start(null, null, files("a.txt")))
+        assertThatThrownBy(() -> service.start(5L, null, null, files("a.txt"), null))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("isn't available");
         verify(tutor, never()).plan(anyString(), any());
     }
 
     @Test
-    void start_rejectsNoFilesAndTooManyFiles() {
-        assertThatThrownBy(() -> service.start(null, null, List.of()))
+    void start_rejectsNoMaterialAndTooManyFiles() {
+        assertThatThrownBy(() -> service.start(5L, null, null, List.of(), null))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Add your lecture");
-        assertThatThrownBy(() -> service.start(null, null, files("a.txt", "b.txt", "c.txt", "d.txt")))
+        assertThatThrownBy(() -> service.start(5L, null, null, files("a.txt", "b.txt", "c.txt", "d.txt"), null))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("up to 3 files");
         verify(tutor, never()).plan(anyString(), any());
     }
 
     @Test
-    void start_rejectsTooMuchMaterialBeforeCallingTheModel() {
-        when(reader.readText(anyString(), any())).thenReturn("x".repeat(FeynmanService.MAX_MATERIAL_CHARS + 1));
-
-        assertThatThrownBy(() -> service.start(null, null, files("a.txt")))
-                .hasMessageContaining("too much material");
+    void start_requiresACourse() {
+        assertThatThrownBy(() -> service.start(null, null, null, files("a.txt"), null))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Choose a course");
+        verify(bankService, never()).upload(any(), any(), any());
         verify(tutor, never()).plan(anyString(), any());
     }
 
     @Test
-    void start_savesTheDocumentsPlanAndOpeningMessageAndRecordsUsage() {
+    void start_hidesCoursesThatBelongToSomeoneElse() {
+        when(courses.findByIdAndUserId(99L, 7L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.start(99L, null, null, files("a.txt"), null))
+                .isInstanceOf(NotFoundException.class);
+        verify(bankService, never()).upload(any(), any(), any());
+        verify(tutor, never()).plan(anyString(), any());
+    }
+
+    @Test
+    void start_hidesBankFilesThatBelongToSomeoneElse() {
+        when(bankService.ownedFiles(List.of(42L))).thenThrow(new NotFoundException("File not found"));
+
+        assertThatThrownBy(() -> service.start(5L, null, null, null, List.of(42L)))
+                .isInstanceOf(NotFoundException.class);
+        verify(bankService, never()).content(any());
+        verify(tutor, never()).plan(anyString(), any());
+    }
+
+    @Test
+    void start_rejectsBankFilesFromAnotherCourse() {
+        when(bankService.ownedFiles(List.of(42L))).thenReturn(List.of(bankFile(42L, 6L, "Chem.pdf")));
+
+        assertThatThrownBy(() -> service.start(5L, null, null, null, List.of(42L)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("this course's file bank");
+        verify(tutor, never()).plan(anyString(), any());
+    }
+
+    @Test
+    void start_countsUploadsAndBankFilesTogetherAgainstTheLimit() {
+        assertThatThrownBy(() -> service.start(5L, null, null, files("a.txt", "b.txt"), List.of(11L, 12L)))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("up to 3 files");
+        verify(bankService, never()).ownedFiles(any());
+        verify(bankService, never()).upload(any(), any(), any());
+        verify(tutor, never()).plan(anyString(), any());
+    }
+
+    @Test
+    void start_mixesUploadsAndBankFilesUpToTheLimit() {
+        when(bankService.ownedFiles(List.of(11L, 12L)))
+                .thenReturn(List.of(bankFile(11L, 5L, "A.pdf"), bankFile(12L, 5L, "B.pdf")));
+        when(tutor.plan(anyString(), any())).thenReturn(ok(PLAN, "m"));
+
+        SessionDto dto = service.start(5L, null, null, files("c.txt"), List.of(11L, 12L));
+
+        assertThat(dto.documents()).extracting(DocumentDto::fileName).containsExactly("c.txt", "A.pdf", "B.pdf");
+        assertThat(dto.documents()).extracting(DocumentDto::bankFileId).containsExactly(100L, 11L, 12L);
+    }
+
+    @Test
+    void start_rejectsTooMuchMaterialBeforeCallingTheModelOrSavingToTheBank() {
+        when(reader.readText(anyString(), any())).thenReturn("x".repeat(FeynmanService.MAX_MATERIAL_CHARS + 1));
+
+        assertThatThrownBy(() -> service.start(5L, null, null, files("a.txt"), null))
+                .hasMessageContaining("too much material");
+        verify(tutor, never()).plan(anyString(), any());
+        verify(bankService, never()).upload(any(), any(), any());
+    }
+
+    @Test
+    void start_savesUploadsToTheCourseBankAndLinksThem() {
         when(tutor.plan(anyString(), eq("only the first law"))).thenReturn(ok(PLAN, "claude-sonnet-5-5"));
 
-        SessionDto dto = service.start("  ", "only the first law", files("lecture.txt"));
+        SessionDto dto = service.start(5L, "  ", "only the first law", files("lecture.txt"), null);
 
+        ArgumentCaptor<Scope> scope = ArgumentCaptor.forClass(Scope.class);
+        verify(bankService).upload(scope.capture(), anyList(), isNull());
+        assertThat(scope.getValue()).isEqualTo(Scope.course(7L, 5L));
         verify(limits).check();
         assertThat(dto.title()).isEqualTo("Newton's laws");
         assertThat(dto.focus()).isEqualTo("only the first law");
+        assertThat(dto.courseId()).isEqualTo(5L);
+        assertThat(dto.courseName()).isEqualTo("Physics");
         assertThat(dto.status()).isEqualTo(FeynmanStatus.ACTIVE);
         assertThat(dto.documents()).singleElement().satisfies(d -> {
             assertThat(d.fileName()).isEqualTo("lecture.txt");
             assertThat(d.chars()).isPositive();
+            assertThat(d.bankFileId()).isEqualTo(100L);
         });
         assertThat(dto.messages()).singleElement().satisfies(m -> {
             assertThat(m.role()).isEqualTo(FeynmanRole.BOT);
-            assertThat(m.body()).contains("Newton's first law").contains("2 ideas");
+            assertThat(m.body()).startsWith("Alright, Newton's laws! Teach it to me.")
+                    .contains("Newton's first law").contains("2 ideas");
         });
         ArgumentCaptor<FeynmanSession> session = ArgumentCaptor.forClass(FeynmanSession.class);
         verify(sessions).save(session.capture());
+        assertThat(session.getValue().getCourseId()).isEqualTo(5L);
         assertThat(session.getValue().getPlan()).contains("Newton's second law");
-        ArgumentCaptor<CourseParseUsage> row = ArgumentCaptor.forClass(CourseParseUsage.class);
-        verify(usage).save(row.capture());
-        assertThat(row.getValue().getFeature()).isEqualTo(AiFeature.FEYNMAN);
-        assertThat(row.getValue().getModel()).isEqualTo("claude-sonnet-5-5");
-        assertThat(row.getValue().isSucceeded()).isTrue();
+        verify(usage).record(7L, AiFeature.FEYNMAN, "claude-sonnet-5-5", 1_000, 200, true);
+    }
+
+    @Test
+    void start_readsBankFilesFromStorageAndLinksThemWithoutUploading() {
+        BankFile lecture = bankFile(11L, 5L, "Lecture 1.pdf");
+        when(bankService.ownedFiles(List.of(11L))).thenReturn(List.of(lecture));
+        when(tutor.plan(anyString(), any())).thenReturn(ok(PLAN, "m"));
+
+        SessionDto dto = service.start(5L, null, null, null, List.of(11L));
+
+        verify(bankService).content(lecture);
+        verify(reader).readText(eq("Lecture 1.pdf"), any());
+        verify(bankService, never()).upload(any(), any(), any());
+        assertThat(dto.documents()).singleElement().satisfies(d -> {
+            assertThat(d.fileName()).isEqualTo("Lecture 1.pdf");
+            assertThat(d.bankFileId()).isEqualTo(11L);
+        });
     }
 
     @Test
@@ -211,7 +336,7 @@ class FeynmanServiceTest {
         }
         when(tutor.plan(anyString(), any())).thenReturn(ok(new FeynmanPlan("Topic", many), "m"));
 
-        SessionDto dto = service.start("My midterm review", null, files("a.txt"));
+        SessionDto dto = service.start(5L, "My midterm review", null, files("a.txt"), null);
 
         assertThat(dto.title()).isEqualTo("My midterm review");
         ArgumentCaptor<FeynmanSession> session = ArgumentCaptor.forClass(FeynmanSession.class);
@@ -221,12 +346,46 @@ class FeynmanServiceTest {
     }
 
     @Test
-    void start_failsWithoutSavingWhenThePlanHasNoConcepts() {
+    void start_failsWithoutSavingTheSessionWhenThePlanHasNoConcepts() {
         when(tutor.plan(anyString(), any())).thenReturn(ok(new FeynmanPlan("Topic", List.of()), "m"));
 
-        assertThatThrownBy(() -> service.start(null, null, files("a.txt")))
+        assertThatThrownBy(() -> service.start(5L, null, null, files("a.txt"), null))
                 .hasMessageContaining("couldn't find anything");
         verify(sessions, never()).save(any());
+    }
+
+    @Test
+    void list_filtersByCourseAndNamesIt() {
+        when(sessions.findByUserIdAndCourseIdOrderByUpdatedAtDesc(7L, 5L))
+                .thenReturn(List.of(session(1L, 5L, "Newton's laws")));
+
+        List<SessionSummaryDto> found = service.list(5L);
+
+        assertThat(found).singleElement().satisfies(s -> {
+            assertThat(s.courseId()).isEqualTo(5L);
+            assertThat(s.courseName()).isEqualTo("Physics");
+        });
+        verify(sessions, never()).findByUserIdOrderByUpdatedAtDesc(anyLong());
+    }
+
+    @Test
+    void list_withoutACourseReturnsEverySession() {
+        when(sessions.findByUserIdOrderByUpdatedAtDesc(7L))
+                .thenReturn(List.of(session(1L, 5L, "Newton's laws"), session(2L, null, "Loose notes")));
+
+        List<SessionSummaryDto> all = service.list(null);
+
+        assertThat(all).extracting(SessionSummaryDto::title).containsExactly("Newton's laws", "Loose notes");
+        assertThat(all.get(1).courseName()).isNull();
+        verify(sessions, never()).findByUserIdAndCourseIdOrderByUpdatedAtDesc(anyLong(), anyLong());
+    }
+
+    @Test
+    void list_hidesCoursesThatBelongToSomeoneElse() {
+        when(courses.findByIdAndUserId(99L, 7L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.list(99L)).isInstanceOf(NotFoundException.class);
+        verify(sessions, never()).findByUserIdAndCourseIdOrderByUpdatedAtDesc(anyLong(), anyLong());
     }
 
     @Test
@@ -271,14 +430,14 @@ class FeynmanServiceTest {
     }
 
     @Test
-    void send_savesNothingWhenTheModelFails() {
+    void send_savesNothingWhenTheModelFailsAndRecordsTheFailure() {
         activeSession();
         when(tutor.turn(any(), any(), any(), anyString())).thenReturn(failed());
 
         assertThatThrownBy(() -> service.send(1L, "Things keep moving"))
                 .isInstanceOf(BadRequestException.class);
         assertThat(savedMessages).isEmpty();
-        verify(usage, never()).save(any());
+        verify(usage).record(7L, AiFeature.FEYNMAN, "claude-haiku-5-5", 0, 0, false);
     }
 
     @Test
@@ -385,11 +544,12 @@ class FeynmanServiceTest {
     }
 
     @Test
-    void addDocuments_replansOverEveryFileAndResetsTheOpening() {
+    void addDocuments_savesNewFilesToTheCourseBankAndReplansOverEveryFile() {
         activeSession();
         FeynmanDocument first = new FeynmanDocument();
         first.setFileName("first.txt");
         first.setContent("FIRST FILE TEXT");
+        first.setBankFileId(50L);
         savedDocs.add(first);
         when(tutor.plan(anyString(), any())).thenReturn(ok(PLAN, "m"));
 
@@ -398,8 +558,22 @@ class FeynmanServiceTest {
         ArgumentCaptor<String> material = ArgumentCaptor.forClass(String.class);
         verify(tutor).plan(material.capture(), any());
         assertThat(material.getValue()).contains("FIRST FILE TEXT").contains("second.txt");
+        verify(bankService).upload(eq(Scope.course(7L, 5L)), anyList(), isNull());
         assertThat(savedDocs).hasSize(2);
+        assertThat(savedDocs.get(1).getFileName()).isEqualTo("second.txt");
+        assertThat(savedDocs.get(1).getBankFileId()).isEqualTo(100L);
         verify(messages, times(1)).save(any());
+    }
+
+    @Test
+    void addDocuments_refusesASessionThatIsNotLinkedToACourse() {
+        activeSession().setCourseId(null);
+
+        assertThatThrownBy(() -> service.addDocuments(1L, files("more.txt")))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("isn't linked to a course");
+        verify(bankService, never()).upload(any(), any(), any());
+        verify(tutor, never()).plan(anyString(), any());
     }
 
     @Test

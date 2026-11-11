@@ -34,6 +34,9 @@ public class FeynmanDocument {
     @Column(name = "size_bytes", nullable = false)
     private long sizeBytes;
 
+    @Column(name = "bank_file_id")
+    private Long bankFileId;
+
     @Column(nullable = false, columnDefinition = "text")
     private String content;
 

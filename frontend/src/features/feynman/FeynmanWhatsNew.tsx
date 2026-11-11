@@ -83,7 +83,7 @@ const SLIDES: Slide[] = [
   {
     eyebrow: "How it works",
     title: "Upload a lecture, then teach it back",
-    body: "Add up to 3 PDFs, slide decks or notes from one lecture. StudilyBot picks out the key ideas and asks you to explain them one at a time. When you miss something, it asks a follow-up. Say \"I don't know\" and it explains it simply, then moves on.",
+    body: "Pick up to 3 files from one lecture, from your course files or uploaded fresh. StudilyBot picks out the key ideas and asks you to explain them one at a time. When you miss something, it asks a follow-up. Say \"I don't know\" and it explains it simply, then moves on.",
     visual: <UploadVisual />,
   },
   {
@@ -163,7 +163,7 @@ function Slides() {
                     type="button"
                     tabIndex={i === index ? 0 : -1}
                     onClick={() => {
-                      navigate("/learn/feynman");
+                      navigate("/study/studilybot/recall");
                       close();
                     }}
                     className="btn btn-primary"

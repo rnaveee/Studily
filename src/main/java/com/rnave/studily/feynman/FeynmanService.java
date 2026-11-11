@@ -4,6 +4,8 @@ import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.config.TooManyRequestsException;
+import com.rnave.studily.course.Course;
+import com.rnave.studily.course.CourseRepository;
 import com.rnave.studily.feynman.ClaudeFeynmanTutor.Assessed;
 import com.rnave.studily.feynman.ClaudeFeynmanTutor.HistoryLine;
 import com.rnave.studily.feynman.ClaudeFeynmanTutor.Outcome;
@@ -16,10 +18,12 @@ import com.rnave.studily.feynman.FeynmanDtos.ReportDto;
 import com.rnave.studily.feynman.FeynmanDtos.SessionDto;
 import com.rnave.studily.feynman.FeynmanDtos.SessionSummaryDto;
 import com.rnave.studily.feynman.FeynmanDtos.TurnDto;
+import com.rnave.studily.filebank.BankFile;
+import com.rnave.studily.filebank.BankService;
 import com.rnave.studily.flashcard.generate.StudyDocumentReader;
 import com.rnave.studily.parse.AiFeature;
-import com.rnave.studily.parse.CourseParseUsage;
-import com.rnave.studily.parse.CourseParseUsageRepository;
+import com.rnave.studily.parse.AiUsageRecorder;
+import com.rnave.studily.rag.Scope;
 import com.rnave.studily.user.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +33,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,26 +56,31 @@ public class FeynmanService {
     private final ClaudeFeynmanTutor tutor;
     private final FeynmanLimits limits;
     private final StudyDocumentReader reader;
+    private final BankService bankService;
+    private final CourseRepository courses;
     private final FeynmanSessionRepository sessions;
     private final FeynmanDocumentRepository documents;
     private final FeynmanMessageRepository messages;
     private final FeynmanAssessmentRepository assessments;
-    private final CourseParseUsageRepository usageRepository;
+    private final AiUsageRecorder usageRecorder;
     private final CurrentUser currentUser;
     private final Set<Long> inFlight = ConcurrentHashMap.newKeySet();
 
     public FeynmanService(ClaudeFeynmanTutor tutor, FeynmanLimits limits, StudyDocumentReader reader,
+                          BankService bankService, CourseRepository courses,
                           FeynmanSessionRepository sessions, FeynmanDocumentRepository documents,
                           FeynmanMessageRepository messages, FeynmanAssessmentRepository assessments,
-                          CourseParseUsageRepository usageRepository, CurrentUser currentUser) {
+                          AiUsageRecorder usageRecorder, CurrentUser currentUser) {
         this.tutor = tutor;
         this.limits = limits;
         this.reader = reader;
+        this.bankService = bankService;
+        this.courses = courses;
         this.sessions = sessions;
         this.documents = documents;
         this.messages = messages;
         this.assessments = assessments;
-        this.usageRepository = usageRepository;
+        this.usageRecorder = usageRecorder;
         this.currentUser = currentUser;
     }
 
@@ -79,9 +90,20 @@ public class FeynmanService {
                 MAX_FILES, MAX_FILE_BYTES);
     }
 
-    public List<SessionSummaryDto> list() {
-        return sessions.findByUserIdOrderByUpdatedAtDesc(currentUser.id()).stream()
-                .map(s -> new SessionSummaryDto(s.getId(), s.getTitle(), s.getStatus(), s.getScore(), s.getUpdatedAt()))
+    public List<SessionSummaryDto> list(Long courseId) {
+        Long userId = currentUser.id();
+        List<FeynmanSession> found;
+        if (courseId == null) {
+            found = sessions.findByUserIdOrderByUpdatedAtDesc(userId);
+        } else {
+            ownedCourse(courseId);
+            found = sessions.findByUserIdAndCourseIdOrderByUpdatedAtDesc(userId, courseId);
+        }
+        Map<Long, String> names = new HashMap<>();
+        courses.findByUserIdOrderByNameAsc(userId).forEach(c -> names.put(c.getId(), c.getName()));
+        return found.stream()
+                .map(s -> new SessionSummaryDto(s.getId(), s.getTitle(), s.getCourseId(),
+                        names.get(s.getCourseId()), s.getStatus(), s.getScore(), s.getUpdatedAt()))
                 .toList();
     }
 
@@ -89,20 +111,38 @@ public class FeynmanService {
         return dto(owned(id));
     }
 
-    record Material(String fileName, long sizeBytes, String text) {
+    record Material(Long bankFileId, String fileName, long sizeBytes, String text) {
     }
 
-    public SessionDto start(String title, String focus, List<MultipartFile> files) {
+    public SessionDto start(Long courseId, String title, String focus, List<MultipartFile> files,
+                            List<Long> bankFileIds) {
         requireEnabled();
-        List<Material> material = read(files, 0);
+        List<MultipartFile> uploads = present(files);
+        List<Long> picked = distinct(bankFileIds);
+        if (uploads.isEmpty() && picked.isEmpty()) {
+            throw new BadRequestException("Add your lecture slides or notes to start.");
+        }
+        requireFileCount(uploads.size() + picked.size());
+        if (courseId == null) {
+            throw new BadRequestException("Choose a course for this session.");
+        }
+        ownedCourse(courseId);
+        List<Material> read = readUploads(uploads);
+        List<Material> fromBank = readBankFiles(courseId, picked);
+        List<Material> all = new ArrayList<>(read);
+        all.addAll(fromBank);
+        requireMaterialFits(all);
         String cleanFocus = clip(focus, MAX_FOCUS);
         User user = currentUser.entity();
         return guarded(user.getId(), () -> {
             limits.check();
+            List<Material> material = new ArrayList<>(saveUploads(user.getId(), courseId, uploads, read));
+            material.addAll(fromBank);
             FeynmanPlan plan = buildPlan(user, material, cleanFocus);
 
             FeynmanSession session = new FeynmanSession();
             session.setUser(user);
+            session.setCourseId(courseId);
             String chosen = clip(title, MAX_TITLE);
             session.setTitle(chosen != null ? chosen : titleFrom(plan, material));
             session.setFocus(cleanFocus);
@@ -123,17 +163,27 @@ public class FeynmanService {
         if (messages.countBySessionIdAndRole(id, FeynmanRole.USER) > 0) {
             throw new BadRequestException("You can only add files before you start explaining.");
         }
+        if (session.getCourseId() == null) {
+            throw new BadRequestException("This session isn't linked to a course, so new files can't be saved to a file bank.");
+        }
+        List<MultipartFile> uploads = present(files);
+        if (uploads.isEmpty()) {
+            throw new BadRequestException("Add your lecture slides or notes to start.");
+        }
         List<FeynmanDocument> existing = documents.findBySessionIdOrderByIdAsc(id);
-        List<Material> added = read(files, existing.size());
+        requireFileCount(existing.size() + uploads.size());
+        List<Material> added = readUploads(uploads);
         List<Material> all = new ArrayList<>();
-        existing.forEach(d -> all.add(new Material(d.getFileName(), d.getSizeBytes(), d.getContent())));
+        existing.forEach(d -> all.add(new Material(d.getBankFileId(), d.getFileName(), d.getSizeBytes(), d.getContent())));
         all.addAll(added);
         requireMaterialFits(all);
         User user = currentUser.entity();
+        Long courseId = session.getCourseId();
         return guarded(user.getId(), () -> {
             limits.check();
+            List<Material> linked = saveUploads(user.getId(), courseId, uploads, added);
             FeynmanPlan plan = buildPlan(user, all, session.getFocus());
-            for (Material m : added) {
+            for (Material m : linked) {
                 saveDocument(session, m);
             }
             session.setPlan(ClaudeFeynmanTutor.JSON.writeValueAsString(plan));
@@ -273,15 +323,7 @@ public class FeynmanService {
         return new FeynmanPlan(plan.topic(), concepts);
     }
 
-    private List<Material> read(List<MultipartFile> files, int alreadyAttached) {
-        List<MultipartFile> uploads = files == null ? List.of()
-                : files.stream().filter(f -> f != null && !f.isEmpty()).toList();
-        if (uploads.isEmpty()) {
-            throw new BadRequestException("Add your lecture slides or notes to start.");
-        }
-        if (uploads.size() + alreadyAttached > MAX_FILES) {
-            throw new BadRequestException("A session can use up to " + MAX_FILES + " files.");
-        }
+    private List<Material> readUploads(List<MultipartFile> uploads) {
         List<Material> material = new ArrayList<>();
         for (MultipartFile file : uploads) {
             String name = file.getOriginalFilename() == null ? "document" : file.getOriginalFilename();
@@ -298,10 +340,50 @@ public class FeynmanService {
             if (text.isBlank()) {
                 throw new BadRequestException(name + " has no text StudilyBot can read.");
             }
-            material.add(new Material(name, bytes.length, text));
+            material.add(new Material(null, name, bytes.length, text));
         }
-        requireMaterialFits(material);
         return material;
+    }
+
+    private List<Material> readBankFiles(Long courseId, List<Long> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        List<Material> material = new ArrayList<>();
+        for (BankFile file : bankService.ownedFiles(ids)) {
+            if (!courseId.equals(file.getCourseId())) {
+                throw new BadRequestException("Pick files from this course's file bank.");
+            }
+            material.add(new Material(file.getId(), file.getName(), file.getSizeBytes(), bankText(file)));
+        }
+        return material;
+    }
+
+    private String bankText(BankFile file) {
+        byte[] bytes;
+        try {
+            bytes = bankService.content(file);
+        } catch (RuntimeException e) {
+            throw new BadRequestException(file.getName() + " could not be read. Try again in a moment.");
+        }
+        String text = reader.readText(file.getName(), bytes);
+        if (text.isBlank()) {
+            throw new BadRequestException(file.getName() + " has no text StudilyBot can read.");
+        }
+        return text;
+    }
+
+    private List<Material> saveUploads(Long userId, Long courseId, List<MultipartFile> uploads, List<Material> read) {
+        if (uploads.isEmpty()) {
+            return List.of();
+        }
+        List<BankFile> saved = bankService.upload(Scope.course(userId, courseId), uploads, null);
+        List<Material> linked = new ArrayList<>();
+        for (int i = 0; i < read.size(); i++) {
+            Material m = read.get(i);
+            linked.add(new Material(saved.get(i).getId(), m.fileName(), m.sizeBytes(), m.text()));
+        }
+        return linked;
     }
 
     private static void requireMaterialFits(List<Material> material) {
@@ -309,6 +391,21 @@ public class FeynmanService {
         if (chars > MAX_MATERIAL_CHARS) {
             throw new BadRequestException("That's too much material for one session. Try one lecture at a time.");
         }
+    }
+
+    private static void requireFileCount(int count) {
+        if (count > MAX_FILES) {
+            throw new BadRequestException("A session can use up to " + MAX_FILES + " files.");
+        }
+    }
+
+    private static List<MultipartFile> present(List<MultipartFile> files) {
+        return files == null ? List.of()
+                : files.stream().filter(f -> f != null && !f.isEmpty()).toList();
+    }
+
+    private static List<Long> distinct(List<Long> ids) {
+        return ids == null ? List.of() : ids.stream().distinct().toList();
     }
 
     private <T> T guarded(Long userId, Supplier<T> work) {
@@ -339,6 +436,11 @@ public class FeynmanService {
                 .orElseThrow(() -> new NotFoundException("Session not found"));
     }
 
+    private Course ownedCourse(Long courseId) {
+        return courses.findByIdAndUserId(courseId, currentUser.id())
+                .orElseThrow(() -> new NotFoundException("Course not found"));
+    }
+
     private static FeynmanPlan plan(FeynmanSession session) {
         return ClaudeFeynmanTutor.JSON.readValue(session.getPlan(), FeynmanPlan.class);
     }
@@ -351,9 +453,10 @@ public class FeynmanService {
 
     static String opening(FeynmanPlan plan) {
         String first = plan.concepts().get(0).name();
-        String topic = plan.topic() == null || plan.topic().isBlank() ? "this lecture" : plan.topic().strip();
+        String topic = plan.topic() == null || plan.topic().isBlank() ? null : plan.topic().strip();
         int count = plan.concepts().size();
-        return "I read your material on " + topic + " and found " + count
+        String lead = topic == null ? "Alright!" : "Alright, " + topic + "!";
+        return lead + " Teach it to me. I read your material and found " + count
                 + (count == 1 ? " idea" : " ideas") + " to go through. Pretend I've never heard of any of it. "
                 + "Let's start with " + first + ". How would you explain it to me?";
     }
@@ -385,6 +488,7 @@ public class FeynmanService {
         doc.setSession(session);
         doc.setFileName(clip(m.fileName(), 255));
         doc.setSizeBytes(m.sizeBytes());
+        doc.setBankFileId(m.bankFileId());
         doc.setContent(m.text());
         documents.save(doc);
     }
@@ -399,18 +503,9 @@ public class FeynmanService {
     }
 
     private void record(User user, Outcome<?> outcome) {
-        if (!outcome.billed()) {
-            return;
-        }
         try {
-            CourseParseUsage usage = new CourseParseUsage();
-            usage.setUser(user);
-            usage.setModel(outcome.model());
-            usage.setInputTokens(outcome.inputTokens());
-            usage.setOutputTokens(outcome.outputTokens());
-            usage.setFeature(AiFeature.FEYNMAN);
-            usage.setSucceeded(outcome.ok());
-            usageRepository.save(usage);
+            usageRecorder.record(user.getId(), AiFeature.FEYNMAN, outcome.model(), outcome.inputTokens(),
+                    outcome.outputTokens(), outcome.ok());
         } catch (RuntimeException e) {
             log.warn("Could not record StudilyBot usage: {}", e.getMessage());
         }
@@ -419,10 +514,16 @@ public class FeynmanService {
     private SessionDto dto(FeynmanSession s) {
         List<DocumentDto> docs = documents.findBySessionIdOrderByIdAsc(s.getId()).stream()
                 .map(d -> new DocumentDto(d.getId(), d.getFileName(), d.getSizeBytes(), d.getContent().length(),
-                        d.getCreatedAt()))
+                        d.getCreatedAt(), d.getBankFileId()))
                 .toList();
         List<MessageDto> msgs = messages.findBySessionIdOrderByIdAsc(s.getId()).stream().map(FeynmanService::dto).toList();
-        return new SessionDto(s.getId(), s.getTitle(), s.getFocus(), s.getStatus(), s.getScore(), docs, msgs);
+        return new SessionDto(s.getId(), s.getTitle(), s.getFocus(), s.getCourseId(), courseName(s.getCourseId()),
+                s.getStatus(), s.getScore(), docs, msgs);
+    }
+
+    private String courseName(Long courseId) {
+        return courseId == null ? null
+                : courses.findByIdAndUserId(courseId, currentUser.id()).map(Course::getName).orElse(null);
     }
 
     private static MessageDto dto(FeynmanMessage m) {

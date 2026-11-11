@@ -9,5 +9,7 @@ public interface FeynmanSessionRepository extends JpaRepository<FeynmanSession, 
 
     List<FeynmanSession> findByUserIdOrderByUpdatedAtDesc(Long userId);
 
+    List<FeynmanSession> findByUserIdAndCourseIdOrderByUpdatedAtDesc(Long userId, Long courseId);
+
     Optional<FeynmanSession> findByIdAndUserId(Long id, Long userId);
 }

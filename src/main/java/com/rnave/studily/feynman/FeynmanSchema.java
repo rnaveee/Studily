@@ -58,15 +58,15 @@ final class FeynmanSchema {
     private static Map<String, Object> turnRoot() {
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("assessed", Map.of("type", "boolean",
-                "description", "True when the student's last message was an attempt to explain a concept."));
+                "description", "True when the student's last message was an attempt to explain a concept, or they said they didn't know it."));
         properties.put("concept", nullable("string",
-                "The name of the concept from the plan the student just explained, written exactly as in the plan. Null when assessed is false."));
+                "The name of the concept from the plan that the student just explained or said they didn't know, written exactly as in the plan. Null when assessed is false."));
         properties.put("score", nullable("integer",
-                "0 to 100 for how well they explained it in their own words. Null when assessed is false."));
+                "0 to 100 for how well they explained it in their own words. 0 when they said they didn't know it. Null when assessed is false."));
         properties.put("gaps", array(Map.of("type", "string"),
                 "Short notes on what they missed or got wrong. Empty when nothing is missing."));
         properties.put("didNotKnow", Map.of("type", "boolean",
-                "description", "True when the student didn't know the answer."));
+                "description", "True only when the student said they didn't know the concept."));
         properties.put("messages", array(Map.of("type", "string"),
                 "Your chat bubbles in order, one to three."));
         properties.put("lectureComplete", Map.of("type", "boolean",
