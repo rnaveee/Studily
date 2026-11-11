@@ -136,10 +136,11 @@ function RenameField({
       aria-label="Rename"
       onChange={(e) => setValue(e.target.value)}
       onKeyDown={(e) => {
-        if (e.key === "Enter") {
+        if (e.key === "Enter" && !e.nativeEvent.isComposing) {
           e.preventDefault();
           finish(true);
         } else if (e.key === "Escape") {
+          e.preventDefault();
           finish(false);
         }
       }}
@@ -172,6 +173,8 @@ export default function BotLayout({
   const status = useBotStatus();
   const [drawer, setDrawer] = useState(false);
   const [renamingId, setRenamingId] = useState<number | null>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const drawerCloseRef = useRef<HTMLButtonElement>(null);
 
   const list = useQuery({
     queryKey: ["bot", "chats", src.key],
@@ -182,6 +185,19 @@ export default function BotLayout({
   useEffect(() => {
     setDrawer(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!drawer) return;
+    drawerCloseRef.current?.focus();
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && !e.defaultPrevented) setDrawer(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      menuButtonRef.current?.focus();
+    };
+  }, [drawer]);
 
   const rename = useMutation({
     mutationFn: ({ id, title }: { id: number; title: string }) => {
@@ -228,6 +244,7 @@ export default function BotLayout({
           </Link>
           {mobile && (
             <button
+              ref={drawerCloseRef}
               type="button"
               onClick={() => setDrawer(false)}
               aria-label="Close chats"
@@ -345,6 +362,9 @@ export default function BotLayout({
           aria-hidden
         />
         <aside
+          role={drawer ? "dialog" : undefined}
+          aria-modal={drawer ? true : undefined}
+          aria-label={drawer ? "StudilyBot chats" : undefined}
           className="absolute inset-y-0 left-0 flex w-[84%] max-w-[300px] flex-col transition-transform duration-200 ease-out"
           style={{
             background: "var(--surface)",
@@ -370,6 +390,7 @@ export default function BotLayout({
             <ArrowLeft size={14} />
           </Link>
           <button
+            ref={menuButtonRef}
             type="button"
             onClick={() => setDrawer(true)}
             aria-label="Show chats"
