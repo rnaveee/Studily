@@ -49,6 +49,7 @@ export default function StudilyBotTile({ className = "" }: { className?: string 
   return (
     <section
       aria-label="StudilyBot"
+      data-tour="studilybot"
       className={`card relative isolate flex min-h-[18rem] flex-col items-center gap-1.5 overflow-hidden p-3 xl:min-h-0 ${className}`}
     >
       <BotBackdrop variant="tile" />

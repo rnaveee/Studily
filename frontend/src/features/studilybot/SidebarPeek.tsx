@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../lib/auth";
+import { useWelcomeTourStep } from "../../lib/welcomeTour";
 import Mascot from "./Mascot";
 
 const SIZE = 84;
@@ -22,10 +23,12 @@ export default function SidebarPeek({
   const timer = useRef<number | undefined>(undefined);
   const first = user?.name?.trim().split(/\s+/)[0];
   const footer = variant === "footer";
+  const touring = useWelcomeTourStep() !== null;
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
   useEffect(() => setOut(false), [pathname]);
 
+  if (touring) return null;
   if (footer && (hidden || FOOTER_HIDDEN_ON.some((p) => pathname.startsWith(p)))) return null;
 
   function tap(e: MouseEvent) {

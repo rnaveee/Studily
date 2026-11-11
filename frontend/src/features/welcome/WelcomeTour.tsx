@@ -3,59 +3,94 @@ import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { api } from "../../lib/api";
+import { useAuth } from "../../lib/auth";
+import { prefersReducedMotion } from "../../lib/motion";
 import { useWelcomeTourStep, welcomeTour } from "../../lib/welcomeTour";
+import Mascot, { type MascotState } from "../studilybot/Mascot";
 import type { FlashcardSet } from "../../types";
 
 const SAMPLE_SET_TITLE = "Studily flashcard set";
 const PAD = 8;
+const EDGE = 20;
+const TYPE_STEP_MS = 22;
 
 type Route = "learn" | "sample-set" | "friends";
 
 interface Step {
   route: Route;
-  target: string;
+  target: string | null;
   title: string;
   body: string;
+  mood: MascotState;
 }
 
 export const TOUR_STEPS: Step[] = [
   {
     route: "learn",
+    target: null,
+    title: "Hi{name}!",
+    body: "I'm StudilyBot, your study buddy. Let me show you around Studily. It only takes a minute!",
+    mood: "wave",
+  },
+  {
+    route: "learn",
     target: "nav-study",
     title: "Your Study page",
-    body: "Everything for studying lives here: study sessions, flashcards and tools like the Pomodoro timer and calculator.",
+    body: "This is where studying happens: study sessions, flashcards, and tools like the Pomodoro timer and calculator.",
+    mood: "happy",
   },
   {
     route: "learn",
     target: "study-sessions",
     title: "Study sessions",
-    body: "Study sessions keep you focused. Pick a Pomodoro timer or a straight timer, list what you want to get done, and check in as each block ends. Every session earns XP, coins and chests you can spend on flairs for your profile ✨",
+    body: "Sessions keep you focused. Pick a Pomodoro or a timer, list what you want to get done, and check in as each block ends. Every session earns XP, coins and chests!",
+    mood: "excited",
+  },
+  {
+    route: "learn",
+    target: "studilybot",
+    title: "That's me!",
+    body: "Add your course files and I'll answer questions about them, write practice problems from your class, or let you teach a lecture back to me. You can dress me up in the shop too.",
+    mood: "love",
   },
   {
     route: "sample-set",
     target: "flashcard-viewer",
     title: "Flashcards",
-    body: "Studily has flashcards, with five ways to study every set. We made you a starter set to try them on.",
+    body: "I made you a starter flashcard set to try. Every set has five ways to study it.",
+    mood: "happy",
   },
   {
     route: "sample-set",
     target: "quizlet-import",
     title: "Coming from Quizlet?",
-    body: "Bring your Quizlet sets over in seconds. Export from Quizlet, paste it here, and every card comes across.",
+    body: "Export your Quizlet set, paste it here, and every card comes across in seconds.",
+    mood: "thinking",
   },
   {
     route: "friends",
     target: "schoolmates",
     title: "Schoolmates",
-    body: "Find other students on Studily who go to your school.",
+    body: "These are other students on Studily from your school. Say hi!",
+    mood: "wave",
   },
   {
     route: "friends",
     target: "friend-link",
     title: "Friends",
-    body: "Add your friends on Studily to chat with them and start group chats.",
+    body: "Add your friends to chat, start group chats and study together. That's the tour. Let's go study!",
+    mood: "excited",
   },
 ];
+
+interface Hole {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+type Corner = "br" | "bl" | "tr" | "tl";
 
 async function resolveRoute(route: Route): Promise<string> {
   if (route === "learn") return "/study";
@@ -71,57 +106,80 @@ async function resolveRoute(route: Route): Promise<string> {
 
 function visibleTarget(name: string): HTMLElement | null {
   const nodes = Array.from(document.querySelectorAll<HTMLElement>(`[data-tour="${name}"]`));
-  return nodes.find((n) => {
-    const r = n.getBoundingClientRect();
-    return r.width > 0 && r.height > 0;
-  }) ?? null;
+  return (
+    nodes.find((n) => {
+      const r = n.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    }) ?? null
+  );
 }
 
-export default function WelcomeTour() {
-  const index = useWelcomeTourStep();
-  if (index === null) return null;
-  const step = TOUR_STEPS[Math.min(index, TOUR_STEPS.length - 1)];
-  return <Spotlight key={index} index={index} step={step} />;
+function overlap(a: Hole, b: Hole): number {
+  const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
+  const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+  return w > 0 && h > 0 ? w * h : 0;
 }
 
-function Spotlight({ index, step }: { index: number; step: Step }) {
+function pickCorner(hole: Hole | null, vw: number, vh: number, gw: number, gh: number): Corner {
+  if (!hole) return "br";
+  const boxes: Record<Corner, Hole> = {
+    br: { x: vw - gw - EDGE, y: vh - gh - EDGE, w: gw, h: gh },
+    bl: { x: EDGE, y: vh - gh - EDGE, w: gw, h: gh },
+    tr: { x: vw - gw - EDGE, y: EDGE, w: gw, h: gh },
+    tl: { x: EDGE, y: EDGE, w: gw, h: gh },
+  };
+  let best: Corner = "br";
+  let least = Infinity;
+  for (const corner of ["br", "bl", "tr", "tl"] as Corner[]) {
+    const covered = overlap(boxes[corner], hole);
+    if (covered === 0) return corner;
+    if (covered < least) {
+      least = covered;
+      best = corner;
+    }
+  }
+  return best;
+}
+
+function useViewport() {
+  const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight });
+  useEffect(() => {
+    const onResize = () => setSize({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return size;
+}
+
+function useTourTarget(index: number, step: Step): Hole | null {
   const navigate = useNavigate();
   const location = useLocation();
   const [path, setPath] = useState<string | null>(null);
-  const [rect, setRect] = useState<DOMRect | null>(null);
-  const [viewport, setViewport] = useState({ w: window.innerWidth, h: window.innerHeight });
-  const cardRef = useRef<HTMLDivElement>(null);
-  const [cardH, setCardH] = useState(150);
-  const last = index === TOUR_STEPS.length - 1;
-
-  useLayoutEffect(() => {
-    const el = cardRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => setCardH(el.offsetHeight));
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  const [hole, setHole] = useState<Hole | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setPath(null);
+    setHole(null);
     resolveRoute(step.route).then((p) => {
       if (!cancelled) setPath(p);
     });
     return () => {
       cancelled = true;
     };
-  }, [step.route]);
+  }, [index, step.route]);
 
   useEffect(() => {
     if (path && location.pathname !== path) navigate(path);
   }, [path, location.pathname, navigate]);
 
   useLayoutEffect(() => {
-    if (!path || location.pathname !== path) return;
+    if (!path || location.pathname !== path || !step.target) return;
+    const target = step.target;
     let frame = 0;
     let scrolled = false;
     const measure = () => {
-      const el = visibleTarget(step.target);
+      const el = visibleTarget(target);
       if (el) {
         if (!scrolled) {
           const tall = el.getBoundingClientRect().height > window.innerHeight * 0.5;
@@ -129,73 +187,138 @@ function Spotlight({ index, step }: { index: number; step: Step }) {
           scrolled = true;
         }
         const r = el.getBoundingClientRect();
-        setRect((prev) =>
-          prev && prev.left === r.left && prev.top === r.top && prev.width === r.width && prev.height === r.height
-            ? prev
-            : r,
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const y = Math.max(4, r.top - PAD);
+        const next = {
+          x: Math.max(4, r.left - PAD),
+          y,
+          w: Math.min(vw - 8, r.width + PAD * 2),
+          h: Math.max(0, Math.min(vh - 4, r.bottom + PAD) - y),
+        };
+        setHole((prev) =>
+          prev && prev.x === next.x && prev.y === next.y && prev.w === next.w && prev.h === next.h ? prev : next,
         );
       }
-      setViewport((prev) =>
-        prev.w === window.innerWidth && prev.h === window.innerHeight
-          ? prev
-          : { w: window.innerWidth, h: window.innerHeight },
-      );
       frame = window.requestAnimationFrame(measure);
     };
     measure();
     return () => window.cancelAnimationFrame(frame);
-  }, [path, location.pathname, step.target]);
+  }, [path, location.pathname, step.target, index]);
+
+  return hole;
+}
+
+function useTyped(text: string) {
+  const instant = prefersReducedMotion();
+  const [count, setCount] = useState(instant ? text.length : 0);
+
+  useEffect(() => {
+    if (instant) {
+      setCount(text.length);
+      return;
+    }
+    setCount(0);
+    let n = 0;
+    const id = window.setInterval(() => {
+      n += 2;
+      setCount(Math.min(n, text.length));
+      if (n >= text.length) window.clearInterval(id);
+    }, TYPE_STEP_MS);
+    return () => window.clearInterval(id);
+  }, [text, instant]);
+
+  return { shown: text.slice(0, count), done: count >= text.length, skip: () => setCount(text.length) };
+}
+
+export default function WelcomeTour() {
+  const index = useWelcomeTourStep();
+  if (index === null) return null;
+  return <TourGuide index={Math.min(index, TOUR_STEPS.length - 1)} />;
+}
+
+function TourGuide({ index }: { index: number }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const step = TOUR_STEPS[index];
+  const hole = useTourTarget(index, step);
+  const viewport = useViewport();
+  const guideRef = useRef<HTMLDivElement>(null);
+  const [guide, setGuide] = useState({ w: 480, h: 230 });
+  const first = user?.name?.trim().split(/\s+/)[0];
+  const title = step.title.replace("{name}", first ? ` ${first}` : "");
+  const typed = useTyped(step.body);
+  const last = index === TOUR_STEPS.length - 1;
+  const mobile = viewport.w < 640;
+
+  useLayoutEffect(() => {
+    const el = guideRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setGuide({ w: el.offsetWidth, h: el.offsetHeight }));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [mobile]);
 
   function finish() {
     welcomeTour.complete();
     navigate("/welcome?step=finish");
   }
 
-  const mobile = viewport.w < 640;
-  const hole = rect
-    ? (() => {
-        const y = Math.max(4, rect.top - PAD);
-        const bottom = Math.min(viewport.h - 4, rect.bottom + PAD);
-        return {
-          x: Math.max(4, rect.left - PAD),
-          y,
-          w: Math.min(viewport.w - 8, rect.width + PAD * 2),
-          h: Math.max(0, bottom - y),
-        };
-      })()
-    : null;
-
-  const cardWidth = Math.min(340, viewport.w - 32);
-  const atBottom: React.CSSProperties = { left: 12, right: 12, bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" };
-  const atTop: React.CSSProperties = { left: 12, right: 12, top: "calc(env(safe-area-inset-top, 0px) + 12px)" };
-  let cardStyle: React.CSSProperties;
-  if (!hole) {
-    cardStyle = mobile ? atBottom : { left: 16, right: 16, bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" };
-  } else if (mobile) {
-    const need = cardH + 28;
-    const below = viewport.h - (hole.y + hole.h);
-    const above = hole.y;
-    if (below >= need) cardStyle = atBottom;
-    else if (above >= need) cardStyle = atTop;
-    else cardStyle = atBottom;
-    cardStyle = { ...cardStyle, maxHeight: Math.max(140, viewport.h * 0.42) };
-  } else {
-    const below = hole.y + hole.h + 14;
-    const fitsBelow = below + 220 < viewport.h;
-    const left = Math.min(Math.max(16, hole.x), viewport.w - cardWidth - 16);
-    cardStyle = fitsBelow
-      ? { top: below, left, width: cardWidth }
-      : hole.x + hole.w + cardWidth + 32 < viewport.w
-        ? { top: Math.max(16, Math.min(hole.y, viewport.h - 240)), left: hole.x + hole.w + 16, width: cardWidth }
-        : { top: Math.max(16, hole.y - 230), left, width: cardWidth };
+  function next() {
+    if (!typed.done) {
+      typed.skip();
+      return;
+    }
+    if (last) finish();
+    else welcomeTour.go(index + 1);
   }
+
+  function back() {
+    if (index > 0) welcomeTour.go(index - 1);
+  }
+
+  const nextRef = useRef(next);
+  const backRef = useRef(back);
+  nextRef.current = next;
+  backRef.current = back;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowRight") nextRef.current();
+      if (e.key === "ArrowLeft") backRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  let placement: React.CSSProperties;
+  let botRight = true;
+  if (mobile) {
+    const need = guide.h + 16;
+    const above = hole ? hole.y : Infinity;
+    const below = hole ? viewport.h - (hole.y + hole.h) : Infinity;
+    const dockTop = hole !== null && below < need && (above >= need || above > below);
+    placement = dockTop
+      ? { left: 12, right: 12, top: "calc(env(safe-area-inset-top, 0px) + 12px)" }
+      : { left: 12, right: 12, bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" };
+    botRight = false;
+  } else {
+    const corner = pickCorner(hole, viewport.w, viewport.h, guide.w, guide.h);
+    botRight = corner === "br" || corner === "tr";
+    placement = {
+      [corner.startsWith("b") ? "bottom" : "top"]: EDGE,
+      [botRight ? "right" : "left"]: EDGE,
+    };
+  }
+
+  const mood: MascotState = typed.done ? step.mood : "explaining";
 
   return createPortal(
     <div
       className="fixed inset-0 z-[120]"
       role="dialog"
       aria-modal="true"
-      aria-label={step.title}
+      aria-labelledby="tour-title"
+      aria-describedby="tour-body"
       onClick={(e) => e.stopPropagation()}
     >
       <svg className="absolute inset-0 h-full w-full" aria-hidden>
@@ -214,36 +337,58 @@ function Spotlight({ index, step }: { index: number; step: Step }) {
           style={{ left: hole.x, top: hole.y, width: hole.w, height: hole.h }}
         />
       )}
+
       <div
-        ref={cardRef}
-        className="glass tour-card absolute flex flex-col rounded-2xl p-3 shadow-xl sm:p-4"
-        style={cardStyle}
+        ref={guideRef}
+        className={`absolute flex items-end ${mobile ? "gap-2" : "gap-3"}`}
+        style={{ ...placement, flexDirection: botRight ? "row-reverse" : "row" }}
       >
-        <div className="min-h-0 overflow-y-auto">
-          <h2 className="text-[15px] font-semibold text-fg sm:mt-1 sm:text-[16px]">{step.title}</h2>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-fg-2 sm:mt-1.5 sm:text-[13px]">{step.body}</p>
+        <div className="shrink-0">
+          <Mascot state={mood} size={mobile ? 66 : 118} shadow label="StudilyBot" />
         </div>
-        <div className="mt-3 flex shrink-0 items-center gap-2 sm:mt-4">
-          <span className="text-[11px] font-semibold tabular-nums text-accent">
-            {index + 1}/{TOUR_STEPS.length}
-          </span>
-          <button type="button" onClick={finish} className="mr-auto px-1.5 py-1 text-[12px] font-medium text-fg-3 hover:text-fg">
-            Skip tour
-          </button>
-          {index > 0 && (
-            <button type="button" onClick={() => welcomeTour.go(index - 1)} className="btn btn-ghost" aria-label="Back">
-              <ArrowLeft size={14} />
+        <div
+          key={index}
+          className={`tour-card tour-bubble flex flex-col rounded-2xl ${mobile ? "mb-4 min-w-0 flex-1 p-3" : "mb-12 w-[340px] p-4"}`}
+          data-tail={botRight ? "right" : "left"}
+          onClick={() => {
+            if (!typed.done) typed.skip();
+          }}
+          style={mobile ? { maxHeight: Math.max(150, viewport.h * 0.42) } : undefined}
+        >
+          <div className="min-h-0 overflow-y-auto">
+            <h2 id="tour-title" className="text-[15px] font-semibold text-fg sm:text-[16px]">
+              {title}
+            </h2>
+            <p id="tour-body" className="sr-only">
+              {step.body}
+            </p>
+            <p aria-hidden className="mt-1 grid text-[13px] leading-relaxed text-fg-2 sm:mt-1.5 sm:text-[13.5px]">
+              <span className="invisible" style={{ gridArea: "1 / 1" }}>
+                {step.body}
+              </span>
+              <span style={{ gridArea: "1 / 1" }}>
+                {typed.shown}
+                {!typed.done && <span className="tour-caret ml-px inline-block h-[1em] w-[2px] translate-y-[2px] bg-accent" />}
+              </span>
+            </p>
+          </div>
+          <div className="mt-3 flex shrink-0 items-center gap-2">
+            <span className="text-[11px] font-semibold tabular-nums text-accent">
+              {index + 1}/{TOUR_STEPS.length}
+            </span>
+            <button type="button" onClick={finish} className="mr-auto px-1.5 py-1 text-[12px] font-medium text-fg-3 hover:text-fg">
+              Skip tour
             </button>
-          )}
-          <button
-            type="button"
-            onClick={() => (last ? finish() : welcomeTour.go(index + 1))}
-            className="btn btn-primary"
-            autoFocus
-          >
-            {last ? "Finish" : "Next"}
-            {!last && <ArrowRight size={14} />}
-          </button>
+            {index > 0 && (
+              <button type="button" onClick={back} className="btn btn-ghost" aria-label="Back">
+                <ArrowLeft size={14} />
+              </button>
+            )}
+            <button type="button" onClick={next} className="btn btn-primary" autoFocus>
+              {index === 0 ? "Show me!" : last ? "Finish" : "Next"}
+              {!last && <ArrowRight size={14} />}
+            </button>
+          </div>
         </div>
       </div>
     </div>,

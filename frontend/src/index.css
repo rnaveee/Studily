@@ -898,6 +898,26 @@ textarea.input { resize: vertical; }
 }
 .tour-ring { animation: tour-pulse 1.8s ease-in-out infinite; }
 .tour-card { animation: level-pop 0.35s cubic-bezier(0.34, 1.32, 0.64, 1) both; }
+.tour-bubble {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 18px 40px -16px rgb(6 7 14 / 0.55);
+}
+.tour-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: 30px;
+  width: 14px;
+  height: 14px;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.tour-bubble[data-tail="right"]::after { right: -8px; transform: rotate(-45deg); }
+.tour-bubble[data-tail="left"]::after { left: -8px; transform: rotate(135deg); }
+@keyframes tour-caret { 50% { opacity: 0; } }
+.tour-caret { animation: tour-caret 0.9s steps(1) infinite; }
 .chest-reveal { animation: level-pop 0.5s cubic-bezier(0.34, 1.32, 0.64, 1) both; }
 
 @keyframes chest-art-bob {
@@ -1257,6 +1277,7 @@ button.streak-tint:hover {
   .chest-shake { animation: none; }
   .chest-drop,
   .tour-card { animation: none; }
+  .tour-caret { animation: none; }
   .chest-burst { animation: none; display: none; }
   .chest-art * { animation: none !important; }
   .chest-art .chest-art-glint,
