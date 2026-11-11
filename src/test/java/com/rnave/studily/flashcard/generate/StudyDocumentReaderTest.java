@@ -41,6 +41,19 @@ class StudyDocumentReaderTest {
     private final StudyDocumentReader reader = new StudyDocumentReader();
 
     @Test
+    void readTextAddsUnitHeadersAndSkipsBlankPages() {
+        byte[] note = "Inertia keeps things moving.".getBytes(StandardCharsets.UTF_8);
+        assertThat(reader.readText("notes.txt", note)).isEqualTo("=== Section 1 ===\nInertia keeps things moving.");
+
+        assertThatThrownBy(() -> reader.readText("blank.txt", "   \n\n  ".getBytes(StandardCharsets.UTF_8)))
+                .isInstanceOf(BadRequestException.class);
+
+        String long_ = "line\n".repeat(800);
+        String text = reader.readText("long.txt", long_.getBytes(StandardCharsets.UTF_8));
+        assertThat(text).contains("=== Section 1 ===").contains("=== Section 2 ===");
+    }
+
+    @Test
     void pdf_keepsTextPerPageRendersVisualPagesAndDropsRepeatedLogos() throws IOException {
         byte[] pdf = pdf(4, true);
 

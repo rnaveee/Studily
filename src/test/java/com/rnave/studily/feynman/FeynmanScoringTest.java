@@ -41,4 +41,32 @@ class FeynmanScoringTest {
                 new ConceptScoreDto("a", 50, false),
                 new ConceptScoreDto("b", 75, false)))).isEqualTo(63);
     }
+
+    @Test
+    void overallUsesLatestAssessmentPerConcept() {
+        FeynmanPlan plan = new FeynmanPlan("Motion", List.of(
+                new FeynmanPlan.Concept("Newton's first law", "s", List.of(), List.of(), null),
+                new FeynmanPlan.Concept("Net force", "s", List.of(), List.of(), null),
+                new FeynmanPlan.Concept("Friction", "s", List.of(), List.of(), null)));
+        List<FeynmanAssessment> assessments = List.of(
+                assessment("Net force", 50, true),
+                assessment("Newton's first law", 80, false),
+                assessment("net force", 90, false));
+
+        List<ConceptScoreDto> scores = FeynmanScoring.conceptScores(plan, assessments);
+
+        assertThat(scores).extracting(ConceptScoreDto::concept).containsExactly("Newton's first law", "Net force");
+        assertThat(scores.get(1).score()).isEqualTo(90);
+        assertThat(scores.get(1).didNotKnow()).isTrue();
+        assertThat(scores.get(0).didNotKnow()).isFalse();
+        assertThat(FeynmanScoring.overall(scores)).isEqualTo(85);
+    }
+
+    private static FeynmanAssessment assessment(String concept, int score, boolean didNotKnow) {
+        FeynmanAssessment a = new FeynmanAssessment();
+        a.setConcept(concept);
+        a.setScore(score);
+        a.setDidNotKnow(didNotKnow);
+        return a;
+    }
 }

@@ -198,6 +198,7 @@ class LmsFeedImportTest {
 
     @Test
     void moodle_stagesCoursesFromCategoriesAndSkipsOpensEvents() {
+        service.clock = Clock.fixed(Instant.parse("2026-10-26T12:00:00Z"), ZoneOffset.UTC);
         StageOutcome outcome = importText(fixture("moodle.ics"));
 
         assertThat(outcome.payload().provider()).isEqualTo("MOODLE");
@@ -291,6 +292,7 @@ class LmsFeedImportTest {
         when(fetcher.fetch(anyString())).thenReturn(text);
         CanvasFeedService fetching = new CanvasFeedService(courseRepository, itemRepository, eventRepository,
                 mock(SemesterRepository.class), ignoredRefRepository, new CourseMatcher(courseRepository), fetcher);
+        fetching.clock = Clock.fixed(Instant.parse("2026-10-26T12:00:00Z"), ZoneOffset.UTC);
 
         StageOutcome outcome = fetching.stage(user, new FeedRequest(
                 "https://brightspace.example.edu/d2l/le/calendar/feed/user/feed.ics?token=t", null, null, false));
