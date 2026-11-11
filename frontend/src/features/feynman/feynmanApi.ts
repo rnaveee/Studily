@@ -12,6 +12,7 @@ export interface FeynmanMessage {
 
 export interface FeynmanDocument {
   id: number;
+  bankFileId: number | null;
   fileName: string;
   sizeBytes: number;
   chars: number;
@@ -20,6 +21,8 @@ export interface FeynmanDocument {
 
 export interface FeynmanSession {
   id: number;
+  courseId: number | null;
+  courseName: string | null;
   title: string;
   focus: string | null;
   status: FeynmanStatus;
@@ -30,6 +33,8 @@ export interface FeynmanSession {
 
 export interface FeynmanSummary {
   id: number;
+  courseId: number | null;
+  courseName: string | null;
   title: string;
   status: FeynmanStatus;
   score: number | null;

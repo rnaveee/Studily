@@ -23,6 +23,7 @@ import Banners from "./Banners";
 import NotificationBell from "./NotificationBell";
 import NotificationPanel from "./NotificationPanel";
 import ProgressWhatsNew from "../features/progress/ProgressWhatsNew";
+import FeynmanWhatsNew from "../features/feynman/FeynmanWhatsNew";
 import StartSessionHost from "../features/learn/sessions/StartSessionHost";
 import SurveyPrompt from "../features/survey/SurveyPrompt";
 import InstallPrompt from "./InstallPrompt";
@@ -342,6 +343,7 @@ export default function Layout() {
           <SessionDock placement="bar" />
           <Banners />
           <ProgressWhatsNew />
+          <FeynmanWhatsNew />
           <StartSessionHost />
           <SurveyPrompt />
           <InstallPrompt />
