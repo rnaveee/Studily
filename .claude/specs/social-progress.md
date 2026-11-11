@@ -1,4 +1,4 @@
-# Social progress: feature spec and team contract
+/# Social progress: feature spec and team contract
 
 The single source of truth for the progress team (`.claude/agents/*`). The lead (main session, `/progress-team` skill) owns this file. If an agent thinks something here is wrong, it says so in its HANDOFF; it never silently deviates. Economy numbers change only here, and only with Ryan's say-so.
 
