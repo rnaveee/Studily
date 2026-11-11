@@ -2,6 +2,7 @@ package com.rnave.studily.config;
 
 import com.rnave.studily.admin.ActivityTracker;
 import com.rnave.studily.admin.AdminAuthFilter;
+import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -87,6 +88,7 @@ public class SecurityConfig {
                                         + "base-uri 'self'; "
                                         + "frame-ancestors 'none'")))
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/ws").permitAll()
                         .requestMatchers("/actuator/health").permitAll()

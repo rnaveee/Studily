@@ -165,6 +165,7 @@ export default function ChatConversation({
         },
       });
     } catch (error) {
+      if (saved) return;
       failed = true;
       setTurn(null);
       setFailure({
