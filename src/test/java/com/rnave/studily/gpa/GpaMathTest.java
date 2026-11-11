@@ -41,4 +41,22 @@ class GpaMathTest {
         List<Entry> entries = List.of(new Entry(90, 3.0), new Entry(70, 1.0));
         assertThat(GpaMath.gpa(GpaScale.UBC_PERCENT.preset(), entries)).isCloseTo(85, within(1e-9));
     }
+
+    private static GradingScale threeBandCustomScale() {
+        return GradingScale.custom(List.of(
+                new GradingScale.Band(90, "A", 4.0), new GradingScale.Band(70, "C", 2.0),
+                new GradingScale.Band(0, "F", 0.0)));
+    }
+
+    @Test
+    void customScaleGpaIsCreditWeighted() {
+        List<Entry> entries = List.of(new Entry(70, 3.0), new Entry(90, 1.0));
+        assertThat(GpaMath.gpa(threeBandCustomScale(), entries)).isCloseTo(2.5, within(1e-9));
+    }
+
+    @Test
+    void customScaleMissingCreditsCountAsOne() {
+        List<Entry> entries = List.of(new Entry(70, null), new Entry(90, 1.0));
+        assertThat(GpaMath.gpa(threeBandCustomScale(), entries)).isCloseTo(3.0, within(1e-9));
+    }
 }
