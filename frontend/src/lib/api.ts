@@ -95,7 +95,7 @@ function guestStub(path: string): unknown {
   if (p === "/notifications/center") return { items: [], hasMore: false };
   if (p === "/notifications/unread-count") return { count: 0 };
   if (p === "/push/public-key") return { publicKey: null };
-  if (p === "/settings/gpa-scale") return { scale: "FOUR_POINT", defaultScale: "FOUR_POINT", explicit: false };
+  if (p === "/settings/gpa-scale") return { scale: "FOUR_POINT", defaultScale: "FOUR_POINT", explicit: false, custom: null };
   if (p === "/settings/privacy") return { readReceipts: true, scheduleVisibility: "FRIENDS" };
   if (p === "/settings/notifications")
     return { messages: true, classReminders: true, eventDayOf: true, itemWeekAhead: true, examDayOf: true, examCountdown: true };

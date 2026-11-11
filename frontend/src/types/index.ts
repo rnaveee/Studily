@@ -46,12 +46,26 @@ export interface SemesterStats {
   courses: CourseGrade[];
 }
 
-export type GpaScaleName = "FOUR_POINT" | "FOUR_THREE_THREE" | "NINE_POINT" | "UBC_PERCENT";
+export type GpaScaleName = "FOUR_POINT" | "FOUR_THREE_THREE" | "NINE_POINT" | "UBC_PERCENT" | "CUSTOM";
+
+export type PresetScaleName = Exclude<GpaScaleName, "CUSTOM">;
+
+export interface GradeBand {
+  minPercent: number;
+  letter: string;
+  points: number;
+}
+
+export interface CustomGradingScale {
+  name: string | null;
+  bands: GradeBand[];
+}
 
 export interface GpaScalePrefs {
   scale: GpaScaleName;
   defaultScale: GpaScaleName;
   explicit: boolean;
+  custom: CustomGradingScale | null;
 }
 
 export interface SemesterRequest {
