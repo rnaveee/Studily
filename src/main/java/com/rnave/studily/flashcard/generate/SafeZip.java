@@ -1,38 +1,51 @@
 package com.rnave.studily.flashcard.generate;
 
 import com.rnave.studily.config.BadRequestException;
+import org.apache.poi.openxml4j.util.ZipSecureFile;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-final class SafeZip {
+public final class SafeZip {
 
     static final int MAX_ENTRIES = 2_000;
     static final long MAX_ENTRY_BYTES = 50L * 1024 * 1024;
+    static final long MAX_TEXT_BYTES = 20_000_000L;
     static final long MAX_TOTAL_BYTES = 200L * 1024 * 1024;
     static final long MAX_RATIO = 100;
     static final long RATIO_FLOOR = 1024 * 1024;
     private static final int MAX_CONTENT_TYPES_BYTES = 1024 * 1024;
 
-    static final String BOMB = "That file expands to far more data than a real document would, so it can't be read.";
+    public static final String BOMB = "That file expands to far more data than a real document would, so it can't be read.";
     static final String DAMAGED = "That file is damaged or isn't a real Office document.";
 
-    record Inspection(String contentTypes, boolean hasMacros, int entries, long inflatedBytes) {
+    public record Inspection(String contentTypes, boolean hasMacros, int entries, long inflatedBytes,
+                             List<String> names) {
     }
 
     private SafeZip() {
     }
 
-    static Inspection inspect(byte[] zip) {
+    public static void applyPoiLimits() {
+        ZipSecureFile.setMinInflateRatio(1.0 / MAX_RATIO);
+        ZipSecureFile.setMaxEntrySize(MAX_ENTRY_BYTES);
+        ZipSecureFile.setMaxFileCount(MAX_ENTRIES);
+        ZipSecureFile.setMaxTextSize(MAX_TEXT_BYTES);
+    }
+
+    public static Inspection inspect(byte[] zip) {
         int entries = 0;
         long total = 0;
         String contentTypes = null;
         boolean macros = false;
+        List<String> names = new ArrayList<>();
         byte[] buffer = new byte[64 * 1024];
         try (ZipInputStream in = new ZipInputStream(new ByteArrayInputStream(zip))) {
             ZipEntry entry;
@@ -41,6 +54,7 @@ final class SafeZip {
                     throw new BadRequestException(BOMB);
                 }
                 String name = entry.getName();
+                names.add(name);
                 if (name.toLowerCase(Locale.ROOT).endsWith("vbaproject.bin")) {
                     macros = true;
                 }
@@ -74,6 +88,6 @@ final class SafeZip {
         if (total > RATIO_FLOOR && total / Math.max(1, zip.length) > MAX_RATIO) {
             throw new BadRequestException(BOMB);
         }
-        return new Inspection(contentTypes, macros, entries, total);
+        return new Inspection(contentTypes, macros, entries, total, List.copyOf(names));
     }
 }

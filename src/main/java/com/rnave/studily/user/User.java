@@ -82,6 +82,12 @@ public class User {
     @Column(name = "equipped_flair_code", length = 48)
     private String equippedFlairCode;
 
+    @Column(name = "bot_top_code", length = 48)
+    private String botTopCode = "hoodie_classic";
+
+    @Column(name = "bot_bottom_code", length = 48)
+    private String botBottomCode = "pants_joggers";
+
     private Instant suspendedUntil;
 
     @Column(nullable = false)

@@ -106,7 +106,7 @@ export default function TodosPage() {
     <div className="space-y-6">
       <div className="stagger-item flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <BackButton fallback="/learn" />
+          <BackButton fallback="/study" />
           <div>
             <h1 className="text-xl font-semibold text-fg">To-Do List</h1>
             <p className="mt-1 text-[13px] text-fg-3">

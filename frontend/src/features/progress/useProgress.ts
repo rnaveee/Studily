@@ -6,6 +6,9 @@ import { applyDelta } from "../../lib/progressDelta";
 import { toast } from "../../lib/toast";
 import type {
   BadgeDto,
+  BotOutfitDto,
+  BotOutfitPurchaseResult,
+  BotOutfitRef,
   ChestDto,
   FlairDto,
   FlairEquipResult,
@@ -27,6 +30,7 @@ export const progressKeys = {
   badges: (who: number | "me") => ["badges", who] as const,
   chests: ["chests"] as const,
   flairs: ["flairs"] as const,
+  botOutfits: ["bot-outfits"] as const,
   activeSession: ["study-session", "active"] as const,
   streak: ["study-session", "streak"] as const,
   history: ["study-session", "history"] as const,
@@ -148,6 +152,46 @@ export function useEquipFlair() {
       );
       if (user) setUser({ ...user, flair: equipped ? flairRef(equipped) : null });
       qc.invalidateQueries({ queryKey: progressKeys.flairs });
+    },
+  });
+}
+
+export function useBotOutfits() {
+  const enabled = useProgressEnabled();
+  return useQuery({
+    queryKey: progressKeys.botOutfits,
+    queryFn: () => api.get<BotOutfitDto[]>("/bot-outfits"),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useBuyBotOutfit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (code: string) =>
+      api.post<BotOutfitPurchaseResult>(`/bot-outfits/${encodeURIComponent(code)}/purchase`),
+    onSuccess: (res) => {
+      qc.setQueryData<BotOutfitDto[]>(progressKeys.botOutfits, (old) =>
+        old?.map((o) => (o.code === res.outfit.code ? { ...res.outfit, equipped: o.equipped } : o)),
+      );
+      qc.setQueryData<ProgressDto>(progressKeys.me, (old) => (old ? { ...old, coins: res.coins } : old));
+      qc.invalidateQueries({ queryKey: ["progress"] });
+      toast.success(`${res.outfit.title} is yours`);
+    },
+  });
+}
+
+export function useEquipBotOutfit() {
+  const qc = useQueryClient();
+  const { user, setUser } = useAuth();
+  return useMutation({
+    mutationFn: (outfit: BotOutfitRef) => api.put<BotOutfitRef>("/me/bot-outfit", outfit),
+    onSuccess: (worn) => {
+      qc.setQueryData<BotOutfitDto[]>(progressKeys.botOutfits, (old) =>
+        old?.map((o) => ({ ...o, equipped: o.code === worn.top || o.code === worn.bottom })),
+      );
+      if (user) setUser({ ...user, botOutfit: worn });
     },
   });
 }

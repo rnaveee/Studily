@@ -83,7 +83,7 @@ export default function FlashcardSetPage() {
     return (
       <div className="card p-10 text-center">
         <p className="text-sm text-fg-3">This flashcard set doesn't exist.</p>
-        <Link to="/learn/flashcards" className="btn btn-soft mt-3 inline-flex">
+        <Link to="/study/flashcards" className="btn btn-soft mt-3 inline-flex">
           Back to sets
         </Link>
       </div>
@@ -149,7 +149,7 @@ export default function FlashcardSetPage() {
   return (
     <div className="space-y-6 stagger-children">
       <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
-        <BackButton fallback="/learn/flashcards" />
+        <BackButton fallback="/study/flashcards" />
         <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
           <h1 className="break-words text-xl font-semibold text-fg">
             {data.title}
@@ -293,7 +293,7 @@ export default function FlashcardSetPage() {
         <EditSetModal
           set={data}
           onClose={() => setEditingSet(false)}
-          onDeleted={() => navigate("/learn/flashcards", { replace: true })}
+          onDeleted={() => navigate("/study/flashcards", { replace: true })}
         />
       )}
       {filling && missing > 0 && <MissingImagesModal cards={data.cards} onClose={saveFilled} />}

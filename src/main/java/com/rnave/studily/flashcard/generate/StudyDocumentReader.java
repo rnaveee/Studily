@@ -22,7 +22,6 @@ import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.apache.poi.xslf.usermodel.XMLSlideShow;
 import org.apache.poi.xslf.usermodel.XSLFGroupShape;
 import org.apache.poi.xslf.usermodel.XSLFNotes;
@@ -99,13 +98,6 @@ public class StudyDocumentReader {
     static final int MAX_WEBP_SIDE = 8_000;
     static final int TIMEOUT_SECONDS = 30;
 
-    static {
-        ZipSecureFile.setMinInflateRatio(0.01);
-        ZipSecureFile.setMaxEntrySize(SafeZip.MAX_ENTRY_BYTES);
-        ZipSecureFile.setMaxFileCount(SafeZip.MAX_ENTRIES);
-        ZipSecureFile.setMaxTextSize(20_000_000L);
-    }
-
     private final ThreadPoolExecutor executor = new ThreadPoolExecutor(
             2, 2, 0, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(6), runnable -> {
                 Thread thread = new Thread(runnable, "flashcard-doc-reader");
@@ -123,6 +115,7 @@ public class StudyDocumentReader {
     }
 
     public StudyDocument read(String fileName, byte[] bytes, PageSelection selection) {
+        SafeZip.applyPoiLimits();
         FileKind kind = FileSniffer.sniff(bytes);
         Future<StudyDocument> future;
         try {
@@ -148,6 +141,24 @@ public class StudyDocumentReader {
         }
     }
 
+    public String readText(String fileName, byte[] bytes) {
+        StudyDocument doc = read(fileName, bytes, PageSelection.ALL);
+        StringBuilder out = new StringBuilder();
+
+        for (StudyDocument.Page page : doc.pages()) {
+            if(!page.text().isBlank()) {
+                out.append("=== ")
+                        .append(doc.unit())
+                        .append(' ')
+                        .append(page.number())
+                        .append(" ===\n")
+                        .append(page.text())
+                        .append("\n\n");
+            }
+        }
+        return out.toString().strip();
+    }
+
     StudyDocument parse(String fileName, FileKind kind, byte[] bytes, PageSelection selection) throws Exception {
         StudyDocument doc = switch (kind) {
             case PDF -> readPdf(fileName, bytes, selection);
@@ -155,7 +166,7 @@ public class StudyDocumentReader {
             case DOCX -> readDocx(fileName, bytes);
             case PNG, JPEG -> readPhoto(fileName, kind, bytes);
             case WEBP -> readWebp(fileName, bytes);
-            case TEXT -> readText(fileName, bytes);
+            case TEXT -> readPlainText(fileName, bytes);
         };
         if (doc.textChars() > MAX_TEXT_CHARS) {
             throw new BadRequestException(fileName + " is too long to turn into cards in one go. "
@@ -498,7 +509,7 @@ public class StudyDocumentReader {
                 List.of(new Figure(1, 1, picture)));
     }
 
-    private static StudyDocument readText(String fileName, byte[] bytes) {
+    private static StudyDocument readPlainText(String fileName, byte[] bytes) {
         String text = new String(bytes, StandardCharsets.UTF_8).replace("﻿", "").replace("\r\n", "\n");
         if (text.length() > MAX_TEXT_CHARS) {
             throw new BadRequestException(fileName + " is too long to turn into cards in one go. "

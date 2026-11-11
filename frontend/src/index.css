@@ -1066,6 +1066,139 @@ button.streak-tint:hover {
 }
 .flair-reveal { animation: flair-reveal 0.6s cubic-bezier(0.34, 1.32, 0.64, 1) 0.15s both; }
 
+@layer components {
+  .mascot-bubble {
+    position: relative;
+    padding: 8px 12px;
+    border-radius: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--fg);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+    box-shadow: 0 4px 14px -6px rgb(14 14 26 / 0.25);
+    animation: mascot-bubble-in 0.28s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  }
+  .mascot-bubble::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: -6px;
+    width: 10px;
+    height: 10px;
+    background: var(--surface);
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    transform: translateX(-50%) rotate(45deg);
+  }
+  @keyframes mascot-bubble-in {
+    from { opacity: 0; transform: translateY(4px) scale(0.92); }
+    to   { opacity: 1; transform: none; }
+  }
+  .mascot-shadow {
+    display: block;
+    height: 10px;
+    margin-top: -4px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(14 14 26 / 0.22), transparent);
+  }
+}
+.mascot-figure .sb-body,
+.mascot-figure .sb-head {
+  transform-box: fill-box;
+}
+.mascot-figure .sb-body { transform-origin: 50% 100%; }
+.mascot-figure .sb-head { transform-origin: 50% 85%; }
+@keyframes mascot-sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50%      { transform: rotate(3deg); }
+}
+@keyframes mascot-head-sway {
+  0%, 100% { transform: rotate(4deg); }
+  50%      { transform: rotate(-4deg); }
+}
+.mascot-sway .sb-body { animation: mascot-sway 3.2s ease-in-out infinite; }
+.mascot-sway .sb-head { animation: mascot-head-sway 3.2s ease-in-out -0.6s infinite; }
+@keyframes mascot-think {
+  0%, 100% { transform: rotate(-7deg); }
+  50%      { transform: rotate(-2deg) translateY(-2px); }
+}
+.mascot-think .sb-head { animation: mascot-think 1.6s ease-in-out infinite; }
+@keyframes mascot-talk {
+  0%, 100% { transform: rotate(0); }
+  25%      { transform: rotate(-4deg) translateY(-1px); }
+  75%      { transform: rotate(3deg); }
+}
+.mascot-talk .sb-head { animation: mascot-talk 0.7s ease-in-out infinite; }
+.mascot-talk .sb-body { animation: mascot-sway 2.4s ease-in-out infinite; }
+@keyframes mascot-bounce {
+  0%, 100% { transform: translateY(0); }
+  40%      { transform: translateY(-5%); }
+}
+.mascot-bounce .sb-body { animation: mascot-bounce 0.9s ease-in-out infinite; }
+@keyframes mascot-hop {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  15%      { transform: translateY(0) scaleY(0.94); }
+  45%      { transform: translateY(-14%) scaleY(1.03); }
+  70%      { transform: translateY(0) scaleY(0.97); }
+}
+.mascot-hop .sb-body { animation: mascot-hop 0.62s cubic-bezier(0.3, 0.7, 0.4, 1) infinite; }
+@keyframes mascot-lean {
+  0%, 100% { transform: rotate(0); }
+  35%, 60% { transform: rotate(8deg) translateX(3%); }
+}
+.mascot-lean .sb-body { animation: mascot-lean 1.1s ease-in-out infinite; }
+@keyframes mascot-tilt {
+  0%, 100% { transform: rotate(-10deg); }
+  50%      { transform: rotate(-14deg); }
+}
+.mascot-tilt .sb-head { animation: mascot-tilt 2s ease-in-out infinite; }
+@keyframes mascot-breathe {
+  0%, 100% { transform: scaleY(1); }
+  50%      { transform: scaleY(0.97); }
+}
+.mascot-breathe .sb-body { animation: mascot-breathe 3.6s ease-in-out infinite; }
+@keyframes mascot-spin {
+  0%   { transform: scaleX(1); }
+  25%  { transform: scaleX(0.05); }
+  50%  { transform: scaleX(-1); }
+  75%  { transform: scaleX(0.05); }
+  100% { transform: scaleX(1); }
+}
+.mascot-spin .sb-body { transform-origin: 50% 50%; animation: mascot-spin 0.9s ease-in-out 2; }
+@keyframes hero-doodle-float {
+  0%, 100% { transform: translate(-50%, -50%) rotate(var(--tilt, 0deg)) translateY(0); }
+  50%      { transform: translate(-50%, -50%) rotate(calc(var(--tilt, 0deg) * -0.5)) translateY(-10px); }
+}
+.hero-doodle {
+  transform: translate(-50%, -50%) rotate(var(--tilt, 0deg));
+  opacity: 0.85;
+  animation: hero-doodle-float 6s ease-in-out infinite;
+}
+@keyframes hero-orbit-spin {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.hero-orbit {
+  transform: translate(-50%, -50%);
+  animation: hero-orbit-spin 40s linear infinite;
+}
+.hero-orbit-rev { animation-duration: 60s; animation-direction: reverse; }
+@keyframes attire-pop {
+  0%   { opacity: 0; transform: translateY(14px) scale(0.9); }
+  60%  { opacity: 1; transform: translateY(-2px) scale(1.02); }
+  100% { opacity: 1; transform: none; }
+}
+.attire-pop { animation: attire-pop 0.38s cubic-bezier(0.34, 1.3, 0.64, 1) both; }
+.peek-slot { clip-path: inset(-160px -16px 0 -240px); }
+.peek-bot { transition: transform 0.38s cubic-bezier(0.34, 1.45, 0.64, 1); }
+.peek-slot .mascot-bubble::after {
+  left: auto;
+  right: -6px;
+  bottom: 50%;
+  transform: translateY(50%) rotate(-45deg);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal,
   .reveal-scale,
@@ -1108,6 +1241,12 @@ button.streak-tint:hover {
   .card-lift:hover,
   .card-lift:active { transform: none; }
   .btn:active:not(:disabled) { transform: none; }
+  .mascot-figure .sb-body,
+  .mascot-figure .sb-head,
+  .mascot-bubble { animation: none; }
+  .peek-bot { transition: none; }
+  .attire-pop { animation: none; }
+  .hero-doodle, .hero-orbit { animation: none; }
   .nav-ind { transition: none; }
   .frame-hover:hover { transform: none; }
   .xp-fill { transition: none; }

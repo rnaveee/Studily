@@ -45,8 +45,11 @@ import FlashcardsPage from "./features/learn/FlashcardsPage";
 import FlashcardSetPage from "./features/learn/FlashcardSetPage";
 import FlashcardGroupPage from "./features/learn/FlashcardGroupPage";
 import SharedSetPage from "./features/learn/SharedSetPage";
-import AiChatPage from "./features/learn/AiChatPage";
 import PomodoroPage from "./features/learn/PomodoroPage";
+import StudilyBotHome from "./features/studilybot/StudilyBotHome";
+import ChatMode from "./features/studilybot/ChatMode";
+import RecallMode from "./features/studilybot/RecallMode";
+import PracticeMode from "./features/studilybot/PracticeMode";
 import SchoolPage from "./features/schools/SchoolPage";
 import GradeCalculatorPage from "./features/tools/GradeCalculatorPage";
 import SettingsPage from "./features/settings/SettingsPage";
@@ -58,6 +61,11 @@ import SessionHistoryPage from "./features/learn/sessions/SessionHistoryPage";
 const PeriodicTablePage = lazy(() => import("./features/learn/PeriodicTablePage"));
 const CalculatorPage = lazy(() => import("./features/learn/CalculatorPage"));
 const AdminPage = lazy(() => import("./features/admin/AdminPage"));
+
+function LearnRedirect() {
+  const { pathname, search, hash } = useLocation();
+  return <Navigate to={`/study${pathname.slice("/learn".length)}${search}${hash}`} replace />;
+}
 
 function BareShell({ children }: { children: ReactNode }) {
   return (
@@ -153,22 +161,30 @@ export const appRoutes = (
       <Route path="/imports/:id" element={<ImportReviewPage />} />
       <Route path="/messages" element={<VerifyGate><MessagesPage /></VerifyGate>} />
       <Route path="/messages/:id" element={<VerifyGate><ConversationPage /></VerifyGate>} />
-      <Route path="/learn" element={<LearnPage />} />
-      <Route path="/learn/flashcards" element={<FlashcardsPage />} />
-      <Route path="/flashcards" element={<Navigate to="/learn/flashcards" replace />} />
-      <Route path="/learn/flashcards/folders/:id" element={<FlashcardGroupPage kind="folder" />} />
-      <Route path="/learn/flashcards/courses/:id" element={<FlashcardGroupPage kind="course" />} />
-      <Route path="/learn/flashcards/:id" element={<FlashcardSetPage />} />
-      <Route path="/learn/sessions" element={<SessionHistoryPage />} />
-      <Route path="/learn/ai" element={<AiChatPage />} />
+      <Route path="/study" element={<LearnPage />} />
+      <Route path="/study/flashcards" element={<FlashcardsPage />} />
+      <Route path="/flashcards" element={<Navigate to="/study/flashcards" replace />} />
+      <Route path="/study/flashcards/folders/:id" element={<FlashcardGroupPage kind="folder" />} />
+      <Route path="/study/flashcards/courses/:id" element={<FlashcardGroupPage kind="course" />} />
+      <Route path="/study/flashcards/:id" element={<FlashcardSetPage />} />
+      <Route path="/study/sessions" element={<SessionHistoryPage />} />
+      <Route path="/study/ai" element={<Navigate to="/study/studilybot/chat" replace />} />
       <Route
-        path="/learn/calculator"
+        path="/study/calculator"
         element={
           <Suspense fallback={null}>
             <CalculatorPage />
           </Suspense>
         }
       />
+      <Route path="/study/studilybot" element={<StudilyBotHome />} />
+      <Route path="/study/studilybot/chat" element={<VerifyGate><ChatMode /></VerifyGate>} />
+      <Route path="/study/studilybot/chat/:id" element={<VerifyGate><ChatMode /></VerifyGate>} />
+      <Route path="/study/studilybot/recall" element={<VerifyGate><RecallMode /></VerifyGate>} />
+      <Route path="/study/studilybot/recall/:id" element={<VerifyGate><RecallMode /></VerifyGate>} />
+      <Route path="/study/studilybot/practice" element={<VerifyGate><PracticeMode /></VerifyGate>} />
+      <Route path="/study/studilybot/practice/:id" element={<VerifyGate><PracticeMode /></VerifyGate>} />
+      <Route path="/learn/*" element={<LearnRedirect />} />
       <Route path="/todos" element={<TodosPage />} />
       <Route path="/semesters" element={<SemestersPage />} />
       <Route path="/grades" element={<GradesPage />} />

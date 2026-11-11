@@ -1,12 +1,32 @@
 import { Link } from "react-router-dom";
-import { Atom, Calculator, Percent, Timer } from "lucide-react";
+import { Atom, Calculator, Percent, Timer, type LucideIcon } from "lucide-react";
 import { formatMs, pomodoroColor, usePomodoro } from "../../lib/pomodoro";
 import TodoQuickView from "../todos/TodoQuickView";
+import Mascot from "../studilybot/Mascot";
+import StudilyBotTile from "../studilybot/StudilyBotTile";
 import FlashcardsPanel from "./FlashcardsPanel";
 import ProgressPanel from "./ProgressPanel";
 import StudySessionsPanel from "./sessions/StudySessionsPanel";
 
-const TOOLS = [
+type Tool = {
+  to: string;
+  icon?: LucideIcon;
+  mascot?: boolean;
+  title: string;
+  label: string;
+  color: string;
+  description: string;
+};
+
+const TOOLS: Tool[] = [
+  {
+    to: "/study/studilybot",
+    mascot: true,
+    title: "StudilyBot",
+    label: "StudilyBot",
+    color: "var(--accent)",
+    description: "Ask, explain and practise with your own course files.",
+  },
   {
     to: "/pomodoro",
     icon: Timer,
@@ -32,7 +52,7 @@ const TOOLS = [
     description: "Work out your weighted grade and what you need on your final.",
   },
   {
-    to: "/learn/calculator",
+    to: "/study/calculator",
     icon: Calculator,
     title: "Calculator",
     label: "Calculator",
@@ -41,15 +61,13 @@ const TOOLS = [
   },
 ];
 
-type Tool = (typeof TOOLS)[number];
-
 export default function LearnPage() {
   const p = usePomodoro();
   const liveColor = pomodoroColor(p.phase);
   const isLive = (to: string) => to === "/pomodoro" && p.running;
 
   return (
-    <div className="space-y-6 stagger-children xl:grid xl:grid-cols-[minmax(0,3fr)_minmax(0,1fr)_auto] xl:items-start xl:gap-x-8 xl:gap-y-5 xl:space-y-0">
+    <div className="space-y-6 stagger-children xl:grid xl:grid-cols-[minmax(0,3fr)_minmax(0,1fr)_auto] xl:items-start xl:gap-x-5 xl:gap-y-5 xl:space-y-0">
       <ProgressPanel />
 
       <div className="space-y-6 xl:space-y-5">
@@ -57,13 +75,16 @@ export default function LearnPage() {
         <FlashcardsPanel />
       </div>
 
-      <div className="relative xl:self-stretch">
-        <TodoQuickView stacked limit={8} className="xl:absolute xl:inset-0" />
+      <div className="space-y-6 xl:grid xl:grid-rows-[1fr_1fr] xl:gap-5 xl:space-y-0 xl:self-stretch">
+        <div className="relative xl:min-h-0">
+          <TodoQuickView stacked limit={8} className="xl:absolute xl:inset-0" />
+        </div>
+        <StudilyBotTile />
       </div>
 
       <div className="space-y-6 xl:hidden">
         <div className="pt-2">
-          <h2 className="text-xl font-semibold text-fg">Learn</h2>
+          <h2 className="text-xl font-semibold text-fg">Study</h2>
           <p className="mt-1 text-[13px] text-fg-3">
             Study tools to help you master your courses.
           </p>
@@ -156,7 +177,16 @@ function ToolIcon({
   liveColor: string;
   large?: boolean;
 }) {
+  if (tool.mascot) {
+    const size = large ? 48 : 44;
+    return (
+      <span className="flex shrink-0 items-center justify-center" style={{ width: size, height: size }}>
+        <Mascot crop="head" size={size} still />
+      </span>
+    );
+  }
   const Icon = tool.icon;
+  if (!Icon) return null;
   const color = live ? liveColor : tool.color;
   return (
     <span

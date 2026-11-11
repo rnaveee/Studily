@@ -47,7 +47,7 @@ export default function FlashcardGroupPage({ kind }: { kind: "folder" | "course"
         <p className="text-sm text-fg-3">
           This {kind === "folder" ? "folder" : "course"} doesn't exist.
         </p>
-        <Link to="/learn/flashcards" className="btn btn-soft mt-3 inline-flex">
+        <Link to="/study/flashcards" className="btn btn-soft mt-3 inline-flex">
           Back to sets
         </Link>
       </div>
@@ -64,7 +64,7 @@ export default function FlashcardGroupPage({ kind }: { kind: "folder" | "course"
   return (
     <div className="space-y-6 stagger-children">
       <div className="flex items-center gap-3">
-        <BackButton fallback="/learn/flashcards" />
+        <BackButton fallback="/study/flashcards" />
         <div className="min-w-0 flex-1">
           <h1 className="flex items-center gap-2 break-words text-xl font-semibold text-fg">
             <Folder size={18} className="shrink-0" style={{ color }} />
@@ -91,7 +91,7 @@ export default function FlashcardGroupPage({ kind }: { kind: "folder" | "course"
       {count === 0 ? (
         <div className="card p-10 text-center">
           <p className="text-sm text-fg-3">There are no cards to study here yet.</p>
-          <Link to="/learn/flashcards" className="btn btn-soft mt-3 inline-flex">
+          <Link to="/study/flashcards" className="btn btn-soft mt-3 inline-flex">
             Back to sets
           </Link>
         </div>

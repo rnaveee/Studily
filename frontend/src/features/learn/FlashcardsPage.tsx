@@ -156,7 +156,7 @@ export default function FlashcardsPage() {
     <div className="space-y-6 stagger-children">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <BackButton fallback="/learn" />
+          <BackButton fallback="/study" />
           <div>
             <h1 className="text-xl font-semibold text-fg">Flashcards</h1>
             <p className="mt-1 text-[13px] text-fg-3">Create sets and study them.</p>
@@ -335,7 +335,7 @@ function buildSections(
       title: f.name,
       folder: f,
       sets: sets.filter((s) => s.folderId === f.id),
-      studyTo: `/learn/flashcards/folders/${f.id}`,
+      studyTo: `/study/flashcards/folders/${f.id}`,
     }));
     const known = new Set(folders.map((f) => f.id));
     const unfiled = sets.filter((s) => s.folderId == null || !known.has(s.folderId));
@@ -353,7 +353,7 @@ function buildSections(
       title: c.code ? `${c.code}${c.name ? ` · ${c.name}` : ""}` : c.name,
       color: c.color ?? undefined,
       sets: inCourse,
-      studyTo: `/learn/flashcards/courses/${c.id}`,
+      studyTo: `/study/flashcards/courses/${c.id}`,
     });
   }
   const known = new Set(courses.map((c) => c.id));
@@ -596,7 +596,7 @@ function SetCard({
       }}
       onDragEnd={onDragEnd}
     >
-      <Link draggable={false} to={`/learn/flashcards/${s.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+      <Link draggable={false} to={`/study/flashcards/${s.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-left">
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
           style={{ background: `color-mix(in srgb, ${color} 12%, transparent)` }}

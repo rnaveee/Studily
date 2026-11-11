@@ -88,7 +88,7 @@ export default function NewFlashcardSetModal({
       }
       qc.invalidateQueries({ queryKey: ["flashcards"] });
       onClose();
-      navigate(`/learn/flashcards/${created[0].id}`, {
+      navigate(`/study/flashcards/${created[0].id}`, {
         state: { addImages: !created[0].cards.every(cardIsComplete) },
       });
     },

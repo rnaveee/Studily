@@ -23,12 +23,14 @@ import Banners from "./Banners";
 import NotificationBell from "./NotificationBell";
 import NotificationPanel from "./NotificationPanel";
 import ProgressWhatsNew from "../features/progress/ProgressWhatsNew";
+import StudilyBotWhatsNew from "../features/studilybot/StudilyBotWhatsNew";
 import StartSessionHost from "../features/learn/sessions/StartSessionHost";
 import SurveyPrompt from "../features/survey/SurveyPrompt";
 import InstallPrompt from "./InstallPrompt";
 import ProgressHost from "../features/progress/ProgressHost";
 import SessionChime from "../features/learn/sessions/SessionChime";
 import SessionDock, { SessionHost } from "../features/learn/sessions/SessionDock";
+import SidebarPeek from "../features/studilybot/SidebarPeek";
 import WelcomeTour from "../features/welcome/WelcomeTour";
 import { useWelcomeTourStep } from "../lib/welcomeTour";
 import CoinBalance from "../features/progress/CoinBalance";
@@ -40,7 +42,7 @@ const NAV = [
   { to: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard, end: true },
   { to: "/semesters",  label: "Semesters",  icon: GraduationCap },
   { to: "/messages",   label: "Messages",   icon: MessageSquare },
-  { to: "/learn",      label: "Study",      icon: Brain },
+  { to: "/study",      label: "Study",      icon: Brain },
   { to: "/friends",    label: "Friends",    icon: Users2 },
   { to: "/profile",    label: "Profile",    icon: User },
 ];
@@ -184,7 +186,7 @@ export default function Layout() {
               key={to}
               to={to}
               end={end}
-              data-tour={to === "/learn" ? "nav-study" : undefined}
+              data-tour={to === "/study" ? "nav-study" : undefined}
               className={({ isActive }) =>
                 [
                   "relative flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors duration-150 select-none",
@@ -213,6 +215,10 @@ export default function Layout() {
           <SessionDock placement="sidebar" />
         </ClientOnly>
         </div>
+
+        <ClientOnly>
+          <SidebarPeek />
+        </ClientOnly>
 
         <div className="px-5 pb-3">
           <div className="flex flex-wrap gap-x-3 gap-y-1">
@@ -343,16 +349,18 @@ export default function Layout() {
           <SessionDock placement="bar" />
           <Banners />
           <ProgressWhatsNew />
+          <StudilyBotWhatsNew />
           <StartSessionHost />
           <SurveyPrompt />
           <InstallPrompt />
         </ClientOnly>
 
+        <div className="relative flex min-h-0 flex-1 flex-col">
         <main className="flex-1 overflow-y-auto overscroll-contain">
           <div
             ref={outletRef}
             className={`mx-auto flex min-h-full ${
-              pathname === "/learn"
+              pathname === "/study"
                 ? "max-w-[96rem] xl:pb-16"
                 : pathname === "/dashboard" || pathname === "/calendar"
                   ? "max-w-5xl xl:max-w-[96rem] xl:pb-16"
@@ -364,6 +372,10 @@ export default function Layout() {
             <Outlet />
           </div>
         </main>
+        <ClientOnly>
+          <SidebarPeek variant="footer" hidden={typing} />
+        </ClientOnly>
+        </div>
 
         <MobileFooter
           nav={NAV}

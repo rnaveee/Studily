@@ -7,6 +7,8 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
+  { version: 80, date: "2026-11-11", summary: "StudilyBot has a new look and lives on the Study page. Tap Interact for a high five, watch it think and explain while it answers, and dress it in hoodies and pants from the new StudilyBot tab in the shop. The Aurora Zip Hoodie only drops from Diamond chests." },
+  { version: 79, date: "2026-11-10", summary: "Added StudilyBot. Chat with it about your course files and get answers with citations, practice with problems written from your own material and graded for you, or teach a lecture back in your own words and get a report on your gaps. Study now lives at /study, with a file bank for each course." },
   { version: 78, date: "2026-10-29", summary: "Redid the welcome setup for phones. Profile, semester and courses each get their own page, every page can be set up later, you can bring in courses from Canvas, Brightspace or Moodle with a step-by-step guide, and the tour cards no longer cover what they point at." },
   { version: 77, date: "2026-10-26", summary: "Brightspace imports now bring in your assignments, quizzes, midterms and finals as deadlines under the right course, including schools with four-digit course numbers like BIOL 1191." },
   { version: 76, date: "2026-10-26", summary: "Google Calendar and other calendar links now stay in sync on their own. New, moved and deleted events show up in Studily and in your notifications." },

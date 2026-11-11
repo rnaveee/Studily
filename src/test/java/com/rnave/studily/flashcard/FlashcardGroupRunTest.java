@@ -8,6 +8,7 @@ import com.rnave.studily.flashcard.FlashcardRunDtos.CardResult;
 import com.rnave.studily.flashcard.FlashcardRunDtos.FlashcardRunResult;
 import com.rnave.studily.flashcard.FlashcardRunDtos.XpReason;
 import com.rnave.studily.friend.FriendRequestRepository;
+import com.rnave.studily.progress.BotOutfitService;
 import com.rnave.studily.progress.BadgeService;
 import com.rnave.studily.progress.Chest;
 import com.rnave.studily.progress.ChestRepository;
@@ -179,7 +180,7 @@ class FlashcardGroupRunTest {
         RandomGenerator random = mock(RandomGenerator.class);
         when(random.nextDouble()).thenReturn(0.99);
         ChestService chestService = new ChestService(chestRepository, progressService, mock(BadgeService.class),
-                mock(FlairService.class), currentUser, clock, random);
+                mock(FlairService.class), mock(BotOutfitService.class), currentUser, clock, random);
         FlashcardSetService setService = new FlashcardSetService(setRepository, currentUser,
                 mock(CourseService.class), mock(FriendRequestRepository.class), mock(Flairs.class),
                 mock(FlashcardImageRepository.class), mock(ExamStudyLinkRepository.class),

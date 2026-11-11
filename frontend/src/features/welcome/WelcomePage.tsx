@@ -54,7 +54,7 @@ export default function WelcomePage() {
   const go = (next: Slide) => setParams({ step: next }, { replace: false });
   const startTour = () => {
     welcomeTour.start();
-    navigate("/learn");
+    navigate("/study");
   };
 
   return (
