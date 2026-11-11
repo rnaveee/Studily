@@ -13,6 +13,7 @@ import BadgeArt from "./BadgeArt";
 import BadgeGrid from "./BadgeGrid";
 import { CATEGORY_COLOR, CATEGORY_LABEL, groupBadges } from "./badges";
 import { FlairShop, FlairsPanel, SectionHeader, ShopSkeleton } from "./FlairsPanel";
+import AttireShop from "../studilybot/AttireShop";
 import { progressKeys, useBadges, useFlairs, useMyProgress, useProgressEnabled } from "./useProgress";
 import type { BadgeDto, BadgePurchaseResult, ProgressDto, Relationship } from "../../types";
 
@@ -23,6 +24,18 @@ const TABS: { value: Tab; label: string }[] = [
   { value: "flairs", label: "Flairs" },
   { value: "shop", label: "Shop" },
 ];
+
+type ShopSection = "flairs" | "badges" | "studilybot";
+
+const SHOP_SECTIONS: { value: ShopSection; label: string }[] = [
+  { value: "flairs", label: "Flairs" },
+  { value: "badges", label: "Badges" },
+  { value: "studilybot", label: "StudilyBot" },
+];
+
+function parseShopSection(raw: string | null): ShopSection {
+  return raw === "badges" || raw === "studilybot" ? raw : "flairs";
+}
 
 function parseTab(raw: string | null): Tab {
   return raw === "flairs" || raw === "shop" ? raw : "badges";
@@ -132,7 +145,7 @@ function OwnBadges() {
             : "Rings for your avatar",
         }
       : tab === "shop"
-        ? { title: "Shop", sub: "Spend coins on flairs and badges" }
+        ? { title: "Shop", sub: "Spend coins on flairs, badges and StudilyBot attire" }
         : {
             title: "Badges",
             sub: progress.data
@@ -373,6 +386,20 @@ function Shop({
 }) {
   const qc = useQueryClient();
   const confirm = useConfirm();
+  const [params, setParams] = useSearchParams();
+  const section = parseShopSection(params.get("shop"));
+
+  function setSection(next: ShopSection) {
+    setParams(
+      (p) => {
+        const out = new URLSearchParams(p);
+        if (next === "flairs") out.delete("shop");
+        else out.set("shop", next);
+        return out;
+      },
+      { replace: true },
+    );
+  }
 
   const buy = useMutation({
     mutationFn: (code: string) => api.post<BadgePurchaseResult>(`/badges/${encodeURIComponent(code)}/purchase`),
@@ -416,70 +443,76 @@ function Shop({
         </div>
       </div>
 
-      <FlairShop coins={coins} />
+      <SegmentedToggle options={SHOP_SECTIONS} value={section} onChange={setSection} className="w-full" />
 
-      <section className="space-y-2.5">
-        <SectionHeader
-          title="Badges"
-          count={loading || failed ? "" : `${sorted.filter((b) => b.owned).length}/${sorted.length}`}
-          color={CATEGORY_COLOR.COSMETIC}
-        />
-        {loading ? (
-          <ShopSkeleton />
-        ) : failed ? (
-          <LoadError onRetry={onRetry} />
-        ) : sorted.length === 0 ? (
-          <div className="card p-10 text-center">
-            <p className="text-sm text-fg-3">No badges for sale right now. Check back soon.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-            {sorted.map((b) => {
-              const price = b.priceCoins ?? 0;
-              const short = price - coins;
-              const buying = buy.isPending && buy.variables === b.code;
-              return (
-                <div key={b.code} className="card flex items-center gap-3.5 p-4 sm:flex-col sm:items-stretch sm:text-center">
-                  <span className="flex justify-center">
-                    <BadgeArt badge={b} size={88} locked={false} />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[14px] font-semibold text-fg">{b.title}</div>
-                    <p className="mt-0.5 text-[12px] leading-snug text-fg-3">{b.description}</p>
-                    <div className="mt-1.5 flex items-center gap-1 text-[13px] font-semibold tabular-nums sm:justify-center" style={{ color: "var(--yellow)" }}>
-                      <Coins size={13} />
-                      {price}
-                    </div>
-                  </div>
-                  {b.owned ? (
-                    <span className="btn btn-ghost pointer-events-none min-h-[40px] shrink-0" style={{ color: "var(--green)" }}>
-                      <Check size={14} />
-                      Owned
+      {section === "flairs" && <FlairShop coins={coins} />}
+
+      {section === "studilybot" && <AttireShop coins={coins} />}
+
+      {section === "badges" && (
+        <section className="space-y-2.5">
+          <SectionHeader
+            title="Badges"
+            count={loading || failed ? "" : `${sorted.filter((b) => b.owned).length}/${sorted.length}`}
+            color={CATEGORY_COLOR.COSMETIC}
+          />
+          {loading ? (
+            <ShopSkeleton />
+          ) : failed ? (
+            <LoadError onRetry={onRetry} />
+          ) : sorted.length === 0 ? (
+            <div className="card p-10 text-center">
+              <p className="text-sm text-fg-3">No badges for sale right now. Check back soon.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+              {sorted.map((b) => {
+                const price = b.priceCoins ?? 0;
+                const short = price - coins;
+                const buying = buy.isPending && buy.variables === b.code;
+                return (
+                  <div key={b.code} className="card flex items-center gap-3.5 p-4 sm:flex-col sm:items-stretch sm:text-center">
+                    <span className="flex justify-center">
+                      <BadgeArt badge={b} size={88} locked={false} />
                     </span>
-                  ) : (
-                    <button
-                      onClick={() => purchase(b)}
-                      disabled={short > 0 || buy.isPending || b.priceCoins == null}
-                      className="btn btn-primary min-h-[40px] shrink-0"
-                    >
-                      {short > 0 ? (
-                        <>
-                          <Lock size={13} />
-                          {short} more
-                        </>
-                      ) : buying ? (
-                        "Buying…"
-                      ) : (
-                        "Buy"
-                      )}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[14px] font-semibold text-fg">{b.title}</div>
+                      <p className="mt-0.5 text-[12px] leading-snug text-fg-3">{b.description}</p>
+                      <div className="mt-1.5 flex items-center gap-1 text-[13px] font-semibold tabular-nums sm:justify-center" style={{ color: "var(--yellow)" }}>
+                        <Coins size={13} />
+                        {price}
+                      </div>
+                    </div>
+                    {b.owned ? (
+                      <span className="btn btn-ghost pointer-events-none min-h-[40px] shrink-0" style={{ color: "var(--green)" }}>
+                        <Check size={14} />
+                        Owned
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => purchase(b)}
+                        disabled={short > 0 || buy.isPending || b.priceCoins == null}
+                        className="btn btn-primary min-h-[40px] shrink-0"
+                      >
+                        {short > 0 ? (
+                          <>
+                            <Lock size={13} />
+                            {short} more
+                          </>
+                        ) : buying ? (
+                          "Buying…"
+                        ) : (
+                          "Buy"
+                        )}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.progress.ProgressDtos.BadgeDto;
 import com.rnave.studily.progress.ProgressDtos.ChestDto;
 import com.rnave.studily.progress.ProgressDtos.ChestOpenResult;
+import com.rnave.studily.progress.ProgressDtos.BotOutfitDto;
 import com.rnave.studily.progress.ProgressDtos.FlairDto;
 import com.rnave.studily.progress.ProgressDtos.ProgressDelta;
 import org.springframework.stereotype.Service;
@@ -25,14 +26,14 @@ import java.util.random.RandomGenerator;
 public class ChestService {
 
     record LootTable(int coinsMin, int coinsMax, double xpChance, int xpMin, int xpMax, double badgeChance,
-                     double flairChance) {
+                     double flairChance, double outfitChance) {
     }
 
     static final Map<ChestTier, LootTable> LOOT = new EnumMap<>(Map.of(
-            ChestTier.WOOD, new LootTable(20, 50, 0.25, 25, 60, 0.02, 0.02),
-            ChestTier.SILVER, new LootTable(40, 100, 0.4, 50, 120, 0.04, 0.04),
-            ChestTier.GOLD, new LootTable(90, 180, 0.6, 80, 180, 0.07, 0.07),
-            ChestTier.DIAMOND, new LootTable(180, 350, 1.0, 120, 250, 0.12, 0.12)));
+            ChestTier.WOOD, new LootTable(20, 50, 0.25, 25, 60, 0.02, 0.02, 0),
+            ChestTier.SILVER, new LootTable(40, 100, 0.4, 50, 120, 0.04, 0.04, 0),
+            ChestTier.GOLD, new LootTable(90, 180, 0.6, 80, 180, 0.07, 0.07, 0),
+            ChestTier.DIAMOND, new LootTable(180, 350, 1.0, 120, 250, 0.12, 0.12, 0.05)));
     static final int DAILY_DROP_LIMIT = 2;
     static final int ALL_COSMETICS_OWNED_COINS = 100;
     static final int ALL_LOOT_FLAIRS_OWNED_COINS = 100;
@@ -43,16 +44,19 @@ public class ChestService {
     private final ProgressService progressService;
     private final BadgeService badgeService;
     private final FlairService flairService;
+    private final BotOutfitService botOutfitService;
     private final CurrentUser currentUser;
     private final Clock clock;
     private final RandomGenerator random;
 
     public ChestService(ChestRepository chestRepository, ProgressService progressService, BadgeService badgeService,
-                        FlairService flairService, CurrentUser currentUser, Clock clock, RandomGenerator random) {
+                        FlairService flairService, BotOutfitService botOutfitService, CurrentUser currentUser,
+                        Clock clock, RandomGenerator random) {
         this.chestRepository = chestRepository;
         this.progressService = progressService;
         this.badgeService = badgeService;
         this.flairService = flairService;
+        this.botOutfitService = botOutfitService;
         this.currentUser = currentUser;
         this.clock = clock;
         this.random = random;
@@ -85,6 +89,7 @@ public class ChestService {
         chest.setLootXp(loot.xp());
         chest.setLootBadge(loot.badge());
         chest.setLootFlairCode(loot.flair() != null ? loot.flair().getCode() : null);
+        chest.setLootOutfitCode(loot.outfit() != null ? loot.outfit().getCode() : null);
         chestRepository.save(chest);
 
         String ref = "chest:" + chestId;
@@ -102,8 +107,13 @@ public class ChestService {
             flairDto = flairService.toDto(loot.flair(), userFlair, false);
             delta.addFlair(flairDto);
         }
+        BotOutfitDto outfitDto = null;
+        if (loot.outfit() != null) {
+            botOutfitService.grant(userId, loot.outfit(), BotOutfitSource.CHEST);
+            outfitDto = botOutfitService.toDto(loot.outfit(), true, false);
+        }
         ProgressDelta result = progressService.finish(delta);
-        return new ChestOpenResult(ChestDto.of(chest, badgeDto, flairDto), result);
+        return new ChestOpenResult(ChestDto.of(chest, badgeDto, flairDto, outfitDto), result);
     }
 
     @Transactional
@@ -184,9 +194,16 @@ public class ChestService {
                 flair = candidates.get(random.nextInt(candidates.size()));
             }
         }
-        return new Loot(coins, xp, badge, flair);
+        BotOutfit outfit = null;
+        if (table.outfitChance() > 0 && random.nextDouble() < table.outfitChance()) {
+            List<BotOutfit> candidates = botOutfitService.unownedChestOutfits(userId);
+            if (!candidates.isEmpty()) {
+                outfit = candidates.get(random.nextInt(candidates.size()));
+            }
+        }
+        return new Loot(coins, xp, badge, flair, outfit);
     }
 
-    record Loot(int coins, int xp, Badge badge, Flair flair) {
+    record Loot(int coins, int xp, Badge badge, Flair flair, BotOutfit outfit) {
     }
 }

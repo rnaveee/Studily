@@ -60,4 +60,7 @@ public class Chest {
 
     @Column(length = 48)
     private String lootFlairCode;
+
+    @Column(length = 48)
+    private String lootOutfitCode;
 }

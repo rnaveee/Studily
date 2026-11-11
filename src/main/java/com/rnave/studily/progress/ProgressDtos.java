@@ -59,22 +59,44 @@ public class ProgressDtos {
             int badgeTotal) {
     }
 
-    public record LootDto(int coins, int xp, BadgeDto badge, FlairDto flair) {
+    public record BotOutfitDto(
+            String code,
+            String title,
+            BotOutfitSlot slot,
+            FlairRarity rarity,
+            BotOutfitUnlock unlock,
+            Integer priceCoins,
+            boolean owned,
+            boolean equipped) {
+    }
+
+    public record BotOutfitPurchaseResult(BotOutfitDto outfit, int coins) {
+    }
+
+    public record EquipBotOutfitRequest(String top, String bottom) {
+    }
+
+    public record LootDto(int coins, int xp, BadgeDto badge, FlairDto flair, BotOutfitDto outfit) {
     }
 
     public record ChestDto(Long id, ChestSource source, ChestTier tier, Instant createdAt, Instant openedAt,
                            LootDto loot) {
 
         public static ChestDto of(Chest c, BadgeDto lootBadge) {
-            return of(c, lootBadge, null);
+            return of(c, lootBadge, null, null);
         }
 
         public static ChestDto of(Chest c, BadgeDto lootBadge, FlairDto lootFlair) {
+            return of(c, lootBadge, lootFlair, null);
+        }
+
+        public static ChestDto of(Chest c, BadgeDto lootBadge, FlairDto lootFlair, BotOutfitDto lootOutfit) {
             LootDto loot = c.getOpenedAt() == null ? null : new LootDto(
                     c.getLootCoins() == null ? 0 : c.getLootCoins(),
                     c.getLootXp() == null ? 0 : c.getLootXp(),
                     lootBadge,
-                    lootFlair);
+                    lootFlair,
+                    lootOutfit);
             return new ChestDto(c.getId(), c.getSource(), c.getTier(), c.getCreatedAt(), c.getOpenedAt(), loot);
         }
     }

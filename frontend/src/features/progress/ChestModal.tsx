@@ -11,6 +11,7 @@ import { applyDelta } from "../../lib/progressDelta";
 import BadgeArt from "./BadgeArt";
 import { CHEST_SOURCE_LABEL, CHEST_TIER_COLOR, CHEST_TIER_LABEL } from "./badges";
 import ChestIcon from "./ChestIcon";
+import Mascot from "../studilybot/Mascot";
 import { useEquipFlair } from "./useProgress";
 import type { ChestDto, ChestOpenResult, FlairDto } from "../../types";
 
@@ -41,6 +42,7 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
         shownBadges: lootBadge ? [lootBadge.code] : [],
         shownFlairs: lootFlair ? [lootFlair.code] : [],
       });
+      if (res.chest.loot?.outfit) qc.invalidateQueries({ queryKey: ["bot-outfits"] });
     },
     onError: () => {
       qc.invalidateQueries({ queryKey: ["chests"] });
@@ -119,7 +121,7 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
       </p>
       <h2 className="mt-1 text-[18px] font-semibold text-fg">
         {opened
-          ? lootFlair
+          ? lootFlair || loot?.outfit
             ? "A rare find!"
             : "Here's what you got"
           : shaking
@@ -161,6 +163,24 @@ function ChestFlow({ chests }: { chests: ChestDto[] }) {
             </li>
           )}
           {lootFlair && <FlairLoot flair={lootFlair} />}
+          {loot?.outfit && (
+            <li
+              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-left"
+              style={{ background: `color-mix(in srgb, ${RARITY_COLOR[loot.outfit.rarity]} 10%, transparent)` }}
+            >
+              <Mascot
+                state="excited"
+                size={48}
+                outfit={loot.outfit.slot === "TOP" ? { top: loot.outfit.code, bottom: null } : { top: null, bottom: loot.outfit.code }}
+              />
+              <span className="min-w-0">
+                <span className="block text-[11px] font-semibold uppercase tracking-wider" style={{ color: RARITY_COLOR[loot.outfit.rarity] }}>
+                  New StudilyBot outfit
+                </span>
+                <span className="block truncate text-[14px] font-semibold text-fg">{loot.outfit.title}</span>
+              </span>
+            </li>
+          )}
         </ul>
       )}
 

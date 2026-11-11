@@ -14,6 +14,7 @@ public record UserDto(
         String bio,
         String avatarUrl,
         FlairRef flair,
+        BotOutfitRef botOutfit,
         boolean emailVerified,
         boolean admin,
         boolean welcomed,
@@ -27,7 +28,7 @@ public record UserDto(
         return new UserDto(
                 u.getId(), u.getEmail(), u.getUsername(), u.getName(), u.getSchool(),
                 u.getSchoolId(), u.getYear(), u.getMajor(), u.getBio(), AvatarUrls.of(u), flairs.refOf(u),
-                u.isEmailVerified(), admin, u.getWelcomedAt() != null, u.getCreatedAt(),
+                new BotOutfitRef(u.getBotTopCode(), u.getBotBottomCode()), u.isEmailVerified(), admin, u.getWelcomedAt() != null, u.getCreatedAt(),
                 suspended, suspended ? u.getSuspendedUntil() : null, suspended && u.isBanned());
     }
 }

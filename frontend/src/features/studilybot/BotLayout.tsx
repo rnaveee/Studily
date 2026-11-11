@@ -8,7 +8,7 @@ import { api, isGuestMode } from "../../lib/api";
 import { useConfirm } from "../../lib/confirm";
 import { toast } from "../../lib/toast";
 import type { FeynmanSummary } from "../feynman/feynmanApi";
-import BotMascot from "./BotMascot";
+import Mascot from "./Mascot";
 import { botApi, type BotChatSummary, type Difficulty } from "./api";
 import { useBotStatus } from "./useBotStatus";
 
@@ -156,12 +156,14 @@ export default function BotLayout({
   activeId = null,
   source,
   topBarEnd,
+  toolbar,
   children,
 }: {
   mode: BotSurface;
   activeId?: number | null;
   source?: BotSource;
   topBarEnd?: ReactNode;
+  toolbar?: ReactNode;
   children: ReactNode;
 }) {
   const src = source ?? BOT_SOURCES[mode];
@@ -239,7 +241,7 @@ export default function BotLayout({
       <>
         <div className="flex items-center justify-between gap-2 px-3 pb-2 pt-4">
           <Link to="/study/studilybot" className="flex min-w-0 items-center gap-2 rounded-lg px-1 py-0.5">
-            <BotMascot size={26} />
+            <Mascot crop="head" size={26} still />
             <span className="truncate text-[13px] font-semibold text-fg">StudilyBot</span>
           </Link>
           {mobile && (
@@ -379,7 +381,7 @@ export default function BotLayout({
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header
-          className="flex shrink-0 items-center gap-2 px-3 pb-2.5 md:px-5 md:py-3"
+          className="flex shrink-0 flex-wrap items-center gap-2 px-3 pb-2.5 md:flex-nowrap md:px-5 md:py-3"
           style={{
             background: "var(--surface)",
             borderBottom: "1px solid var(--line)",
@@ -409,6 +411,7 @@ export default function BotLayout({
               className="max-w-[300px]"
             />
           </div>
+          {toolbar && <div className="order-last w-full md:order-none md:ml-2 md:w-72">{toolbar}</div>}
           <div className="ml-auto flex shrink-0 items-center gap-2">{topBarEnd}</div>
         </header>
 

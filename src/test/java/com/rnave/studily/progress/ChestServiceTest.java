@@ -6,6 +6,7 @@ import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.progress.ProgressDtos.BadgeDto;
 import com.rnave.studily.progress.ProgressDtos.ChestDto;
 import com.rnave.studily.progress.ProgressDtos.ChestOpenResult;
+import com.rnave.studily.progress.ProgressDtos.BotOutfitDto;
 import com.rnave.studily.progress.ProgressDtos.FlairDto;
 import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
@@ -55,6 +56,7 @@ class ChestServiceTest {
     private FlairRepository flairRepository;
     private UserFlairRepository userFlairRepository;
     private FlairService flairService;
+    private BotOutfitService botOutfitService;
     private CurrentUser currentUser;
     private RandomGenerator random;
     private ProgressService progressService;
@@ -78,6 +80,7 @@ class ChestServiceTest {
         flairRepository = mock(FlairRepository.class);
         userFlairRepository = mock(UserFlairRepository.class);
         currentUser = mock(CurrentUser.class);
+        botOutfitService = mock(BotOutfitService.class);
         random = mock(RandomGenerator.class);
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         flairService = new FlairService(flairRepository, userFlairRepository, userRepository, userProgressRepository,
@@ -86,8 +89,8 @@ class ChestServiceTest {
         progressService = new ProgressService(userProgressRepository, xpEventRepository, coinTransactionRepository,
                 chestRepository, userRepository, badgeService, flairService, new UserTimeZones(userRepository, "UTC"),
                 currentUser, clock);
-        service = new ChestService(chestRepository, progressService, badgeService, flairService, currentUser, clock,
-                random);
+        service = new ChestService(chestRepository, progressService, badgeService, flairService, botOutfitService,
+                currentUser, clock, random);
         seedFlairCatalog();
 
         progress = new UserProgress();
@@ -446,7 +449,7 @@ class ChestServiceTest {
     @EnumSource(ChestTier.class)
     void rollLoot_seededRandom_staysWithinEachTiersRanges(ChestTier tier) {
         ChestService seeded = new ChestService(chestRepository, progressService, badgeService, flairService,
-                currentUser, Clock.fixed(NOW, ZoneOffset.UTC), new Random(20261007L));
+                botOutfitService, currentUser, Clock.fixed(NOW, ZoneOffset.UTC), new Random(20261007L));
         Badge spark = cosmetic("cosmetic_spark", 300);
         when(badgeService.unownedCosmetics(1L)).thenReturn(List.of(spark));
         ChestService.LootTable table = ChestService.LOOT.get(tier);
@@ -565,6 +568,68 @@ class ChestServiceTest {
             assertThat(c.getLocalDate()).isEqualTo(day);
         });
         assertThat(delta.build().chests()).extracting(ChestDto::tier).containsExactly(ChestTier.GOLD, ChestTier.SILVER);
+    }
+
+    @Test
+    void open_diamondOutfitRollHit_grantsChestOnlyOutfit() {
+        chest.setTier(ChestTier.DIAMOND);
+        BotOutfit aurora = new BotOutfit();
+        aurora.setCode("hoodie_aurora");
+        aurora.setSlot(BotOutfitSlot.TOP);
+        aurora.setRarity(FlairRarity.LEGENDARY);
+        aurora.setUnlock(BotOutfitUnlock.CHEST);
+        BotOutfitDto auroraDto = new BotOutfitDto("hoodie_aurora", "Aurora Zip Hoodie", BotOutfitSlot.TOP,
+                FlairRarity.LEGENDARY, BotOutfitUnlock.CHEST, null, true, false);
+        when(botOutfitService.unownedChestOutfits(1L)).thenReturn(List.of(aurora));
+        when(botOutfitService.toDto(aurora, true, false)).thenReturn(auroraDto);
+        when(random.nextDouble()).thenReturn(0.9, 0.9, 0.9, 0.0499);
+
+        ChestOpenResult result = service.open(7L);
+
+        assertThat(chest.getLootOutfitCode()).isEqualTo("hoodie_aurora");
+        assertThat(result.chest().loot().outfit()).isEqualTo(auroraDto);
+        verify(botOutfitService).grant(1L, aurora, BotOutfitSource.CHEST);
+    }
+
+    @Test
+    void open_diamondOutfitRollAtChance_grantsNoOutfit() {
+        chest.setTier(ChestTier.DIAMOND);
+        when(random.nextDouble()).thenReturn(0.9, 0.9, 0.9, 0.05);
+
+        ChestOpenResult result = service.open(7L);
+
+        assertThat(chest.getLootOutfitCode()).isNull();
+        assertThat(result.chest().loot().outfit()).isNull();
+        verify(botOutfitService, never()).unownedChestOutfits(anyLong());
+        verify(botOutfitService, never()).grant(anyLong(), any(), any());
+    }
+
+    @Test
+    void open_diamondOutfitRollHitWhenAuroraOwned_grantsNothingExtra() {
+        chest.setTier(ChestTier.DIAMOND);
+        when(botOutfitService.unownedChestOutfits(1L)).thenReturn(List.of());
+        when(random.nextDouble()).thenReturn(0.9, 0.9, 0.9, 0.0);
+
+        ChestOpenResult result = service.open(7L);
+
+        assertThat(chest.getLootOutfitCode()).isNull();
+        assertThat(result.chest().loot().outfit()).isNull();
+        verify(botOutfitService, never()).grant(anyLong(), any(), any());
+    }
+
+    @Test
+    void open_belowDiamond_neverRollsForOutfit() {
+        for (ChestTier tier : List.of(ChestTier.WOOD, ChestTier.SILVER, ChestTier.GOLD)) {
+            assertThat(ChestService.LOOT.get(tier).outfitChance()).isZero();
+        }
+        chest.setTier(ChestTier.GOLD);
+        when(random.nextDouble()).thenReturn(0.0);
+        when(badgeService.unownedCosmetics(1L)).thenReturn(List.of());
+
+        service.open(7L);
+
+        verify(random, times(3)).nextDouble();
+        verify(botOutfitService, never()).unownedChestOutfits(anyLong());
     }
 
     @Test

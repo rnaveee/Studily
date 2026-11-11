@@ -23,13 +23,14 @@ import Banners from "./Banners";
 import NotificationBell from "./NotificationBell";
 import NotificationPanel from "./NotificationPanel";
 import ProgressWhatsNew from "../features/progress/ProgressWhatsNew";
-import FeynmanWhatsNew from "../features/feynman/FeynmanWhatsNew";
+import StudilyBotWhatsNew from "../features/studilybot/StudilyBotWhatsNew";
 import StartSessionHost from "../features/learn/sessions/StartSessionHost";
 import SurveyPrompt from "../features/survey/SurveyPrompt";
 import InstallPrompt from "./InstallPrompt";
 import ProgressHost from "../features/progress/ProgressHost";
 import SessionChime from "../features/learn/sessions/SessionChime";
 import SessionDock, { SessionHost } from "../features/learn/sessions/SessionDock";
+import SidebarPeek from "../features/studilybot/SidebarPeek";
 import WelcomeTour from "../features/welcome/WelcomeTour";
 import { useWelcomeTourStep } from "../lib/welcomeTour";
 import CoinBalance from "../features/progress/CoinBalance";
@@ -214,6 +215,10 @@ export default function Layout() {
         </ClientOnly>
         </div>
 
+        <ClientOnly>
+          <SidebarPeek />
+        </ClientOnly>
+
         <div className="px-5 pb-3">
           <div className="flex flex-wrap gap-x-3 gap-y-1">
             {SUB_LINKS.map(({ label, to }) => (
@@ -343,12 +348,13 @@ export default function Layout() {
           <SessionDock placement="bar" />
           <Banners />
           <ProgressWhatsNew />
-          <FeynmanWhatsNew />
+          <StudilyBotWhatsNew />
           <StartSessionHost />
           <SurveyPrompt />
           <InstallPrompt />
         </ClientOnly>
 
+        <div className="relative flex min-h-0 flex-1 flex-col">
         <main className="flex-1 overflow-y-auto overscroll-contain">
           <div
             ref={outletRef}
@@ -365,6 +371,10 @@ export default function Layout() {
             <Outlet />
           </div>
         </main>
+        <ClientOnly>
+          <SidebarPeek variant="footer" hidden={typing} />
+        </ClientOnly>
+        </div>
 
         <MobileFooter
           nav={NAV}

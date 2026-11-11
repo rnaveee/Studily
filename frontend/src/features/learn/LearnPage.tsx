@@ -2,7 +2,8 @@ import { Link } from "react-router-dom";
 import { Atom, Calculator, Percent, Timer, type LucideIcon } from "lucide-react";
 import { formatMs, pomodoroColor, usePomodoro } from "../../lib/pomodoro";
 import TodoQuickView from "../todos/TodoQuickView";
-import BotMascot from "../studilybot/BotMascot";
+import Mascot from "../studilybot/Mascot";
+import StudilyBotTile from "../studilybot/StudilyBotTile";
 import FlashcardsPanel from "./FlashcardsPanel";
 import ProgressPanel from "./ProgressPanel";
 import StudySessionsPanel from "./sessions/StudySessionsPanel";
@@ -66,7 +67,7 @@ export default function LearnPage() {
   const isLive = (to: string) => to === "/pomodoro" && p.running;
 
   return (
-    <div className="space-y-6 stagger-children xl:grid xl:grid-cols-[minmax(0,3fr)_minmax(0,1fr)_auto] xl:items-start xl:gap-x-8 xl:gap-y-5 xl:space-y-0">
+    <div className="space-y-6 stagger-children xl:grid xl:grid-cols-[minmax(0,3fr)_minmax(0,1fr)_auto] xl:items-start xl:gap-x-5 xl:gap-y-5 xl:space-y-0">
       <ProgressPanel />
 
       <div className="space-y-6 xl:space-y-5">
@@ -74,8 +75,11 @@ export default function LearnPage() {
         <FlashcardsPanel />
       </div>
 
-      <div className="relative xl:self-stretch">
-        <TodoQuickView stacked limit={8} className="xl:absolute xl:inset-0" />
+      <div className="space-y-6 xl:grid xl:grid-rows-[1fr_1fr] xl:gap-5 xl:space-y-0 xl:self-stretch">
+        <div className="relative xl:min-h-0">
+          <TodoQuickView stacked limit={8} className="xl:absolute xl:inset-0" />
+        </div>
+        <StudilyBotTile />
       </div>
 
       <div className="space-y-6 xl:hidden">
@@ -177,7 +181,7 @@ function ToolIcon({
     const size = large ? 48 : 44;
     return (
       <span className="flex shrink-0 items-center justify-center" style={{ width: size, height: size }}>
-        <BotMascot size={size - 4} />
+        <Mascot crop="head" size={size} still />
       </span>
     );
   }

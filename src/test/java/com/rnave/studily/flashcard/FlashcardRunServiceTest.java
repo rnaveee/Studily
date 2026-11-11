@@ -14,6 +14,7 @@ import com.rnave.studily.flashcard.FlashcardRunDtos.XpReason;
 import com.rnave.studily.friend.FriendRequest;
 import com.rnave.studily.friend.FriendRequestRepository;
 import com.rnave.studily.friend.FriendRequestStatus;
+import com.rnave.studily.progress.BotOutfitService;
 import com.rnave.studily.progress.BadgeService;
 import com.rnave.studily.progress.Chest;
 import com.rnave.studily.progress.ChestRepository;
@@ -154,7 +155,7 @@ class FlashcardRunServiceTest {
                 mock(CoinTransactionRepository.class), chestRepository, userRepository, badgeService, flairService,
                 timeZones, currentUser, clock);
         ChestService chestService = new ChestService(chestRepository, progressService, badgeService, flairService,
-                currentUser, clock, random);
+                mock(BotOutfitService.class), currentUser, clock, random);
         FlashcardSetService setService = new FlashcardSetService(flashcardSetRepository, currentUser,
                 mock(CourseService.class), friendRequestRepository, mock(Flairs.class),
                 mock(FlashcardImageRepository.class), mock(com.rnave.studily.exam.ExamStudyLinkRepository.class),

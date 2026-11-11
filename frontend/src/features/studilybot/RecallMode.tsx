@@ -22,6 +22,7 @@ import CourseSelect from "./CourseSelect";
 import ReportCard from "./ReportCard";
 import { BANK_ACCEPT, EmailVerifyPrompt, FileStatusBadge, isUnverifiedError } from "./ChatConversation";
 import { bankApi, type BankFile } from "./api";
+import { useMascotReaction } from "./Mascot";
 
 const MAX_MATERIALS = 3;
 const MAX_MESSAGE = 4000;
@@ -331,6 +332,7 @@ function SessionView({ sessionId }: { sessionId: number }) {
   const navigate = useNavigate();
   const confirm = useConfirm();
   const [needsVerify, setNeedsVerify] = useState(false);
+  const [reaction, react] = useMascotReaction();
   const key = sessionKey(sessionId);
   const session = useQuery({
     queryKey: key,
@@ -358,14 +360,19 @@ function SessionView({ sessionId }: { sessionId: number }) {
 
   const send = useMutation({
     mutationFn: (body: string) => api.post<FeynmanTurn>(`/feynman/sessions/${sessionId}/messages`, { body }),
-    onSuccess: (turn, body) =>
-      append(turn, { id: -Date.now(), role: "USER", kind: "CHAT", body, createdAt: new Date().toISOString() }),
+    onSuccess: (turn, body) => {
+      append(turn, { id: -Date.now(), role: "USER", kind: "CHAT", body, createdAt: new Date().toISOString() });
+      react("happy");
+    },
     onError: (error) => failed(error, "Couldn't send that. Try again."),
   });
 
   const finish = useMutation({
     mutationFn: () => api.post<FeynmanTurn>(`/feynman/sessions/${sessionId}/finish`),
-    onSuccess: (turn) => append(turn),
+    onSuccess: (turn) => {
+      append(turn);
+      react("excited", 3000);
+    },
     onError: (error) => failed(error, "Couldn't write your report. Try again."),
   });
 
@@ -503,6 +510,7 @@ function SessionView({ sessionId }: { sessionId: number }) {
           row.kind === "REPORT" ? (row.report ? <ReportCard report={row.report} /> : null) : undefined
         }
         typing={busy}
+        mascot={busy ? "thinking" : reaction ?? "idle"}
         typingLabel={finish.isPending ? "StudilyBot is writing your report" : "StudilyBot is thinking"}
         empty={
           <p className="px-4 py-10 text-center text-[13px] leading-relaxed text-fg-3">

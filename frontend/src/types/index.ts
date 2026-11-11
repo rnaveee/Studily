@@ -91,6 +91,7 @@ export interface User {
   bio?: string | null;
   avatarUrl?: string | null;
   flair?: FlairRef | null;
+  botOutfit?: BotOutfitRef | null;
   emailVerified: boolean;
   admin?: boolean;
   welcomed?: boolean;
@@ -98,6 +99,11 @@ export interface User {
   suspendedUntil?: string | null;
   banned?: boolean;
   createdAt: string;
+}
+
+export interface BotOutfitRef {
+  top: string | null;
+  bottom: string | null;
 }
 
 export interface AuthResponse {
@@ -1083,7 +1089,13 @@ export interface ChestDto {
   tier: ChestTier;
   createdAt: string;
   openedAt: string | null;
-  loot: { coins: number; xp: number; badge: BadgeDto | null; flair: FlairDto | null } | null;
+  loot: {
+    coins: number;
+    xp: number;
+    badge: BadgeDto | null;
+    flair: FlairDto | null;
+    outfit?: BotOutfitDto | null;
+  } | null;
 }
 
 export interface ProgressDelta {
@@ -1125,6 +1137,25 @@ export interface FlairDto {
 
 export interface FlairPurchaseResult {
   flair: FlairDto;
+  coins: number;
+}
+
+export type BotOutfitSlot = "TOP" | "BOTTOM";
+export type BotOutfitUnlock = "STARTER" | "SHOP" | "CHEST";
+
+export interface BotOutfitDto {
+  code: string;
+  title: string;
+  slot: BotOutfitSlot;
+  rarity: FlairRarity;
+  unlock: BotOutfitUnlock;
+  priceCoins: number | null;
+  owned: boolean;
+  equipped: boolean;
+}
+
+export interface BotOutfitPurchaseResult {
+  outfit: BotOutfitDto;
   coins: number;
 }
 

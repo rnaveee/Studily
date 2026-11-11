@@ -1,7 +1,7 @@
 import { Fragment, useLayoutEffect, useRef, type ReactNode } from "react";
-import { Sparkles } from "lucide-react";
 import type { Citation } from "./api";
 import CitationChip from "./CitationChip";
+import Mascot, { type MascotState } from "./Mascot";
 
 export interface ThreadItem {
   id: number | string;
@@ -124,7 +124,7 @@ function Avatar() {
       className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
       style={{ background: "color-mix(in srgb, var(--accent) 14%, transparent)" }}
     >
-      <Sparkles size={13} className="text-accent" />
+      <Mascot crop="head" size={24} still />
     </span>
   );
 }
@@ -170,12 +170,14 @@ export default function ChatThread<T extends ThreadItem>({
   typing = false,
   typingLabel = "StudilyBot is thinking",
   empty,
+  mascot,
 }: {
   items: T[];
   renderItem?: (item: T) => ReactNode | undefined;
   typing?: boolean;
   typingLabel?: string;
   empty?: ReactNode;
+  mascot?: MascotState;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -195,11 +197,11 @@ export default function ChatThread<T extends ThreadItem>({
     stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 96;
   }
 
-  return (
+  const thread = (
     <div
       ref={scrollRef}
       onScroll={onScroll}
-      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-4 pb-4 md:px-8"
+      className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-4 pb-4 md:px-8"
     >
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
         {items.length === 0 && !typing && empty}
@@ -209,6 +211,16 @@ export default function ChatThread<T extends ThreadItem>({
         })}
         {typing && <TypingRow label={typingLabel} />}
       </div>
+    </div>
+  );
+
+  if (!mascot) return thread;
+  return (
+    <div className="flex min-h-0 flex-1">
+      <div className="hidden w-28 shrink-0 flex-col items-center justify-end pb-4 pl-3 md:flex" aria-hidden="true">
+        <Mascot state={mascot} size={84} shadow />
+      </div>
+      {thread}
     </div>
   );
 }

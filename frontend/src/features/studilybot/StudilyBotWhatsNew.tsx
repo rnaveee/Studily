@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Bot, ChevronLeft, ChevronRight, FileText, Presentation, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import Modal, { useModalClose } from "../../components/Modal";
 import { useAuth } from "../../lib/auth";
+import Mascot, { type MascotState } from "./Mascot";
 
-const SEEN_KEY = "studily.whatsnew.feynman";
-const OPEN_EVENT = "studily:feynman-whats-new";
-const QUIET_PATHS = ["/onboarding", "/profile/setup", "/welcome"];
+const SEEN_KEY = "studily.whatsnew.studilybot";
+const SUPERSEDED_KEYS = ["studily.whatsnew.feynman"];
+const OPEN_EVENT = "studily:studilybot-whats-new";
+const QUIET_PATHS = ["/onboarding", "/profile/setup", "/welcome", "/study/studilybot"];
 const NEW_ACCOUNT_MS = 24 * 60 * 60 * 1000;
 
-export function openFeynmanWhatsNew() {
+export function openStudilyBotWhatsNew() {
   window.dispatchEvent(new Event(OPEN_EVENT));
 }
 
@@ -24,11 +26,12 @@ function hasSeen(): boolean {
 function markSeen() {
   try {
     localStorage.setItem(SEEN_KEY, "1");
+    for (const key of SUPERSEDED_KEYS) localStorage.setItem(key, "1");
   } catch {
   }
 }
 
-export default function FeynmanWhatsNew() {
+export default function StudilyBotWhatsNew() {
   const { user } = useAuth();
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
@@ -76,23 +79,53 @@ interface Slide {
 const SLIDES: Slide[] = [
   {
     eyebrow: "New: StudilyBot",
-    title: "Learn it by teaching it",
-    body: "StudilyBot is a study partner that plays the student while you play the teacher. Explaining an idea in your own words is one of the fastest ways to find out what you really understand. It's called the Feynman technique.",
-    visual: <ChatVisual />,
+    title: "Meet your study buddy",
+    body: "StudilyBot lives in the Study tab now. It reads the files you add to a course and helps you study them, with citations back to your slides and pages. Give it a tap to say hi.",
+    visual: <Mascot state="wave" size={92} shadow say="Hi! I'm StudilyBot. Let's study!" />,
   },
   {
-    eyebrow: "How it works",
-    title: "Upload a lecture, then teach it back",
-    body: "Pick up to 3 files from one lecture, from your course files or uploaded fresh. StudilyBot picks out the key ideas and asks you to explain them one at a time. When you miss something, it asks a follow-up. Say \"I don't know\" and it explains it simply, then moves on.",
-    visual: <UploadVisual />,
+    eyebrow: "Three modes",
+    title: "Chat, Practice and Recall",
+    body: "Chat answers questions from your course files. Practice writes word problems from your class material and checks your working. Recall has you explain a lecture back so you find your gaps before the exam.",
+    visual: <ModesVisual />,
   },
   {
-    eyebrow: "Your report",
-    title: "See exactly where your gaps are",
-    body: "When you're done, you get a score for each idea, what you explained well, and the gaps to review before your exam, with the right answer from your own material.",
-    visual: <ReportVisual />,
+    eyebrow: "StudilyBot attire",
+    title: "Dress it up with your coins",
+    body: "Hoodies and pants for StudilyBot are in the shop. Your outfit shows everywhere StudilyBot does. The legendary Aurora Zip Hoodie only drops from Diamond chests.",
+    visual: <OutfitsVisual />,
   },
 ];
+
+function ModesVisual() {
+  const modes: { label: string; state: MascotState; color: string }[] = [
+    { label: "Chat", state: "explaining", color: "var(--accent)" },
+    { label: "Practice", state: "thinking", color: "var(--orange-vivid)" },
+    { label: "Recall", state: "confused", color: "var(--green)" },
+  ];
+  return (
+    <div className="flex items-end gap-4">
+      {modes.map((m) => (
+        <div key={m.label} className="flex flex-col items-center gap-1">
+          <Mascot state={m.state} size={62} shadow />
+          <span className="text-[12px] font-semibold" style={{ color: m.color }}>
+            {m.label}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OutfitsVisual() {
+  return (
+    <div className="flex items-end gap-3">
+      <Mascot size={64} outfit={{ top: "hoodie_varsity", bottom: "pants_jeans" }} shadow />
+      <Mascot size={78} state="excited" outfit={{ top: "hoodie_aurora", bottom: "pants_joggers" }} shadow />
+      <Mascot size={64} outfit={{ top: "hoodie_sunset", bottom: "shorts_cargo" }} shadow />
+    </div>
+  );
+}
 
 function Slides() {
   const close = useModalClose();
@@ -113,6 +146,11 @@ function Slides() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [index]);
+
+  function goTo(path: string) {
+    navigate(path);
+    close();
+  }
 
   return (
     <div
@@ -145,31 +183,37 @@ function Slides() {
             style={{ gridArea: "1 / 1" }}
           >
             <div
-              className="flex h-52 items-center justify-center overflow-hidden rounded-t-2xl px-6 pb-3 pt-10"
+              className="flex h-56 items-end justify-center overflow-hidden rounded-t-2xl px-6 pb-4 pt-8"
               style={{
                 background:
                   "radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%)",
               }}
             >
-              {s.visual}
+              {i === index && s.visual}
             </div>
             <div className="px-6 pt-4 text-center">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-accent">{s.eyebrow}</p>
               <h2 className="mt-1 text-lg font-semibold text-fg">{s.title}</h2>
               <p className="mx-auto mt-2 max-w-sm text-[13px] leading-relaxed text-fg-2">{s.body}</p>
               {i === last && (
-                <div className="mt-4 flex justify-center">
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
                   <button
                     type="button"
                     tabIndex={i === index ? 0 : -1}
-                    onClick={() => {
-                      navigate("/study/studilybot/recall");
-                      close();
-                    }}
+                    onClick={() => goTo("/profile/badges?tab=shop&shop=studilybot")}
+                    className="btn btn-soft"
+                    style={{ minHeight: 40 }}
+                  >
+                    Visit the shop
+                  </button>
+                  <button
+                    type="button"
+                    tabIndex={i === index ? 0 : -1}
+                    onClick={() => goTo("/study/studilybot")}
                     className="btn btn-primary"
                     style={{ minHeight: 40 }}
                   >
-                    Try StudilyBot
+                    Meet StudilyBot
                   </button>
                 </div>
               )}
@@ -219,113 +263,5 @@ function Slides() {
         </button>
       </div>
     </div>
-  );
-}
-
-function MiniCard({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <div
-      className={`rounded-lg border border-line ${className}`}
-      style={{ background: "var(--surface)", boxShadow: "var(--card-shadow)" }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function Bubble({ bot, children }: { bot?: boolean; children: ReactNode }) {
-  return (
-    <div className={`flex items-end gap-1.5 ${bot ? "" : "justify-end"}`}>
-      {bot && (
-        <span
-          className="grid h-5 w-5 shrink-0 place-items-center rounded-full"
-          style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-        >
-          <Bot size={11} />
-        </span>
-      )}
-      <span
-        className="max-w-[78%] rounded-2xl px-2.5 py-1.5 text-left text-[11px] leading-snug"
-        style={
-          bot
-            ? { background: "var(--surface-hi)", color: "var(--fg)" }
-            : { background: "var(--accent)", color: "var(--accent-fg)" }
-        }
-      >
-        {children}
-      </span>
-    </div>
-  );
-}
-
-function ChatVisual() {
-  return (
-    <MiniCard className="flex w-full max-w-[290px] flex-col gap-1.5 p-3">
-      <Bubble bot>How would you explain Newton's first law to me?</Bubble>
-      <Bubble>Things keep doing what they're doing unless a force acts on them.</Bubble>
-      <Bubble bot>Nice! So why does a rolling ball stop?</Bubble>
-    </MiniCard>
-  );
-}
-
-function UploadVisual() {
-  const files = [
-    { icon: <Presentation size={12} />, name: "Lecture 6 - Forces.pptx" },
-    { icon: <FileText size={12} />, name: "Chapter 4 notes.pdf" },
-  ];
-  return (
-    <MiniCard className="w-full max-w-[290px] p-3">
-      {files.map((f) => (
-        <div key={f.name} className="flex items-center gap-2 py-1 text-[11px] text-fg-2">
-          <span style={{ color: "var(--accent)" }}>{f.icon}</span>
-          {f.name}
-        </div>
-      ))}
-      <div className="mt-2 border-t border-line pt-2 text-[10px] text-fg-3">6 ideas to teach back</div>
-      <div className="mt-1.5 flex flex-wrap gap-1">
-        {["Inertia", "Net force", "F = ma", "Friction"].map((c) => (
-          <span key={c} className="badge badge-accent">
-            {c}
-          </span>
-        ))}
-      </div>
-    </MiniCard>
-  );
-}
-
-function ReportVisual() {
-  const concepts = [
-    { name: "Inertia", score: 92 },
-    { name: "Net force", score: 74 },
-    { name: "Friction", score: 38 },
-  ];
-  return (
-    <MiniCard className="w-full max-w-[290px] p-3">
-      <div className="flex items-baseline justify-between">
-        <span className="text-[12px] font-semibold text-fg">Your understanding</span>
-        <span className="text-[15px] font-semibold tabular-nums" style={{ color: "var(--accent)" }}>
-          68%
-        </span>
-      </div>
-      <div className="mt-2 flex flex-col gap-1.5">
-        {concepts.map((c) => (
-          <div key={c.name}>
-            <div className="flex justify-between text-[10px] text-fg-2">
-              <span>{c.name}</span>
-              <span className="tabular-nums">{c.score}%</span>
-            </div>
-            <div className="mt-0.5 h-1.5 overflow-hidden rounded-full" style={{ background: "var(--surface-hi)" }}>
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${c.score}%`,
-                  background: c.score >= 70 ? "var(--green)" : "var(--orange-vivid)",
-                }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-    </MiniCard>
   );
 }

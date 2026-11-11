@@ -7,7 +7,7 @@ import SegmentedToggle from "../../components/SegmentedToggle";
 import { Skeleton } from "../../components/Skeleton";
 import { ApiError } from "../../lib/api";
 import BotLayout from "./BotLayout";
-import BotMascot from "./BotMascot";
+import Mascot, { useMascotReaction } from "./Mascot";
 import ChatThread from "./ChatThread";
 import Composer from "./Composer";
 import CourseSelect from "./CourseSelect";
@@ -129,7 +129,7 @@ function NoticeBanner({ notice, courseId }: { notice: Notice; courseId: number |
 function BusyRow({ label }: { label: string }) {
   return (
     <div role="status" className="chat-in flex items-center gap-3 self-start rounded-2xl px-4 py-2.5" style={BUBBLE_STYLE}>
-      <BotMascot size={36} mood="thinking" />
+      <Mascot crop="head" size={36} state="thinking" />
       <span className="text-[13px] text-fg-2">{label}…</span>
     </div>
   );
@@ -194,7 +194,7 @@ function PracticeSetup() {
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto flex w-full max-w-xl flex-col gap-5 px-3 py-6 md:px-8 md:py-8">
         <div className="flex items-center gap-4">
-          <BotMascot size={64} mood={starting ? "thinking" : "idle"} />
+          <Mascot size={56} state={starting ? "thinking" : "idle"} />
           <div className="min-w-0">
             <h1 className="text-xl font-semibold text-fg">Practice</h1>
             <p className="mt-1 text-[13px] leading-relaxed text-fg-2">
@@ -269,6 +269,7 @@ function PracticeSession({ chatId }: { chatId: number }) {
   const status = useBotStatus();
   const chat = useQuery({ queryKey: chatKey(chatId), queryFn: () => botApi.chat(chatId) });
   const [busy, setBusy] = useState<Busy | null>(null);
+  const [reaction, react] = useMascotReaction();
   const [notice, setNotice] = useState<Notice | null>(null);
   const [photo, setPhoto] = useState<PhotoDraft | null>(null);
   const [preparing, setPreparing] = useState(false);
@@ -358,6 +359,7 @@ function PracticeSession({ chatId }: { chatId: number }) {
     );
     if (!result) return;
     appendMessages(result.grade ? [result.userMessage, result.grade] : [result.userMessage]);
+    if (result.grade?.grade) react(result.grade.grade.verdict === "CORRECT" ? "excited" : "happy", 2600);
     refreshChats();
     if (result.helpChatId !== null) {
       setHelpChatId(result.helpChatId);
@@ -478,7 +480,7 @@ function PracticeSession({ chatId }: { chatId: number }) {
   return (
     <div className="flex min-h-0 flex-1">
       <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <ChatThread<Row> items={rows} renderItem={renderRow} />
+        <ChatThread<Row> items={rows} renderItem={renderRow} mascot={busy !== null && busy !== "ask" ? "thinking" : reaction ?? "idle"} />
 
         {(lockedMessage || notice) && (
           <div className="shrink-0 px-3 pb-2 md:px-8">

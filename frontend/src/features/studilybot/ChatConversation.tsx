@@ -6,7 +6,7 @@ import QueryError from "../../components/QueryError";
 import { Skeleton } from "../../components/Skeleton";
 import { ApiError } from "../../lib/api";
 import { toast } from "../../lib/toast";
-import BotMascot from "./BotMascot";
+import Mascot, { useMascotReaction, type MascotState } from "./Mascot";
 import ChatThread, { type ThreadItem } from "./ChatThread";
 import Composer from "./Composer";
 import { botApi, streamAnswer, type BankFile, type BankFileStatus, type BotMessage } from "./api";
@@ -68,10 +68,21 @@ function toRow(message: BotMessage): ThreadItem {
   };
 }
 
+export function mascotStateFor(s: {
+  busy: boolean;
+  streaming: boolean;
+  failed: boolean;
+  reaction: MascotState | null;
+}): MascotState {
+  if (s.busy) return s.streaming ? "explaining" : "thinking";
+  if (s.failed) return "confused";
+  return s.reaction ?? "idle";
+}
+
 function ThinkingRow() {
   return (
     <div role="status" aria-label="StudilyBot is thinking" className="chat-in flex items-center gap-2.5">
-      <BotMascot size={30} mood="thinking" />
+      <Mascot crop="head" size={30} state="thinking" />
       <span className="text-[13px] text-fg-3">Thinking…</span>
     </div>
   );
@@ -128,6 +139,7 @@ export default function ChatConversation({
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<Failure | null>(null);
   const [needsVerify, setNeedsVerify] = useState(false);
+  const [reaction, react] = useMascotReaction();
   const sentInitial = useRef(false);
 
   async function ask(question: string) {
@@ -142,6 +154,7 @@ export default function ChatConversation({
         onDelta: (text) => setTurn((current) => (current ? { ...current, reply: current.reply + text } : current)),
         onDone: (message) => {
           saved = true;
+          react("happy");
           setTurn((current) => (current ? { ...current, saved: message } : current));
         },
         onError: (error) => {
@@ -255,10 +268,11 @@ export default function ChatConversation({
 
       <ChatThread
         items={rows}
+        mascot={compact ? undefined : mascotStateFor({ busy, streaming: Boolean(live?.reply), failed: failure !== null, reaction })}
         renderItem={(item) => (item.id === THINKING ? <ThinkingRow /> : undefined)}
         empty={
           <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-            <BotMascot size={72} />
+            <Mascot state="wave" size={72} shadow className={compact ? "" : "md:hidden"} />
             <p className="max-w-sm text-[13.5px] leading-relaxed text-fg-2">
               {course
                 ? `Ask about ${course}. StudilyBot answers from its files and points to the slide or page.`

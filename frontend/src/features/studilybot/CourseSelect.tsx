@@ -11,6 +11,7 @@ export default function CourseSelect({
   noneLabel = "No course",
   label = "Course",
   disabled = false,
+  hideLabel = false,
 }: {
   value: number | null;
   onChange: (courseId: number | null) => void;
@@ -18,6 +19,7 @@ export default function CourseSelect({
   noneLabel?: string;
   label?: string;
   disabled?: boolean;
+  hideLabel?: boolean;
 }) {
   const id = useId();
   const courses = useQuery({
@@ -28,7 +30,7 @@ export default function CourseSelect({
 
   return (
     <div className="min-w-0">
-      <label htmlFor={id} className="field-label">
+      <label htmlFor={id} className={hideLabel ? "sr-only" : "field-label"}>
         {label}
       </label>
       <div className="relative">

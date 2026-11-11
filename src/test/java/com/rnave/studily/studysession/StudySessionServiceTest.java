@@ -4,6 +4,7 @@ import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.ConflictException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
+import com.rnave.studily.progress.BotOutfitService;
 import com.rnave.studily.progress.BadgeService;
 import com.rnave.studily.progress.Chest;
 import com.rnave.studily.progress.ChestRepository;
@@ -266,7 +267,7 @@ class StudySessionServiceTest {
                 coinTransactionRepository, chestRepository, userRepository, badgeService, flairService, timeZones,
                 currentUser, clock);
         chestService = spy(new ChestService(chestRepository, progressService, badgeService, flairService,
-                currentUser, clock, random));
+                mock(BotOutfitService.class), currentUser, clock, random));
         StreakRestoreService streakRestoreService = new StreakRestoreService(progressService,
                 streakRestoreRepository, userRepository, rateLimiter, currentUser, clock);
         service = new StudySessionService(sessionRepository, blockRepository, taskRepository, progressService,
