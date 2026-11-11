@@ -98,10 +98,10 @@ export default function SemestersPage() {
           <LineChart size={14} />
           Grades overview
         </Link>
-        <label className="flex items-center gap-2 text-[12px] text-fg-3">
-          GPA scale
+        <div className="flex min-w-0 max-w-full items-center gap-2 text-[12px] text-fg-3">
+          <span aria-hidden>GPA scale</span>
           <GpaScalePicker />
-        </label>
+        </div>
       </div>
 
       {showForm && (

@@ -182,14 +182,15 @@ export default function SettingsPage() {
         Grades
       </h2>
 
-      <div className="card mt-3 flex flex-wrap items-center justify-between gap-3 p-4">
+      <div className="card mt-3 space-y-3 p-4">
         <div>
           <div className="text-[14px] font-medium text-fg">GPA scale</div>
           <div className="mt-0.5 text-[12px] text-fg-3">
-            How your course grades turn into a GPA. Match my school picks it from your school.
+            How your course grades turn into a GPA. Match my school picks it from your school. If your
+            school grades differently, make a custom scale.
           </div>
         </div>
-        <GpaScalePicker />
+        <GpaScalePicker variant="labelled" />
       </div>
 
       <h2 className="mt-8 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
