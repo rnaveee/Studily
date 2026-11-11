@@ -335,8 +335,8 @@ Changes:
 
 Throughout: handle 429 with a friendly banner, show a disabled state from `useBotStatus`, and handle guest mode.
 
-## Wave 2 addendum (after the Wave 1 reviews; base commit 7dd0850)
-- **Branching**: your worktree may start on the wrong commit. First run `git checkout -b <your-branch> 7dd0850`.
+## Wave 2 addendum (after the Wave 1 reviews; base commit 91dee15 or later)
+- **Branching**: your worktree may start on the wrong commit. First run `git checkout -b <your-branch> studilybot`.
 - **Chat and Practice backends (2D and 2E)**:
   - Call `BotLimits.check(mode)` **before** `QueryRewriter.rewrite`, `Retriever.retrieve` and every Claude call.
   - Pass `AiFeature.BOT_CHAT` or `BOT_PRACTICE` to `retrieve`.
