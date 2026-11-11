@@ -31,6 +31,9 @@ public class FeynmanSession {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Column(name = "course_id")
+    private Long courseId;
+
     @Column(nullable = false, length = 120)
     private String title;
 

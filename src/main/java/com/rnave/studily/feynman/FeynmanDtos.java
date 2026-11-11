@@ -12,17 +12,20 @@ public class FeynmanDtos {
                                   int maxFiles, long maxFileBytes) {
     }
 
-    public record SessionSummaryDto(Long id, String title, FeynmanStatus status, Integer score, Instant updatedAt) {
+    public record SessionSummaryDto(Long id, String title, Long courseId, String courseName, FeynmanStatus status,
+                                    Integer score, Instant updatedAt) {
     }
 
-    public record DocumentDto(Long id, String fileName, long sizeBytes, int chars, Instant createdAt) {
+    public record DocumentDto(Long id, String fileName, long sizeBytes, int chars, Instant createdAt,
+                              Long bankFileId) {
     }
 
     public record MessageDto(Long id, FeynmanRole role, FeynmanKind kind, String body, Instant createdAt) {
     }
 
-    public record SessionDto(Long id, String title, String focus, FeynmanStatus status, Integer score,
-                             List<DocumentDto> documents, List<MessageDto> messages) {
+    public record SessionDto(Long id, String title, String focus, Long courseId, String courseName,
+                             FeynmanStatus status, Integer score, List<DocumentDto> documents,
+                             List<MessageDto> messages) {
     }
 
     public record SendMessageRequest(@NotBlank @Size(max = 4000) String body) {

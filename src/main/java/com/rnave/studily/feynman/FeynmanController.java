@@ -47,16 +47,18 @@ public class FeynmanController {
     }
 
     @GetMapping("/sessions")
-    public List<SessionSummaryDto> list() {
-        return service.list();
+    public List<SessionSummaryDto> list(@RequestParam(value = "courseId", required = false) Long courseId) {
+        return service.list(courseId);
     }
 
     @PostMapping(value = "/sessions", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public SessionDto start(@RequestParam(value = "title", required = false) String title,
+    public SessionDto start(@RequestParam(value = "courseId", required = false) Long courseId,
+                            @RequestParam(value = "title", required = false) String title,
                             @RequestParam(value = "focus", required = false) String focus,
-                            @RequestParam(value = "files", required = false) List<MultipartFile> files) {
+                            @RequestParam(value = "files", required = false) List<MultipartFile> files,
+                            @RequestParam(value = "bankFileIds", required = false) List<Long> bankFileIds) {
         limit();
-        return service.start(title, focus, files);
+        return service.start(courseId, title, focus, files, bankFileIds);
     }
 
     @GetMapping("/sessions/{id}")
