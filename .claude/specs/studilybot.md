@@ -334,3 +334,22 @@ Changes:
 - When `AnswerResult.helpChatId` is set, open the panel and auto-send `question` into it.
 
 Throughout: handle 429 with a friendly banner, show a disabled state from `useBotStatus`, and handle guest mode.
+
+## Wave 2 addendum (after the Wave 1 reviews; base commit 7dd0850)
+- **Branching**: your worktree may start on the wrong commit. First run `git checkout -b <your-branch> 7dd0850`.
+- **Chat and Practice backends (2D and 2E)**:
+  - Call `BotLimits.check(mode)` **before** `QueryRewriter.rewrite`, `Retriever.retrieve` and every Claude call.
+  - Pass `AiFeature.BOT_CHAT` or `BOT_PRACTICE` to `retrieve`.
+  - Record `Rewrite.inputTokens`/`outputTokens` against `Rewrite.model` through `AiUsageRecorder`. Do this only when `model != null`, because the rewriter doesn't record anything itself.
+  - Clip the question to 2,000 characters before it goes to the rewriter or to retrieval.
+  - `ChunkStore` can throw `TooManyRequestsException` when it's busy. Over SSE, send it as `error {code:"BUSY"}`.
+- **Chat uploads (2D)**: `POST /api/bot/chats/{id}/files` must load the chat with `findByIdAndUserId`, which gives a 404 for anyone else's chat, **before** calling `bankService.upload`. `BankService` trusts the chat scope.
+- **`Retriever.retrieve`**: if Voyage embedding fails, it now falls back to keyword-only search, and relevance comes back null. Treat a null relevance as normal.
+- **Frontend: shared `ChatConversation`** (`features/studilybot/ChatConversation.tsx`):
+  - Wave 2G1 **owns** it. A stub with the final props exists already: `{chatId, compact?, initialQuestion?, onInitialQuestionSent?}`.
+  - It renders one existing chat end to end: it loads it with `botApi.chat`, shows the thread with citations, streams through `streamAnswer`, handles uploads through `botApi.uploadToChat` (hidden when `temporary`), and auto-sends `initialQuestion` once.
+  - ChatMode's `:id` view and Practice's `HelpChatPanel` both render it. 2G2 imports it and never edits it.
+- **BotLayout**: its sidebar query key is `["bot","chats",mode]`. Invalidate `["bot","chats"]` after you create, rename, delete or send.
+- The Wave 2G split, owners and ownership:
+  - **2G1**: `ChatMode.tsx`, `ChatConversation.tsx`, `RecallMode.tsx`, `features/feynman/*` (port the `FeynmanChatPage` and `FeynmanListPage` logic into RecallMode, then delete those two pages and fix `FeynmanWhatsNew` to link to `/study/studilybot/recall`), and mounting `FeynmanWhatsNew` in `components/Layout.tsx`.
+  - **2G2**: `PracticeMode.tsx`, `ProblemCard.tsx`, `HelpChatPanel.tsx`, `photo.ts` (canvas downscale to a JPEG of at most 1600px).
