@@ -1301,3 +1301,4 @@ button.streak-tint:hover {
   .bot-md .katex { font-size: 1.05em; }
   .bot-md .katex-display { margin: 0.25rem 0; overflow-x: auto; overflow-y: hidden; padding: 2px 0; }
 }
+.tour-bubble[data-tail="down-center"]::after { bottom: -8px; left: calc(50% - 7px); transform: rotate(45deg); }

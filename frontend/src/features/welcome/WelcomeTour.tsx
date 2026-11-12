@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
-import { prefersReducedMotion } from "../../lib/motion";
+import { useTyped } from "../../lib/motion";
 import { useWelcomeTourStep, welcomeTour } from "../../lib/welcomeTour";
 import Mascot, { type MascotState } from "../studilybot/Mascot";
 import type { FlashcardSet } from "../../types";
@@ -12,7 +12,6 @@ import type { FlashcardSet } from "../../types";
 const SAMPLE_SET_TITLE = "Studily flashcard set";
 const PAD = 8;
 const EDGE = 20;
-const TYPE_STEP_MS = 22;
 
 type Route = "learn" | "sample-set" | "friends";
 
@@ -207,28 +206,6 @@ function useTourTarget(index: number, step: Step): Hole | null {
   }, [path, location.pathname, step.target, index]);
 
   return hole;
-}
-
-function useTyped(text: string) {
-  const instant = prefersReducedMotion();
-  const [count, setCount] = useState(instant ? text.length : 0);
-
-  useEffect(() => {
-    if (instant) {
-      setCount(text.length);
-      return;
-    }
-    setCount(0);
-    let n = 0;
-    const id = window.setInterval(() => {
-      n += 2;
-      setCount(Math.min(n, text.length));
-      if (n >= text.length) window.clearInterval(id);
-    }, TYPE_STEP_MS);
-    return () => window.clearInterval(id);
-  }, [text, instant]);
-
-  return { shown: text.slice(0, count), done: count >= text.length, skip: () => setCount(text.length) };
 }
 
 export default function WelcomeTour() {

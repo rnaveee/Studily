@@ -46,3 +46,25 @@ export function useDeferredClose(onClose: () => void, exitMs = 160) {
 export function staggerDelay(index: number, step = 50, cap = 8): React.CSSProperties {
   return { "--reveal-delay": `${Math.min(index, cap) * step}ms` } as React.CSSProperties;
 }
+
+export function useTyped(text: string, stepMs = 22) {
+  const instant = prefersReducedMotion();
+  const [count, setCount] = useState(instant ? text.length : 0);
+
+  useEffect(() => {
+    if (instant) {
+      setCount(text.length);
+      return;
+    }
+    setCount(0);
+    let n = 0;
+    const id = window.setInterval(() => {
+      n += 2;
+      setCount(Math.min(n, text.length));
+      if (n >= text.length) window.clearInterval(id);
+    }, stepMs);
+    return () => window.clearInterval(id);
+  }, [text, instant, stepMs]);
+
+  return { shown: text.slice(0, count), done: count >= text.length, skip: () => setCount(text.length) };
+}

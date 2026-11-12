@@ -1,7 +1,7 @@
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Trash2, Upload, X } from "lucide-react";
+import { FileText, MessagesSquare, PanelRightClose, Trash2, Upload, X } from "lucide-react";
 import QueryError from "../../components/QueryError";
 import { Skeleton } from "../../components/Skeleton";
 import { api, ApiError } from "../../lib/api";
@@ -15,8 +15,9 @@ import {
   type FeynmanSession,
   type FeynmanTurn,
 } from "../feynman/feynmanApi";
-import BotLayout, { BOT_PATHS } from "./BotLayout";
+import BotLayout, { BOT_PATHS, useStoredFlag } from "./BotLayout";
 import ChatThread, { type ThreadItem } from "./ChatThread";
+import RecallStage, { useRecallQueue } from "./RecallStage";
 import Composer from "./Composer";
 import CourseSelect from "./CourseSelect";
 import ReportCard from "./ReportCard";
@@ -27,6 +28,8 @@ import { useMascotReaction } from "./Mascot";
 const MAX_MATERIALS = 3;
 const MAX_MESSAGE = 4000;
 const LIMIT_NOTICE = `StudilyBot reads up to ${MAX_MATERIALS} materials per session. Remove one to add another.`;
+
+const NO_MESSAGES: FeynmanMessage[] = [];
 
 const sessionKey = (sessionId: number) => ["feynman", "session", sessionId] as const;
 
@@ -333,11 +336,23 @@ function SessionView({ sessionId }: { sessionId: number }) {
   const confirm = useConfirm();
   const [needsVerify, setNeedsVerify] = useState(false);
   const [reaction, react] = useMascotReaction();
+  const [logOpen, setLogOpen] = useStoredFlag("studilybot.recallLog");
+  const [logDrawer, setLogDrawer] = useState(false);
+
+  useEffect(() => {
+    if (!logDrawer) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setLogDrawer(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [logDrawer]);
   const key = sessionKey(sessionId);
   const session = useQuery({
     queryKey: key,
     queryFn: () => api.get<FeynmanSession>(`/feynman/sessions/${sessionId}`),
   });
+  const queue = useRecallQueue(session.data?.messages ?? NO_MESSAGES);
 
   function append(turn: FeynmanTurn) {
     qc.setQueryData<FeynmanSession>(key, (old) => {
@@ -434,9 +449,28 @@ function SessionView({ sessionId }: { sessionId: number }) {
   const busy = send.isPending || finish.isPending;
 
   const rows: RecallRow[] = s.messages.map(rowFor);
-  if (send.isPending && send.variables && !echoes(s.messages, send.variables)) {
-    rows.push({ id: "pending", mine: true, body: send.variables, kind: "CHAT", report: null });
+  const pendingText = send.isPending && send.variables && !echoes(s.messages, send.variables) ? send.variables : null;
+  if (pendingText) {
+    rows.push({ id: "pending", mine: true, body: pendingText, kind: "CHAT", report: null });
   }
+  const busyLabel = finish.isPending ? "Writing your report" : "Thinking";
+
+  function toggleLog() {
+    if (window.matchMedia("(min-width: 768px)").matches) setLogOpen(!logOpen);
+    else setLogDrawer(true);
+  }
+
+  const log = (
+    <ChatThread
+      items={rows}
+      renderItem={(row) =>
+        row.kind === "REPORT" ? (row.report ? <ReportCard report={row.report} /> : null) : undefined
+      }
+      typing={busy}
+      typingLabel={`StudilyBot is ${busyLabel.toLowerCase()}`}
+      empty={<p className="px-4 py-10 text-center text-[13px] text-fg-3">Nothing said yet.</p>}
+    />
+  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -457,12 +491,22 @@ function SessionView({ sessionId }: { sessionId: number }) {
             )}
             <button
               type="button"
+              onClick={toggleLog}
+              aria-expanded={logOpen || logDrawer}
+              className={`btn text-xs ${logOpen ? "btn-soft" : "btn-ghost"}`}
+            >
+              <MessagesSquare size={13} />
+              Conversation
+            </button>
+            <button
+              type="button"
               onClick={() => void confirmRemove()}
               disabled={remove.isPending}
+              aria-label="Delete session"
               className="btn btn-ghost text-xs"
             >
               <Trash2 size={13} />
-              Delete
+              <span className="hidden sm:inline">Delete</span>
             </button>
           </div>
         </div>
@@ -504,20 +548,65 @@ function SessionView({ sessionId }: { sessionId: number }) {
         </details>
       </header>
 
-      <ChatThread
-        items={rows}
-        renderItem={(row) =>
-          row.kind === "REPORT" ? (row.report ? <ReportCard report={row.report} /> : null) : undefined
-        }
-        typing={busy}
-        mascot={busy ? "thinking" : reaction ?? "idle"}
-        typingLabel={finish.isPending ? "StudilyBot is writing your report" : "StudilyBot is thinking"}
-        empty={
-          <p className="px-4 py-10 text-center text-[13px] leading-relaxed text-fg-3">
-            Explain the first idea from your material in your own words. StudilyBot will ask follow-ups.
-          </p>
-        }
-      />
+      <div className="flex min-h-0 flex-1">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <RecallStage queue={queue} busy={busy} busyLabel={busyLabel} pending={pendingText} reaction={reaction} />
+        </div>
+        {logOpen && (
+          <aside
+            aria-label="Conversation log"
+            className="hidden w-[360px] shrink-0 flex-col md:flex"
+            style={{ background: "var(--surface)", borderLeft: "1px solid var(--line)" }}
+          >
+            <div className="flex shrink-0 items-center justify-between px-4 py-2.5" style={{ borderBottom: "1px solid var(--line)" }}>
+              <span className="text-[12px] font-semibold uppercase tracking-wider text-fg-3">Conversation</span>
+              <button
+                type="button"
+                onClick={() => setLogOpen(false)}
+                aria-label="Hide conversation"
+                className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+              >
+                <PanelRightClose size={16} />
+              </button>
+            </div>
+            {log}
+          </aside>
+        )}
+      </div>
+
+      <div className={`fixed inset-0 z-50 md:hidden ${logDrawer ? "" : "pointer-events-none"}`} inert={!logDrawer}>
+        <div
+          className="absolute inset-0 transition-opacity duration-200"
+          style={{ background: "var(--scrim)", opacity: logDrawer ? 1 : 0 }}
+          onClick={() => setLogDrawer(false)}
+          aria-hidden
+        />
+        <aside
+          role={logDrawer ? "dialog" : undefined}
+          aria-modal={logDrawer ? true : undefined}
+          aria-label="Conversation log"
+          className="absolute inset-y-0 right-0 flex w-[88%] max-w-[380px] flex-col transition-transform duration-200 ease-out"
+          style={{
+            background: "var(--bg)",
+            borderLeft: "1px solid var(--line)",
+            transform: logDrawer ? "translateX(0)" : "translateX(102%)",
+            paddingTop: "env(safe-area-inset-top, 0px)",
+          }}
+        >
+          <div className="flex shrink-0 items-center justify-between px-4 py-3" style={{ borderBottom: "1px solid var(--line)" }}>
+            <span className="text-[12px] font-semibold uppercase tracking-wider text-fg-3">Conversation</span>
+            <button
+              type="button"
+              onClick={() => setLogDrawer(false)}
+              aria-label="Close conversation"
+              className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          {logDrawer && log}
+        </aside>
+      </div>
 
       {needsVerify && (
         <div className="mx-auto w-full max-w-3xl px-3 pb-2 md:px-6">
@@ -528,6 +617,7 @@ function SessionView({ sessionId }: { sessionId: number }) {
       {active ? (
         <Composer
           onSend={(text) => {
+            if (!queue.atEnd) return;
             if (text.length > MAX_MESSAGE) {
               toast.error("Keep it under 4,000 characters.");
               return;
@@ -535,7 +625,8 @@ function SessionView({ sessionId }: { sessionId: number }) {
             send.mutate(text);
           }}
           busy={busy}
-          placeholder="Explain it in your own words…"
+          sendDisabled={!queue.atEnd}
+          placeholder={queue.atEnd ? "Explain it in your own words…" : "Tap Next to hear the rest first…"}
           sendLabel="Send explanation"
         />
       ) : (

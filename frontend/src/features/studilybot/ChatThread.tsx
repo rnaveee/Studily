@@ -29,7 +29,7 @@ export function Markdownish({ text, className }: { text: string; className?: str
   );
 }
 
-function Dots() {
+export function Dots() {
   return (
     <span className="flex items-center gap-1.5">
       {[0, 150, 300].map((delay) => (
