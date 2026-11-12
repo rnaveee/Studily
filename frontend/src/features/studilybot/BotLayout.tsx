@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Menu, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowLeft, Menu, PanelLeftClose, PanelLeftOpen, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
 import SegmentedToggle from "../../components/SegmentedToggle";
 import { Skeleton } from "../../components/Skeleton";
 import { api, isGuestMode } from "../../lib/api";
@@ -87,6 +87,28 @@ export const BOT_SOURCES: Record<BotSurface, BotSource> = {
   RECALL: recallSource,
   PRACTICE: botChatSource("PRACTICE"),
 };
+
+function readFlag(key: string, fallback: boolean): boolean {
+  try {
+    const value = window.localStorage.getItem(key);
+    return value === null ? fallback : value === "1";
+  } catch {
+    return fallback;
+  }
+}
+
+export function useStoredFlag(key: string, fallback = false): [boolean, (next: boolean) => void] {
+  const [value, setValue] = useState(() => readFlag(key, fallback));
+  function set(next: boolean) {
+    setValue(next);
+    try {
+      window.localStorage.setItem(key, next ? "1" : "0");
+    } catch {
+      void 0;
+    }
+  }
+  return [value, set];
+}
 
 export function GuestSignUpCard({ what }: { what: string }) {
   return (
@@ -174,6 +196,7 @@ export default function BotLayout({
   const confirm = useConfirm();
   const status = useBotStatus();
   const [drawer, setDrawer] = useState(false);
+  const [collapsed, setCollapsed] = useStoredFlag("studilybot.sidebar");
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const drawerCloseRef = useRef<HTMLButtonElement>(null);
@@ -244,6 +267,17 @@ export default function BotLayout({
             <Mascot crop="head" size={26} still />
             <span className="truncate text-[13px] font-semibold text-fg">StudilyBot</span>
           </Link>
+          {!mobile && (
+            <button
+              type="button"
+              onClick={() => setCollapsed(true)}
+              aria-label="Hide chat history"
+              title="Hide chat history"
+              className="rounded-lg p-1.5 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+            >
+              <PanelLeftClose size={16} />
+            </button>
+          )}
           {mobile && (
             <button
               ref={drawerCloseRef}
@@ -350,10 +384,40 @@ export default function BotLayout({
       className="chat-in fixed inset-0 z-40 flex bg-bg h-[var(--app-height,auto)] md:relative md:z-auto md:h-full md:min-h-0 md:flex-1"
     >
       <aside
-        className="hidden w-[256px] shrink-0 flex-col md:flex"
+        aria-label={collapsed ? "StudilyBot" : undefined}
+        className={`hidden shrink-0 flex-col overflow-hidden transition-[width] duration-200 ease-out motion-reduce:transition-none md:flex ${
+          collapsed ? "w-14" : "w-[256px]"
+        }`}
         style={{ background: "var(--surface)", borderRight: "1px solid var(--line)" }}
       >
-        {sidebar(false)}
+        {collapsed ? (
+          <div className="flex flex-col items-center gap-2 pt-4">
+            <Link to="/study/studilybot" aria-label="StudilyBot home" className="rounded-lg p-1">
+              <Mascot crop="head" size={26} still />
+            </Link>
+            <button
+              type="button"
+              onClick={() => setCollapsed(false)}
+              aria-label="Show chat history"
+              title="Show chat history"
+              className="rounded-lg p-2 text-fg-3 transition-colors hover:bg-surface-hi hover:text-fg"
+            >
+              <PanelLeftOpen size={17} />
+            </button>
+            <button
+              type="button"
+              onClick={newChat}
+              aria-label={`New ${SURFACE_NOUN[mode]}`}
+              title={`New ${SURFACE_NOUN[mode]}`}
+              className="btn btn-primary"
+              style={{ height: 36, width: 36, padding: 0 }}
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex min-h-0 w-[256px] flex-1 flex-col">{sidebar(false)}</div>
+        )}
       </aside>
 
       <div className={`fixed inset-0 z-50 md:hidden ${drawer ? "" : "pointer-events-none"}`} inert={!drawer}>
