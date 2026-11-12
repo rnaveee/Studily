@@ -50,9 +50,9 @@ function isUnverified(error: unknown): boolean {
 
 function VerifyPrompt() {
   return (
-    <div className="flex flex-col items-start gap-3 rounded-xl p-4" style={{ background: "var(--surface-hi)" }}>
-      <p className="text-[13px] text-fg-2">Verify your email to add course files for StudilyBot.</p>
-      <Link to="/settings" className="btn btn-primary">
+    <div className="flex flex-wrap items-center gap-2 rounded-xl px-3 py-2" style={{ background: "var(--surface-hi)" }}>
+      <p className="flex-1 text-[12px] text-fg-2">Verify your email to add course files for StudilyBot.</p>
+      <Link to="/settings" className="btn btn-soft text-xs">
         Verify in Settings
       </Link>
     </div>
@@ -209,9 +209,9 @@ export default function FileBankPanel({ courseId }: { courseId: number }) {
   let body: ReactNode;
   if (guest) {
     body = (
-      <div className="flex flex-col items-start gap-3">
-        <p className="text-[13px] text-fg-2">Sign up free to add your own course files for StudilyBot.</p>
-        <Link to="/signup" className="btn btn-primary">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="flex-1 text-[12px] text-fg-2">Sign up free to add your own course files for StudilyBot.</p>
+        <Link to="/signup" className="btn btn-soft text-xs">
           Create a free account
         </Link>
       </div>
@@ -219,37 +219,35 @@ export default function FileBankPanel({ courseId }: { courseId: number }) {
   } else if (!verified) {
     body = <VerifyPrompt />;
   } else if (status.isLoading) {
-    body = <Skeleton height={92} />;
+    body = <Skeleton height={40} />;
   } else if (status.isError) {
     body = <QueryError onRetry={() => status.refetch()} message="Couldn't load the file bank." />;
   } else if (!bankOn) {
-    body = <p className="text-[13px] text-fg-2">File bank isn't set up yet.</p>;
+    body = <p className="text-[12px] text-fg-3">File bank isn't set up yet.</p>;
   } else if (needsVerify) {
     body = <VerifyPrompt />;
   } else {
     body = (
-      <div className="space-y-4">
+      <div className="space-y-2">
         <div
           onDragEnter={onDragEnter}
           onDragOver={(e) => e.preventDefault()}
           onDragLeave={onDragLeave}
           onDrop={onDrop}
-          className="rounded-xl border border-dashed p-5 text-center transition-colors"
+          className="flex items-center gap-2 rounded-xl border border-dashed px-3 py-2 transition-colors"
+          title={`PDF, Word, PowerPoint, text or Markdown · up to ${formatBytes(limits?.maxFileBytes ?? 0)} each`}
           style={{
             borderColor: dragging ? "var(--accent)" : "var(--line)",
             background: dragging ? "color-mix(in srgb, var(--accent) 8%, transparent)" : "transparent",
           }}
         >
-          <Upload className="mx-auto mb-2 text-fg-3" size={22} strokeWidth={1.5} />
-          <p className="text-[13px] text-fg-2">Drop lecture slides, notes, past exams or assignments here</p>
-          <p className="mt-0.5 text-[11px] text-fg-3">
-            PDF, Word, PowerPoint, text or Markdown · up to {formatBytes(limits?.maxFileBytes ?? 0)} each
-          </p>
+          <Upload className="shrink-0 text-fg-3" size={14} />
+          <p className="min-w-0 flex-1 truncate text-[12px] text-fg-2">Drop slides, notes or past exams</p>
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={upload.isPending}
-            className="btn btn-soft mt-3 text-xs"
+            className="btn btn-soft shrink-0 py-1 text-xs"
           >
             {upload.isPending ? "Uploading…" : "Choose files"}
           </button>
@@ -273,7 +271,7 @@ export default function FileBankPanel({ courseId }: { courseId: number }) {
         )}
 
         {files.isLoading ? (
-          <Skeleton height={56} />
+          <Skeleton height={36} />
         ) : files.isError ? (
           isUnverified(files.error) ? (
             <VerifyPrompt />
@@ -281,18 +279,18 @@ export default function FileBankPanel({ courseId }: { courseId: number }) {
             <QueryError onRetry={() => files.refetch()} message="Couldn't load this course's files." />
           )
         ) : (files.data ?? []).length === 0 ? (
-          <p className="text-[13px] text-fg-3">No files yet. StudilyBot answers from the files you add here.</p>
+          <p className="text-[12px] text-fg-3">No files yet. StudilyBot answers from the files you add here.</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-1.5">
             {(files.data ?? []).map((file) => {
               const pill = STATUS_PILL[file.status];
               const unit = /\.pptx$/i.test(file.name) ? "slides" : "pages";
               return (
-                <li key={file.id} className="rounded-xl px-3 py-2.5" style={{ background: "var(--surface-hi)" }}>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                    <FileText size={15} className="shrink-0 text-fg-3" />
+                <li key={file.id} className="rounded-xl px-3 py-1.5" style={{ background: "var(--surface-hi)" }}>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <FileText size={13} className="shrink-0 text-fg-3" />
                     <div className="min-w-0 flex-1 basis-40">
-                      <div className="truncate text-[13px] font-medium text-fg" title={file.name}>
+                      <div className="truncate text-[12px] font-medium text-fg" title={file.name}>
                         {file.name}
                       </div>
                       <div className="text-[11px] text-fg-3">
@@ -311,7 +309,7 @@ export default function FileBankPanel({ courseId }: { courseId: number }) {
                       value={file.kind}
                       disabled={setKind.isPending}
                       onChange={(e) => setKind.mutate({ id: file.id, kind: e.target.value as BankFileKind })}
-                      style={{ width: "auto", padding: "5px 28px 5px 10px", fontSize: 12 }}
+                      style={{ width: "auto", padding: "3px 26px 3px 8px", fontSize: 11 }}
                     >
                       {KINDS.map((kind) => (
                         <option key={kind} value={kind}>
@@ -340,9 +338,9 @@ export default function FileBankPanel({ courseId }: { courseId: number }) {
                       type="button"
                       onClick={() => confirmRemove(file)}
                       aria-label={`Remove ${file.name}`}
-                      className="shrink-0 rounded-md p-1.5 text-fg-3 transition-colors hover:text-red"
+                      className="shrink-0 rounded-md p-1 text-fg-3 transition-colors hover:text-red"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </li>
@@ -357,7 +355,7 @@ export default function FileBankPanel({ courseId }: { courseId: number }) {
   return (
     <section className="space-y-3">
       {header}
-      <div className="card space-y-4 p-4">{body}</div>
+      {body}
     </section>
   );
 }
