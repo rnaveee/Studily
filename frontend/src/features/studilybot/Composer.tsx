@@ -21,6 +21,8 @@ export default function Composer({
   onRemoveAttachment,
   hint = "Enter to send · Shift+Enter for a new line",
   sendLabel = "Send message",
+  sendDisabled = false,
+  trayFooter,
 }: {
   onSend: (text: string) => void;
   busy?: boolean;
@@ -33,13 +35,15 @@ export default function Composer({
   onRemoveAttachment?: (id: string) => void;
   hint?: ReactNode;
   sendLabel?: string;
+  sendDisabled?: boolean;
+  trayFooter?: ReactNode;
 }) {
   const [text, setText] = useState("");
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const blocked = busy || disabled;
-  const canSend = !blocked && (text.trim().length > 0 || attachments.length > 0);
+  const canSend = !blocked && !sendDisabled && (text.trim().length > 0 || attachments.length > 0);
 
   function resize(el: HTMLTextAreaElement) {
     el.style.height = "auto";
@@ -99,7 +103,9 @@ export default function Composer({
                   style={{ background: "var(--surface-hi)", border: "1px solid var(--line)" }}
                 >
                   <FileText size={14} className="shrink-0 text-accent" />
-                  <span className="truncate text-[12px] font-medium text-fg">{item.name}</span>
+                  <span className="truncate text-[12px] font-medium text-fg" title={item.name}>
+                    {item.name}
+                  </span>
                 </div>
               )}
               {onRemoveAttachment && (
@@ -118,6 +124,7 @@ export default function Composer({
           ))}
         </ul>
       )}
+      {attachments.length > 0 && trayFooter && <div className="mx-auto mb-2 max-w-3xl">{trayFooter}</div>}
 
       <div className="mx-auto flex max-w-3xl items-end gap-2">
         {onFiles && (

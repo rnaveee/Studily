@@ -10,6 +10,7 @@ import { useConfirm } from "../../lib/confirm";
 import { formatBytes } from "../../lib/format";
 import { toast } from "../../lib/toast";
 import { bankApi, type BankFile, type BankFileKind, type BankFileStatus } from "./api";
+import { savedFilesMessage } from "./ChatConversation";
 
 const EXTENSIONS = ["pdf", "docx", "pptx", "txt", "md", "markdown"];
 const ACCEPT = ".pdf,.docx,.pptx,.txt,.md,.markdown";
@@ -109,7 +110,7 @@ export default function FileBankPanel({ courseId }: { courseId: number }) {
   const upload = useMutation({
     mutationFn: (picked: File[]) => bankApi.upload(courseId, picked),
     onSuccess: (created) => {
-      toast.success(created.length === 1 ? "Added 1 file" : `Added ${created.length} files`);
+      toast.success(savedFilesMessage(created.map((file) => file.name), null));
       qc.invalidateQueries({ queryKey: filesKey(courseId) });
       qc.invalidateQueries({ queryKey: statusKey });
     },

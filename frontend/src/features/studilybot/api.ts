@@ -59,6 +59,11 @@ export interface Grade {
   solution: string | null;
 }
 
+export interface BotAttachment {
+  fileId: number;
+  name: string;
+}
+
 export interface BotMessage {
   id: number;
   role: BotRole;
@@ -67,6 +72,7 @@ export interface BotMessage {
   citations: Citation[];
   problem: Problem | null;
   grade: Grade | null;
+  attachments?: BotAttachment[];
   createdAt: string;
 }
 
@@ -127,6 +133,7 @@ export const botApi = {
     api.post<BotChat>("/bot/chats", { courseId, parentChatId: parentChatId ?? null }),
   rename: (id: number, title: string) => api.patch<BotChat>(`/bot/chats/${id}`, { title }),
   remove: (id: number) => api.del<void>(`/bot/chats/${id}`),
+  setCourse: (id: number, courseId: number) => api.put<BotChat>(`/bot/chats/${id}/course`, { courseId }),
   uploadToChat: (id: number, files: File[]) => {
     const form = new FormData();
     files.forEach((f) => form.append("files", f));
@@ -151,14 +158,20 @@ export interface StreamHandlers {
   onError: (error: { code: string; message: string }) => void;
 }
 
-export async function streamAnswer(chatId: number, body: string, handlers: StreamHandlers, signal?: AbortSignal) {
+export async function streamAnswer(
+  chatId: number,
+  body: string,
+  handlers: StreamHandlers,
+  signal?: AbortSignal,
+  fileIds: number[] = [],
+) {
   const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "text/event-stream" };
   const token = getToken();
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`/api/bot/chats/${chatId}/messages`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ body }),
+    body: JSON.stringify(fileIds.length ? { body, fileIds } : { body }),
     signal,
   });
   if (!res.ok || !res.body) {

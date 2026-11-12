@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "../../lib/toast";
 import BotLayout from "./BotLayout";
 import Mascot from "./Mascot";
-import ChatConversation, { chatKey } from "./ChatConversation";
+import ChatConversation, { BANK_ACCEPT, SaveToCourse, chatKey, handOffFiles, useStagedFiles } from "./ChatConversation";
+import FileDropZone from "./FileDropZone";
 import Composer from "./Composer";
 import CourseSelect from "./CourseSelect";
 import { botApi } from "./api";
@@ -64,45 +65,73 @@ export default function ChatMode() {
         />
       }
     >
-      {chatId === null ? <NewChat courseId={draftCourse} /> : <OpenChat key={chatId} chatId={chatId} />}
+      {chatId === null ? (
+        <NewChat courseId={draftCourse} onCourse={setDraftCourse} />
+      ) : (
+        <OpenChat key={chatId} chatId={chatId} />
+      )}
     </BotLayout>
   );
 }
 
-function NewChat({ courseId }: { courseId: number | null }) {
+function NewChat({ courseId, onCourse }: { courseId: number | null; onCourse: (id: number | null) => void }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const status = useBotStatus();
+  const botOff = status.data?.enabled === false;
   const create = useMutation({
-    mutationFn: ({ course }: { course: number | null; text: string }) => botApi.createChat(course),
-    onSuccess: (chat, { text }) => {
+    mutationFn: ({ course }: { course: number | null; text: string; files: File[] }) => botApi.createChat(course),
+    onSuccess: (chat, { text, files }) => {
       qc.setQueryData(chatKey(chat.id), chat);
+      handOffFiles(chat.id, files);
       void qc.invalidateQueries({ queryKey: ["bot", "chats"] });
       navigate(`/study/studilybot/chat/${chat.id}`, { state: { initialQuestion: text } });
     },
-    onError: (error) =>
-      toast.error(error instanceof Error && error.message ? error.message : "Couldn't start that chat. Try again."),
+    onError: (error, { files }) => {
+      attach.restore(files);
+      toast.error(error instanceof Error && error.message ? error.message : "Couldn't start that chat. Try again.");
+    },
   });
+  const attach = useStagedFiles(create.isPending);
+  const needsCourse = attach.staged.length > 0 && courseId == null;
+
+  function send(text: string) {
+    if (needsCourse) return;
+    const files = attach.files;
+    attach.clear();
+    create.mutate({ course: courseId, text, files });
+  }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <FileDropZone
+      onFiles={attach.take}
+      disabled={botOff}
+      label="Drop to attach"
+      className="flex min-h-0 flex-1 flex-col"
+    >
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 overflow-y-auto px-6 py-8 text-center">
         <Mascot state="wave" size={88} shadow />
         <div className="space-y-1.5">
           <h1 className="text-xl font-semibold text-fg">What are you working on?</h1>
           <p className="mx-auto max-w-md text-[13px] leading-relaxed text-fg-3">
-            Pick a course at the top to answer from its files, or just ask. Answers point back to the slide or page
-            they came from.
+            Pick a course at the top to answer from its files, or just ask. Drop slides or notes here to attach them.
+            Answers point back to the slide or page they came from.
           </p>
         </div>
       </div>
       <Composer
-        onSend={(text) => create.mutate({ course: courseId, text })}
+        onSend={send}
         busy={create.isPending}
-        disabled={status.data?.enabled === false}
+        disabled={botOff}
         placeholder="Ask StudilyBot anything…"
+        accept={BANK_ACCEPT}
+        onFiles={botOff ? undefined : attach.take}
+        attachments={attach.composerItems}
+        onRemoveAttachment={attach.remove}
+        sendDisabled={needsCourse}
+        trayFooter={needsCourse ? <SaveToCourse value={courseId} onChange={onCourse} /> : null}
       />
-    </div>
+    </FileDropZone>
   );
 }
 
