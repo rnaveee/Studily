@@ -108,8 +108,11 @@ export default function CourseDetailPage() {
       <div className="stagger-item">
         <BackButton fallback="/courses" />
       </div>
+      <div className="card grid lg:grid-cols-3 xl:grid-cols-4">
+      <div className="min-w-0 p-5 lg:col-span-2 xl:col-span-3">
       {editing ? (
         <CourseForm
+          bare
           submitLabel="Save changes"
           initial={{
             name: course.name,
@@ -124,7 +127,7 @@ export default function CourseDetailPage() {
           onCancel={() => setEditing(false)}
         />
       ) : (
-        <div className="card p-5">
+        <>
           <div className="flex items-start gap-2.5">
             <span
               className="mt-2 h-3 w-3 shrink-0 rounded-full"
@@ -194,31 +197,44 @@ export default function CourseDetailPage() {
               );
             })}
           </div>
-        </div>
-      )}
 
-      <GradeCard course={course} items={itemsQ.data ?? []} categories={weightsQ.data ?? []} />
-      <ExamPlansSection items={itemsQ.data ?? []} />
-      <WeightsSection
-        courseId={courseId}
-        categories={weightsQ.data ?? []}
+          <div className="mt-5 grid gap-5 border-t border-line pt-4 lg:grid-cols-2">
+            <NotesSection courseId={courseId} notes={notesQ.data ?? []} />
+            <FileBankPanel courseId={courseId} />
+          </div>
+        </>
+      )}
+      </div>
+
+      <GradeCard
+        course={course}
         items={itemsQ.data ?? []}
+        categories={weightsQ.data ?? []}
         onChange={invalidateAll}
       />
-      <ItemsSection
-        courseId={courseId}
-        items={itemsQ.data ?? []}
-        categories={weightsQ.data ?? []}
-        onChange={invalidateAll}
-      />
-      <FileBankPanel courseId={courseId} />
+      </div>
+
+      <div className="space-y-6 lg:flex lg:items-start lg:gap-6 lg:space-y-0">
+        <div className="min-w-0 lg:flex-[2]">
+          <ItemsSection
+            courseId={courseId}
+            items={itemsQ.data ?? []}
+            categories={weightsQ.data ?? []}
+            onChange={invalidateAll}
+          />
+        </div>
+        <div className="min-w-0 empty:hidden lg:flex-1">
+          <ExamPlansSection items={itemsQ.data ?? []} />
+        </div>
+      </div>
+
       <CourseDocumentImport
         course={course}
         items={itemsQ.data ?? []}
         onChange={invalidateAll}
       />
+
       <ClassmatesSection courseId={courseId} />
-      <NotesSection courseId={courseId} notes={notesQ.data ?? []} />
     </div>
   );
 }
@@ -227,87 +243,97 @@ function GradeCard({
   course,
   items,
   categories,
+  onChange,
 }: {
   course: Course;
   items: AcademicItem[];
   categories: GradeCategory[];
+  onChange: () => void;
 }) {
   const summary = courseGrade(items, categories);
-
-  if (items.length === 0) return null;
-
-  if (summary.percent == null) {
-    return (
-      <div className="card p-4">
-        <div className="text-[13px] font-semibold uppercase tracking-wider text-fg-3">Grade</div>
-        <p className="mt-1.5 text-[13px] text-fg-2">
-          Tap the score chip on any item below to enter what you got. Your grade updates as you go.
-        </p>
-        <div className="mt-3">
-          <GradingFields course={course} />
-        </div>
-      </div>
-    );
-  }
-
   const scale = Math.max(100, summary.totalWeight);
 
   return (
-    <div className="card p-4">
-      <div className="flex items-end justify-between gap-4">
-        <div>
+    <div className="min-w-0 border-t border-line p-5 lg:border-t-0 lg:border-l">
+      {summary.percent == null ? (
+        <>
           <div className="text-[13px] font-semibold uppercase tracking-wider text-fg-3">Grade</div>
-          <div
-            className="mt-0.5 font-mono text-[30px] font-bold leading-none tabular-nums"
-            style={{ color: gradeColor(summary.percent) }}
-          >
-            {formatPercent(summary.percent)}
-          </div>
-        </div>
-        <div className="text-right text-[11px] text-fg-3">
-          {summary.gradedCount} of {summary.itemCount} scored
-          {summary.gradedWeight > 0 && (
-            <div>{Math.round(summary.gradedWeight)}% of the course graded</div>
-          )}
-        </div>
-      </div>
-
-      {summary.gradedWeight > 0 && (
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full" style={{ background: "var(--surface-hi)" }}>
-          <div
-            className="h-full rounded-full transition-all duration-300"
-            style={{
-              width: `${Math.min(100, (summary.gradedWeight / scale) * 100)}%`,
-              background: gradeColor(summary.percent),
-            }}
-          />
-        </div>
-      )}
-
-      <div className="mt-3 space-y-1.5">
-        <GradingFields course={course} />
-        {summary.gradedWeight > 0 && course.targetGrade != null && (
-          <p className="text-[12px] text-fg-2">
-            <NeededGradeText summary={summary} target={course.targetGrade} />
+          <p className="mt-1.5 text-[13px] text-fg-2">
+            {items.length === 0
+              ? "Add your exams and assignments, then tap their score chip to enter what you got. Your grade updates as you go."
+              : "Tap the score chip on any exam or assignment to enter what you got. Your grade updates as you go."}
           </p>
-        )}
-        {course.credits == null && (
-          <p className="text-[11px] text-fg-3">Add credits for an accurate GPA.</p>
-        )}
-      </div>
+          <div className="mt-3">
+            <GradingFields course={course} />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+            <div>
+              <div className="text-[13px] font-semibold uppercase tracking-wider text-fg-3">Grade</div>
+              <div
+                className="mt-0.5 font-mono text-[30px] font-bold leading-none tabular-nums"
+                style={{ color: gradeColor(summary.percent) }}
+              >
+                {formatPercent(summary.percent)}
+              </div>
+            </div>
+            <div className="text-right text-[11px] text-fg-3">
+              {summary.gradedCount} of {summary.itemCount} scored
+              {summary.gradedWeight > 0 && (
+                <div>{Math.round(summary.gradedWeight)}% of the course graded</div>
+              )}
+            </div>
+          </div>
 
-      {summary.gradedWeight === 0 && (
-        <p className="mt-2 text-[12px] text-fg-3">
-          Fill in the Weights section for a weighted grade and projections.
-        </p>
+          {summary.gradedWeight > 0 && (
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full" style={{ background: "var(--surface-hi)" }}>
+              <div
+                className="h-full rounded-full transition-all duration-300"
+                style={{
+                  width: `${Math.min(100, (summary.gradedWeight / scale) * 100)}%`,
+                  background: gradeColor(summary.percent),
+                }}
+              />
+            </div>
+          )}
+
+          <div className="mt-3 space-y-1.5">
+            <GradingFields course={course} />
+            {summary.gradedWeight > 0 && course.targetGrade != null && (
+              <p className="text-[12px] text-fg-2">
+                <NeededGradeText summary={summary} target={course.targetGrade} />
+              </p>
+            )}
+            {course.credits == null && (
+              <p className="text-[11px] text-fg-3">Add credits for an accurate GPA.</p>
+            )}
+          </div>
+
+          {summary.gradedWeight === 0 && (
+            <p className="mt-2 text-[12px] text-fg-3">
+              Fill in the weights below for a weighted grade and projections.
+            </p>
+          )}
+
+          <Link
+            to={`/grade-calculator?course=${course.id}`}
+            className="mt-3 inline-block text-[12px] font-medium text-accent underline underline-offset-2"
+          >
+            Open in grade calculator
+          </Link>
+        </>
       )}
 
-      <Link
-        to={`/grade-calculator?course=${course.id}`}
-        className="mt-3 inline-block text-[12px] font-medium text-accent underline underline-offset-2"
-      >
-        Open in grade calculator
-      </Link>
+      <div className="mt-4 border-t border-line pt-4">
+        <WeightsSection
+          courseId={course.id}
+          categories={categories}
+          items={items}
+          onChange={onChange}
+        />
+      </div>
     </div>
   );
 }
@@ -674,7 +700,7 @@ function NotesSection({ courseId, notes }: { courseId: number; notes: Note[] }) 
       ) : (
         <ul className="space-y-2">
           {notes.map((n) => (
-            <li key={n.id} className="card p-3.5">
+            <li key={n.id} className="rounded-xl p-3.5" style={{ background: "var(--surface-hi)" }}>
               <div className="flex items-start justify-between gap-3">
                 <p className="flex-1 whitespace-pre-wrap text-[13px] text-fg">{n.body}</p>
                 <button

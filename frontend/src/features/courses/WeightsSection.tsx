@@ -106,18 +106,18 @@ export default function WeightsSection({ courseId, categories, items, onChange }
       )}
 
       {categories.length === 0 ? (
-        <p className="text-sm text-fg-3">
+        <p className="text-[13px] text-fg-3">
           Nothing here yet. Add one for each row of your grading scheme, or a plain label like "Lab
           Assignment" with no percentage — or paste your outline below and we'll fill them in.
         </p>
       ) : (
-        <ul className="card divide-y divide-line">
+        <ul className="divide-y divide-line overflow-hidden rounded-xl" style={{ background: "var(--surface-hi)" }}>
           {categories.map((category) => {
             const count = counts.get(category.id) ?? 0;
             const each = category.weight != null && count > 0 ? category.weight / count : null;
 
             return (
-              <li key={category.id} className="px-4 py-2.5 text-[13px]">
+              <li key={category.id} className="px-3 py-2.5 text-[13px]">
                 {editing?.id === category.id ? (
                   <WeightForm
                     initial={category}
