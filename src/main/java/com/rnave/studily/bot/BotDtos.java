@@ -27,23 +27,32 @@ public class BotDtos {
     public record ProblemSecret(String solution, String finalAnswer) {
     }
 
-    public record BotMeta(List<CitationDto> citations, ProblemDto problem, ProblemSecret secret, GradeDto grade) {
+    public record AttachmentDto(long fileId, String name) {
+    }
+
+    public record BotMeta(List<CitationDto> citations, ProblemDto problem, ProblemSecret secret, GradeDto grade,
+                          List<AttachmentDto> attachments) {
 
         public static BotMeta citations(List<CitationDto> citations) {
-            return new BotMeta(citations, null, null, null);
+            return new BotMeta(citations, null, null, null, null);
         }
 
         public static BotMeta problem(ProblemDto problem, ProblemSecret secret) {
-            return new BotMeta(List.of(), problem, secret, null);
+            return new BotMeta(List.of(), problem, secret, null, null);
         }
 
         public static BotMeta grade(GradeDto grade) {
-            return new BotMeta(List.of(), null, null, grade);
+            return new BotMeta(List.of(), null, null, grade, null);
+        }
+
+        public static BotMeta attachments(List<AttachmentDto> attachments) {
+            return new BotMeta(List.of(), null, null, null, attachments);
         }
     }
 
     public record MessageDto(Long id, BotRole role, BotMessageKind kind, String content,
-                             List<CitationDto> citations, ProblemDto problem, GradeDto grade, Instant createdAt) {
+                             List<CitationDto> citations, ProblemDto problem, GradeDto grade,
+                             List<AttachmentDto> attachments, Instant createdAt) {
     }
 
     public record ChatSummaryDto(Long id, BotMode mode, Long courseId, String courseName, String title,
@@ -65,7 +74,10 @@ public class BotDtos {
     public record RenameRequest(@NotBlank @Size(max = 120) String title) {
     }
 
-    public record SendRequest(@NotBlank @Size(max = 4000) String body) {
+    public record SendRequest(@Size(max = 4000) String body, @Size(max = 10) List<Long> fileIds) {
+    }
+
+    public record SetCourseRequest(@NotNull Long courseId) {
     }
 
     public record StartPracticeRequest(@NotNull Long courseId, @NotNull Difficulty difficulty,

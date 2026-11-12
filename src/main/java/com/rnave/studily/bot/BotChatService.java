@@ -8,6 +8,7 @@ import com.anthropic.errors.SseException;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.RawMessageStreamEvent;
 import com.anthropic.models.messages.StopReason;
+import com.rnave.studily.bot.BotDtos.AttachmentDto;
 import com.rnave.studily.bot.BotDtos.BotMeta;
 import com.rnave.studily.bot.BotDtos.ChatDto;
 import com.rnave.studily.bot.BotDtos.ChatSummaryDto;
@@ -24,6 +25,7 @@ import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.course.Course;
 import com.rnave.studily.course.CourseRepository;
+import com.rnave.studily.filebank.BankFile;
 import com.rnave.studily.filebank.BankFileDto;
 import com.rnave.studily.filebank.BankService;
 import com.rnave.studily.parse.AiFeature;
@@ -70,6 +72,7 @@ public class BotChatService {
             "I can't help with that one. Try rephrasing the question, or ask about a different part of your notes.";
     static final String EMPTY_ANSWER = "I couldn't put an answer together for that. Try rewording the question.";
     static final String CHAT_FILES_SCOPE = "the files attached to this chat";
+    static final int MAX_ATTACHMENTS = 10;
 
     record Turn(long userId, long chatId, String question, Scope scope, String scopeLabel,
                 List<HistoryTurn> history) {
@@ -169,7 +172,11 @@ public class BotChatService {
     }
 
     public SseEmitter send(long chatId, String body) {
-        Turn turn = open(chatId, body);
+        return send(chatId, body, List.of());
+    }
+
+    public SseEmitter send(long chatId, String body, List<Long> fileIds) {
+        Turn turn = open(chatId, body, fileIds);
         SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MS);
         SseSink sink = new SseSink(emitter);
         try {
@@ -191,28 +198,58 @@ public class BotChatService {
                 ready == null ? 0L : ready);
     }
 
+    @Transactional
+    public ChatDto setCourse(long chatId, long courseId) {
+        long userId = currentUser.id();
+        BotChat chat = owned(chatId);
+        if (chat.getMode() != BotMode.CHAT || chat.isTemporary()) {
+            throw new BadRequestException("Only a regular chat can be moved to a course.");
+        }
+        if (chat.getCourseId() != null) {
+            if (chat.getCourseId() == courseId) {
+                return detail(chat);
+            }
+            throw new BadRequestException("This chat already belongs to a course. Start a new chat for another one.");
+        }
+        requireCourse(userId, courseId);
+        bank.moveChatFilesToCourse(userId, chatId, courseId);
+        chat.setCourseId(courseId);
+        chat.setUpdatedAt(Instant.now());
+        return detail(chats.save(chat));
+    }
+
     Turn open(long chatId, String body) {
+        return open(chatId, body, List.of());
+    }
+
+    Turn open(long chatId, String body, List<Long> fileIds) {
         long userId = currentUser.id();
         BotChat chat = owned(chatId);
         if (chat.getMode() != BotMode.CHAT) {
             throw new BadRequestException("Practice answers go through the answer box.");
+        }
+        String text = body == null ? "" : body.strip();
+        List<AttachmentDto> attached = attachments(chat, fileIds);
+        if (text.isEmpty() && attached.isEmpty()) {
+            throw new BadRequestException("Write something to send.");
         }
         limits.check(BotMode.CHAT);
         if (!inFlight.add(chatId)) {
             throw new TooManyRequestsException("StudilyBot is still answering in this chat. Wait for it to finish first.");
         }
         try {
-            String question = body.strip();
+            String question = text.isEmpty() ? overviewQuestion(attached) : text;
             List<BotMessage> previous = messages.findByChatIdOrderByIdAsc(chatId);
             boolean firstQuestion = previous.stream().noneMatch(message -> message.getRole() == BotRole.USER);
-            messages.save(newMessage(chatId, BotRole.USER, question, null));
+            messages.save(newMessage(chatId, BotRole.USER, text,
+                    attached.isEmpty() ? null : botMessages.write(BotMeta.attachments(attached))));
             if (firstQuestion && untitled(chat.getTitle())) {
-                chat.setTitle(titleFrom(question));
+                chat.setTitle(titleFrom(text.isEmpty() ? attached.getFirst().name() : text));
             }
             chat.setUpdatedAt(Instant.now());
             chats.save(chat);
             return new Turn(userId, chatId, clip(question, MAX_QUESTION_CHARS), scopeOf(chat, userId),
-                    scopeLabel(chat, userId), history(previous));
+                    scopeLabel(chat, userId), history(previous, botMessages));
         } catch (RuntimeException e) {
             inFlight.remove(chatId);
             throw e;
@@ -358,11 +395,49 @@ public class BotChatService {
         return message;
     }
 
-    private static List<HistoryTurn> history(List<BotMessage> previous) {
+    private List<AttachmentDto> attachments(BotChat chat, List<Long> fileIds) {
+        if (fileIds == null || fileIds.isEmpty()) {
+            return List.of();
+        }
+        if (fileIds.size() > MAX_ATTACHMENTS) {
+            throw new BadRequestException("Attach up to " + MAX_ATTACHMENTS + " files to one message.");
+        }
+        if (chat.isTemporary()) {
+            throw new BadRequestException("Help chats can't take file uploads.");
+        }
+        List<BankFile> owned = bank.ownedFiles(fileIds);
+        for (BankFile file : owned) {
+            boolean inScope = chat.getCourseId() != null
+                    ? chat.getCourseId().equals(file.getCourseId())
+                    : chat.getId().equals(file.getChatId());
+            if (!inScope) {
+                throw new BadRequestException("Attach files from this chat's file bank.");
+            }
+        }
+        return owned.stream().map(file -> new AttachmentDto(file.getId(), file.getName())).toList();
+    }
+
+    static String overviewQuestion(List<AttachmentDto> attached) {
+        String names = String.join(", ", attached.stream().map(AttachmentDto::name).toList());
+        return "I just added " + names + ". Give me a short overview of what's in it.";
+    }
+
+    private static List<HistoryTurn> history(List<BotMessage> previous, BotMessages botMessages) {
         List<HistoryTurn> turns = previous.stream()
-                .map(message -> new HistoryTurn(message.getRole() == BotRole.USER, message.getContent()))
+                .map(message -> new HistoryTurn(message.getRole() == BotRole.USER, historyText(message, botMessages)))
                 .toList();
         return turns.subList(Math.max(0, turns.size() - HISTORY_MESSAGES), turns.size());
+    }
+
+    private static String historyText(BotMessage message, BotMessages botMessages) {
+        if (message.getRole() != BotRole.USER || !message.getContent().isBlank()) {
+            return message.getContent();
+        }
+        BotMeta meta = botMessages.read(message.getMeta());
+        if (meta == null || meta.attachments() == null || meta.attachments().isEmpty()) {
+            return message.getContent();
+        }
+        return overviewQuestion(meta.attachments());
     }
 
     private static boolean untitled(String title) {

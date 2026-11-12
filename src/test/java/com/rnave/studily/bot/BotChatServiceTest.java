@@ -6,6 +6,7 @@ import com.anthropic.core.http.StreamResponse;
 import com.anthropic.models.messages.MessageCreateParams;
 import com.anthropic.models.messages.RawMessageStreamEvent;
 import com.anthropic.services.blocking.MessageService;
+import com.rnave.studily.bot.BotDtos.AttachmentDto;
 import com.rnave.studily.bot.BotDtos.ChatDto;
 import com.rnave.studily.bot.BotDtos.ChatSummaryDto;
 import com.rnave.studily.bot.BotDtos.CitationDto;
@@ -18,6 +19,7 @@ import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.course.Course;
 import com.rnave.studily.course.CourseRepository;
+import com.rnave.studily.filebank.BankFile;
 import com.rnave.studily.filebank.BankFileKind;
 import com.rnave.studily.filebank.BankService;
 import com.rnave.studily.parse.AiFeature;
@@ -51,6 +53,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -439,6 +442,106 @@ class BotChatServiceTest {
 
         service.delete(chat.getId());
         assertThatThrownBy(() -> service.get(chat.getId())).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void attachedFilesMustComeFromTheChatsOwnBank() {
+        BotChat chat = chat(BotMode.CHAT, 5L, false);
+        when(bank.ownedFiles(List.of(21L))).thenReturn(List.of(bankFile(21L, "Other.pdf", 6L, null)));
+
+        assertThatThrownBy(() -> service.open(chat.getId(), "What is this?", List.of(21L)))
+                .isInstanceOf(BadRequestException.class);
+
+        assertThat(thread).isEmpty();
+        verify(limits, never()).check(any());
+    }
+
+    @Test
+    void someoneElsesFileIsNotFoundBeforeAnythingIsSaved() {
+        BotChat chat = chat(BotMode.CHAT, 5L, false);
+        when(bank.ownedFiles(List.of(21L))).thenThrow(new NotFoundException("File not found"));
+
+        assertThatThrownBy(() -> service.open(chat.getId(), "hi", List.of(21L)))
+                .isInstanceOf(NotFoundException.class);
+
+        assertThat(thread).isEmpty();
+    }
+
+    @Test
+    void aBlankMessageNeedsAnAttachment() {
+        BotChat chat = chat(BotMode.CHAT, 5L, false);
+
+        assertThatThrownBy(() -> service.open(chat.getId(), "   ", List.of()))
+                .isInstanceOf(BadRequestException.class);
+
+        assertThat(thread).isEmpty();
+        verify(limits, never()).check(any());
+    }
+
+    @Test
+    void anAttachmentOnlyMessageAsksForAnOverviewAndKeepsTheFilesOnTheMessage() {
+        BotChat chat = chat(BotMode.CHAT, 5L, false);
+        when(bank.ownedFiles(List.of(21L))).thenReturn(List.of(bankFile(21L, "Lecture 9.pdf", 5L, null)));
+
+        BotChatService.Turn turn = service.open(chat.getId(), "  ", List.of(21L));
+
+        assertThat(turn.question()).contains("Lecture 9.pdf");
+        BotMessage sent = thread.getFirst();
+        assertThat(sent.getContent()).isEmpty();
+        assertThat(store.get(chat.getId()).getTitle()).isEqualTo("Lecture 9.pdf");
+        MessageDto shown = service.get(chat.getId()).messages().getFirst();
+        assertThat(shown.attachments()).containsExactly(new AttachmentDto(21L, "Lecture 9.pdf"));
+    }
+
+    @Test
+    void aChatWithNoCourseTakesFilesFromItsOwnBank() {
+        BotChat loose = chat(BotMode.CHAT, null, false);
+        when(bank.ownedFiles(List.of(22L))).thenReturn(List.of(bankFile(22L, "notes.md", null, loose.getId())));
+
+        BotChatService.Turn turn = service.open(loose.getId(), "Summarise", List.of(22L));
+
+        assertThat(turn.question()).isEqualTo("Summarise");
+        assertThat(service.get(loose.getId()).messages().getFirst().attachments())
+                .containsExactly(new AttachmentDto(22L, "notes.md"));
+    }
+
+    @Test
+    void aChatWithNoCourseAdoptsOneAndBringsItsFilesAlong() {
+        BotChat loose = chat(BotMode.CHAT, null, false);
+
+        ChatDto moved = service.setCourse(loose.getId(), 5L);
+
+        assertThat(moved.courseId()).isEqualTo(5L);
+        assertThat(store.get(loose.getId()).getCourseId()).isEqualTo(5L);
+        verify(bank).moveChatFilesToCourse(USER, loose.getId(), 5L);
+    }
+
+    @Test
+    void onlyAPlainChatWithoutACourseCanAdoptAnOwnedCourse() {
+        BotChat inCourse = chat(BotMode.CHAT, 5L, false);
+        BotChat help = chat(BotMode.CHAT, null, true);
+        BotChat practice = chat(BotMode.PRACTICE, null, false);
+        BotChat loose = chat(BotMode.CHAT, null, false);
+        when(courses.findByIdAndUserId(8L, USER)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.setCourse(inCourse.getId(), 6L)).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.setCourse(help.getId(), 5L)).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.setCourse(practice.getId(), 5L)).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.setCourse(loose.getId(), 8L)).isInstanceOf(NotFoundException.class);
+        assertThat(service.setCourse(inCourse.getId(), 5L).courseId()).isEqualTo(5L);
+
+        assertThat(store.get(loose.getId()).getCourseId()).isNull();
+        verify(bank, never()).moveChatFilesToCourse(anyLong(), anyLong(), anyLong());
+    }
+
+    private static BankFile bankFile(long id, String name, Long courseId, Long chatId) {
+        BankFile file = new BankFile();
+        file.setId(id);
+        file.setUserId(USER);
+        file.setName(name);
+        file.setCourseId(courseId);
+        file.setChatId(chatId);
+        return file;
     }
 
     private BotChat chat(BotMode mode, Long courseId, boolean temporary) {

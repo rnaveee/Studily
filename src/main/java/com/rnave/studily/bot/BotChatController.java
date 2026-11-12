@@ -5,6 +5,7 @@ import com.rnave.studily.bot.BotDtos.ChatSummaryDto;
 import com.rnave.studily.bot.BotDtos.CreateChatRequest;
 import com.rnave.studily.bot.BotDtos.RenameRequest;
 import com.rnave.studily.bot.BotDtos.SendRequest;
+import com.rnave.studily.bot.BotDtos.SetCourseRequest;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.SlidingWindowRateLimiter;
 import com.rnave.studily.config.TooManyRequestsException;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -86,7 +88,12 @@ public class BotChatController {
         limit();
         response.setHeader("Cache-Control", "no-cache");
         response.setHeader("X-Accel-Buffering", "no");
-        return service.send(id, request.body());
+        return service.send(id, request.body(), request.fileIds());
+    }
+
+    @PutMapping("/{id}/course")
+    public ChatDto setCourse(@PathVariable long id, @Valid @RequestBody SetCourseRequest request) {
+        return service.setCourse(id, request.courseId());
     }
 
     private void limit() {

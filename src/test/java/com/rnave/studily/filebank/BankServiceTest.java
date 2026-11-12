@@ -32,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
@@ -440,6 +441,46 @@ class BankServiceTest {
         when(previews.render(BankFormat.PDF, "deck.pdf", bytes, 2)).thenReturn(png);
 
         assertThat(service.previewPng(22L, 2)).isEqualTo(png);
+    }
+
+    @Test
+    void movingAChatsFilesToACourseRescopesTheRowsAndChunksAndDropsCopiesTheCourseAlreadyHas() {
+        BankFile fresh = chatFile(51L, "fresh-sha");
+        BankFile duplicate = chatFile(52L, "dup-sha");
+        when(files.findByChatIdAndUserIdOrderByCreatedAtDesc(CHAT, USER)).thenReturn(List.of(fresh, duplicate));
+        when(files.findByCourseIdAndSha256(COURSE, "dup-sha")).thenReturn(Optional.of(fileWithId(99L)));
+
+        service.moveChatFilesToCourse(USER, CHAT, COURSE);
+
+        assertThat(fresh.getCourseId()).isEqualTo(COURSE);
+        assertThat(fresh.getChatId()).isNull();
+        verify(files).save(fresh);
+        verify(files).delete(duplicate);
+        verify(files, never()).save(duplicate);
+        verify(jdbc).update(contains("UPDATE bank_chunks"), eq(COURSE), eq(USER), eq(CHAT));
+    }
+
+    @Test
+    void movingAChatsFilesWaitsUntilNoneAreStillBeingRead() {
+        BankFile reading = chatFile(53L, "sha");
+        reading.setStatus(BankFileStatus.PROCESSING);
+        when(files.findByChatIdAndUserIdOrderByCreatedAtDesc(CHAT, USER)).thenReturn(List.of(reading));
+
+        assertThatThrownBy(() -> service.moveChatFilesToCourse(USER, CHAT, COURSE))
+                .isInstanceOf(BadRequestException.class);
+
+        assertThat(reading.getChatId()).isEqualTo(CHAT);
+        verify(files, never()).save(any());
+        verify(jdbc, never()).update(contains("UPDATE bank_chunks"), any(), any(), any());
+    }
+
+    private static BankFile chatFile(long id, String sha) {
+        BankFile file = fileWithId(id);
+        file.setUserId(USER);
+        file.setChatId(CHAT);
+        file.setSha256(sha);
+        file.setStatus(BankFileStatus.READY);
+        return file;
     }
 
     private BankService service(long maxFileBytes, int maxFilesPerRequest, int maxFilesPerUser, long quotaBytes) {

@@ -209,6 +209,28 @@ public class BankService {
         files.delete(owned(id));
     }
 
+    @Transactional
+    public void moveChatFilesToCourse(long userId, long chatId, long courseId) {
+        jdbc.queryForObject("SELECT pg_advisory_xact_lock(?)", Object.class, userId);
+        List<BankFile> chatFiles = files.findByChatIdAndUserIdOrderByCreatedAtDesc(chatId, userId);
+        if (chatFiles.stream().anyMatch(file -> file.getStatus() == BankFileStatus.QUEUED
+                || file.getStatus() == BankFileStatus.PROCESSING)) {
+            throw new BadRequestException("StudilyBot is still reading this chat's files. Try again in a moment.");
+        }
+        for (BankFile file : chatFiles) {
+            if (files.findByCourseIdAndSha256(courseId, file.getSha256()).isPresent()) {
+                files.delete(file);
+                continue;
+            }
+            file.setChatId(null);
+            file.setCourseId(courseId);
+            files.save(file);
+        }
+        files.flush();
+        jdbc.update("UPDATE bank_chunks SET course_id = ?, chat_id = NULL WHERE user_id = ? AND chat_id = ?",
+                courseId, userId, chatId);
+    }
+
     public byte[] previewPng(Long id, int page) {
         BankFile file = owned(id);
         if (!file.getFormat().previewable()) {
