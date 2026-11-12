@@ -49,7 +49,7 @@ class AnswerAccumulatorTest {
         assertThat(answer.text()).isEqualTo("Power is P = VI.");
         assertThat(pieces).containsExactly("Power is ", "P = VI.");
         assertThat(answer.citations()).containsExactly(
-                new CitationDto(0, 3, "Lecture 5.pdf", 12, 12, "P = VI", true));
+                new CitationDto(0, 3, "Lecture 5.pdf", 12, 12, "P = VI", true, 16));
         assertThat(answer.stopReason()).isEqualTo(StopReason.END_TURN);
         assertThat(answer.inputTokens()).isEqualTo(1200);
         assertThat(answer.outputTokens()).isEqualTo(42);
@@ -67,6 +67,33 @@ class AnswerAccumulatorTest {
                 {"type":"content_block_stop","index":0}"""));
 
         assertThat(answer.citations()).extracting(CitationDto::quote).containsExactly("P = VI", "rate of energy");
+    }
+
+    @Test
+    void eachCitationRemembersWhereItsBlockEndsAndARepeatKeepsItsFirstPlace() throws Exception {
+        AnswerAccumulator answer = new AnswerAccumulator(CHUNKS);
+        answer.accept(event(textBlockStart()));
+        answer.accept(event(textDelta("Intro. ")));
+        answer.accept(event("""
+                {"type":"content_block_stop","index":0}"""));
+        answer.accept(event(textBlockStart()));
+        answer.accept(event(citationDelta(0, "P = VI")));
+        answer.accept(event(textDelta("Power is P = VI.")));
+        answer.accept(event("""
+                {"type":"content_block_stop","index":0}"""));
+        answer.accept(event(textBlockStart()));
+        answer.accept(event(citationDelta(0, "P = VI")));
+        answer.accept(event(textDelta(" Again, P = VI.")));
+        answer.accept(event("""
+                {"type":"content_block_stop","index":0}"""));
+
+        assertThat(answer.citations()).singleElement()
+                .satisfies(c -> assertThat(c.offset()).isEqualTo("Intro. Power is P = VI.".length()));
+    }
+
+    private static String textDelta(String text) {
+        return """
+                {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"%s"}}""".formatted(text);
     }
 
     @Test

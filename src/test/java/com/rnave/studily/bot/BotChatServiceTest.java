@@ -306,7 +306,7 @@ class BotChatServiceTest {
         assertThat(reply.getMeta()).contains("Lecture 8.pdf").contains("\"secret\":null");
 
         MessageDto shown = service.get(chat.getId()).messages().getLast();
-        assertThat(shown.citations()).containsExactly(new CitationDto(0, 3, "Lecture 8.pdf", 12, 12, "P = VI", true));
+        assertThat(shown.citations()).containsExactly(new CitationDto(0, 3, "Lecture 8.pdf", 12, 12, "P = VI", true, 16));
     }
 
     @Test

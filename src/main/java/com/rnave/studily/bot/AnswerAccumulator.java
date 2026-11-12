@@ -9,6 +9,7 @@ import com.rnave.studily.rag.RetrievedChunk;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 final class AnswerAccumulator {
 
@@ -60,8 +61,10 @@ final class AnswerAccumulator {
                 if (index < 0 || index >= chunks.size()) {
                     continue;
                 }
-                CitationDto citation = toCitation(index, location.citedText());
-                if (!citations.contains(citation)) {
+                CitationDto citation = toCitation(index, location.citedText(), text.length());
+                boolean seen = citations.stream()
+                        .anyMatch(c -> c.index() == citation.index() && Objects.equals(c.quote(), citation.quote()));
+                if (!seen) {
                     citations.add(citation);
                 }
             }
@@ -77,10 +80,10 @@ final class AnswerAccumulator {
         return pieces;
     }
 
-    private CitationDto toCitation(int index, String citedText) {
+    private CitationDto toCitation(int index, String citedText, int offset) {
         RetrievedChunk chunk = chunks.get(index);
         return new CitationDto(index, chunk.fileId(), chunk.fileName(), chunk.pageFrom(), chunk.pageTo(),
-                citedText, chunk.previewable());
+                citedText, chunk.previewable(), offset);
     }
 
     String text() {

@@ -41,6 +41,9 @@ public class FeynmanMessage {
     @Column(nullable = false, columnDefinition = "text")
     private String body;
 
+    @Column(length = 200)
+    private String concept;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 }

@@ -20,7 +20,11 @@ public class FeynmanDtos {
                               Long bankFileId) {
     }
 
-    public record MessageDto(Long id, FeynmanRole role, FeynmanKind kind, String body, Instant createdAt) {
+    public record SlideDto(long fileId, String fileName, int page) {
+    }
+
+    public record MessageDto(Long id, FeynmanRole role, FeynmanKind kind, String body, SlideDto slide,
+                             Instant createdAt) {
     }
 
     public record SessionDto(Long id, String title, String focus, Long courseId, String courseName,

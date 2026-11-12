@@ -17,6 +17,7 @@ import com.rnave.studily.feynman.FeynmanDtos.MessageDto;
 import com.rnave.studily.feynman.FeynmanDtos.ReportDto;
 import com.rnave.studily.feynman.FeynmanDtos.SessionDto;
 import com.rnave.studily.feynman.FeynmanDtos.SessionSummaryDto;
+import com.rnave.studily.feynman.FeynmanDtos.SlideDto;
 import com.rnave.studily.feynman.FeynmanDtos.TurnDto;
 import com.rnave.studily.filebank.BankFile;
 import com.rnave.studily.filebank.BankService;
@@ -35,6 +36,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -151,7 +153,7 @@ public class FeynmanService {
             for (Material m : material) {
                 saveDocument(session, m);
             }
-            saveMessage(session, FeynmanRole.BOT, FeynmanKind.CHAT, opening(plan));
+            saveMessage(session, FeynmanRole.BOT, FeynmanKind.CHAT, opening(plan), firstConcept(plan));
             return dto(session);
         });
     }
@@ -191,7 +193,7 @@ public class FeynmanService {
             for (FeynmanMessage m : messages.findBySessionIdOrderByIdAsc(id)) {
                 messages.delete(m);
             }
-            saveMessage(session, FeynmanRole.BOT, FeynmanKind.CHAT, opening(plan));
+            saveMessage(session, FeynmanRole.BOT, FeynmanKind.CHAT, opening(plan), firstConcept(plan));
             return dto(session);
         });
     }
@@ -221,12 +223,17 @@ public class FeynmanService {
             }
             FeynmanTurn turn = outcome.result();
 
+            Map<String, SlideDto> slides = slides(plan, documents.findBySessionIdOrderByIdAsc(id));
+            String focus = FeynmanScoring.matchConcept(plan, turn.focusConcept())
+                    .or(() -> FeynmanScoring.matchConcept(plan, turn.concept()))
+                    .orElse(null);
             List<MessageDto> out = new ArrayList<>();
             FeynmanMessage studentMessage = saveMessage(session, FeynmanRole.USER, FeynmanKind.CHAT, text);
-            out.add(dto(studentMessage));
+            out.add(dto(studentMessage, slides));
             for (String bubble : turn.messages()) {
                 if (bubble != null && !bubble.isBlank()) {
-                    out.add(dto(saveMessage(session, FeynmanRole.BOT, FeynmanKind.CHAT, bubble.strip())));
+                    out.add(dto(saveMessage(session, FeynmanRole.BOT, FeynmanKind.CHAT, bubble.strip(), focus),
+                            slides));
                 }
             }
             if (turn.assessed()) {
@@ -299,13 +306,15 @@ public class FeynmanService {
         session.setStatus(FeynmanStatus.COMPLETE);
         session.setScore(score);
         touch(session);
-        return new TurnDto(List.of(dto(saved)), FeynmanStatus.COMPLETE, score);
+        return new TurnDto(List.of(dto(saved, Map.of())), FeynmanStatus.COMPLETE, score);
     }
 
     private FeynmanPlan buildPlan(User user, List<Material> material, String focus) {
         StringBuilder text = new StringBuilder();
-        for (Material m : material) {
-            text.append("Document: ").append(m.fileName()).append("\n\n").append(m.text()).append("\n\n");
+        for (int i = 0; i < material.size(); i++) {
+            Material m = material.get(i);
+            text.append("Document ").append(i + 1).append(": ").append(m.fileName()).append("\n\n")
+                    .append(m.text()).append("\n\n");
         }
         Outcome<FeynmanPlan> outcome = tutor.plan(text.toString().strip(), focus);
         record(user, outcome);
@@ -494,12 +503,61 @@ public class FeynmanService {
     }
 
     private FeynmanMessage saveMessage(FeynmanSession session, FeynmanRole role, FeynmanKind kind, String body) {
+        return saveMessage(session, role, kind, body, null);
+    }
+
+    private FeynmanMessage saveMessage(FeynmanSession session, FeynmanRole role, FeynmanKind kind, String body,
+                                       String concept) {
         FeynmanMessage message = new FeynmanMessage();
         message.setSession(session);
         message.setRole(role);
         message.setKind(kind);
         message.setBody(body);
+        message.setConcept(concept);
         return messages.save(message);
+    }
+
+    private static String firstConcept(FeynmanPlan plan) {
+        return plan.concepts().get(0).name();
+    }
+
+    static Map<String, SlideDto> slides(FeynmanPlan plan, List<FeynmanDocument> docs) {
+        Map<String, SlideDto> out = new HashMap<>();
+        if (plan == null || plan.concepts() == null) {
+            return out;
+        }
+        for (FeynmanPlan.Concept concept : plan.concepts()) {
+            if (concept == null || concept.name() == null || concept.document() == null || concept.page() == null) {
+                continue;
+            }
+            int index = concept.document() - 1;
+            if (index < 0 || index >= docs.size() || concept.page() < 1) {
+                continue;
+            }
+            FeynmanDocument doc = docs.get(index);
+            if (doc.getBankFileId() == null || !previewable(doc.getFileName())) {
+                continue;
+            }
+            out.put(concept.name(), new SlideDto(doc.getBankFileId(), doc.getFileName(), concept.page()));
+        }
+        return out;
+    }
+
+    private static boolean previewable(String fileName) {
+        String lower = fileName == null ? "" : fileName.toLowerCase(Locale.ROOT);
+        return lower.endsWith(".pdf") || lower.endsWith(".pptx");
+    }
+
+    private Map<String, SlideDto> slidesFor(FeynmanSession session, List<FeynmanDocument> docs) {
+        if (session.getPlan() == null) {
+            return Map.of();
+        }
+        try {
+            return slides(plan(session), docs);
+        } catch (RuntimeException e) {
+            log.warn("Could not read the plan for session {}: {}", session.getId(), e.getMessage());
+            return Map.of();
+        }
     }
 
     private void record(User user, Outcome<?> outcome) {
@@ -512,11 +570,15 @@ public class FeynmanService {
     }
 
     private SessionDto dto(FeynmanSession s) {
-        List<DocumentDto> docs = documents.findBySessionIdOrderByIdAsc(s.getId()).stream()
+        List<FeynmanDocument> stored = documents.findBySessionIdOrderByIdAsc(s.getId());
+        Map<String, SlideDto> slides = slidesFor(s, stored);
+        List<DocumentDto> docs = stored.stream()
                 .map(d -> new DocumentDto(d.getId(), d.getFileName(), d.getSizeBytes(), d.getContent().length(),
                         d.getCreatedAt(), d.getBankFileId()))
                 .toList();
-        List<MessageDto> msgs = messages.findBySessionIdOrderByIdAsc(s.getId()).stream().map(FeynmanService::dto).toList();
+        List<MessageDto> msgs = messages.findBySessionIdOrderByIdAsc(s.getId()).stream()
+                .map(m -> dto(m, slides))
+                .toList();
         return new SessionDto(s.getId(), s.getTitle(), s.getFocus(), s.getCourseId(), courseName(s.getCourseId()),
                 s.getStatus(), s.getScore(), docs, msgs);
     }
@@ -526,7 +588,8 @@ public class FeynmanService {
                 : courses.findByIdAndUserId(courseId, currentUser.id()).map(Course::getName).orElse(null);
     }
 
-    private static MessageDto dto(FeynmanMessage m) {
-        return new MessageDto(m.getId(), m.getRole(), m.getKind(), m.getBody(), m.getCreatedAt());
+    private static MessageDto dto(FeynmanMessage m, Map<String, SlideDto> slides) {
+        SlideDto slide = m.getRole() == FeynmanRole.BOT && m.getConcept() != null ? slides.get(m.getConcept()) : null;
+        return new MessageDto(m.getId(), m.getRole(), m.getKind(), m.getBody(), slide, m.getCreatedAt());
     }
 }

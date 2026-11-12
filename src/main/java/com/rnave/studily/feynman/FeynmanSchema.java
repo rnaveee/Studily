@@ -46,6 +46,10 @@ final class FeynmanSchema {
         concept.put("misconceptions", array(Map.of("type", "string"),
                 "Mistakes students commonly make about it. Empty when none are likely."));
         concept.put("source", nullable("string", "Where it is in the material, such as \"Slide 4\"."));
+        concept.put("document", nullable("integer",
+                "The number N from the \"Document N:\" heading of the document that teaches this concept."));
+        concept.put("page", nullable("integer",
+                "The number of the one page or slide in that document that best shows this concept, from its \"=== Slide N ===\" or \"=== Page N ===\" marker. Null when the document has no such markers."));
 
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("topic", Map.of("type", "string",
@@ -69,6 +73,8 @@ final class FeynmanSchema {
                 "description", "True only when the student said they didn't know the concept."));
         properties.put("messages", array(Map.of("type", "string"),
                 "Your chat bubbles in order, one to three."));
+        properties.put("focusConcept", nullable("string",
+                "The plan concept your bubbles are about: the one you're explaining, following up on or asking the student to explain next, written exactly as in the plan."));
         properties.put("lectureComplete", Map.of("type", "boolean",
                 "description", "True when every concept in the plan has been assessed and the session is over."));
         return object(properties);

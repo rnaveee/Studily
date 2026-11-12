@@ -15,7 +15,12 @@ public class BotDtos {
     }
 
     public record CitationDto(int index, long fileId, String fileName, Integer page, Integer pageTo,
-                              String quote, boolean previewable) {
+                              String quote, boolean previewable, Integer offset) {
+
+        public CitationDto(int index, long fileId, String fileName, Integer page, Integer pageTo,
+                           String quote, boolean previewable) {
+            this(index, fileId, fileName, page, pageTo, quote, previewable, null);
+        }
     }
 
     public record ProblemDto(int number, String statement, boolean fromClass, List<CitationDto> sources) {

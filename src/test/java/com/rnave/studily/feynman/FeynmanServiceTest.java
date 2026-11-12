@@ -270,6 +270,20 @@ class FeynmanServiceTest {
     }
 
     @Test
+    void start_numbersTheDocumentsForThePlanAndTagsTheOpeningWithTheFirstConcept() {
+        when(bankService.ownedFiles(List.of(11L))).thenReturn(List.of(bankFile(11L, 5L, "A.pdf")));
+        when(tutor.plan(anyString(), any())).thenReturn(ok(PLAN, "m"));
+
+        service.start(5L, null, null, files("c.txt"), List.of(11L));
+
+        ArgumentCaptor<String> material = ArgumentCaptor.forClass(String.class);
+        verify(tutor).plan(material.capture(), any());
+        assertThat(material.getValue()).startsWith("Document 1: c.txt").contains("Document 2: A.pdf");
+        assertThat(savedMessages).singleElement()
+                .satisfies(m -> assertThat(m.getConcept()).isEqualTo("Newton's first law"));
+    }
+
+    @Test
     void start_rejectsTooMuchMaterialBeforeCallingTheModelOrSavingToTheBank() {
         when(reader.readText(anyString(), any())).thenReturn("x".repeat(FeynmanService.MAX_MATERIAL_CHARS + 1));
 
@@ -395,6 +409,51 @@ class FeynmanServiceTest {
         assertThatThrownBy(() -> service.get(99L)).isInstanceOf(NotFoundException.class);
         assertThatThrownBy(() -> service.delete(99L)).isInstanceOf(NotFoundException.class);
         verify(sessions, never()).delete(any());
+    }
+
+    @Test
+    void send_tagsTheBotBubblesWithTheConceptTheyAreAboutAndShowsItsSlide() {
+        FeynmanSession session = activeSession();
+        session.setPlan(ClaudeFeynmanTutor.JSON.writeValueAsString(new FeynmanPlan("Newton's laws", List.of(
+                new FeynmanPlan.Concept("Newton's first law", "s", List.of("inertia"), List.of(), "Slide 2", 1, 2),
+                new FeynmanPlan.Concept("Newton's second law", "s", List.of("F = ma"), List.of(), "Slide 3", 1, 3)))));
+        savedDocs.add(document(1L, "Lecture 2.pptx", 41L));
+        when(tutor.turn(any(), any(), any(), eq("no idea"))).thenReturn(ok(new FeynmanTurn(true,
+                "Newton's first law", 0, List.of(), true, List.of("It means things keep moving."), false,
+                "newton's SECOND law"), "claude-haiku-5-5"));
+
+        TurnDto dto = service.send(1L, "no idea");
+
+        assertThat(dto.messages().get(0).slide()).isNull();
+        assertThat(dto.messages().get(1).slide()).isEqualTo(new FeynmanDtos.SlideDto(41L, "Lecture 2.pptx", 3));
+        assertThat(savedMessages.getLast().getConcept()).isEqualTo("Newton's second law");
+        assertThat(service.get(1L).messages().getLast().slide()).isEqualTo(dto.messages().get(1).slide());
+    }
+
+    @Test
+    void slides_skipConceptsWithoutAPreviewablePageInALinkedFile() {
+        FeynmanPlan plan = new FeynmanPlan("t", List.of(
+                new FeynmanPlan.Concept("A", "s", List.of(), List.of(), null, 1, 4),
+                new FeynmanPlan.Concept("B", "s", List.of(), List.of(), null, 2, 1),
+                new FeynmanPlan.Concept("C", "s", List.of(), List.of(), null, 3, 1),
+                new FeynmanPlan.Concept("D", "s", List.of(), List.of(), null, 9, 1),
+                new FeynmanPlan.Concept("E", "s", List.of(), List.of(), null, 1, 0),
+                new FeynmanPlan.Concept("F", "s", List.of(), List.of(), "Slide 1")));
+        List<FeynmanDocument> docs = List.of(document(1L, "Slides.PDF", 50L), document(2L, "notes.docx", 51L),
+                document(3L, "upload.pdf", null));
+
+        assertThat(FeynmanService.slides(plan, docs))
+                .containsOnlyKeys("A")
+                .containsEntry("A", new FeynmanDtos.SlideDto(50L, "Slides.PDF", 4));
+    }
+
+    private static FeynmanDocument document(long id, String name, Long bankFileId) {
+        FeynmanDocument doc = new FeynmanDocument();
+        doc.setId(id);
+        doc.setFileName(name);
+        doc.setBankFileId(bankFileId);
+        doc.setContent("text");
+        return doc;
     }
 
     @Test
