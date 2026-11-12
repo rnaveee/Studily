@@ -8,8 +8,9 @@ import "katex/dist/katex.min.css";
 export function normalizeMath(text: string): string {
   return text
     .replace(/\r\n?/g, "\n")
-    .replace(/\\\[([\s\S]+?)\\\]/g, (_, body: string) => `\n$$\n${body.trim()}\n$$\n`)
-    .replace(/\\\(([\s\S]+?)\\\)/g, (_, body: string) => `$${body.trim()}$`);
+    .replace(/\\\[([\s\S]+?)\\\]/g, (_, body: string) => `$$${body}$$`)
+    .replace(/\\\(([\s\S]+?)\\\)/g, (_, body: string) => `$${body.trim()}$`)
+    .replace(/\$\$([\s\S]+?)\$\$/g, (_, body: string) => `\n\n$$\n${body.trim()}\n$$\n\n`);
 }
 
 const codeStyle = { background: "var(--surface-hi)" };
