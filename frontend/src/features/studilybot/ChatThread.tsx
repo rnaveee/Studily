@@ -70,13 +70,13 @@ function MascotBubble({ text, open, onHold }: MascotSpeech & { onHold?: (held: b
   if (!mounted) return null;
   return (
     <div
-      className={`pointer-events-auto absolute bottom-full left-0 z-10 mb-3 w-max max-w-[min(22rem,calc(100vw-14rem))] origin-bottom-left ${state === "in" ? "panel-in" : "overlay-out"}`}
+      className={`pointer-events-auto absolute bottom-full left-0 z-30 mb-3 w-max max-w-[min(40rem,calc(100cqw-2rem))] origin-bottom-left ${state === "in" ? "panel-in" : "overlay-out"}`}
       aria-hidden="true"
       onMouseEnter={() => onHold?.(true)}
       onMouseLeave={() => onHold?.(false)}
     >
       <div data-tail="down" className="tour-bubble rounded-2xl text-[13px] leading-snug text-fg">
-        <div className="max-h-[50vh] overflow-y-auto overscroll-contain px-3.5 py-2.5">
+        <div className="max-h-[60vh] overflow-y-auto overscroll-contain px-4 py-3 text-[13.5px]">
           {text.trim() ? <Markdownish text={text} /> : <span className="block py-1"><Dots /></span>}
         </div>
       </div>
@@ -223,19 +223,19 @@ export default function ChatThread<T extends ThreadItem>({
 
   if (!mascot) return thread;
   return (
-    <div className="flex min-h-0 flex-1">
-      <div className="pointer-events-none hidden w-36 shrink-0 flex-col items-center justify-end pb-4 pl-3 md:flex lg:w-44">
+    <div className="@container relative flex min-h-0 flex-1">
+      {thread}
+      <div className="pointer-events-none absolute bottom-3 left-3 z-20 hidden @5xl:block">
         <div className="relative">
           {speech && <MascotBubble text={speech.text} open={speech.open} onHold={onHoldSpeech} />}
-          <span aria-hidden="true" className="lg:hidden">
-            <Mascot state={mascot} size={104} shadow />
+          <span aria-hidden="true" className="@6xl:hidden">
+            <Mascot state={mascot} size={112} shadow />
           </span>
-          <span aria-hidden="true" className="hidden lg:inline">
+          <span aria-hidden="true" className="hidden @6xl:inline">
             <Mascot state={mascot} size={136} shadow />
           </span>
         </div>
       </div>
-      {thread}
     </div>
   );
 }
