@@ -38,13 +38,31 @@ interface RecallRow extends ThreadItem {
   report: FeynmanReport | null;
 }
 
-function rowFor(message: FeynmanMessage): RecallRow {
+function rowFor(message: FeynmanMessage, previous: FeynmanMessage | undefined): RecallRow {
+  const slide = message.slide;
+  const repeat =
+    slide && previous?.slide && previous.slide.fileId === slide.fileId && previous.slide.page === slide.page;
   return {
     id: message.id,
     mine: message.role === "USER",
     body: message.body,
     kind: message.kind,
     report: message.kind === "REPORT" ? parseReport(message.body) : null,
+    citations:
+      slide && !repeat
+        ? [
+            {
+              index: 0,
+              fileId: slide.fileId,
+              fileName: slide.fileName,
+              page: slide.page,
+              pageTo: null,
+              quote: "",
+              previewable: true,
+              offset: null,
+            },
+          ]
+        : undefined,
   };
 }
 
@@ -448,7 +466,7 @@ function SessionView({ sessionId }: { sessionId: number }) {
   const active = s.status === "ACTIVE";
   const busy = send.isPending || finish.isPending;
 
-  const rows: RecallRow[] = s.messages.map(rowFor);
+  const rows: RecallRow[] = s.messages.map((message, i) => rowFor(message, s.messages[i - 1]));
   const pendingText = send.isPending && send.variables && !echoes(s.messages, send.variables) ? send.variables : null;
   if (pendingText) {
     rows.push({ id: "pending", mine: true, body: pendingText, kind: "CHAT", report: null });

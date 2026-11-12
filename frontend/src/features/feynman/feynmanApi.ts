@@ -7,7 +7,14 @@ export interface FeynmanMessage {
   role: FeynmanRole;
   kind: FeynmanKind;
   body: string;
+  slide?: FeynmanSlide | null;
   createdAt: string;
+}
+
+export interface FeynmanSlide {
+  fileId: number;
+  fileName: string;
+  page: number;
 }
 
 export interface FeynmanDocument {

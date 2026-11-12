@@ -43,6 +43,7 @@ export interface Citation {
   pageTo: number | null;
   quote: string;
   previewable: boolean;
+  offset?: number | null;
 }
 
 export interface Problem {

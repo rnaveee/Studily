@@ -1,8 +1,9 @@
-import { Fragment, Suspense, lazy, useLayoutEffect, useRef, type ReactNode } from "react";
+import { Fragment, Suspense, lazy, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { FileText } from "lucide-react";
 import { usePresence } from "../../lib/motion";
 import type { Citation } from "./api";
-import CitationChip from "./CitationChip";
+import CitationChip, { SlideFigure } from "./CitationChip";
+import { placeSlides } from "./slidePlacement";
 import Mascot, { type MascotState } from "./Mascot";
 
 export interface ThreadItem {
@@ -95,6 +96,10 @@ function Avatar() {
 }
 
 function DefaultBubble({ item }: { item: ThreadItem }) {
+  const { parts, chips } = useMemo(
+    () => (item.mine ? { parts: [], chips: [] } : placeSlides(item.body, item.citations ?? [])),
+    [item.mine, item.body, item.citations],
+  );
   if (item.mine) {
     return (
       <div className="chat-in flex justify-end">
@@ -135,14 +140,24 @@ function DefaultBubble({ item }: { item: ThreadItem }) {
       <Avatar />
       <div className="min-w-0 max-w-[88%] space-y-2.5 md:max-w-[78%]">
         <div
-          className="rounded-2xl rounded-bl-md px-4 py-3 text-[14px] leading-relaxed text-fg"
+          className="space-y-3 rounded-2xl rounded-bl-md px-4 py-3 text-[14px] leading-relaxed text-fg"
           style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--card-shadow)" }}
         >
-          <Markdownish text={item.body} />
+          {parts.map((part, i) =>
+            part.kind === "text" ? (
+              <Markdownish key={i} text={part.text} />
+            ) : (
+              <div key={i} className={`grid gap-3 ${part.slides.length > 1 ? "sm:grid-cols-2" : ""}`}>
+                {part.slides.map((slide) => (
+                  <SlideFigure key={`${slide.fileId}-${slide.page}`} source={slide} />
+                ))}
+              </div>
+            ),
+          )}
         </div>
-        {item.citations && item.citations.length > 0 && (
+        {chips.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {item.citations.map((citation) => (
+            {chips.map((citation) => (
               <CitationChip key={`${citation.index}-${citation.fileId}-${citation.page ?? "x"}`} citation={citation} />
             ))}
           </div>
