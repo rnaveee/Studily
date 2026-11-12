@@ -60,25 +60,18 @@ function TypingRow({ label }: { label: string }) {
   );
 }
 
-export interface MascotSpeech {
-  text: string;
-  open: boolean;
-}
-
-function MascotBubble({ text, open, onHold }: MascotSpeech & { onHold?: (held: boolean) => void }) {
+function MascotBubble({ open }: { open: boolean }) {
   const { mounted, state } = usePresence(open, 140);
   if (!mounted) return null;
   return (
     <div
-      className={`pointer-events-auto absolute bottom-full left-0 z-30 mb-3 w-max max-w-[min(40rem,calc(100cqw-2rem))] origin-bottom-left ${state === "in" ? "panel-in" : "overlay-out"}`}
       aria-hidden="true"
-      onMouseEnter={() => onHold?.(true)}
-      onMouseLeave={() => onHold?.(false)}
+      className={`absolute bottom-full left-0 z-30 mb-3 origin-bottom-left ${state === "in" ? "panel-in" : "overlay-out"}`}
     >
-      <div data-tail="down" className="tour-bubble rounded-2xl text-[13px] leading-snug text-fg">
-        <div className="max-h-[60vh] overflow-y-auto overscroll-contain px-4 py-3 text-[13.5px]">
-          {text.trim() ? <Markdownish text={text} /> : <span className="block py-1"><Dots /></span>}
-        </div>
+      <div data-tail="down" className="tour-bubble rounded-2xl px-4 py-3">
+        <span className="block py-1">
+          <Dots />
+        </span>
       </div>
     </div>
   );
@@ -174,8 +167,7 @@ export default function ChatThread<T extends ThreadItem>({
   typingLabel = "StudilyBot is thinking",
   empty,
   mascot,
-  speech = null,
-  onHoldSpeech,
+  thinking = false,
 }: {
   items: T[];
   renderItem?: (item: T) => ReactNode | undefined;
@@ -183,8 +175,7 @@ export default function ChatThread<T extends ThreadItem>({
   typingLabel?: string;
   empty?: ReactNode;
   mascot?: MascotState;
-  speech?: MascotSpeech | null;
-  onHoldSpeech?: (held: boolean) => void;
+  thinking?: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -227,7 +218,7 @@ export default function ChatThread<T extends ThreadItem>({
       {thread}
       <div className="pointer-events-none absolute bottom-3 left-3 z-20 hidden @5xl:block">
         <div className="relative">
-          {speech && <MascotBubble text={speech.text} open={speech.open} onHold={onHoldSpeech} />}
+          <MascotBubble open={thinking} />
           <span aria-hidden="true" className="@6xl:hidden">
             <Mascot state={mascot} size={112} shadow />
           </span>

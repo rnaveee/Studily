@@ -8,7 +8,7 @@ import { ApiError } from "../../lib/api";
 import { formatBytes } from "../../lib/format";
 import { toast } from "../../lib/toast";
 import Mascot, { useMascotReaction, type MascotState } from "./Mascot";
-import ChatThread, { type MascotSpeech, type ThreadAttachment, type ThreadItem } from "./ChatThread";
+import ChatThread, { type ThreadAttachment, type ThreadItem } from "./ChatThread";
 import Composer from "./Composer";
 import CourseSelect from "./CourseSelect";
 import FileDropZone from "./FileDropZone";
@@ -20,7 +20,6 @@ export const BANK_ACCEPT = ".pdf,.docx,.pptx,.txt,.md,.markdown";
 const THINKING = "thinking";
 const PENDING = "pending";
 const STREAMING = "streaming";
-const SAY_MS = 5000;
 
 const STATUS_PILL: Record<BankFileStatus, { label: string; className: string }> = {
   QUEUED: { label: "Queued", className: "badge-muted" },
@@ -243,17 +242,10 @@ export default function ChatConversation({
   const [failure, setFailure] = useState<Failure | null>(null);
   const [needsVerify, setNeedsVerify] = useState(false);
   const [reaction, react] = useMascotReaction();
-  const [said, setSaid] = useState<MascotSpeech | null>(null);
-  const [held, setHeld] = useState(false);
   const sentInitial = useRef(false);
   const attach = useStagedFiles(busy);
   const [pickedCourse, setPickedCourse] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (!said?.open || held) return;
-    const t = window.setTimeout(() => setSaid((current) => current && { ...current, open: false }), SAY_MS);
-    return () => window.clearTimeout(t);
-  }, [said, held]);
 
   function patchTurn(patch: Partial<Turn>) {
     setTurn((current) => (current ? { ...current, ...patch } : current));
@@ -308,8 +300,6 @@ export default function ChatConversation({
       options.attachments ?? files.map((file, i) => ({ key: `local-${i}-${file.name}`, name: file.name, note: "Saving…" }));
     setBusy(true);
     setFailure(null);
-    setSaid(null);
-    setHeld(false);
     setTurn({ question, attachments, phase: files.length ? "saving" : "asking", reply: "", saved: null });
     let fileIds = options.fileIds ?? [];
     if (files.length) {
@@ -332,8 +322,6 @@ export default function ChatConversation({
           onDelta: (text) => setTurn((current) => (current ? { ...current, reply: current.reply + text } : current)),
           onDone: (message) => {
             saved = true;
-            react("happy");
-            setSaid({ text: message.content, open: true });
             setTurn((current) => (current ? { ...current, saved: message } : current));
           },
           onError: (error) => {
@@ -361,6 +349,7 @@ export default function ChatConversation({
       void qc.invalidateQueries({ queryKey: ["bot", "chats"] });
       await qc.invalidateQueries({ queryKey: key });
       setBusy(false);
+      if (saved) react("excited", 2600);
     }
   }
 
@@ -462,8 +451,7 @@ export default function ChatConversation({
       <ChatThread
         items={rows}
         mascot={compact ? undefined : mascotStateFor({ busy, streaming: Boolean(live?.reply), failed: failure !== null, reaction })}
-        speech={compact ? null : (said ?? (busy ? { text: live?.reply || thinkingLine, open: true } : null))}
-        onHoldSpeech={setHeld}
+        thinking={!compact && busy}
         renderItem={(item) => (item.id === THINKING ? <ThinkingRow label={thinkingLine || undefined} /> : undefined)}
         empty={
           <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
