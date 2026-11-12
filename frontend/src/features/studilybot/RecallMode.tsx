@@ -339,15 +339,15 @@ function SessionView({ sessionId }: { sessionId: number }) {
     queryFn: () => api.get<FeynmanSession>(`/feynman/sessions/${sessionId}`),
   });
 
-  function append(turn: FeynmanTurn, sent?: FeynmanMessage) {
+  function append(turn: FeynmanTurn) {
     qc.setQueryData<FeynmanSession>(key, (old) => {
       if (!old) return old;
-      const echoed = sent !== undefined && echoes(old.messages, sent.body);
+      const known = new Set(old.messages.map((message) => message.id));
       return {
         ...old,
         status: turn.status,
         score: turn.score,
-        messages: [...old.messages, ...(sent && !echoed ? [sent] : []), ...turn.messages],
+        messages: [...old.messages, ...turn.messages.filter((message) => !known.has(message.id))],
       };
     });
     void qc.invalidateQueries({ queryKey: ["bot", "chats"] });
@@ -360,8 +360,8 @@ function SessionView({ sessionId }: { sessionId: number }) {
 
   const send = useMutation({
     mutationFn: (body: string) => api.post<FeynmanTurn>(`/feynman/sessions/${sessionId}/messages`, { body }),
-    onSuccess: (turn, body) => {
-      append(turn, { id: -Date.now(), role: "USER", kind: "CHAT", body, createdAt: new Date().toISOString() });
+    onSuccess: (turn) => {
+      append(turn);
       react("happy");
     },
     onError: (error) => failed(error, "Couldn't send that. Try again."),
