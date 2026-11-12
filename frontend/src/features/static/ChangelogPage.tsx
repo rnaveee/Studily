@@ -7,6 +7,7 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
+  { version: 82, date: "2026-11-11", summary: "You can now drop files anywhere in a StudilyBot chat to add them to a course's file bank. If the chat has no course yet, StudilyBot asks which course they belong to." },
   { version: 81, date: "2026-11-11", summary: "You can now build your own grading scale if your school's letter grades or GPA points don't match the built-in ones. Start from any scale, set the minimum percent and points for each letter, and it applies to every semester. Find it in the GPA scale menu in Settings and on the Grades page." },
   { version: 80, date: "2026-11-11", summary: "StudilyBot has a new look and lives on the Study page. Tap Interact for a high five, watch it think and explain while it answers, and dress it in hoodies and pants from the new StudilyBot tab in the shop. The Aurora Zip Hoodie only drops from Diamond chests. New to Studily? StudilyBot now gives you the tour." },
   { version: 79, date: "2026-11-10", summary: "Added StudilyBot. Chat with it about your course files and get answers with citations, practice with problems written from your own material and graded for you, or teach a lecture back in your own words and get a report on your gaps. Study now lives at /study, with a file bank for each course." },

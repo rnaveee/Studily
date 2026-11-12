@@ -1,15 +1,18 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, FileText, MailWarning, X } from "lucide-react";
 import QueryError from "../../components/QueryError";
 import { Skeleton } from "../../components/Skeleton";
 import { ApiError } from "../../lib/api";
 import { toast } from "../../lib/toast";
+import type { Course } from "../../types";
 import Mascot, { useMascotReaction, type MascotState } from "./Mascot";
 import ChatThread, { type MascotSpeech, type ThreadItem } from "./ChatThread";
 import Composer from "./Composer";
-import { botApi, streamAnswer, type BankFile, type BankFileStatus, type BotMessage } from "./api";
+import CourseSelect from "./CourseSelect";
+import FileDropZone from "./FileDropZone";
+import { bankApi, botApi, streamAnswer, type BankFile, type BankFileStatus, type BotMessage } from "./api";
 import { useBotStatus } from "./useBotStatus";
 
 export const BANK_ACCEPT = ".pdf,.docx,.pptx,.txt,.md,.markdown";
@@ -129,6 +132,7 @@ export default function ChatConversation({
   onInitialQuestionSent,
 }: ChatConversationProps) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const status = useBotStatus();
   const key = chatKey(chatId);
   const chat = useQuery({
@@ -143,6 +147,9 @@ export default function ChatConversation({
   const [reaction, react] = useMascotReaction();
   const [said, setSaid] = useState<MascotSpeech | null>(null);
   const sentInitial = useRef(false);
+  const [pending, setPending] = useState<File[] | null>(null);
+  const [pickedCourse, setPickedCourse] = useState<number | null>(null);
+  const [addedTo, setAddedTo] = useState<number | null>(null);
 
   useEffect(() => {
     if (!said?.open) return;
@@ -198,12 +205,48 @@ export default function ChatConversation({
     onSuccess: (created) => {
       toast.success(created.length === 1 ? "Added 1 file" : `Added ${created.length} files`);
       void qc.invalidateQueries({ queryKey: key });
+      if (chat.data?.courseId != null) {
+        void qc.invalidateQueries({ queryKey: ["bank", "files", chat.data.courseId] });
+        void qc.invalidateQueries({ queryKey: ["bank", "status"] });
+      }
     },
     onError: (error) => {
       if (isUnverifiedError(error)) setNeedsVerify(true);
       else toast.error(error instanceof Error && error.message ? error.message : "Couldn't add those files. Try again.");
     },
   });
+
+  const toBank = useMutation({
+    mutationFn: ({ courseId, files }: { courseId: number; files: File[] }) => bankApi.upload(courseId, files),
+    onSuccess: (created, { courseId }) => {
+      toast.success(created.length === 1 ? "Added 1 file" : `Added ${created.length} files`);
+      void qc.invalidateQueries({ queryKey: ["bank", "files", courseId] });
+      void qc.invalidateQueries({ queryKey: ["bank", "status"] });
+      setPending(null);
+      if (chat.data && chat.data.messages.length === 0) openCourseChat(courseId);
+      else setAddedTo(courseId);
+    },
+    onError: (error) => {
+      if (isUnverifiedError(error)) setNeedsVerify(true);
+      else toast.error(error instanceof Error && error.message ? error.message : "Couldn't add those files. Try again.");
+    },
+  });
+
+  function openCourseChat(courseId: number) {
+    setAddedTo(null);
+    navigate("/study/studilybot/chat", { state: { courseId } });
+  }
+
+  function takeFiles(files: File[]) {
+    if (files.length === 0 || upload.isPending || toBank.isPending) return;
+    setAddedTo(null);
+    if (chat.data?.courseId == null) {
+      setPending(files);
+      setPickedCourse(null);
+    } else {
+      upload.mutate(files);
+    }
+  }
 
   useEffect(() => {
     if (!initialQuestion || sentInitial.current || !chat.data) return;
@@ -255,8 +298,16 @@ export default function ChatConversation({
     else rows.push({ id: THINKING, mine: false, body: "" });
   }
 
+  const dropLabel = course ? `Drop to add to ${course}'s file bank` : "Drop to add to a course's file bank";
+  const addedCourse = qc.getQueryData<Course[]>(["courses", null])?.find((c) => c.id === addedTo)?.name;
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <FileDropZone
+      onFiles={takeFiles}
+      disabled={!canUpload}
+      label={dropLabel}
+      className="flex min-h-0 flex-1 flex-col"
+    >
       <header
         className={`shrink-0 border-b border-line ${compact ? "px-3 py-2" : "px-3 py-2.5 md:px-8"}`}
         style={{ background: "var(--surface)" }}
@@ -288,7 +339,7 @@ export default function ChatConversation({
             <p className="max-w-sm text-[13.5px] leading-relaxed text-fg-2">
               {course
                 ? `Ask about ${course}. StudilyBot answers from its files and points to the slide or page.`
-                : "Ask anything about your coursework. Attach slides or notes and StudilyBot answers from them."}
+                : "Ask anything about your coursework. Drop slides or notes here, pick a course, and they go into its file bank."}
             </p>
           </div>
         }
@@ -328,6 +379,50 @@ export default function ChatConversation({
             </button>
           </div>
         )}
+        {pending && (
+          <div
+            className="flex flex-wrap items-end gap-3 rounded-xl px-3.5 py-2.5 text-[12.5px] text-fg-2"
+            style={{ background: "var(--surface-hi)", border: "1px solid var(--line)" }}
+          >
+            <span className="min-w-0 basis-full">
+              Add {pending.length === 1 ? pending[0].name : `${pending.length} files`} to which course's file bank?
+            </span>
+            <div className="min-w-[180px] flex-1">
+              <CourseSelect hideLabel allowNone={false} value={pickedCourse} onChange={setPickedCourse} />
+            </div>
+            <button
+              type="button"
+              disabled={pickedCourse == null || toBank.isPending}
+              onClick={() => pickedCourse != null && toBank.mutate({ courseId: pickedCourse, files: pending })}
+              className="btn btn-primary text-xs"
+            >
+              {toBank.isPending ? "Adding…" : "Add to bank"}
+            </button>
+            <button type="button" onClick={() => setPending(null)} disabled={toBank.isPending} className="btn btn-ghost text-xs">
+              Cancel
+            </button>
+          </div>
+        )}
+        {addedTo != null && (
+          <div
+            role="status"
+            className="flex flex-wrap items-center gap-2 rounded-xl px-3.5 py-2.5 text-[12.5px] text-fg-2"
+            style={{ background: "var(--surface-hi)", border: "1px solid var(--line)" }}
+          >
+            <span className="min-w-0 flex-1">Added to {addedCourse ?? "the course"}'s file bank.</span>
+            <button type="button" onClick={() => openCourseChat(addedTo)} className="btn btn-soft text-xs">
+              Ask about {addedCourse ?? "it"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAddedTo(null)}
+              aria-label="Dismiss"
+              className="grid h-7 w-7 place-items-center rounded-md text-fg-3 transition-colors hover:text-fg"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
         {needsVerify && <EmailVerifyPrompt />}
       </div>
 
@@ -337,9 +432,9 @@ export default function ChatConversation({
         disabled={botOff || paused}
         placeholder={temporary ? "Ask a quick question…" : "Ask about your coursework…"}
         accept={BANK_ACCEPT}
-        onFiles={canUpload ? (files) => upload.mutate(files) : undefined}
+        onFiles={canUpload ? takeFiles : undefined}
         hint={compact ? null : undefined}
       />
-    </div>
+    </FileDropZone>
   );
 }

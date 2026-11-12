@@ -35,7 +35,6 @@ export default function Composer({
   sendLabel?: string;
 }) {
   const [text, setText] = useState("");
-  const [dragging, setDragging] = useState(false);
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -70,32 +69,12 @@ export default function Composer({
     if (files.length && onFiles) onFiles(files);
   }
 
-  const hasDrop = !!onFiles;
-
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
         submit();
       }}
-      onDragOver={
-        hasDrop
-          ? (e) => {
-              e.preventDefault();
-              setDragging(true);
-            }
-          : undefined
-      }
-      onDragLeave={hasDrop ? () => setDragging(false) : undefined}
-      onDrop={
-        hasDrop
-          ? (e) => {
-              e.preventDefault();
-              setDragging(false);
-              takeFiles(e.dataTransfer.files);
-            }
-          : undefined
-      }
       className="relative shrink-0 px-3 pt-2.5 md:px-6 md:pb-4"
       style={{
         background: "var(--surface)",
@@ -103,18 +82,6 @@ export default function Composer({
         paddingBottom: "var(--composer-pb, calc(env(safe-area-inset-bottom, 0px) + 12px))",
       }}
     >
-      {dragging && (
-        <div
-          className="pointer-events-none absolute inset-2 z-10 flex items-center justify-center rounded-2xl text-[13px] font-medium text-accent"
-          style={{
-            border: "2px dashed var(--accent)",
-            background: "color-mix(in srgb, var(--accent) 8%, var(--surface))",
-          }}
-        >
-          Drop files to add them to your bank
-        </div>
-      )}
-
       {attachments.length > 0 && (
         <ul className="mx-auto mb-2 flex max-w-3xl gap-2 overflow-x-auto pb-1 pt-1">
           {attachments.map((item) => (
