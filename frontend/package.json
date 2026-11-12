@@ -11,12 +11,17 @@
   "dependencies": {
     "@sentry/react": "^10.63.0",
     "@tanstack/react-query": "^5.66.0",
+    "katex": "^0.19.1",
     "lucide-react": "^1.22.0",
     "mathjs": "^15.2.0",
     "pdfjs-dist": "5.7.284",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router-dom": "^7.18.2"
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.18.2",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.6",

@@ -67,7 +67,9 @@ public class PracticeTutor {
             - sourceIndexes lists the numbers of the excerpts you used, and only numbers that appear in \
             <excerpts>.
             - Standard constants such as g are fine. Don't rely on facts the course material doesn't contain \
-            unless the problem needs them.""";
+            unless the problem needs them.
+            - Write the statement and solution in Markdown. Write every formula, variable and symbol in LaTeX: \
+            $...$ inline and $$...$$ for a displayed equation. Write a dollar amount as \\$5.""";
 
     static final String GRADE_PROMPT = """
             You grade a student's answer to a practice problem. You get the problem, a reference solution and \
@@ -103,7 +105,10 @@ public class PracticeTutor {
             StudilyBot's help chat answers questions, so don't answer here.
 
             If a photo is attached, read the handwritten or printed working in it. When part of it is too blurry \
-            to read, grade what you can read and say so in feedback.""";
+            to read, grade what you can read and say so in feedback.
+
+            Write feedback and steps in Markdown, with every formula, variable and symbol in LaTeX: $...$ inline \
+            and $$...$$ for a displayed equation.""";
 
     private final ClaudeConnection connection;
     private final boolean botEnabled;

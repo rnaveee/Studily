@@ -1,4 +1,5 @@
-import { Fragment, useLayoutEffect, useRef, type ReactNode } from "react";
+import { Fragment, Suspense, lazy, useLayoutEffect, useRef, type ReactNode } from "react";
+import { FileText } from "lucide-react";
 import { usePresence } from "../../lib/motion";
 import type { Citation } from "./api";
 import CitationChip from "./CitationChip";
@@ -9,91 +10,22 @@ export interface ThreadItem {
   mine: boolean;
   body: string;
   citations?: Citation[];
+  attachments?: ThreadAttachment[];
 }
 
-type Block = { kind: "p"; lines: string[] } | { kind: "ul" | "ol"; items: string[] };
-
-const BULLET = /^\s*[-*•]\s+(.*)$/;
-const NUMBERED = /^\s*\d{1,3}[.)]\s+(.*)$/;
-
-function parseBlocks(text: string): Block[] {
-  const blocks: Block[] = [];
-  let current: Block | null = null;
-  for (const raw of text.replace(/\r\n?/g, "\n").split("\n")) {
-    const line = raw.trimEnd();
-    if (!line.trim()) {
-      current = null;
-      continue;
-    }
-    const bullet = BULLET.exec(line);
-    const numbered = NUMBERED.exec(line);
-    if (bullet || numbered) {
-      const kind = bullet ? "ul" : "ol";
-      const content = (bullet ?? numbered)![1];
-      if (current && current.kind === kind) {
-        current.items.push(content);
-      } else {
-        current = { kind, items: [content] };
-        blocks.push(current);
-      }
-      continue;
-    }
-    if (current && current.kind === "p") {
-      current.lines.push(line);
-    } else {
-      current = { kind: "p", lines: [line] };
-      blocks.push(current);
-    }
-  }
-  return blocks;
+export interface ThreadAttachment {
+  key: string;
+  name: string;
+  note?: string | null;
 }
 
-function renderInline(text: string): ReactNode[] {
-  return text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, i) => {
-    if (part.length > 4 && part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={i} className="font-semibold text-fg">{part.slice(2, -2)}</strong>;
-    }
-    if (part.length > 2 && part.startsWith("`") && part.endsWith("`")) {
-      return (
-        <code key={i} className="rounded px-1 py-px font-mono text-[12.5px]" style={{ background: "var(--surface-hi)" }}>
-          {part.slice(1, -1)}
-        </code>
-      );
-    }
-    return <Fragment key={i}>{part}</Fragment>;
-  });
-}
+const MarkdownRenderer = lazy(() => import("./MarkdownRenderer"));
 
-export function Markdownish({ text }: { text: string }) {
-  const blocks = parseBlocks(text);
+export function Markdownish({ text, className }: { text: string; className?: string }) {
   return (
-    <div className="space-y-2.5 break-words">
-      {blocks.map((block, i) => {
-        if (block.kind === "p") {
-          return (
-            <p key={i}>
-              {block.lines.map((line, j) => (
-                <Fragment key={j}>
-                  {j > 0 && <br />}
-                  {renderInline(line)}
-                </Fragment>
-              ))}
-            </p>
-          );
-        }
-        const List = block.kind === "ul" ? "ul" : "ol";
-        return (
-          <List
-            key={i}
-            className={`space-y-1 pl-5 ${block.kind === "ul" ? "list-disc" : "list-decimal"} marker:text-fg-3`}
-          >
-            {block.items.map((item, j) => (
-              <li key={j}>{renderInline(item)}</li>
-            ))}
-          </List>
-        );
-      })}
-    </div>
+    <Suspense fallback={<p className={`whitespace-pre-wrap break-words ${className ?? ""}`}>{text}</p>}>
+      <MarkdownRenderer text={text} className={className} />
+    </Suspense>
   );
 }
 
@@ -132,16 +64,20 @@ export interface MascotSpeech {
   open: boolean;
 }
 
-function MascotBubble({ text, open }: MascotSpeech) {
+function MascotBubble({ text, open, onHold }: MascotSpeech & { onHold?: (held: boolean) => void }) {
   const { mounted, state } = usePresence(open, 140);
   if (!mounted) return null;
-  const line = text.replace(/\*\*|`/g, "").replace(/\s+/g, " ").trim();
   return (
     <div
-      className={`absolute bottom-full left-0 z-10 mb-2 w-max max-w-60 origin-bottom-left ${state === "in" ? "panel-in" : "overlay-out"}`}
+      className={`pointer-events-auto absolute bottom-full left-0 z-10 mb-3 w-max max-w-[min(22rem,calc(100vw-14rem))] origin-bottom-left ${state === "in" ? "panel-in" : "overlay-out"}`}
+      aria-hidden="true"
+      onMouseEnter={() => onHold?.(true)}
+      onMouseLeave={() => onHold?.(false)}
     >
-      <div data-tail="down" className="tour-bubble rounded-2xl px-3.5 py-2.5 text-[13px] leading-snug text-fg">
-        {line ? <p className="line-clamp-4 break-words">{line}</p> : <span className="block py-1"><Dots /></span>}
+      <div data-tail="down" className="tour-bubble rounded-2xl text-[13px] leading-snug text-fg">
+        <div className="max-h-[50vh] overflow-y-auto overscroll-contain px-3.5 py-2.5">
+          {text.trim() ? <Markdownish text={text} /> : <span className="block py-1"><Dots /></span>}
+        </div>
       </div>
     </div>
   );
@@ -150,10 +86,10 @@ function MascotBubble({ text, open }: MascotSpeech) {
 function Avatar() {
   return (
     <span
-      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
       style={{ background: "color-mix(in srgb, var(--accent) 14%, transparent)" }}
     >
-      <Mascot crop="head" size={24} still />
+      <Mascot crop="head" size={26} still />
     </span>
   );
 }
@@ -162,11 +98,34 @@ function DefaultBubble({ item }: { item: ThreadItem }) {
   if (item.mine) {
     return (
       <div className="chat-in flex justify-end">
-        <div
-          className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-md px-4 py-2.5 text-[14px] leading-relaxed md:max-w-[70%]"
-          style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-        >
-          {item.body}
+        <div className="flex max-w-[85%] flex-col items-end gap-1.5 md:max-w-[70%]">
+          {item.attachments && item.attachments.length > 0 && (
+            <ul className="flex flex-wrap justify-end gap-1.5">
+              {item.attachments.map((file) => (
+                <li
+                  key={file.key}
+                  className="flex max-w-[240px] items-center gap-2 rounded-xl px-3 py-2"
+                  style={{ background: "var(--surface-hi)", border: "1px solid var(--line)" }}
+                >
+                  <FileText size={14} className="shrink-0 text-accent" />
+                  <span className="min-w-0">
+                    <span className="block truncate text-[12.5px] font-medium text-fg" title={file.name}>
+                      {file.name}
+                    </span>
+                    {file.note && <span className="block truncate text-[11px] text-fg-3">{file.note}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {item.body && (
+            <div
+              className="whitespace-pre-wrap break-words rounded-2xl rounded-br-md px-4 py-2.5 text-[14px] leading-relaxed"
+              style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+            >
+              {item.body}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -201,6 +160,7 @@ export default function ChatThread<T extends ThreadItem>({
   empty,
   mascot,
   speech = null,
+  onHoldSpeech,
 }: {
   items: T[];
   renderItem?: (item: T) => ReactNode | undefined;
@@ -209,6 +169,7 @@ export default function ChatThread<T extends ThreadItem>({
   empty?: ReactNode;
   mascot?: MascotState;
   speech?: MascotSpeech | null;
+  onHoldSpeech?: (held: boolean) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -248,10 +209,15 @@ export default function ChatThread<T extends ThreadItem>({
   if (!mascot) return thread;
   return (
     <div className="flex min-h-0 flex-1">
-      <div className="hidden w-28 shrink-0 flex-col items-center justify-end pb-4 pl-3 md:flex" aria-hidden="true">
+      <div className="pointer-events-none hidden w-36 shrink-0 flex-col items-center justify-end pb-4 pl-3 md:flex lg:w-44">
         <div className="relative">
-          {speech && <MascotBubble text={speech.text} open={speech.open} />}
-          <Mascot state={mascot} size={84} shadow />
+          {speech && <MascotBubble text={speech.text} open={speech.open} onHold={onHoldSpeech} />}
+          <span aria-hidden="true" className="lg:hidden">
+            <Mascot state={mascot} size={104} shadow />
+          </span>
+          <span aria-hidden="true" className="hidden lg:inline">
+            <Mascot state={mascot} size={136} shadow />
+          </span>
         </div>
       </div>
       {thread}
