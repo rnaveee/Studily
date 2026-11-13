@@ -22,15 +22,25 @@ interface ReferralMe {
 const STORY_FILENAME = "studily-story.png";
 
 function StoryPreview() {
+  const { user, loading } = useAuth();
   const [blob, setBlob] = useState<Blob | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  const profile = user
+    ? { name: user.name, username: user.username, avatarUrl: user.avatarUrl, flair: user.flair }
+    : null;
+  const profileKey = profile ? `${profile.username}|${profile.name}|${profile.avatarUrl ?? ""}|${profile.flair?.code ?? ""}|${profile.flair?.imageUrl ?? ""}` : "";
+
   useEffect(() => {
+    if (loading) return;
     let objectUrl: string | null = null;
     let cancelled = false;
-    renderStoryCard()
+    setUrl(null);
+    setBlob(null);
+    setFailed(false);
+    renderStoryCard(profile)
       .then((b) => {
         if (cancelled) return;
         objectUrl = URL.createObjectURL(b);
@@ -44,7 +54,7 @@ function StoryPreview() {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, []);
+  }, [loading, profileKey]);
 
   function copy() {
     if (!blob) return;

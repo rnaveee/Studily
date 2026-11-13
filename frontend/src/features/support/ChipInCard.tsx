@@ -165,7 +165,7 @@ function ChipInBody() {
           onClick={() => rememberNext("/support-studily")}
           className="btn btn-primary w-full"
         >
-          Log in to chip in
+          Log in to donate
         </Link>
       )}
 
@@ -183,7 +183,7 @@ export default function ChipInCard() {
   return (
     <section className="card flex flex-col gap-4 p-5 sm:p-6">
       <div>
-        <h2 className="text-[15px] font-semibold text-fg">Chip in</h2>
+        <h2 className="text-[15px] font-semibold text-fg">Donate</h2>
         <p className="mt-1 text-[12.5px] text-fg-3">
           Pick an amount, or enter your own.
         </p>
