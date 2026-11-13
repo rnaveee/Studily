@@ -17,17 +17,25 @@ const INTRO: string[] = [
 ];
 
 const COVERS: { icon: LucideIcon; title: string; text: string }[] = [
-  { icon: Globe, title: "Running the website", text: "It costs money to keep Studily running on the internet!" },
+  {
+    icon: Globe,
+    title: "Keeping Studily online",
+    text: "Servers and hosting keep Studily fast and ready whenever you need it.",
+  },
   {
     icon: HardDrive,
-    title: "Memory and storage",
-    text: "Keeping track of your schedules, deadlines, flashcards and files costs money to maintain!",
+    title: "Storing your work",
+    text: "Your schedules, deadlines, flashcards and files stay safely saved and on every device you use.",
   },
-  { icon: Sparkles, title: "AI", text: "Using our AI services costs money for the AI to run!" },
+  {
+    icon: Sparkles,
+    title: "Powering the AI",
+    text: "StudilyBot, flashcard generation and course imports run on AI that costs money every time you use it.",
+  },
   {
     icon: Rocket,
-    title: "Motivation",
-    text: "Seeing Studily being used and supported makes us want to keep updating it and providing it to students!",
+    title: "Building what's next",
+    text: "Your support shows us Studily is worth it, and keeps new features and improvements coming.",
   },
 ];
 
