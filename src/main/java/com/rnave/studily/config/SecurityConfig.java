@@ -96,6 +96,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/push/rotate").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/support").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/donations/config").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/stripe/webhook").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
                 .exceptionHandling(eh -> eh.authenticationEntryPoint(unauthorizedEntryPoint()))

@@ -19,6 +19,8 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
 
     private static final String FLASHCARD_IMAGES = "/api/public/flashcard-images/";
 
+    private static final String STRIPE_WEBHOOK = "/api/stripe/webhook";
+
     private static final String CALENDAR_FEED = "/api/public/calendar/";
 
     private final SlidingWindowRateLimiter limiter = new SlidingWindowRateLimiter(120, WINDOW_MS);
@@ -33,7 +35,7 @@ public class GlobalRateLimitFilter extends OncePerRequestFilter {
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
         String uri = request.getRequestURI();
-        if (!uri.startsWith("/api/") || uri.startsWith("/api/auth/")) {
+        if (!uri.startsWith("/api/") || uri.startsWith("/api/auth/") || uri.equals(STRIPE_WEBHOOK)) {
             filterChain.doFilter(request, response);
             return;
         }
