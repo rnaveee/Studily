@@ -11,7 +11,7 @@ const H = 1920;
 const ACCENT = "#7c83f3";
 const ACCENT_DEEP = "#4f46e5";
 const INK = "#ffffff";
-const MUTED = "#dcd8ff";
+const MUTED = "#b4b8e0";
 const CARD_INK = "#1e1b4b";
 
 const SANS = '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif';
@@ -391,9 +391,9 @@ async function drawFeature(
   outfit: BotOutfitRef,
 ) {
   roundRect(ctx, x, y, w, h, 40);
-  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  ctx.fillStyle = "rgba(255,255,255,0.06)";
   ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.24)";
+  ctx.strokeStyle = "rgba(165,180,252,0.2)";
   ctx.lineWidth = 2;
   ctx.stroke();
 
@@ -425,21 +425,17 @@ export async function renderStoryCard(profile: StoryProfile | null = null): Prom
   if (!ctx) throw new Error("Canvas is not available");
   if (document.fonts?.ready) await document.fonts.ready;
 
-  const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, "#6a5cf0");
-  bg.addColorStop(0.5, "#5548c8");
-  bg.addColorStop(1, "#3a2e9e");
-  ctx.fillStyle = bg;
+  ctx.fillStyle = "#111116";
   ctx.fillRect(0, 0, W, H);
 
   for (const [x, y, r, a] of [
-    [W * 0.1, 220, 560, 0.18],
-    [W * 0.95, 900, 600, 0.14],
-    [W * 0.25, 1750, 640, 0.12],
+    [W * 0.1, 220, 560, 0.22],
+    [W * 0.95, 900, 600, 0.16],
+    [W * 0.25, 1750, 640, 0.14],
   ] as const) {
     const glow = ctx.createRadialGradient(x, y, 0, x, y, r);
-    glow.addColorStop(0, `rgba(255,255,255,${a})`);
-    glow.addColorStop(1, "rgba(255,255,255,0)");
+    glow.addColorStop(0, `rgba(85,72,200,${a})`);
+    glow.addColorStop(1, "rgba(85,72,200,0)");
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, W, H);
   }
@@ -494,7 +490,7 @@ export async function renderStoryCard(profile: StoryProfile | null = null): Prom
   }
 
   ctx.textAlign = "center";
-  ctx.fillStyle = INK;
+  ctx.fillStyle = ACCENT;
   ctx.font = `700 52px ${MONO}`;
   ctx.fillText("studily.ca", W / 2, H - 70);
 
