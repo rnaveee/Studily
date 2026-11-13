@@ -337,7 +337,7 @@ export async function renderStoryCard(profile: StoryProfile | null = null): Prom
     await drawFeature(ctx, FEATURES[i], 80, listTop + i * (cardH + spacing), cardW, cardH);
   }
   const botCardBottom = listTop + (FEATURES.length - 1) * (cardH + spacing) + cardH;
-  await drawMascot(ctx, profile?.botOutfit ?? BOT_STARTER, W - 40, botCardBottom - cardH / 2, 340, -0.38);
+  await drawMascot(ctx, profile?.botOutfit ?? BOT_STARTER, W - 40, botCardBottom - cardH / 2 - 190, 340, -0.38);
 
   ctx.textAlign = "center";
   ctx.fillStyle = ACCENT;
