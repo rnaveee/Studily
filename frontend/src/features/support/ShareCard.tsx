@@ -67,23 +67,20 @@ function StoryPreview() {
   }
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-col items-center gap-3">
       <div
-        className="flex h-[140px] w-[79px] shrink-0 items-center justify-center overflow-hidden rounded-lg"
+        className="flex aspect-[9/16] w-full max-w-[240px] items-center justify-center overflow-hidden rounded-xl"
         style={{ background: "var(--surface-hi)", border: "1px solid var(--line)" }}
       >
         {url ? (
           <img src={url} alt="Studily story preview" className="h-full w-full object-cover" />
         ) : failed ? (
-          <span className="px-1 text-center text-[10px] text-fg-3">Preview unavailable</span>
+          <span className="px-2 text-center text-[12px] text-fg-3">Preview unavailable</span>
         ) : (
-          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent" />
+          <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-line border-t-accent" />
         )}
       </div>
-      <div className="flex min-w-0 flex-col items-start gap-2">
-        <p className="text-[12px] leading-relaxed text-fg-3">
-          Post it to your story and tag Studily.
-        </p>
+      <div className="flex flex-wrap justify-center gap-2">
         {canCopyImages && (
           <button type="button" onClick={copy} disabled={!blob} className="btn btn-ghost">
             <Copy size={13} />
@@ -95,6 +92,7 @@ function StoryPreview() {
           Save image
         </button>
       </div>
+      <p className="text-center text-[12px] leading-relaxed text-fg-3">Post it to your story and tag Studily.</p>
     </div>
   );
 }
@@ -205,11 +203,14 @@ export default function ShareCard() {
         </p>
       </div>
       <ClientOnly>
-        <StoryPreview />
-        <div className="h-px" style={{ background: "var(--line)" }} />
         <div>
           <h3 className="mb-2 text-[13px] font-semibold text-fg">Your invite link</h3>
           <InviteLink />
+        </div>
+        <div className="h-px" style={{ background: "var(--line)" }} />
+        <div>
+          <h3 className="mb-3 text-[13px] font-semibold text-fg">Post to your story</h3>
+          <StoryPreview />
         </div>
       </ClientOnly>
     </section>
