@@ -6,6 +6,7 @@ import ClientOnly from "../../components/ClientOnly";
 import SegmentedToggle from "../../components/SegmentedToggle";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
+import { badgeGlow } from "../progress/badges";
 import GreenHeart from "./GreenHeart";
 import ShareCard from "./ShareCard";
 import ChipInCard from "./ChipInCard";
@@ -196,6 +197,29 @@ function SupportTabs() {
   );
 }
 
+const SUPPORTER_BADGE = "https://badges.studily.ca/badges/v4/supporter.webp";
+const BADGE_SIZE = 200;
+
+function SupporterBadgeShowcase() {
+  return (
+    <section className="card flex flex-col items-center gap-3 px-5 py-8 text-center sm:px-8">
+      <img
+        src={SUPPORTER_BADGE}
+        alt="Supporter badge"
+        width={BADGE_SIZE}
+        height={BADGE_SIZE}
+        className="h-40 w-40 object-contain sm:h-[200px] sm:w-[200px]"
+        style={{ filter: badgeGlow("supporter", BADGE_SIZE) }}
+      />
+      <h2 className="text-lg font-semibold text-fg">Earn the Supporter badge</h2>
+      <p className="max-w-md text-[13.5px] leading-relaxed text-fg-2">
+        Chip in any amount, or invite a friend who signs up and starts studying, and the Supporter badge shows
+        on your profile for good.
+      </p>
+    </section>
+  );
+}
+
 export default function SupportStudilyPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-5 pb-6 stagger-children">
@@ -242,6 +266,8 @@ export default function SupportStudilyPage() {
       </section>
 
       <SupportTabs />
+
+      <SupporterBadgeShowcase />
     </div>
   );
 }

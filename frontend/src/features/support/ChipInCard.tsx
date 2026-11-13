@@ -14,7 +14,6 @@ interface DonationConfig {
   maxCents: number;
 }
 
-const SUPPORTER_BADGE = "https://badges.studily.ca/badges/v4/supporter.webp";
 const DEFAULT_CHOICE = 500;
 const CUSTOM_AMOUNT = /^\d+(\.\d{1,2})?$/;
 
@@ -191,12 +190,6 @@ export default function ChipInCard() {
       <ClientOnly>
         <ChipInBody />
       </ClientOnly>
-      <div className="flex items-center gap-3 rounded-lg px-3 py-2.5" style={{ background: "var(--surface-hi)" }}>
-        <img src={SUPPORTER_BADGE} alt="Supporter badge" width={44} height={44} className="h-11 w-11 shrink-0 object-contain" />
-        <p className="text-[12.5px] leading-relaxed text-fg-2">
-          Everyone who chips in gets the Supporter badge on their profile.
-        </p>
-      </div>
     </section>
   );
 }
