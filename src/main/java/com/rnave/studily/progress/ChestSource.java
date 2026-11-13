@@ -6,5 +6,6 @@ public enum ChestSource {
     SESSION,
     FLASHCARD,
     WELCOME,
-    SURVEY
+    SURVEY,
+    REFERRAL
 }

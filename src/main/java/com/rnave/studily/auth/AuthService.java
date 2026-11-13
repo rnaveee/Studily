@@ -13,16 +13,21 @@ import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.config.UnauthorizedException;
 import com.rnave.studily.flashcard.WelcomeFlashcards;
 import com.rnave.studily.moderation.BannedEmails;
+import com.rnave.studily.referral.ReferralService;
 import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserDto;
 import com.rnave.studily.user.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private volatile String dummyHash;
 
@@ -36,11 +41,13 @@ public class AuthService {
     private final Flairs flairs;
     private final WelcomeFlashcards welcomeFlashcards;
     private final BannedEmails bannedEmails;
+    private final ReferralService referralService;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtService jwtService,
                        LoginRateLimiter loginRateLimiter, AuthEmailService authEmailService,
                        AccountTokenService accountTokenService, AdminGuard adminGuard, Flairs flairs,
-                       WelcomeFlashcards welcomeFlashcards, BannedEmails bannedEmails) {
+                       WelcomeFlashcards welcomeFlashcards, BannedEmails bannedEmails,
+                       ReferralService referralService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
@@ -51,6 +58,7 @@ public class AuthService {
         this.flairs = flairs;
         this.welcomeFlashcards = welcomeFlashcards;
         this.bannedEmails = bannedEmails;
+        this.referralService = referralService;
     }
 
     @Transactional
@@ -76,6 +84,11 @@ public class AuthService {
         user = userRepository.save(user);
         welcomeFlashcards.create(user);
         try {
+            referralService.recordSignup(user, req.referralCode());
+        } catch (RuntimeException e) {
+            log.debug("Referral was not recorded for new user {}", user.getId(), e);
+        }
+        try {
             authEmailService.sendVerification(user);
         } catch (RuntimeException ignored) {
         }
@@ -88,6 +101,11 @@ public class AuthService {
                 .orElseThrow(() -> new UnauthorizedException("This verification link is invalid or has expired"));
         user.setEmailVerified(true);
         userRepository.save(user);
+        try {
+            referralService.onEmailVerified(user.getId());
+        } catch (RuntimeException e) {
+            log.debug("Referral check was not scheduled for user {}", user.getId(), e);
+        }
     }
 
     @Transactional

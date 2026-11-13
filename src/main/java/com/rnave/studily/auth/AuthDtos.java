@@ -16,7 +16,8 @@ public class AuthDtos {
             String username,
             @NotBlank @Size(min = 8, max = 100) String password,
             @NotBlank @Size(max = 255) String name,
-            @Size(max = 255) String school) {
+            @Size(max = 255) String school,
+            @Size(max = 16) String referralCode) {
     }
 
     public record LoginRequest(

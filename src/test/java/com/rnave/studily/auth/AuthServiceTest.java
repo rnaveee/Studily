@@ -14,6 +14,7 @@ import com.rnave.studily.config.ForbiddenException;
 import com.rnave.studily.moderation.BannedEmailRepository;
 import com.rnave.studily.moderation.BannedEmails;
 import com.rnave.studily.progress.FlairRepository;
+import com.rnave.studily.referral.ReferralService;
 import com.rnave.studily.user.Flairs;
 import com.rnave.studily.user.User;
 import com.rnave.studily.user.UserRepository;
@@ -47,6 +48,7 @@ class AuthServiceTest {
     private WelcomeFlashcards welcomeFlashcards;
     private BannedEmails bannedEmails;
     private BannedEmailRepository bannedEmailRepository;
+    private ReferralService referralService;
 
     @BeforeEach
     void setUp() {
@@ -58,17 +60,18 @@ class AuthServiceTest {
         accountTokenService = mock(AccountTokenService.class);
         adminGuard = mock(AdminGuard.class);
         welcomeFlashcards = mock(WelcomeFlashcards.class);
+        referralService = mock(ReferralService.class);
         bannedEmails = new BannedEmails(bannedEmailRepository = mock(BannedEmailRepository.class));
         when(loginRateLimiter.tryConsume(anyString())).thenReturn(true);
         authService = new AuthService(userRepository, passwordEncoder, jwtService, loginRateLimiter,
                 authEmailService, accountTokenService, adminGuard,
                 new Flairs(mock(FlairRepository.class), Clock.systemUTC(), "https://badges.studily.ca/flairs/v1"),
-                welcomeFlashcards, bannedEmails);
+                welcomeFlashcards, bannedEmails, referralService);
     }
 
     @Test
     void signup_savesUserAndReturnsToken() {
-        SignupRequest req = new SignupRequest("New@Example.com", "newuser", "password123", "New User", "SFU");
+        SignupRequest req = new SignupRequest("New@Example.com", "newuser", "password123", "New User", "SFU", null);
         when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
         when(userRepository.existsByUsernameIgnoreCase("newuser")).thenReturn(false);
         when(passwordEncoder.encode("password123")).thenReturn("hashed");
@@ -139,7 +142,7 @@ class AuthServiceTest {
 
     @Test
     void signup_rejectsDuplicateEmail() {
-        SignupRequest req = new SignupRequest("dup@example.com", "someone", "password123", "Someone", null);
+        SignupRequest req = new SignupRequest("dup@example.com", "someone", "password123", "Someone", null, null);
         when(userRepository.existsByEmail("dup@example.com")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.signup(req)).isInstanceOf(ConflictException.class);
@@ -147,7 +150,7 @@ class AuthServiceTest {
 
     @Test
     void signup_rejectsDuplicateUsername() {
-        SignupRequest req = new SignupRequest("fresh@example.com", "taken", "password123", "Someone", null);
+        SignupRequest req = new SignupRequest("fresh@example.com", "taken", "password123", "Someone", null, null);
         when(userRepository.existsByEmail("fresh@example.com")).thenReturn(false);
         when(userRepository.existsByUsernameIgnoreCase("taken")).thenReturn(true);
 
@@ -224,8 +227,40 @@ class AuthServiceTest {
     }
 
     @Test
+    void signup_passesTheReferralCodeToTheReferralService() {
+        SignupRequest req = new SignupRequest("fresh@example.com", "freshuser", "password123", "Fresh", null, "ABCD2345");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            u.setId(9L);
+            return u;
+        });
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+
+        authService.signup(req);
+
+        verify(referralService).recordSignup(argThat(u -> u.getId() == 9L), org.mockito.ArgumentMatchers.eq("ABCD2345"));
+    }
+
+    @Test
+    void signup_succeedsEvenWhenRecordingTheReferralFails() {
+        SignupRequest req = new SignupRequest("fresh@example.com", "freshuser", "password123", "Fresh", null, "ABCD2345");
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            u.setId(9L);
+            return u;
+        });
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+        org.mockito.Mockito.doThrow(new IllegalStateException("boom")).when(referralService)
+                .recordSignup(any(User.class), anyString());
+
+        AuthResponse response = authService.signup(req);
+
+        assertThat(response.user().email()).isEqualTo("fresh@example.com");
+    }
+
+    @Test
     void signup_createsTheWelcomeFlashcardSet() {
-        SignupRequest req = new SignupRequest("fresh@example.com", "freshuser", "password123", "Fresh", null);
+        SignupRequest req = new SignupRequest("fresh@example.com", "freshuser", "password123", "Fresh", null, null);
         when(userRepository.save(any(User.class))).thenAnswer(inv -> {
             User u = inv.getArgument(0);
             u.setId(9L);
@@ -244,7 +279,7 @@ class AuthServiceTest {
         String bannedHash = BannedEmails.hash("firstlast@gmail.com");
         when(bannedEmailRepository.existsByEmailHash(bannedHash)).thenReturn(true);
         SignupRequest req = new SignupRequest(
-                "First.Last+x@googlemail.com", "evader", "password123", "Evader", null);
+                "First.Last+x@googlemail.com", "evader", "password123", "Evader", null, null);
 
         assertThatThrownBy(() -> authService.signup(req)).isInstanceOf(ForbiddenException.class);
         org.mockito.Mockito.verify(userRepository, org.mockito.Mockito.never()).save(any(User.class));

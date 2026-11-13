@@ -12,7 +12,7 @@ public enum ChestTier {
 
     public static ChestTier defaultFor(ChestSource source) {
         return switch (source) {
-            case LEVEL -> GOLD;
+            case LEVEL, REFERRAL -> GOLD;
             case STREAK -> SILVER;
             case SESSION, FLASHCARD -> WOOD;
             case WELCOME, SURVEY -> DIAMOND;
