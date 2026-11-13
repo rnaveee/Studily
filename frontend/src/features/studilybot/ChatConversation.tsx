@@ -8,14 +8,18 @@ import { ApiError } from "../../lib/api";
 import { formatBytes } from "../../lib/format";
 import { toast } from "../../lib/toast";
 import Mascot, { useMascotReaction, type MascotState } from "./Mascot";
-import ChatThread, { type ThreadAttachment, type ThreadItem } from "./ChatThread";
+import ChatThread, { type ThreadAttachment, type ThreadImage, type ThreadItem } from "./ChatThread";
 import Composer from "./Composer";
 import CourseSelect from "./CourseSelect";
 import FileDropZone from "./FileDropZone";
 import { bankApi, botApi, streamAnswer, type BankFile, type BankFileStatus, type BotMessage } from "./api";
 import { useBotStatus } from "./useBotStatus";
+import { downscalePhoto, isImageFile } from "./photo";
 
 export const BANK_ACCEPT = ".pdf,.docx,.pptx,.txt,.md,.markdown";
+export const CHAT_ACCEPT = `${BANK_ACCEPT},image/*`;
+const MAX_IMAGES = 4;
+const IMAGE_PREFIX = "img-";
 
 const THINKING = "thinking";
 const PENDING = "pending";
@@ -62,13 +66,14 @@ function failureText(error: { code: string; message: string }): string {
   return error.message || "StudilyBot couldn't answer that. Try again.";
 }
 
-function toRow(message: BotMessage): ThreadItem {
+function toRow(message: BotMessage, chatId: number): ThreadItem {
   return {
     id: message.id,
     mine: message.role === "USER",
     body: message.content,
     citations: message.citations,
     attachments: message.attachments?.map((file) => ({ key: String(file.fileId), name: file.name })),
+    images: message.images?.map((id) => ({ key: id, chatId })),
   };
 }
 
@@ -142,8 +147,15 @@ interface Staged {
 
 type Phase = "saving" | "reading" | "asking";
 
+export interface StagedImage {
+  id: string;
+  data: string;
+  previewUrl: string;
+}
+
 interface Turn {
   question: string;
+  images: ThreadImage[];
   attachments: ThreadAttachment[];
   phase: Phase;
   reply: string;
@@ -152,6 +164,7 @@ interface Turn {
 
 interface Failure {
   question: string;
+  images: StagedImage[];
   fileIds: number[];
   attachments: ThreadAttachment[];
   message: string;
@@ -171,6 +184,70 @@ function workingLine(phase: Phase, attachments: ThreadAttachment[]): string {
 }
 
 const pendingFiles = new Map<number, File[]>();
+const pendingImages = new Map<number, StagedImage[]>();
+
+function readAsBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",", 2)[1] ?? "");
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+export function useStagedImages(locked: boolean) {
+  const [images, setImages] = useState<StagedImage[]>([]);
+
+  async function take(files: File[]) {
+    const picked = files.filter(isImageFile);
+    if (picked.length === 0 || locked) return;
+    const room = Math.max(0, MAX_IMAGES - images.length);
+    if (picked.length > room) toast.error(`Attach up to ${MAX_IMAGES} images to one message.`);
+    for (const file of picked.slice(0, room)) {
+      try {
+        const blob = await downscalePhoto(file);
+        const data = await readAsBase64(blob);
+        const item = {
+          id: `${IMAGE_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          data,
+          previewUrl: URL.createObjectURL(blob),
+        };
+        setImages((current) => (current.length >= MAX_IMAGES ? current : [...current, item]));
+      } catch {
+        toast.error(`${file.name || "That image"} couldn't be read. Try a JPEG or PNG.`);
+      }
+    }
+  }
+
+  return {
+    images,
+    take,
+    restore: (list: StagedImage[]) => setImages(list),
+    remove: (id: string) => setImages((current) => current.filter((item) => item.id !== id)),
+    clear: () => setImages([]),
+    composerItems: images.map((item) => ({ id: item.id, name: "Image", previewUrl: item.previewUrl })),
+  };
+}
+
+export function handOffImages(chatId: number, images: StagedImage[]) {
+  if (images.length) pendingImages.set(chatId, images);
+}
+
+export function splitDrop(
+  files: File[],
+  takeImages: (files: File[]) => void,
+  takeFiles: ((files: File[]) => void) | null,
+) {
+  const images = files.filter(isImageFile);
+  const documents = files.filter((file) => !isImageFile(file));
+  if (images.length) takeImages(images);
+  if (documents.length) {
+    if (takeFiles) takeFiles(documents);
+    else toast.error("This chat can only take images.");
+  }
+}
+
+export const isImageAttachment = (id: string) => id.startsWith(IMAGE_PREFIX);
 
 export function useStagedFiles(locked: boolean) {
   const bankStatus = useQuery({ queryKey: ["bank", "status"], queryFn: () => bankApi.status() });
@@ -244,6 +321,7 @@ export default function ChatConversation({
   const [reaction, react] = useMascotReaction();
   const sentInitial = useRef(false);
   const attach = useStagedFiles(busy);
+  const pics = useStagedImages(busy);
   const [pickedCourse, setPickedCourse] = useState<number | null>(null);
 
 
@@ -293,14 +371,19 @@ export default function ChatConversation({
     }
   }
 
-  async function ask(question: string, options: { files?: File[]; fileIds?: number[]; attachments?: ThreadAttachment[] } = {}) {
+  async function ask(
+    question: string,
+    options: { files?: File[]; fileIds?: number[]; attachments?: ThreadAttachment[]; images?: StagedImage[] } = {},
+  ) {
     if (busy) return;
     const files = options.files ?? [];
+    const images = options.images ?? [];
+    const shownImages = images.map((image) => ({ key: image.id, src: image.previewUrl }));
     const attachments =
       options.attachments ?? files.map((file, i) => ({ key: `local-${i}-${file.name}`, name: file.name, note: "Saving…" }));
     setBusy(true);
     setFailure(null);
-    setTurn({ question, attachments, phase: files.length ? "saving" : "asking", reply: "", saved: null });
+    setTurn({ question, images: shownImages, attachments, phase: files.length ? "saving" : "asking", reply: "", saved: null });
     let fileIds = options.fileIds ?? [];
     if (files.length) {
       const saved = await saveFiles(files, attachments);
@@ -311,7 +394,13 @@ export default function ChatConversation({
       fileIds = saved;
     }
     patchTurn({ phase: "asking" });
-    const failedWith = (message: string) => ({ question, fileIds, attachments: attachments.map((a) => ({ ...a, note: null })), message });
+    const failedWith = (message: string) => ({
+      question,
+      images,
+      fileIds,
+      attachments: attachments.map((a) => ({ ...a, note: null })),
+      message,
+    });
     let saved = false;
     let failed = false;
     try {
@@ -333,6 +422,7 @@ export default function ChatConversation({
         },
         undefined,
         fileIds,
+        images.map((image) => image.data),
       );
     } catch (error) {
       if (saved) return;
@@ -356,17 +446,21 @@ export default function ChatConversation({
   function send(text: string) {
     const files = attach.files;
     if (files.length && chat.data?.courseId == null && pickedCourse == null) return;
+    const images = pics.images;
     attach.clear();
-    void ask(text, { files });
+    pics.clear();
+    void ask(text, { files, images });
   }
 
   useEffect(() => {
     if (sentInitial.current || !chat.data) return;
     const files = pendingFiles.get(chatId) ?? [];
-    if (initialQuestion == null && files.length === 0) return;
+    const images = pendingImages.get(chatId) ?? [];
+    if (initialQuestion == null && files.length === 0 && images.length === 0) return;
     sentInitial.current = true;
     pendingFiles.delete(chatId);
-    void ask(initialQuestion ?? "", { files });
+    pendingImages.delete(chatId);
+    void ask(initialQuestion ?? "", { files, images });
     onInitialQuestionSent?.();
   }, [initialQuestion, chat.data, onInitialQuestionSent]);
 
@@ -403,16 +497,19 @@ export default function ChatConversation({
   const settled = savedId !== null && persisted.some((message) => message.id === savedId);
   const live = turn && !settled ? turn : null;
 
-  const rows: ThreadItem[] = persisted.map(toRow);
+  const rows: ThreadItem[] = persisted.map((message) => toRow(message, chatId));
   if (live) {
     const last = persisted[persisted.length - 1];
     const echoed =
       live.phase === "asking" &&
       last?.role === "USER" &&
       last.content === live.question &&
-      (last.attachments?.length ?? 0) === live.attachments.length;
-    if (!echoed) rows.push({ id: PENDING, mine: true, body: live.question, attachments: live.attachments });
-    if (live.saved) rows.push(toRow(live.saved));
+      (last.attachments?.length ?? 0) === live.attachments.length &&
+      (last.images?.length ?? 0) === live.images.length;
+    if (!echoed) {
+      rows.push({ id: PENDING, mine: true, body: live.question, attachments: live.attachments, images: live.images });
+    }
+    if (live.saved) rows.push(toRow(live.saved, chatId));
     else if (live.reply) rows.push({ id: STREAMING, mine: false, body: live.reply });
     else rows.push({ id: THINKING, mine: false, body: "" });
   }
@@ -420,11 +517,12 @@ export default function ChatConversation({
   const thinkingLine =
     live && live.phase !== "asking" && live.attachments.length ? workingLine(live.phase, live.attachments) : "";
   const needsCourse = attach.staged.length > 0 && data.courseId == null;
+  const takeDropped = (files: File[]) => splitDrop(files, (images) => void pics.take(images), canUpload ? attach.take : null);
 
   return (
     <FileDropZone
-      onFiles={attach.take}
-      disabled={!canUpload}
+      onFiles={takeDropped}
+      disabled={botOff}
       label="Drop to attach"
       className="flex min-h-0 flex-1 flex-col"
     >
@@ -484,7 +582,11 @@ export default function ChatConversation({
             <button
               type="button"
               onClick={() =>
-                void ask(failure.question, { fileIds: failure.fileIds, attachments: failure.attachments })
+                void ask(failure.question, {
+                  fileIds: failure.fileIds,
+                  attachments: failure.attachments,
+                  images: failure.images,
+                })
               }
               disabled={busy}
               className="btn btn-ghost text-xs"
@@ -509,10 +611,12 @@ export default function ChatConversation({
         busy={busy}
         disabled={botOff || paused}
         placeholder={temporary ? "Ask a quick question…" : "Ask about your coursework…"}
-        accept={BANK_ACCEPT}
-        onFiles={canUpload ? attach.take : undefined}
-        attachments={attach.composerItems}
-        onRemoveAttachment={attach.remove}
+        accept={canUpload ? CHAT_ACCEPT : "image/*"}
+        onFiles={botOff ? undefined : takeDropped}
+        onCamera={botOff ? undefined : (file) => void pics.take([file])}
+        onPasteImages={(files) => void pics.take(files)}
+        attachments={[...pics.composerItems, ...attach.composerItems]}
+        onRemoveAttachment={(id) => (isImageAttachment(id) ? pics.remove(id) : attach.remove(id))}
         sendDisabled={needsCourse && pickedCourse == null}
         trayFooter={needsCourse ? <SaveToCourse value={pickedCourse} onChange={setPickedCourse} /> : null}
         hint={compact ? null : undefined}

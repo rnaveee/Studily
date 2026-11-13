@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from "react";
 import { Camera, FileText, Paperclip, Send, X } from "lucide-react";
 
 export interface ComposerAttachment {
@@ -17,6 +17,7 @@ export default function Composer({
   accept,
   onFiles,
   onCamera,
+  onPasteImages,
   attachments = [],
   onRemoveAttachment,
   hint = "Enter to send · Shift+Enter for a new line",
@@ -31,6 +32,7 @@ export default function Composer({
   accept?: string;
   onFiles?: (files: File[]) => void;
   onCamera?: (file: File) => void;
+  onPasteImages?: (files: File[]) => void;
   attachments?: ComposerAttachment[];
   onRemoveAttachment?: (id: string) => void;
   hint?: ReactNode;
@@ -66,6 +68,14 @@ export default function Composer({
       e.preventDefault();
       submit();
     }
+  }
+
+  function onPaste(e: ClipboardEvent<HTMLTextAreaElement>) {
+    if (!onPasteImages || blocked) return;
+    const images = Array.from(e.clipboardData.files).filter((file) => file.type.startsWith("image/"));
+    if (images.length === 0) return;
+    e.preventDefault();
+    onPasteImages(images);
   }
 
   function takeFiles(list: FileList | null) {
@@ -191,6 +201,7 @@ export default function Composer({
             resize(e.target);
           }}
           onKeyDown={onKeyDown}
+          onPaste={onPaste}
           className="input min-w-0 flex-1"
           style={{
             minHeight: 40,

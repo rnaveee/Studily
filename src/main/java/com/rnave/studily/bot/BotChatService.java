@@ -16,9 +16,11 @@ import com.rnave.studily.bot.BotDtos.CreateChatRequest;
 import com.rnave.studily.bot.BotDtos.DeltaEvent;
 import com.rnave.studily.bot.BotDtos.DoneEvent;
 import com.rnave.studily.bot.BotDtos.ErrorEvent;
+import com.rnave.studily.bot.BotDtos.ImageInput;
 import com.rnave.studily.bot.BotDtos.MessageDto;
 import com.rnave.studily.bot.BotDtos.MetaEvent;
 import com.rnave.studily.bot.BotDtos.StatusDto;
+import com.rnave.studily.bot.PracticeTutor.Photo;
 import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
 import com.rnave.studily.config.NotFoundException;
@@ -52,6 +54,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -68,6 +71,8 @@ public class BotChatService {
     static final int TITLE_CHARS = 60;
     static final String NEW_CHAT_TITLE = "New chat";
     static final String HELP_CHAT_TITLE = "Practice help";
+    static final String IMAGE_QUESTION = "Help me with what's in this image.";
+    static final String IMAGE_TITLE = "Image question";
     static final String REFUSED =
             "I can't help with that one. Try rephrasing the question, or ask about a different part of your notes.";
     static final String EMPTY_ANSWER = "I couldn't put an answer together for that. Try rewording the question.";
@@ -75,7 +80,12 @@ public class BotChatService {
     static final int MAX_ATTACHMENTS = 10;
 
     record Turn(long userId, long chatId, String question, Scope scope, String scopeLabel,
-                List<HistoryTurn> history) {
+                List<HistoryTurn> history, List<Photo> images, boolean searchable, int priorImagesAt,
+                List<Photo> priorImages) {
+
+        boolean withImages() {
+            return !images.isEmpty() || !priorImages.isEmpty();
+        }
     }
 
     private final Set<Long> inFlight = ConcurrentHashMap.newKeySet();
@@ -93,13 +103,14 @@ public class BotChatService {
     private final AiUsageRecorder usage;
     private final BotMessages botMessages;
     private final JdbcTemplate jdbc;
+    private final ChatImages chatImages;
     private final boolean botEnabled;
 
     public BotChatService(BotChatRepository chats, BotMessageRepository messages, CourseRepository courses,
                           CurrentUser currentUser, BotLimits limits, BankService bank, QueryRewriter rewriter,
                           Retriever retriever, ChatPromptBuilder prompts, ClaudeConnection claude,
                           AiUsageRecorder usage, BotMessages botMessages, JdbcTemplate jdbc,
-                          @Value("${app.bot.enabled}") boolean botEnabled) {
+                          ChatImages chatImages, @Value("${app.bot.enabled}") boolean botEnabled) {
         this.chats = chats;
         this.messages = messages;
         this.courses = courses;
@@ -113,6 +124,7 @@ public class BotChatService {
         this.usage = usage;
         this.botMessages = botMessages;
         this.jdbc = jdbc;
+        this.chatImages = chatImages;
         this.botEnabled = botEnabled;
     }
 
@@ -176,7 +188,11 @@ public class BotChatService {
     }
 
     public SseEmitter send(long chatId, String body, List<Long> fileIds) {
-        Turn turn = open(chatId, body, fileIds);
+        return send(chatId, body, fileIds, List.of());
+    }
+
+    public SseEmitter send(long chatId, String body, List<Long> fileIds, List<ImageInput> images) {
+        Turn turn = open(chatId, body, fileIds, chatImages.decode(images));
         SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MS);
         SseSink sink = new SseSink(emitter);
         try {
@@ -223,6 +239,15 @@ public class BotChatService {
     }
 
     Turn open(long chatId, String body, List<Long> fileIds) {
+        return open(chatId, body, fileIds, List.of());
+    }
+
+    @Transactional(readOnly = true)
+    public ChatImages.Stored image(long chatId, UUID imageId) {
+        return chatImages.find(currentUser.id(), chatId, imageId);
+    }
+
+    Turn open(long chatId, String body, List<Long> fileIds, List<Photo> photos) {
         long userId = currentUser.id();
         BotChat chat = owned(chatId);
         if (chat.getMode() != BotMode.CHAT) {
@@ -230,7 +255,7 @@ public class BotChatService {
         }
         String text = body == null ? "" : body.strip();
         List<AttachmentDto> attached = attachments(chat, fileIds);
-        if (text.isEmpty() && attached.isEmpty()) {
+        if (text.isEmpty() && attached.isEmpty() && photos.isEmpty()) {
             throw new BadRequestException("Write something to send.");
         }
         limits.check(BotMode.CHAT);
@@ -238,18 +263,35 @@ public class BotChatService {
             throw new TooManyRequestsException("StudilyBot is still answering in this chat. Wait for it to finish first.");
         }
         try {
-            String question = text.isEmpty() ? overviewQuestion(attached) : text;
+            String question = !text.isEmpty() ? text
+                    : attached.isEmpty() ? IMAGE_QUESTION : overviewQuestion(attached);
             List<BotMessage> previous = messages.findByChatIdOrderByIdAsc(chatId);
             boolean firstQuestion = previous.stream().noneMatch(message -> message.getRole() == BotRole.USER);
-            messages.save(newMessage(chatId, BotRole.USER, text,
-                    attached.isEmpty() ? null : botMessages.write(BotMeta.attachments(attached))));
+            List<String> imageIds = chatImages.newIds(photos.size());
+            BotMessage asked = messages.save(newMessage(chatId, BotRole.USER, text,
+                    attached.isEmpty() && photos.isEmpty() ? null
+                            : botMessages.write(BotMeta.question(attached, imageIds))));
+            if (!photos.isEmpty()) {
+                try {
+                    chatImages.save(userId, asked.getId(), imageIds, photos);
+                } catch (RuntimeException e) {
+                    messages.delete(asked);
+                    log.warn("Could not save chat images: {}", e.getMessage());
+                    throw new BadRequestException("Couldn't save that image. Try again.");
+                }
+            }
             if (firstQuestion && untitled(chat.getTitle())) {
-                chat.setTitle(titleFrom(text.isEmpty() ? attached.getFirst().name() : text));
+                chat.setTitle(titleFrom(!text.isEmpty() ? text
+                        : attached.isEmpty() ? IMAGE_TITLE : attached.getFirst().name()));
             }
             chat.setUpdatedAt(Instant.now());
             chats.save(chat);
+            List<BotMessage> window = previous.subList(Math.max(0, previous.size() - HISTORY_MESSAGES), previous.size());
+            int priorAt = photos.isEmpty() ? lastImageTurn(window) : -1;
+            List<Photo> prior = priorAt < 0 ? List.of() : chatImages.load(window.get(priorAt).getId());
             return new Turn(userId, chatId, clip(question, MAX_QUESTION_CHARS), scopeOf(chat, userId),
-                    scopeLabel(chat, userId), history(previous, botMessages));
+                    scopeLabel(chat, userId), history(previous, botMessages), photos,
+                    !text.isEmpty() || !attached.isEmpty(), prior.isEmpty() ? -1 : priorAt, prior);
         } catch (RuntimeException e) {
             inFlight.remove(chatId);
             throw e;
@@ -258,7 +300,7 @@ public class BotChatService {
 
     void answer(Turn turn, SseSink sink) {
         try {
-            boolean filesReady = retriever.readyFiles(turn.scope()) > 0;
+            boolean filesReady = turn.searchable() && retriever.readyFiles(turn.scope()) > 0;
             String searchQuery = turn.question();
             if (filesReady) {
                 QueryRewriter.Rewrite rewrite = rewriter.rewrite(turn.history(), turn.question());
@@ -278,7 +320,7 @@ public class BotChatService {
 
             BotMessage saved = messages.save(newMessage(turn.chatId(), BotRole.BOT, answerText(answer),
                     botMessages.write(BotMeta.citations(answer.citations()))));
-            usage.record(turn.userId(), AiFeature.BOT_CHAT, modelOf(answer), answer.inputTokens(),
+            usage.record(turn.userId(), AiFeature.BOT_CHAT, modelOf(turn, answer), answer.inputTokens(),
                     answer.outputTokens(), succeeded(answer));
             touch(turn.userId(), turn.chatId());
             sink.send("done", new DoneEvent(botMessages.dto(saved)));
@@ -302,7 +344,7 @@ public class BotChatService {
     private void stream(Turn turn, List<RetrievedChunk> chunks, boolean filesReady, AnswerAccumulator answer,
                         SseSink sink) {
         MessageCreateParams params = prompts.build(turn.history(), chunks, turn.question(), turn.scopeLabel(),
-                filesReady);
+                filesReady, turn.images(), turn.priorImagesAt(), turn.priorImages());
         try (StreamResponse<RawMessageStreamEvent> stream = claude.client().messages().createStreaming(params)) {
             Iterator<RawMessageStreamEvent> events = stream.stream().iterator();
             while (events.hasNext() && !sink.closed()) {
@@ -311,7 +353,7 @@ public class BotChatService {
                 }
             }
         } catch (RuntimeException e) {
-            usage.record(turn.userId(), AiFeature.BOT_CHAT, modelOf(answer), answer.inputTokens(),
+            usage.record(turn.userId(), AiFeature.BOT_CHAT, modelOf(turn, answer), answer.inputTokens(),
                     answer.outputTokens(), false);
             throw e;
         }
@@ -434,10 +476,27 @@ public class BotChatService {
             return message.getContent();
         }
         BotMeta meta = botMessages.read(message.getMeta());
-        if (meta == null || meta.attachments() == null || meta.attachments().isEmpty()) {
-            return message.getContent();
+        if (meta != null && meta.attachments() != null && !meta.attachments().isEmpty()) {
+            return overviewQuestion(meta.attachments());
         }
-        return overviewQuestion(meta.attachments());
+        if (meta != null && meta.images() != null && !meta.images().isEmpty()) {
+            return IMAGE_QUESTION;
+        }
+        return message.getContent();
+    }
+
+    private int lastImageTurn(List<BotMessage> window) {
+        for (int i = window.size() - 1; i >= 0; i--) {
+            BotMessage message = window.get(i);
+            if (message.getRole() != BotRole.USER) {
+                continue;
+            }
+            BotMeta meta = botMessages.read(message.getMeta());
+            if (meta != null && meta.images() != null && !meta.images().isEmpty()) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     private static boolean untitled(String title) {
@@ -474,8 +533,8 @@ public class BotChatService {
         return StopReason.REFUSAL.equals(answer.stopReason());
     }
 
-    private String modelOf(AnswerAccumulator answer) {
-        return answer.model() == null ? prompts.model() : answer.model();
+    private String modelOf(Turn turn, AnswerAccumulator answer) {
+        return answer.model() == null ? prompts.model(turn.withImages()) : answer.model();
     }
 
     private static void fail(SseSink sink, String code, String message) {

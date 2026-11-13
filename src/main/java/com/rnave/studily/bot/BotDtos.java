@@ -36,28 +36,33 @@ public class BotDtos {
     }
 
     public record BotMeta(List<CitationDto> citations, ProblemDto problem, ProblemSecret secret, GradeDto grade,
-                          List<AttachmentDto> attachments) {
+                          List<AttachmentDto> attachments, List<String> images) {
 
         public static BotMeta citations(List<CitationDto> citations) {
-            return new BotMeta(citations, null, null, null, null);
+            return new BotMeta(citations, null, null, null, null, null);
         }
 
         public static BotMeta problem(ProblemDto problem, ProblemSecret secret) {
-            return new BotMeta(List.of(), problem, secret, null, null);
+            return new BotMeta(List.of(), problem, secret, null, null, null);
         }
 
         public static BotMeta grade(GradeDto grade) {
-            return new BotMeta(List.of(), null, null, grade, null);
+            return new BotMeta(List.of(), null, null, grade, null, null);
         }
 
         public static BotMeta attachments(List<AttachmentDto> attachments) {
-            return new BotMeta(List.of(), null, null, null, attachments);
+            return new BotMeta(List.of(), null, null, null, attachments, null);
+        }
+
+        public static BotMeta question(List<AttachmentDto> attachments, List<String> images) {
+            return new BotMeta(List.of(), null, null, null,
+                    attachments.isEmpty() ? null : attachments, images.isEmpty() ? null : images);
         }
     }
 
     public record MessageDto(Long id, BotRole role, BotMessageKind kind, String content,
                              List<CitationDto> citations, ProblemDto problem, GradeDto grade,
-                             List<AttachmentDto> attachments, Instant createdAt) {
+                             List<AttachmentDto> attachments, List<String> images, Instant createdAt) {
     }
 
     public record ChatSummaryDto(Long id, BotMode mode, Long courseId, String courseName, String title,
@@ -79,7 +84,11 @@ public class BotDtos {
     public record RenameRequest(@NotBlank @Size(max = 120) String title) {
     }
 
-    public record SendRequest(@Size(max = 4000) String body, @Size(max = 10) List<Long> fileIds) {
+    public record SendRequest(@Size(max = 4000) String body, @Size(max = 10) List<Long> fileIds,
+                              @Size(max = 4) List<ImageInput> images) {
+    }
+
+    public record ImageInput(@Size(max = 12_000_000) String data) {
     }
 
     public record SetCourseRequest(@NotNull Long courseId) {

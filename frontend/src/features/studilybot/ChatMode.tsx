@@ -4,7 +4,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "../../lib/toast";
 import BotLayout from "./BotLayout";
 import Mascot from "./Mascot";
-import ChatConversation, { BANK_ACCEPT, SaveToCourse, chatKey, handOffFiles, useStagedFiles } from "./ChatConversation";
+import ChatConversation, {
+  CHAT_ACCEPT,
+  SaveToCourse,
+  chatKey,
+  handOffFiles,
+  handOffImages,
+  isImageAttachment,
+  splitDrop,
+  useStagedFiles,
+  useStagedImages,
+  type StagedImage,
+} from "./ChatConversation";
 import FileDropZone from "./FileDropZone";
 import Composer from "./Composer";
 import CourseSelect from "./CourseSelect";
@@ -80,31 +91,39 @@ function NewChat({ courseId, onCourse }: { courseId: number | null; onCourse: (i
   const status = useBotStatus();
   const botOff = status.data?.enabled === false;
   const create = useMutation({
-    mutationFn: ({ course }: { course: number | null; text: string; files: File[] }) => botApi.createChat(course),
-    onSuccess: (chat, { text, files }) => {
+    mutationFn: ({ course }: { course: number | null; text: string; files: File[]; images: StagedImage[] }) =>
+      botApi.createChat(course),
+    onSuccess: (chat, { text, files, images }) => {
       qc.setQueryData(chatKey(chat.id), chat);
       handOffFiles(chat.id, files);
+      handOffImages(chat.id, images);
       void qc.invalidateQueries({ queryKey: ["bot", "chats"] });
       navigate(`/study/studilybot/chat/${chat.id}`, { state: { initialQuestion: text } });
     },
-    onError: (error, { files }) => {
+    onError: (error, { files, images }) => {
       attach.restore(files);
+      pics.restore(images);
       toast.error(error instanceof Error && error.message ? error.message : "Couldn't start that chat. Try again.");
     },
   });
   const attach = useStagedFiles(create.isPending);
+  const pics = useStagedImages(create.isPending);
   const needsCourse = attach.staged.length > 0 && courseId == null;
 
   function send(text: string) {
     if (needsCourse) return;
     const files = attach.files;
+    const images = pics.images;
     attach.clear();
-    create.mutate({ course: courseId, text, files });
+    pics.clear();
+    create.mutate({ course: courseId, text, files, images });
   }
+
+  const takeDropped = (files: File[]) => splitDrop(files, (images) => void pics.take(images), attach.take);
 
   return (
     <FileDropZone
-      onFiles={attach.take}
+      onFiles={takeDropped}
       disabled={botOff}
       label="Drop to attach"
       className="flex min-h-0 flex-1 flex-col"
@@ -124,10 +143,12 @@ function NewChat({ courseId, onCourse }: { courseId: number | null; onCourse: (i
         busy={create.isPending}
         disabled={botOff}
         placeholder="Ask StudilyBot anything…"
-        accept={BANK_ACCEPT}
-        onFiles={botOff ? undefined : attach.take}
-        attachments={attach.composerItems}
-        onRemoveAttachment={attach.remove}
+        accept={CHAT_ACCEPT}
+        onFiles={botOff ? undefined : takeDropped}
+        onCamera={botOff ? undefined : (file) => void pics.take([file])}
+        onPasteImages={(files) => void pics.take(files)}
+        attachments={[...pics.composerItems, ...attach.composerItems]}
+        onRemoveAttachment={(id) => (isImageAttachment(id) ? pics.remove(id) : attach.remove(id))}
         sendDisabled={needsCourse}
         trayFooter={needsCourse ? <SaveToCourse value={courseId} onChange={onCourse} /> : null}
       />

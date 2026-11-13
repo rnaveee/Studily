@@ -12,8 +12,10 @@ import com.rnave.studily.config.TooManyRequestsException;
 import com.rnave.studily.filebank.BankFileDto;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,7 +31,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/bot/chats")
@@ -88,7 +92,17 @@ public class BotChatController {
         limit();
         response.setHeader("Cache-Control", "no-cache");
         response.setHeader("X-Accel-Buffering", "no");
-        return service.send(id, request.body(), request.fileIds());
+        return service.send(id, request.body(), request.fileIds(), request.images());
+    }
+
+    @GetMapping("/{id}/images/{imageId}")
+    public ResponseEntity<byte[]> image(@PathVariable long id, @PathVariable UUID imageId) {
+        ChatImages.Stored image = service.image(id, imageId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(image.mimeType()))
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(1)).cachePrivate())
+                .header("X-Content-Type-Options", "nosniff")
+                .body(image.bytes());
     }
 
     @PutMapping("/{id}/course")

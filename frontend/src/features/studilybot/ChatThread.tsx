@@ -1,5 +1,8 @@
-import { Fragment, Suspense, lazy, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
+import { Fragment, Suspense, lazy, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
+import Lightbox from "../../components/Lightbox";
+import { botApi } from "./api";
 import { usePresence } from "../../lib/motion";
 import type { Citation } from "./api";
 import CitationChip, { SlideFigure } from "./CitationChip";
@@ -12,6 +15,13 @@ export interface ThreadItem {
   body: string;
   citations?: Citation[];
   attachments?: ThreadAttachment[];
+  images?: ThreadImage[];
+}
+
+export interface ThreadImage {
+  key: string;
+  src?: string;
+  chatId?: number;
 }
 
 export interface ThreadAttachment {
@@ -88,6 +98,48 @@ function Avatar() {
   );
 }
 
+function ThreadImageThumb({ image }: { image: ThreadImage }) {
+  const [open, setOpen] = useState(false);
+  const remote = useQuery({
+    queryKey: ["bot", "image", image.chatId, image.key],
+    queryFn: () => botApi.image(image.chatId!, image.key),
+    enabled: !image.src && image.chatId != null,
+    staleTime: Infinity,
+    gcTime: 30 * 60_000,
+    retry: 1,
+  });
+  const objectUrl = useMemo(() => (remote.data ? URL.createObjectURL(remote.data) : null), [remote.data]);
+  useEffect(() => {
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [objectUrl]);
+  const url = image.src ?? objectUrl;
+  return (
+    <li
+      className="overflow-hidden rounded-xl"
+      style={{ background: "var(--surface-hi)", border: "1px solid var(--line)" }}
+    >
+      {url ? (
+        <>
+          <button type="button" onClick={() => setOpen(true)} className="block" aria-label="View image">
+            <img src={url} alt="Attached image" className="block h-28 w-auto max-w-[220px] object-cover md:h-36" />
+          </button>
+          {open && <Lightbox url={url} alt="Attached image" onClose={() => setOpen(false)} />}
+        </>
+      ) : (
+        <div className="flex h-28 w-28 items-center justify-center md:h-36 md:w-36">
+          {remote.isError ? (
+            <span className="px-2 text-center text-[11px] text-fg-3">Couldn't load image</span>
+          ) : (
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-line border-t-accent" />
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
 function DefaultBubble({ item }: { item: ThreadItem }) {
   const { parts, chips } = useMemo(
     () => (item.mine ? { parts: [], chips: [] } : placeSlides(item.body, item.citations ?? [])),
@@ -97,6 +149,13 @@ function DefaultBubble({ item }: { item: ThreadItem }) {
     return (
       <div className="chat-in flex justify-end">
         <div className="flex max-w-[85%] flex-col items-end gap-1.5 md:max-w-[70%]">
+          {item.images && item.images.length > 0 && (
+            <ul className="flex flex-wrap justify-end gap-1.5">
+              {item.images.map((image) => (
+                <ThreadImageThumb key={image.key} image={image} />
+              ))}
+            </ul>
+          )}
           {item.attachments && item.attachments.length > 0 && (
             <ul className="flex flex-wrap justify-end gap-1.5">
               {item.attachments.map((file) => (

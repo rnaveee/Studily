@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ChatPromptBuilderTest {
 
-    private final ChatPromptBuilder builder = new ChatPromptBuilder("claude-haiku-5-5", 2048);
+    private final ChatPromptBuilder builder = new ChatPromptBuilder("claude-haiku-5-5", "claude-sonnet-5-5", 2048);
 
     private static final List<RetrievedChunk> CHUNKS = List.of(
             new RetrievedChunk(11, 3, "Lecture 5.pdf", BankFileKind.LECTURE, true, 12, 13, "Power",
@@ -96,5 +96,39 @@ class ChatPromptBuilderTest {
 
     private static String systemText(MessageCreateParams params) {
         return params.system().orElseThrow().string().orElseThrow();
+    }
+
+    @Test
+    void imagesGoBeforeTheQuestionAndSwitchToTheVisionModel() {
+        PracticeTutor.Photo photo = new PracticeTutor.Photo("image/png", new byte[]{(byte) 0x89, 'P', 'N', 'G'});
+
+        var params = builder.build(List.of(), List.of(), "How do I solve this?", "all files", false,
+                List.of(photo), -1, List.of());
+
+        assertThat(params.model().asString()).isEqualTo("claude-sonnet-5-5");
+        var blocks = params.messages().getLast().content().blockParams().orElseThrow();
+        assertThat(blocks.getFirst().isImage()).isTrue();
+        assertThat(blocks.getLast().isText()).isTrue();
+    }
+
+    @Test
+    void priorImagesAttachToTheirOwnHistoryTurn() {
+        PracticeTutor.Photo photo = new PracticeTutor.Photo("image/jpeg", new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF});
+        var history = List.of(new HistoryTurn(true, "Solve this"),
+                new HistoryTurn(false, "Part a is 3."));
+
+        var params = builder.build(history, List.of(), "And part b?", "all files", false, List.of(), 0, List.of(photo));
+
+        assertThat(params.model().asString()).isEqualTo("claude-sonnet-5-5");
+        assertThat(params.messages().getFirst().content().blockParams().orElseThrow().getFirst().isImage()).isTrue();
+        assertThat(params.messages().getLast().content().blockParams().orElseThrow())
+                .noneSatisfy(block -> assertThat(block.isImage()).isTrue());
+    }
+
+    @Test
+    void textOnlyStaysOnTheChatModel() {
+        var params = builder.build(List.of(), List.of(), "What is KCL?", "all files", false);
+
+        assertThat(params.model().asString()).isEqualTo("claude-haiku-5-5");
     }
 }

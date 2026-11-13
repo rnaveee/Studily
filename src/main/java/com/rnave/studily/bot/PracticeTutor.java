@@ -267,7 +267,7 @@ public class PracticeTutor {
         return ContentBlockParam.ofText(TextBlockParam.builder().text(text).build());
     }
 
-    private static ContentBlockParam image(Photo photo) {
+    static ContentBlockParam image(Photo photo) {
         return ContentBlockParam.ofImage(ImageBlockParam.builder()
                 .source(Base64ImageSource.builder()
                         .mediaType(mediaType(photo.mimeType()))

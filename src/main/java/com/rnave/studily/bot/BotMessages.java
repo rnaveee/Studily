@@ -34,6 +34,7 @@ public class BotMessages {
                 meta == null ? null : meta.problem(),
                 meta == null ? null : meta.grade(),
                 meta == null || meta.attachments() == null ? List.of() : meta.attachments(),
+                meta == null || meta.images() == null ? List.of() : meta.images(),
                 message.getCreatedAt());
     }
 }

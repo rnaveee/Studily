@@ -56,6 +56,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -103,6 +104,7 @@ class BotChatServiceTest {
     private MessageService messagesApi;
     private AiUsageRecorder usage;
     private JdbcTemplate jdbc;
+    private ChatImages chatImages;
     private BotMessages botMessages;
     private BotChatService service;
 
@@ -119,6 +121,14 @@ class BotChatServiceTest {
         claude = mock(ClaudeConnection.class);
         usage = mock(AiUsageRecorder.class);
         jdbc = mock(JdbcTemplate.class);
+        chatImages = mock(ChatImages.class);
+        when(chatImages.newIds(anyInt())).thenAnswer(inv -> {
+            List<String> ids = new ArrayList<>();
+            for (int i = 0; i < inv.<Integer>getArgument(0); i++) {
+                ids.add("00000000-0000-0000-0000-00000000000" + i);
+            }
+            return ids;
+        });
         messagesApi = mock(MessageService.class);
         botMessages = new BotMessages(JsonMapper.builder().build());
 
@@ -174,7 +184,7 @@ class BotChatServiceTest {
                 thread.stream().filter(message -> message.getChatId().equals(inv.<Long>getArgument(0))).toList());
 
         service = new BotChatService(chats, messages, courses, currentUser, limits, bank, rewriter, retriever,
-                new ChatPromptBuilder("claude-haiku-5-5", 2048), claude, usage, botMessages, jdbc, true);
+                new ChatPromptBuilder("claude-haiku-5-5", "claude-sonnet-5-5", 2048), claude, usage, botMessages, jdbc, chatImages, true);
     }
 
     @Test
@@ -307,6 +317,67 @@ class BotChatServiceTest {
 
         MessageDto shown = service.get(chat.getId()).messages().getLast();
         assertThat(shown.citations()).containsExactly(new CitationDto(0, 3, "Lecture 8.pdf", 12, 12, "P = VI", true, 16));
+    }
+
+    @Test
+    void anImageOnlyQuestionSkipsTheFileSearchAndUsesTheVisionModel() throws Exception {
+        BotChat chat = chat(BotMode.CHAT, 5L, false);
+        when(retriever.readyFiles(any())).thenReturn(3L);
+        replyWith(MESSAGE_START, TEXT_BLOCK, textDelta("It simplifies to AB."), BLOCK_STOP, END_TURN, MESSAGE_STOP);
+
+        BotChatService.Turn turn = service.open(chat.getId(), "", List.of(), List.of(PHOTO));
+        service.answer(turn, sink());
+
+        assertThat(turn.question()).isEqualTo(BotChatService.IMAGE_QUESTION);
+        verify(chatImages).save(eq(USER), anyLong(), anyList(), eq(List.of(PHOTO)));
+        verify(retriever, never()).retrieve(any(), anyString(), anyInt(), any());
+        MessageCreateParams params = sentParams();
+        assertThat(params.model().asString()).isEqualTo("claude-sonnet-5-5");
+        assertThat(params.messages().getLast().content().blockParams().orElseThrow())
+                .anySatisfy(block -> assertThat(block.isImage()).isTrue());
+        assertThat(store.get(chat.getId()).getTitle()).isEqualTo(BotChatService.IMAGE_TITLE);
+        MessageDto shown = service.get(chat.getId()).messages().getFirst();
+        assertThat(shown.images()).hasSize(1);
+    }
+
+    @Test
+    void aFollowUpResendsTheLatestImageTurnWithTheVisionModel() throws Exception {
+        BotChat chat = chat(BotMode.CHAT, null, false);
+        replyWith(MESSAGE_START, TEXT_BLOCK, textDelta("Here is part a."), BLOCK_STOP, END_TURN, MESSAGE_STOP);
+        service.answer(service.open(chat.getId(), "How do I solve this?", List.of(), List.of(PHOTO)), sink());
+        when(chatImages.load(anyLong())).thenReturn(List.of(PHOTO));
+
+        replyWith(MESSAGE_START, TEXT_BLOCK, textDelta("Part b."), BLOCK_STOP, END_TURN, MESSAGE_STOP);
+        BotChatService.Turn followUp = service.open(chat.getId(), "What about part b?", List.of(), List.of());
+        service.answer(followUp, sink());
+
+        assertThat(followUp.priorImagesAt()).isZero();
+        assertThat(followUp.priorImages()).containsExactly(PHOTO);
+        MessageCreateParams params = sentParams();
+        assertThat(params.model().asString()).isEqualTo("claude-sonnet-5-5");
+        assertThat(params.messages().getFirst().content().blockParams().orElseThrow())
+                .anySatisfy(block -> assertThat(block.isImage()).isTrue());
+    }
+
+    @Test
+    void textQuestionsStayOnTheChatModel() throws Exception {
+        BotChat chat = chat(BotMode.CHAT, null, false);
+        replyWith(MESSAGE_START, TEXT_BLOCK, textDelta("ok"), BLOCK_STOP, END_TURN, MESSAGE_STOP);
+
+        service.answer(service.open(chat.getId(), "What is power?"), sink());
+
+        assertThat(sentParams().model().asString()).isEqualTo("claude-haiku-5-5");
+        verify(chatImages, never()).load(anyLong());
+    }
+
+    @Test
+    void aFailedImageSaveRemovesTheQuestion() {
+        BotChat chat = chat(BotMode.CHAT, null, false);
+        doThrow(new IllegalStateException("R2 down")).when(chatImages).save(anyLong(), anyLong(), anyList(), anyList());
+
+        assertThatThrownBy(() -> service.open(chat.getId(), "look", List.of(), List.of(PHOTO)))
+                .isInstanceOf(BadRequestException.class);
+        verify(messages).delete(any(BotMessage.class));
     }
 
     @Test
@@ -561,6 +632,15 @@ class BotChatServiceTest {
         message.setRole(role);
         message.setContent(content);
         thread.add(message);
+    }
+
+    private static final PracticeTutor.Photo PHOTO =
+            new PracticeTutor.Photo("image/png", new byte[]{(byte) 0x89, 'P', 'N', 'G', 1, 2, 3});
+
+    private MessageCreateParams sentParams() {
+        ArgumentCaptor<MessageCreateParams> captor = ArgumentCaptor.forClass(MessageCreateParams.class);
+        verify(messagesApi, atLeastOnce()).createStreaming(captor.capture());
+        return captor.getValue();
     }
 
     private void replyWith(String... events) throws Exception {

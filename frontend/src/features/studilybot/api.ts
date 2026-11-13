@@ -74,6 +74,7 @@ export interface BotMessage {
   problem: Problem | null;
   grade: Grade | null;
   attachments?: BotAttachment[];
+  images?: string[];
   createdAt: string;
 }
 
@@ -130,6 +131,7 @@ export const botApi = {
   status: () => api.get<BotStatus>("/bot/status"),
   chats: (mode: BotMode) => api.get<BotChatSummary[]>(`/bot/chats?mode=${mode}`),
   chat: (id: number) => api.get<BotChat>(`/bot/chats/${id}`),
+  image: (chatId: number, imageId: string) => api.getBlob(`/bot/chats/${chatId}/images/${imageId}`),
   createChat: (courseId: number | null, parentChatId?: number | null) =>
     api.post<BotChat>("/bot/chats", { courseId, parentChatId: parentChatId ?? null }),
   rename: (id: number, title: string) => api.patch<BotChat>(`/bot/chats/${id}`, { title }),
@@ -165,6 +167,7 @@ export async function streamAnswer(
   handlers: StreamHandlers,
   signal?: AbortSignal,
   fileIds: number[] = [],
+  images: string[] = [],
 ) {
   const headers: Record<string, string> = { "Content-Type": "application/json", Accept: "text/event-stream" };
   const token = getToken();
@@ -172,7 +175,11 @@ export async function streamAnswer(
   const res = await fetch(`/api/bot/chats/${chatId}/messages`, {
     method: "POST",
     headers,
-    body: JSON.stringify(fileIds.length ? { body, fileIds } : { body }),
+    body: JSON.stringify({
+      body,
+      ...(fileIds.length ? { fileIds } : {}),
+      ...(images.length ? { images: images.map((data) => ({ data })) } : {}),
+    }),
     signal,
   });
   if (!res.ok || !res.body) {
