@@ -52,6 +52,11 @@
       }
     },
     {
+      "path": "/support-studily",
+      "title": "Support Studily: Help Keep It Free",
+      "description": "Studily is free and built by one student. Share it with a friend, post it to your story or chip in a few dollars to help cover hosting and development, and earn the Supporter badge."
+    },
+    {
       "path": "/install",
       "title": "Install Studily on iPhone, Android or Desktop",
       "description": "Add Studily to your home screen in a few taps. It opens full-screen like a native app and sends reminders before classes and deadlines."
@@ -151,6 +156,7 @@
     "/users/:userId",
     "/users/:userId/badges",
     "/profile/:userId/add",
-    "/sets/:id"
+    "/sets/:id",
+    "/invite/:code"
   ]
 }

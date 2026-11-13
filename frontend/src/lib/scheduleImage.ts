@@ -85,7 +85,7 @@ function truncate(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
   return `${out}…`;
 }
 
-async function loadMark(): Promise<HTMLImageElement | null> {
+export async function loadMark(): Promise<HTMLImageElement | null> {
   try {
     const img = new Image();
     img.src = "/studily-3a-192.png";

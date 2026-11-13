@@ -11,6 +11,8 @@ import AboutPage from "./features/static/AboutPage";
 import TermsPage from "./features/static/TermsPage";
 import PrivacyPage from "./features/static/PrivacyPage";
 import SupportPage from "./features/static/SupportPage";
+import SupportStudilyPage from "./features/support/SupportStudilyPage";
+import InviteLanding from "./features/support/InviteLanding";
 import InstallPage from "./features/static/InstallPage";
 import ChangelogPage from "./features/static/ChangelogPage";
 import NotFoundPage from "./features/static/NotFoundPage";
@@ -213,6 +215,8 @@ export const appRoutes = (
       <Route path="/terms"   element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="/support" element={<SupportPage />} />
+      <Route path="/support-studily" element={<SupportStudilyPage />} />
+      <Route path="/invite/:code" element={<InviteLanding />} />
       <Route path="/install" element={<InstallPage />} />
       <Route path="/changelog" element={<ChangelogPage />} />
       <Route path="/pomodoro" element={<PomodoroPage />} />

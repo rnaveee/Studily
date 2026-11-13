@@ -22,3 +22,16 @@ export function downloadImage(blob: Blob, filename: string) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
+
+export async function shareImageFile(blob: Blob, filename: string): Promise<boolean> {
+  if (typeof navigator === "undefined" || !navigator.share || !navigator.canShare) return false;
+  const file = new File([blob], filename, { type: blob.type || "image/png" });
+  if (!navigator.canShare({ files: [file] })) return false;
+  try {
+    await navigator.share({ files: [file] });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") return true;
+    throw err;
+  }
+  return true;
+}

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { useNavigate } from "react-router-dom";
 import { api, ApiError, getToken, setToken, tokenExpiresAt, isGuestMode, setGuestMode } from "./api";
 import { queryClient } from "./queryClient";
+import { clearReferral, readReferral } from "./referral";
 import { syncPush } from "./push";
 import { syncTimeZone } from "./timezone";
 import { ws } from "./ws";
@@ -32,6 +33,7 @@ export interface SignupInput {
   password: string;
   name: string;
   school?: string;
+  referralCode?: string;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
@@ -133,7 +135,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signup(input: SignupInput) {
-    const res = await api.post<AuthResponse>("/auth/signup", input);
+    const referralCode = readReferral();
+    const res = await api.post<AuthResponse>("/auth/signup", referralCode ? { ...input, referralCode } : input);
+    clearReferral();
     setToken(res.token);
     clearGuest();
     setExpired(false);

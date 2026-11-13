@@ -162,7 +162,7 @@ async function request<T>(method: string, path: string, body?: unknown, keepaliv
     if (adminToken) headers["X-Admin-Token"] = adminToken;
   }
 
-  if (!token && isGuestMode() && !path.startsWith("/auth") && path !== "/support" && !path.startsWith("/public/")) {
+  if (!token && isGuestMode() && !path.startsWith("/auth") && path !== "/support" && !path.startsWith("/public/") && path !== "/donations/config") {
     if (method === "GET") {
       const stub = guestStub(path);
       if (stub !== undefined) return stub as T;

@@ -19,6 +19,7 @@ import { prefersReducedMotion } from "../lib/motion";
 import { useIsDesktop } from "../lib/useIsDesktop";
 import Avatar from "./Avatar";
 import ClientOnly from "./ClientOnly";
+import GreenHeart from "../features/support/GreenHeart";
 import Banners from "./Banners";
 import NotificationBell from "./NotificationBell";
 import NotificationPanel from "./NotificationPanel";
@@ -168,6 +169,20 @@ export default function Layout() {
           </ClientOnly>
         </div>
 
+        <div className="px-4 pb-2">
+          <Link
+            to="/support-studily"
+            className="inline-flex h-8 items-center gap-1.5 rounded-full pl-2 pr-3 text-[12.5px] font-semibold transition-colors"
+            style={{
+              background: "color-mix(in srgb, var(--heart-green-2) 15%, transparent)",
+              color: "color-mix(in srgb, var(--heart-green-1) 70%, var(--fg))",
+            }}
+          >
+            <GreenHeart size={18} glow />
+            Support Studily!
+          </Link>
+        </div>
+
         <div className="min-h-0 flex-1 overflow-y-auto">
         <nav ref={sideNavRef} className="relative px-2 py-1 space-y-0.5">
           {indicator && (
@@ -293,6 +308,13 @@ export default function Layout() {
           </Link>
 
           <div className="flex items-center gap-0.5">
+            <Link
+              to="/support-studily"
+              className="inline-flex h-10 w-9 items-center justify-center"
+              aria-label="Support Studily"
+            >
+              <GreenHeart size={22} glow />
+            </Link>
             {user && (
               <ClientOnly>
                 <CoinBalance />
