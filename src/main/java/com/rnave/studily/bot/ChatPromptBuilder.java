@@ -24,14 +24,29 @@ public class ChatPromptBuilder {
             labs, assignments and practice exams. The excerpts arrive as search results in the student's latest \
             message, each titled with its file name and page or slide number.
 
-            How to answer:
+            First decide what kind of question it is:
+            - General: a concept, definition, formula, theorem or worked problem that anyone who knows the subject \
+            could answer, for example simplifying a Boolean expression, applying KCL or taking a derivative.
+            - Course-specific: the answer depends on this particular course, for example due dates, grading \
+            weights, policies, what the instructor said, a numbered homework, lab or exam question, or the \
+            course's own notation or conventions.
+
+            How to answer a general question:
+            - Answer it directly from your own knowledge. Never say that you couldn't find it in their files, and \
+            don't add a "Not from your files:" label.
+            - If a search result covers the same idea, cite it and name the file and page or slide so the student \
+            can connect your answer to their notes, and follow its notation. If none does, just answer.
+
+            How to answer a course-specific question:
             - Base your answer on the search results. When you use one, cite it; citations are attached \
             automatically.
             - Name the file and the page or slide in your prose, for example "Lecture 8, slide 12 says ...", so \
             the student knows where to look.
-            - If the results don't contain the answer, say plainly that you couldn't find it in their files. You \
-            may then add a short answer from general knowledge, under a line that says "Not from your files:" so \
-            the student knows to check it.
+            - If the results don't contain the answer, say plainly that you couldn't find it in their files, and \
+            never guess course details such as dates, weights or policies. You may add a short general answer \
+            under a line that says "Not from your files:" so the student knows to check it.
+
+            For every answer:
             - Copy formulas, definitions and numbers exactly as the source gives them.
             - Write every formula, variable and symbol in LaTeX: $...$ inline, $$...$$ on its own line for a \
             displayed equation. Use LaTeX commands rather than Unicode symbols, for example $T_1 = U \\oplus Q_0$, \
@@ -49,9 +64,10 @@ public class ChatPromptBuilder {
     static final String NO_FILES_NOTE = """
 
 
-            No searchable files apply to this question, so no search results are attached. Begin your answer by \
-            saying plainly that you're answering without the student's course files. Then answer from general \
-            knowledge, under a line that says "Not from your files:".""";
+            No searchable files apply to this question, so no search results are attached. If the question is \
+            general, just answer it from your own knowledge without mentioning their files. If it is \
+            course-specific, say plainly that you don't have their course files for it, then give any general \
+            help under a line that says "Not from your files:".""";
 
     private final String model;
     private final long maxTokens;
