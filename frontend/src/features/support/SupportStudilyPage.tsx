@@ -11,9 +11,11 @@ import ChipInCard from "./ChipInCard";
 
 const INTRO: string[] = ["Here at Studily, we believe that learning should be free and accessible. However, providing these" +
 " tools also costs us a lot to run! We kindly ask for any donations to help Studily out and to keep running, so we can keep developing" +
-" this app "];
+" this app and providing more learning tools and make your school lives easier for you!"];
 
-const COVERS: string[] = ["Placeholder item 1", "Placeholder item 2", "Placeholder item 3"];
+const COVERS: string[] = ["Running the website - It costs money to keep Studily running on the internet!", "Memory and storage - Keeping track of your schedules, deadlines, flashcards and files costs money to maintain!",
+    "AI - Using our AI services costs money for the AI to run!",
+" "];
 
 const POLL_MS = 2000;
 const POLL_LIMIT_MS = 30_000;

@@ -188,7 +188,14 @@ async function drawAvatar(ctx: CanvasRenderingContext2D, profile: StoryProfile, 
   drawFace(ctx, profile, face, cx, cy, size - 20);
 }
 
-async function drawMascot(ctx: CanvasRenderingContext2D, outfit: BotOutfitRef, right: number, bottom: number, width: number) {
+async function drawMascot(
+  ctx: CanvasRenderingContext2D,
+  outfit: BotOutfitRef,
+  cx: number,
+  cy: number,
+  width: number,
+  angle: number,
+) {
   const { renderToStaticMarkup } = await import("react-dom/server");
   const markup = renderToStaticMarkup(
     createElement(StudilyBot, { pose: "wave", top: outfit.top, bottom: outfit.bottom, size: width }),
@@ -199,10 +206,12 @@ async function drawMascot(ctx: CanvasRenderingContext2D, outfit: BotOutfitRef, r
   if (!img) return;
   const height = (width * img.naturalHeight) / img.naturalWidth;
   ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
   ctx.shadowColor = "rgba(0,0,0,0.35)";
   ctx.shadowBlur = 30;
   ctx.shadowOffsetY = 10;
-  ctx.drawImage(img, right - width, bottom - height, width, height);
+  ctx.drawImage(img, -width / 2, -height / 2, width, height);
   ctx.restore();
 }
 
@@ -328,7 +337,7 @@ export async function renderStoryCard(profile: StoryProfile | null = null): Prom
     await drawFeature(ctx, FEATURES[i], 80, listTop + i * (cardH + spacing), cardW, cardH);
   }
   const botCardBottom = listTop + (FEATURES.length - 1) * (cardH + spacing) + cardH;
-  await drawMascot(ctx, profile?.botOutfit ?? BOT_STARTER, W - 40, botCardBottom + 22, 280);
+  await drawMascot(ctx, profile?.botOutfit ?? BOT_STARTER, W - 40, botCardBottom - cardH / 2, 340, -0.38);
 
   ctx.textAlign = "center";
   ctx.fillStyle = ACCENT;

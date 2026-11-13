@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, Download, Share2 } from "lucide-react";
 import ClientOnly from "../../components/ClientOnly";
+import Lightbox from "../../components/Lightbox";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { rememberNext } from "../../lib/next";
@@ -27,6 +28,7 @@ function StoryPreview() {
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const profile = user
     ? { name: user.name, username: user.username, avatarUrl: user.avatarUrl, flair: user.flair, botOutfit: user.botOutfit }
@@ -83,7 +85,14 @@ function StoryPreview() {
         style={{ background: "var(--surface-hi)", border: "1px solid var(--line)" }}
       >
         {url ? (
-          <img src={url} alt="Studily story preview" className="h-full w-full object-cover" />
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            aria-label="View the story image full size"
+            className="block h-full w-full cursor-zoom-in"
+          >
+            <img src={url} alt="Studily story preview" className="h-full w-full object-cover" />
+          </button>
         ) : failed ? (
           <span className="px-2 text-center text-[12px] text-fg-3">Preview unavailable</span>
         ) : (
@@ -103,6 +112,7 @@ function StoryPreview() {
         </button>
       </div>
       <p className="text-center text-[12px] leading-relaxed text-fg-3">Post it to your story and tag Studily.</p>
+      {expanded && url && <Lightbox url={url} alt="Studily story image" onClose={() => setExpanded(false)} />}
     </div>
   );
 }
