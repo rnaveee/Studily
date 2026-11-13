@@ -203,9 +203,9 @@ const BADGE_SIZE = 200;
 
 function SupporterBadgeShowcase() {
   return (
-    <section className="card px-5 py-8 sm:px-8">
+    <section className="card px-5 py-8 sm:px-6">
       <h2 className="text-center text-lg font-semibold text-fg">Earn rewards for supporting Studily</h2>
-      <div className="mt-6 grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-6">
+      <div className="mt-6 grid grid-cols-1 gap-6">
         <div className="flex flex-col items-center gap-3 text-center">
           <div className="flex h-40 items-center justify-center sm:h-[200px]">
             <img
@@ -224,7 +224,7 @@ function SupporterBadgeShowcase() {
           </p>
         </div>
         <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex h-40 items-center justify-center sm:h-[200px]">
+          <div className="flex h-40 items-center justify-center sm:h-[184px]">
             <ChestIcon tier="GOLD" size={176} />
           </div>
           <h3 className="text-[15px] font-semibold text-fg">Gold chest</h3>
@@ -283,9 +283,10 @@ export default function SupportStudilyPage() {
         </ul>
       </section>
 
-      <SupportTabs />
-
-      <SupporterBadgeShowcase />
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <SupportTabs />
+        <SupporterBadgeShowcase />
+      </div>
     </div>
   );
 }
