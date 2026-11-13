@@ -1,5 +1,4 @@
-import { createElement, type ComponentType } from "react";
-import { CalendarDays, Layers, Sparkles, type LucideProps } from "lucide-react";
+import { createElement } from "react";
 import FlairSvg from "../../components/FlairSvg";
 import StudilyBot from "../../components/StudilyBot";
 import { BOT_STARTER } from "../../lib/botArt";
@@ -11,8 +10,9 @@ const W = 1080;
 const H = 1920;
 const ACCENT = "#7c83f3";
 const ACCENT_DEEP = "#4f46e5";
-const INK = "#eef0ff";
-const MUTED = "#a3a8d6";
+const INK = "#ffffff";
+const MUTED = "#dcd8ff";
+const CARD_INK = "#1e1b4b";
 
 const SANS = '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif';
 const MONO = '"SF Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace';
@@ -25,10 +25,12 @@ export interface StoryProfile {
   botOutfit?: BotOutfitRef | null;
 }
 
-const FEATURES: { icon: ComponentType<LucideProps>; title: string; line: string }[] = [
-  { icon: CalendarDays, title: "Scheduling", line: "Classes, deadlines and exams in one plan" },
-  { icon: Layers, title: "Flashcards", line: "Turn your notes into study sets" },
-  { icon: Sparkles, title: "StudilyBot", line: "An AI tutor for your own courses" },
+type Visual = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, outfit: BotOutfitRef) => Promise<void>;
+
+const FEATURES: { title: string; line: string; visual: Visual }[] = [
+  { title: "Scheduling", line: "Classes, deadlines and exams in one plan", visual: (ctx, x, y, w, h) => drawSchedule(ctx, x, y, w, h) },
+  { title: "Flashcards", line: "Turn your notes into study sets", visual: (ctx, x, y, w, h) => drawFlashcards(ctx, x, y, w, h) },
+  { title: "StudilyBot", line: "An AI tutor for your own courses", visual: (ctx, x, y, w, h, outfit) => drawBot(ctx, x, y, w, h, outfit) },
 ];
 
 async function loadImage(src: string, cors = false): Promise<HTMLImageElement | null> {
@@ -188,31 +190,14 @@ async function drawAvatar(ctx: CanvasRenderingContext2D, profile: StoryProfile, 
   drawFace(ctx, profile, face, cx, cy, size - 20);
 }
 
-async function drawMascot(
-  ctx: CanvasRenderingContext2D,
-  outfit: BotOutfitRef,
-  cx: number,
-  cy: number,
-  width: number,
-  angle: number,
-) {
+async function mascotImage(outfit: BotOutfitRef, width: number): Promise<HTMLImageElement | null> {
   const { renderToStaticMarkup } = await import("react-dom/server");
   const markup = renderToStaticMarkup(
     createElement(StudilyBot, { pose: "wave", top: outfit.top, bottom: outfit.bottom, size: width }),
   )
     .replace(/ class="[^"]*"/g, "")
     .replace(/ style="[^"]*"/g, "");
-  const img = await svgImage(markup);
-  if (!img) return;
-  const height = (width * img.naturalHeight) / img.naturalWidth;
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(angle);
-  ctx.shadowColor = "rgba(0,0,0,0.35)";
-  ctx.shadowBlur = 30;
-  ctx.shadowOffsetY = 10;
-  ctx.drawImage(img, -width / 2, -height / 2, width, height);
-  ctx.restore();
+  return svgImage(markup);
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -228,6 +213,174 @@ function fitText(ctx: CanvasRenderingContext2D, text: string, max: number): stri
   return `${cut}…`;
 }
 
+function wrapLines(ctx: CanvasRenderingContext2D, text: string, max: number, limit: number): string[] {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (ctx.measureText(next).width <= max || !line) {
+      line = next;
+    } else {
+      lines.push(line);
+      line = word;
+    }
+  }
+  if (line) lines.push(line);
+  if (lines.length <= limit) return lines;
+  const kept = lines.slice(0, limit);
+  kept[limit - 1] = fitText(ctx, `${kept[limit - 1]} ${lines.slice(limit).join(" ")}`, max);
+  return kept;
+}
+
+const SCHEDULE_DAYS = ["M", "T", "W", "T", "F"];
+const SCHEDULE_BLOCKS: [number, number, number, string, string][] = [
+  [0, 0, 1.4, "#6366f1", "MATH"],
+  [0, 2.4, 1.3, "#f59e0b", "ENGL"],
+  [1, 0.8, 1.6, "#10b981", "BIOL"],
+  [2, 0, 1.4, "#6366f1", "MATH"],
+  [2, 2.2, 1.5, "#ec4899", "CPSC"],
+  [3, 0.8, 1.6, "#10b981", "BIOL"],
+  [3, 2.6, 1.2, "#0ea5e9", "Exam"],
+  [4, 0, 1.4, "#6366f1", "MATH"],
+  [4, 1.9, 1.5, "#f59e0b", "ENGL"],
+];
+
+async function drawSchedule(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+  ctx.save();
+  ctx.shadowColor = "rgba(20,10,80,0.35)";
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 8;
+  roundRect(ctx, x, y, w, h, 22);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+  ctx.restore();
+
+  const pad = 14;
+  const head = 30;
+  const colW = (w - pad * 2) / SCHEDULE_DAYS.length;
+  const bodyTop = y + pad + head;
+  const rowH = (h - pad * 2 - head) / 4;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `700 18px ${SANS}`;
+  ctx.fillStyle = "#6b7280";
+  SCHEDULE_DAYS.forEach((day, i) => ctx.fillText(day, x + pad + colW * i + colW / 2, y + pad + head / 2 - 2));
+  ctx.strokeStyle = "#eef0f6";
+  ctx.lineWidth = 2;
+  for (let r = 0; r <= 4; r++) {
+    ctx.beginPath();
+    ctx.moveTo(x + pad, bodyTop + rowH * r);
+    ctx.lineTo(x + w - pad, bodyTop + rowH * r);
+    ctx.stroke();
+  }
+  ctx.font = `800 15px ${SANS}`;
+  for (const [day, start, length, color, label] of SCHEDULE_BLOCKS) {
+    const bx = x + pad + colW * day + 3;
+    const by = bodyTop + rowH * start + 2;
+    const bw = colW - 6;
+    const bh = rowH * length - 4;
+    roundRect(ctx, bx, by, bw, bh, 8);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(label, bx + bw / 2, by + Math.min(bh / 2, 18));
+  }
+}
+
+async function drawFlashcards(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+  const cw = w - 50;
+  const ch = h - 30;
+  const cx = x + 20;
+  const cy = y + 18;
+  for (const [dx, dy, angle, alpha] of [
+    [26, -10, 0.06, 0.45],
+    [14, -4, 0.03, 0.7],
+  ] as const) {
+    ctx.save();
+    ctx.translate(cx + cw / 2 + dx, cy + ch / 2 + dy);
+    ctx.rotate(angle);
+    roundRect(ctx, -cw / 2, -ch / 2, cw, ch, 20);
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.save();
+  ctx.translate(cx + cw / 2, cy + ch / 2);
+  ctx.rotate(-0.03);
+  ctx.shadowColor = "rgba(20,10,80,0.35)";
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 8;
+  roundRect(ctx, -cw / 2, -ch / 2, cw, ch, 20);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+  ctx.shadowColor = "transparent";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = ACCENT_DEEP;
+  ctx.font = `700 17px ${SANS}`;
+  ctx.fillText("CALCULUS I · 24 CARDS", -cw / 2 + 22, -ch / 2 + 34);
+  ctx.fillStyle = CARD_INK;
+  ctx.font = `700 26px ${SANS}`;
+  wrapLines(ctx, "What is the derivative of sin x?", cw - 44, 2).forEach((line, i) =>
+    ctx.fillText(line, -cw / 2 + 22, -ch / 2 + 74 + i * 32),
+  );
+  ctx.fillStyle = "#9ca3af";
+  ctx.font = `600 15px ${SANS}`;
+  ctx.fillText("Tap to flip", -cw / 2 + 22, ch / 2 - 18);
+  ctx.restore();
+}
+
+async function drawBot(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  outfit: BotOutfitRef,
+) {
+  const width = 170;
+  const img = await mascotImage(outfit, width);
+  const height = img ? (width * img.naturalHeight) / img.naturalWidth : 0;
+  const botX = x + w - width - 6;
+  const botY = y + h - height + 6;
+
+  const bubbleW = w - width - 6;
+  const bubbleH = 92;
+  const bubbleX = x;
+  const bubbleY = y + 10;
+  ctx.save();
+  ctx.shadowColor = "rgba(20,10,80,0.3)";
+  ctx.shadowBlur = 18;
+  ctx.shadowOffsetY = 6;
+  roundRect(ctx, bubbleX, bubbleY, bubbleW, bubbleH, 22);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(bubbleX + bubbleW - 6, bubbleY + bubbleH - 34);
+  ctx.lineTo(bubbleX + bubbleW + 18, bubbleY + bubbleH - 18);
+  ctx.lineTo(bubbleX + bubbleW - 10, bubbleY + bubbleH - 12);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = CARD_INK;
+  ctx.font = `700 20px ${SANS}`;
+  wrapLines(ctx, "Ask me anything about your notes!", bubbleW - 32, 2).forEach((line, i) =>
+    ctx.fillText(line, bubbleX + 16, bubbleY + 38 + i * 26),
+  );
+
+  if (img) {
+    ctx.save();
+    ctx.shadowColor = "rgba(20,10,80,0.35)";
+    ctx.shadowBlur = 24;
+    ctx.shadowOffsetY = 8;
+    ctx.drawImage(img, botX, botY, width, height);
+    ctx.restore();
+  }
+}
+
 async function drawFeature(
   ctx: CanvasRenderingContext2D,
   feature: (typeof FEATURES)[number],
@@ -235,40 +388,33 @@ async function drawFeature(
   y: number,
   w: number,
   h: number,
+  outfit: BotOutfitRef,
 ) {
-  roundRect(ctx, x, y, w, h, 44);
-  ctx.fillStyle = "rgba(255,255,255,0.07)";
+  roundRect(ctx, x, y, w, h, 40);
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
   ctx.fill();
-  ctx.strokeStyle = "rgba(165,180,252,0.22)";
+  ctx.strokeStyle = "rgba(255,255,255,0.24)";
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  const badge = 112;
-  const bx = x + 44;
-  const by = y + (h - badge) / 2;
-  roundRect(ctx, bx, by, badge, badge, 32);
-  const fill = ctx.createLinearGradient(bx, by, bx + badge, by + badge);
-  fill.addColorStop(0, ACCENT);
-  fill.addColorStop(1, ACCENT_DEEP);
-  ctx.fillStyle = fill;
-  ctx.fill();
-
-  const { renderToStaticMarkup } = await import("react-dom/server");
-  const icon = await svgImage(
-    renderToStaticMarkup(createElement(feature.icon, { size: 64, color: "#ffffff", strokeWidth: 2 })),
-  );
-  if (icon) ctx.drawImage(icon, bx + (badge - 64) / 2, by + (badge - 64) / 2, 64, 64);
-
-  const tx = bx + badge + 40;
-  const maxText = x + w - tx - 40;
+  const visualW = 400;
+  const tx = x + 44;
+  const maxText = w - visualW - 44 - 40;
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = INK;
-  ctx.font = `700 54px ${SANS}`;
-  ctx.fillText(feature.title, tx, y + h / 2 - 6);
+  ctx.font = `800 50px ${SANS}`;
+  ctx.font = `500 30px ${SANS}`;
+  const lines = wrapLines(ctx, feature.line, maxText, 2);
+  const block = 56 + lines.length * 38;
+  const top = y + (h - block) / 2 + 44;
+  ctx.font = `800 50px ${SANS}`;
+  ctx.fillText(feature.title, tx, top);
   ctx.fillStyle = MUTED;
-  ctx.font = `500 34px ${SANS}`;
-  ctx.fillText(fitText(ctx, feature.line, maxText), tx, y + h / 2 + 44);
+  ctx.font = `500 30px ${SANS}`;
+  lines.forEach((line, i) => ctx.fillText(line, tx, top + 52 + i * 38));
+
+  await feature.visual(ctx, x + w - visualW - 24, y + 20, visualW, h - 40, outfit);
 }
 
 export async function renderStoryCard(profile: StoryProfile | null = null): Promise<Blob> {
@@ -279,21 +425,21 @@ export async function renderStoryCard(profile: StoryProfile | null = null): Prom
   if (!ctx) throw new Error("Canvas is not available");
   if (document.fonts?.ready) await document.fonts.ready;
 
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, "#0d1033");
-  bg.addColorStop(0.5, "#141a4a");
-  bg.addColorStop(1, "#0a0d26");
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, "#6a5cf0");
+  bg.addColorStop(0.5, "#5548c8");
+  bg.addColorStop(1, "#3a2e9e");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
   for (const [x, y, r, a] of [
-    [W * 0.15, 260, 520, 0.35],
-    [W * 0.9, 980, 560, 0.28],
-    [W * 0.3, 1700, 600, 0.22],
+    [W * 0.1, 220, 560, 0.18],
+    [W * 0.95, 900, 600, 0.14],
+    [W * 0.25, 1750, 640, 0.12],
   ] as const) {
     const glow = ctx.createRadialGradient(x, y, 0, x, y, r);
-    glow.addColorStop(0, `rgba(124,131,243,${a})`);
-    glow.addColorStop(1, "rgba(124,131,243,0)");
+    glow.addColorStop(0, `rgba(255,255,255,${a})`);
+    glow.addColorStop(1, "rgba(255,255,255,0)");
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, W, H);
   }
@@ -308,41 +454,49 @@ export async function renderStoryCard(profile: StoryProfile | null = null): Prom
   ctx.font = `800 132px ${MONO}`;
   const wordWidth = ctx.measureText("Studily").width;
   const markSize = 150;
-  const gap = 24;
+  const gap = 28;
   const rowX = (W - (markSize + gap + wordWidth)) / 2;
-  if (mark) ctx.drawImage(mark, rowX, 300, markSize, markSize);
+  ctx.save();
+  ctx.shadowColor = "rgba(20,10,80,0.35)";
+  ctx.shadowBlur = 24;
+  ctx.shadowOffsetY = 8;
+  roundRect(ctx, rowX, 300, markSize, markSize, 38);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+  ctx.restore();
+  if (mark) ctx.drawImage(mark, rowX + 18, 318, markSize - 36, markSize - 36);
   ctx.textAlign = "left";
   ctx.fillStyle = INK;
   ctx.fillText("Studily", rowX + markSize + gap, 420);
 
-  let listTop = 820;
+  const cardW = W - 160;
+  const cardH = 228;
+  const spacing = 28;
+  const listHeight = FEATURES.length * cardH + (FEATURES.length - 1) * spacing;
+  let listTop = Math.round((470 + 1790) / 2 - listHeight / 2);
   if (profile) {
-    const size = 340;
-    const cy = 530 + size / 2;
+    const size = 300;
+    const cy = 520 + size / 2;
     await drawAvatar(ctx, profile, W / 2, cy, size);
     ctx.textAlign = "center";
     ctx.fillStyle = INK;
     ctx.font = `700 64px ${SANS}`;
-    ctx.fillText(fitText(ctx, profile.name || profile.username, W - 160), W / 2, cy + size / 2 + 100);
+    ctx.fillText(fitText(ctx, profile.name || profile.username, W - 160), W / 2, cy + size / 2 + 90);
     ctx.fillStyle = MUTED;
     ctx.font = `500 40px ${SANS}`;
-    ctx.fillText(fitText(ctx, `@${profile.username}`, W - 160), W / 2, cy + size / 2 + 160);
-    listTop = cy + size / 2 + 230;
+    ctx.fillText(fitText(ctx, `@${profile.username}`, W - 160), W / 2, cy + size / 2 + 145);
+    listTop = cy + size / 2 + 200;
   }
 
-  const cardW = W - 160;
-  const cardH = 190;
-  const spacing = 32;
+  const outfit = profile?.botOutfit ?? BOT_STARTER;
   for (let i = 0; i < FEATURES.length; i++) {
-    await drawFeature(ctx, FEATURES[i], 80, listTop + i * (cardH + spacing), cardW, cardH);
+    await drawFeature(ctx, FEATURES[i], 80, listTop + i * (cardH + spacing), cardW, cardH, outfit);
   }
-  const botCardBottom = listTop + (FEATURES.length - 1) * (cardH + spacing) + cardH;
-  await drawMascot(ctx, profile?.botOutfit ?? BOT_STARTER, W - 40, botCardBottom - cardH / 2 - 190, 340, -0.38);
 
   ctx.textAlign = "center";
-  ctx.fillStyle = ACCENT;
+  ctx.fillStyle = INK;
   ctx.font = `700 52px ${MONO}`;
-  ctx.fillText("studily.ca", W / 2, H - 90);
+  ctx.fillText("studily.ca", W / 2, H - 70);
 
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob((blob) => {
