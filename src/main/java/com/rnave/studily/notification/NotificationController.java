@@ -25,7 +25,8 @@ public class NotificationController {
 
     static final List<NotificationType> CENTER_TYPES = List.of(
             NotificationType.ANNOUNCEMENT, NotificationType.FRIEND_REQUEST, NotificationType.FEED_REVIEW,
-            NotificationType.FEED_UPDATE, NotificationType.REFERRAL_REWARD);
+            NotificationType.FEED_UPDATE, NotificationType.REFERRAL_REWARD,
+            NotificationType.DONATION_THANKS);
 
     private final NotificationRepository notificationRepository;
     private final CurrentUser currentUser;

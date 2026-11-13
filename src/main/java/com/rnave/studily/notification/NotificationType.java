@@ -11,7 +11,8 @@ public enum NotificationType {
     FRIEND_REQUEST(86_400),
     FEED_REVIEW(86_400),
     FEED_UPDATE(86_400),
-    REFERRAL_REWARD(86_400);
+    REFERRAL_REWARD(86_400),
+    DONATION_THANKS(86_400);
 
     private final int pushTtlSeconds;
 

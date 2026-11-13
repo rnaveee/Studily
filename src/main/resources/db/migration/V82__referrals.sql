@@ -30,4 +30,5 @@ ALTER TABLE notifications ADD CONSTRAINT notifications_type_check
         'FRIEND_REQUEST',
         'FEED_REVIEW',
         'FEED_UPDATE',
-        'REFERRAL_REWARD'));
+        'REFERRAL_REWARD',
+        'DONATION_THANKS'));
