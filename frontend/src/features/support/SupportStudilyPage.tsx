@@ -7,6 +7,7 @@ import SegmentedToggle from "../../components/SegmentedToggle";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import { badgeGlow } from "../progress/badges";
+import ChestIcon from "../progress/ChestIcon";
 import GreenHeart from "./GreenHeart";
 import ShareCard from "./ShareCard";
 import ChipInCard from "./ChipInCard";
@@ -202,20 +203,37 @@ const BADGE_SIZE = 200;
 
 function SupporterBadgeShowcase() {
   return (
-    <section className="card flex flex-col items-center gap-3 px-5 py-8 text-center sm:px-8">
-      <img
-        src={SUPPORTER_BADGE}
-        alt="Supporter badge"
-        width={BADGE_SIZE}
-        height={BADGE_SIZE}
-        className="h-40 w-40 object-contain sm:h-[200px] sm:w-[200px]"
-        style={{ filter: badgeGlow("supporter", BADGE_SIZE) }}
-      />
-      <h2 className="text-lg font-semibold text-fg">Earn the Supporter badge</h2>
-      <p className="max-w-md text-[13.5px] leading-relaxed text-fg-2">
-        Chip in any amount, or invite a friend who signs up and starts studying, and the Supporter badge shows
-        on your profile for good.
-      </p>
+    <section className="card px-5 py-8 sm:px-8">
+      <h2 className="text-center text-lg font-semibold text-fg">Earn rewards for supporting Studily</h2>
+      <div className="mt-6 grid grid-cols-1 gap-8 sm:grid-cols-2 sm:gap-6">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex h-40 items-center justify-center sm:h-[200px]">
+            <img
+              src={SUPPORTER_BADGE}
+              alt="Supporter badge"
+              width={BADGE_SIZE}
+              height={BADGE_SIZE}
+              className="h-40 w-40 object-contain sm:h-[200px] sm:w-[200px]"
+              style={{ filter: badgeGlow("supporter", BADGE_SIZE) }}
+            />
+          </div>
+          <h3 className="text-[15px] font-semibold text-fg">Supporter badge</h3>
+          <p className="max-w-xs text-[13px] leading-relaxed text-fg-2">
+            Chip in any amount, or invite a friend who signs up and starts studying. It shows on your profile for
+            good.
+          </p>
+        </div>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex h-40 items-center justify-center sm:h-[200px]">
+            <ChestIcon tier="GOLD" size={176} />
+          </div>
+          <h3 className="text-[15px] font-semibold text-fg">Gold chest</h3>
+          <p className="max-w-xs text-[13px] leading-relaxed text-fg-2">
+            You and every friend who joins with your invite link and starts studying each get one, full of coins
+            and a shot at rare badges and flairs.
+          </p>
+        </div>
+      </div>
     </section>
   );
 }

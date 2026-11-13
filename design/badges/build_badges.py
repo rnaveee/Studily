@@ -414,19 +414,31 @@ def icon_feedback():
 
 
 def icon_heart():
-    heart = ("M256 352 C204 314 128 266 128 194 C128 150 160 120 200 120 C226 120 246 134 256 156 "
-             "C266 134 286 120 312 120 C352 120 384 150 384 194 C384 266 308 314 256 352 Z")
-    right = ("M256 156 C266 134 286 120 312 120 C352 120 384 150 384 194 C384 266 308 314 256 352 Z")
-    inner = ("M256 318 C214 288 160 252 160 198 C160 168 180 150 204 150 C226 150 244 164 256 190 "
-             "C268 164 286 150 308 150 C332 150 352 168 352 198 C352 252 298 288 256 318 Z")
+    outer = ("M50 94 C40 86 4 64 4 34 C4 17 17 5 32 5 C40 5 46 9 50 16 "
+             "C54 9 60 5 68 5 C83 5 96 17 96 34 C96 64 60 86 50 94 Z")
+    mid = ("M50 86 C41 79 12 60 12 36 C12 23 22 13 33 13 C41 13 46 18 50 25 "
+           "C54 18 59 13 67 13 C78 13 88 23 88 36 C88 60 59 79 50 86 Z")
+    shine = "M17 44 C14 32 19 21 29 17 C24 24 21 33 22 45 Z"
+    logo = [
+        "M72 116 C46 100 36 64 38 30 C58 60 72 92 86 110 Z",
+        "M80 118 C60 102 52 74 60 34 C72 64 82 92 94 112 Z",
+        "M88 120 C74 104 72 78 82 42 C88 70 96 94 102 114 Z",
+        "M74 132 C74 150 86 158 100 158 C114 158 126 150 126 132 L126 118 L100 130 L74 118 Z",
+        "M100 90 L164 120 L100 150 L36 120 Z",
+    ]
+    mark = "".join(f'<path d="{d}"/>' for d in logo)
     return (
-        f'<path d="{heart}" fill="#3BD47F"/>'
-        f'<path d="{right}" fill="#1FA85A"/>'
-        f'<path d="{inner}" fill="#6BEBA4" opacity="0.55"/>'
-        '<path d="M256 190 C268 164 286 150 308 150 C332 150 352 168 352 198 C352 252 298 288 256 318 Z" fill="#2CC06C" opacity="0.6"/>'
-        '<path d="M156 214 C148 186 158 160 184 150" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round" opacity="0.6"/>'
-        '<ellipse cx="206" cy="150" rx="12" ry="8" fill="#FFFFFF" opacity="0.6" transform="rotate(-20 206 150)"/>'
-        f'<path d="{heart}" fill="none" stroke="{OUT}" stroke-width="{SW + 2}" stroke-linejoin="round"/>'
+        '<defs><radialGradient id="heart-halo" cx="0.5" cy="0.5" r="0.5">'
+        '<stop offset="0" stop-color="#2fd77c" stop-opacity="0.55"/>'
+        '<stop offset="1" stop-color="#2fd77c" stop-opacity="0"/></radialGradient></defs>'
+        '<circle cx="256" cy="232" r="170" fill="url(#heart-halo)"/>'
+        '<g transform="translate(128 106) scale(2.56)">'
+        f'<path d="{outer}" fill="none" stroke="{OUT}" stroke-width="{(SW + 2) / 2.56:.2f}" stroke-linejoin="round"/>'
+        f'<path d="{outer}" fill="#0d6b3c"/>'
+        f'<path d="{mid}" fill="#1fae5c"/>'
+        f'<path d="{shine}" fill="#FFFFFF" opacity="0.45"/>'
+        f'<g transform="translate(22 23) scale(0.28)" fill="#a9f2c8">{mark}</g>'
+        '</g>'
         + sparkle(134, 300, 14, "#B6F7CF") + sparkle(394, 268, 10, "#FFFFFF")
     )
 
