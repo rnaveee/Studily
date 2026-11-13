@@ -1,9 +1,11 @@
 import { createElement, type ComponentType } from "react";
 import { CalendarDays, Layers, Sparkles, type LucideProps } from "lucide-react";
 import FlairSvg from "../../components/FlairSvg";
+import StudilyBot from "../../components/StudilyBot";
+import { BOT_STARTER } from "../../lib/botArt";
 import { buildFlairArt, flairArtKind, type FlairArtKind } from "../../lib/flairArt";
 import { FLAIR_RINGS, ringWidth, type FlairRing } from "../../lib/flairs";
-import type { FlairRef } from "../../types";
+import type { BotOutfitRef, FlairRef } from "../../types";
 
 const W = 1080;
 const H = 1920;
@@ -20,6 +22,7 @@ export interface StoryProfile {
   username: string;
   avatarUrl?: string | null;
   flair?: FlairRef | null;
+  botOutfit?: BotOutfitRef | null;
 }
 
 const FEATURES: { icon: ComponentType<LucideProps>; title: string; line: string }[] = [
@@ -185,6 +188,24 @@ async function drawAvatar(ctx: CanvasRenderingContext2D, profile: StoryProfile, 
   drawFace(ctx, profile, face, cx, cy, size - 20);
 }
 
+async function drawMascot(ctx: CanvasRenderingContext2D, outfit: BotOutfitRef, right: number, bottom: number, width: number) {
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const markup = renderToStaticMarkup(
+    createElement(StudilyBot, { pose: "wave", top: outfit.top, bottom: outfit.bottom, size: width }),
+  )
+    .replace(/ class="[^"]*"/g, "")
+    .replace(/ style="[^"]*"/g, "");
+  const img = await svgImage(markup);
+  if (!img) return;
+  const height = (width * img.naturalHeight) / img.naturalWidth;
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.35)";
+  ctx.shadowBlur = 30;
+  ctx.shadowOffsetY = 10;
+  ctx.drawImage(img, right - width, bottom - height, width, height);
+  ctx.restore();
+}
+
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, r);
@@ -306,6 +327,8 @@ export async function renderStoryCard(profile: StoryProfile | null = null): Prom
   for (let i = 0; i < FEATURES.length; i++) {
     await drawFeature(ctx, FEATURES[i], 80, listTop + i * (cardH + spacing), cardW, cardH);
   }
+  const botCardBottom = listTop + (FEATURES.length - 1) * (cardH + spacing) + cardH;
+  await drawMascot(ctx, profile?.botOutfit ?? BOT_STARTER, W - 40, botCardBottom + 22, 280);
 
   ctx.textAlign = "center";
   ctx.fillStyle = ACCENT;

@@ -29,9 +29,9 @@ function StoryPreview() {
   const [busy, setBusy] = useState(false);
 
   const profile = user
-    ? { name: user.name, username: user.username, avatarUrl: user.avatarUrl, flair: user.flair }
+    ? { name: user.name, username: user.username, avatarUrl: user.avatarUrl, flair: user.flair, botOutfit: user.botOutfit }
     : null;
-  const profileKey = profile ? `${profile.username}|${profile.name}|${profile.avatarUrl ?? ""}|${profile.flair?.code ?? ""}|${profile.flair?.imageUrl ?? ""}` : "";
+  const profileKey = profile ? `${profile.username}|${profile.name}|${profile.avatarUrl ?? ""}|${profile.flair?.code ?? ""}|${profile.flair?.imageUrl ?? ""}|${profile.botOutfit?.top ?? ""}|${profile.botOutfit?.bottom ?? ""}` : "";
 
   useEffect(() => {
     if (loading) return;
