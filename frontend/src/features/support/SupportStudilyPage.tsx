@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle, Info, Loader2 } from "lucide-react";
 import ClientOnly from "../../components/ClientOnly";
+import SegmentedToggle from "../../components/SegmentedToggle";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
 import GreenHeart from "./GreenHeart";
@@ -15,7 +16,7 @@ const INTRO: string[] = ["Here at Studily, we believe that learning should be fr
 
 const COVERS: string[] = ["Running the website - It costs money to keep Studily running on the internet!", "Memory and storage - Keeping track of your schedules, deadlines, flashcards and files costs money to maintain!",
     "AI - Using our AI services costs money for the AI to run!",
-" "];
+"Motivation - Seeing Studily being used and supported makes us want to update and continue providing to students!"];
 
 const POLL_MS = 2000;
 const POLL_LIMIT_MS = 30_000;
@@ -118,6 +119,62 @@ function DonationReturn() {
   );
 }
 
+type SupportTab = "donate" | "share";
+
+const TABS: { value: SupportTab; label: string }[] = [
+  { value: "donate", label: "Donate" },
+  { value: "share", label: "Share Studily" },
+];
+
+const useIsoLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
+function SupportTabs() {
+  const [tab, setTab] = useState<SupportTab>("donate");
+  const index = TABS.findIndex((t) => t.value === tab);
+  const panels = useRef<(HTMLDivElement | null)[]>([]);
+  const [height, setHeight] = useState<number | null>(null);
+
+  useIsoLayoutEffect(() => {
+    const panel = panels.current[index];
+    if (!panel) return;
+    const measure = () => setHeight(panel.offsetHeight);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, [index]);
+
+  return (
+    <div className="mx-auto w-full max-w-xl space-y-4">
+      <SegmentedToggle options={TABS} value={tab} onChange={setTab} className="mx-auto w-full max-w-sm" />
+      <div
+        className="overflow-hidden transition-[height] duration-300 ease-out motion-reduce:transition-none"
+        style={{ height: height ?? undefined, contain: "inline-size" }}
+      >
+        <div
+          className="flex items-start transition-transform duration-300 ease-out motion-reduce:transition-none"
+          style={{ transform: `translateX(-${index * 100}%)` }}
+        >
+          {TABS.map((t, i) => (
+            <div
+              key={t.value}
+              ref={(el) => {
+                panels.current[i] = el;
+              }}
+              className="w-full shrink-0 p-px"
+              aria-hidden={i !== index}
+              inert={i !== index}
+            >
+              {t.value === "donate" ? <ChipInCard /> : <ShareCard />}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SupportStudilyPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-5 pb-6 stagger-children">
@@ -153,10 +210,7 @@ export default function SupportStudilyPage() {
         </ul>
       </section>
 
-      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
-        <ShareCard />
-        <ChipInCard />
-      </div>
+      <SupportTabs />
     </div>
   );
 }
