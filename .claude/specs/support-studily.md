@@ -5,7 +5,7 @@ Branch `support-studily`. This file is the contract for every agent. Do not chan
 ## Global rules
 - Follow CLAUDE.md. NO code comments anywhere (project rule). Constructor injection, `@Value` config, existing exceptions in `config/` (BadRequestException, ConflictException, ForbiddenException, NotFound...).
 - Backend build check: `podman run --rm --network=host -v "$PWD":/w:Z -v "$HOME/.m2":/root/.m2:Z -w /w maven:3.9-eclipse-temurin-21 mvn -q package -DskipTests` (tests compile even with -DskipTests). Run your own tests with `-Dtest=...` (tests hit the local Postgres from application.properties).
-- Migrations are fixed: V81 supporter badge (done, lead), V82 referrals (Referrals agent), V83 donations (Stripe agent). Never touch another number.
+- Migrations are fixed: V82 supporter badge (done, lead), V83 referrals (Referrals agent), V84 donations (Stripe agent). Never touch another number.
 - Supporter badge: always grant through `com.rnave.studily.support.SupporterBadge#grantIfMissing(userId, delta)` (delta may be null).
 - Frontend: React 19 + TS + Tailwind, `frontend/src/lib/api.ts` fetch wrapper, feature code in `frontend/src/features/support/`.
 - Do not commit; the lead merges. Report: files changed, tests run with results, anything unverified.
@@ -14,9 +14,9 @@ Branch `support-studily`. This file is the contract for every agent. Do not chan
 I'll write `.claude/specs/support-studily.md` before any agent starts, the same way `social-progress.md` worked. It is the contract every agent builds against: the DDL, API JSON, file ownership and the rules below.
 
 **Lead scaffold, committed on branch `support-studily` before wave 1:**
-- `V81__supporter_badge.sql`: adds the `supporter` row to `badges` (SOCIAL, image `supporter.webp`).
+- `V82__supporter_badge.sql`: adds the `supporter` row to `badges` (SOCIAL, image `supporter.webp`).
 - `support/SupporterBadge.java`: `grantIfMissing(userId, ProgressDeltaBuilder)`. It wraps the existing check-then-grant pattern from `SurveyService` (`existsByUserIdAndBadgeCode` → `badgeService.grant(..., EARNED)`), and the `UNIQUE(user_id, badge_code)` constraint is the backstop.
-- The migration numbers are fixed in advance: **V82 referrals** and **V83 donations**, so the parallel agents never collide.
+- The migration numbers are fixed in advance: **V83 referrals** and **V84 donations**, so the parallel agents never collide.
 
 **API contract:**
 ```
@@ -39,8 +39,8 @@ All agents are `general-purpose` and run in `isolation: "worktree"` cut from `su
 | Agent | Model / effort | Owns |
 |---|---|---|
 | Design | Opus 5.5, medium | `frontend/src/features/support/GreenHeart.tsx`, `--heart-*` tokens + `hh-*` keyframes in `index.css`, the `supporter` entry in `design/badges/build_badges.py` + `export/webp/supporter.webp`, `BADGE_TIER.supporter = 6` in `badges.ts` |
-| Referrals | Sonnet 5.5, high | V82, `referral/*`, the `AuthDtos`/`AuthService.signup` hook, `ChestSource.REFERRAL` + `ChestTier.defaultFor`, `NotificationType.REFERRAL_REWARD` (+ check-constraint widening in V82, `CENTER_TYPES`), invite OG image + `/invite/{code}` page controller, tests |
-| Stripe | Sonnet 5.5, medium | `pom.xml` (stripe-java, pinned), `STRIPE_*` properties, V83, `donation/*`, webhook permitAll in `SecurityConfig` + exemption in `GlobalRateLimitFilter`, tests |
+| Referrals | Sonnet 5.5, high | V83, `referral/*`, the `AuthDtos`/`AuthService.signup` hook, `ChestSource.REFERRAL` + `ChestTier.defaultFor`, `NotificationType.REFERRAL_REWARD` (+ check-constraint widening in V83, `CENTER_TYPES`), invite OG image + `/invite/{code}` page controller, tests |
+| Stripe | Sonnet 5.5, medium | `pom.xml` (stripe-java, pinned), `STRIPE_*` properties, V84, `donation/*`, webhook permitAll in `SecurityConfig` + exemption in `GlobalRateLimitFilter`, tests |
 
 **Wave 2 (parallel):**
 
