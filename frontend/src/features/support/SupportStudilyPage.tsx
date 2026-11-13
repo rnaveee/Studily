@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle, Info, Loader2 } from "lucide-react";
+import { CheckCircle, Globe, HardDrive, Info, Loader2, Rocket, Sparkles, type LucideIcon } from "lucide-react";
 import ClientOnly from "../../components/ClientOnly";
 import SegmentedToggle from "../../components/SegmentedToggle";
 import { api } from "../../lib/api";
@@ -10,13 +10,26 @@ import GreenHeart from "./GreenHeart";
 import ShareCard from "./ShareCard";
 import ChipInCard from "./ChipInCard";
 
-const INTRO: string[] = ["Here at Studily, we believe that learning should be free and accessible. However, providing these" +
-" tools also costs us a lot to run! We kindly ask for any donations to help Studily out and to keep running, so we can keep developing" +
-" this app and providing more learning tools and make your school lives easier for you!"];
+const INTRO_LEAD = "Here at Studily, we believe that learning should be free and accessible.";
 
-const COVERS: string[] = ["Running the website - It costs money to keep Studily running on the internet!", "Memory and storage - Keeping track of your schedules, deadlines, flashcards and files costs money to maintain!",
-    "AI - Using our AI services costs money for the AI to run!",
-"Motivation - Seeing Studily being used and supported makes us want to update and continue providing to students!"];
+const INTRO: string[] = [
+  "However, providing these tools also costs us a lot to run! We kindly ask for any donations to help Studily keep running, so we can keep developing this app, provide more learning tools and make your school life easier.",
+];
+
+const COVERS: { icon: LucideIcon; title: string; text: string }[] = [
+  { icon: Globe, title: "Running the website", text: "It costs money to keep Studily running on the internet!" },
+  {
+    icon: HardDrive,
+    title: "Memory and storage",
+    text: "Keeping track of your schedules, deadlines, flashcards and files costs money to maintain!",
+  },
+  { icon: Sparkles, title: "AI", text: "Using our AI services costs money for the AI to run!" },
+  {
+    icon: Rocket,
+    title: "Motivation",
+    text: "Seeing Studily being used and supported makes us want to keep updating it and providing it to students!",
+  },
+];
 
 const POLL_MS = 2000;
 const POLL_LIMIT_MS = 30_000;
@@ -182,29 +195,39 @@ export default function SupportStudilyPage() {
         <DonationReturn />
       </ClientOnly>
 
-      <header className="flex flex-col items-center gap-4 px-2 pb-2 pt-6 text-center">
+      <header className="mx-auto flex max-w-2xl flex-col items-center gap-4 px-2 pb-2 pt-6 text-center">
         <GreenHeart size={96} glow />
-        <h1 className="text-2xl font-semibold tracking-tight text-fg">Help support Studily!</h1>
-      </header>
-
-      <section className="card p-5 sm:p-6">
-        <div className="space-y-3 text-[13.5px] leading-relaxed text-fg-2">
+        <h1 className="text-2xl font-semibold tracking-tight text-fg sm:text-3xl">Help support Studily!</h1>
+        <p className="text-[15px] font-medium leading-relaxed text-fg sm:text-base">{INTRO_LEAD}</p>
+        <div className="space-y-3 text-[13.5px] leading-relaxed text-fg-2 sm:text-[14px]">
           {INTRO.map((p) => (
             <p key={p}>{p}</p>
           ))}
         </div>
-      </section>
+      </header>
 
       <section className="card p-5 sm:p-6">
-        <h2 className="mb-3 text-[15px] font-semibold text-fg">What your support covers</h2>
-        <ul className="space-y-2 text-[13.5px] leading-relaxed text-fg-2">
-          {COVERS.map((item) => (
-            <li key={item} className="flex gap-2.5">
+        <h2 className="mb-4 text-[15px] font-semibold text-fg">What your support covers</h2>
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {COVERS.map(({ icon: Icon, title, text }) => (
+            <li
+              key={title}
+              className="flex gap-3 rounded-xl p-3.5"
+              style={{ background: "var(--surface-hi)", border: "1px solid var(--line)" }}
+            >
               <span
-                className="mt-[8px] h-1.5 w-1.5 shrink-0 rounded-full"
-                style={{ background: "var(--heart-green-2)" }}
-              />
-              <span>{item}</span>
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
+                style={{
+                  background: "color-mix(in srgb, var(--heart-green-2) 16%, transparent)",
+                  color: "var(--heart-green-2)",
+                }}
+              >
+                <Icon size={18} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[13.5px] font-semibold text-fg">{title}</span>
+                <span className="mt-0.5 block text-[12.5px] leading-relaxed text-fg-2">{text}</span>
+              </span>
             </li>
           ))}
         </ul>
