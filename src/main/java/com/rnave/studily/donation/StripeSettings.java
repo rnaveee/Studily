@@ -7,6 +7,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class StripeSettings {
 
+    static final int CONNECT_TIMEOUT_MS = 5_000;
+    static final int READ_TIMEOUT_MS = 15_000;
+
     private final String webhookSecret;
     private final StripeClient client;
 
@@ -26,7 +29,12 @@ public class StripeSettings {
             return;
         }
         this.webhookSecret = hook;
-        this.client = new StripeClient(secret);
+        this.client = StripeClient.builder()
+                .setApiKey(secret)
+                .setConnectTimeout(CONNECT_TIMEOUT_MS)
+                .setReadTimeout(READ_TIMEOUT_MS)
+                .setMaxNetworkRetries(1)
+                .build();
     }
 
     public boolean isEnabled() {

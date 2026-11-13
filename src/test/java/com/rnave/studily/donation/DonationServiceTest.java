@@ -19,6 +19,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -30,7 +31,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,11 +53,14 @@ class DonationServiceTest {
     @Mock(answer = Answers.RETURNS_DEEP_STUBS)
     private StripeClient client;
 
+    @Mock
+    private JdbcTemplate jdbc;
+
     private DonationService service;
 
     @BeforeEach
     void setUp() {
-        service = new DonationService(donations, settings, new DonationCheckoutRateLimiter(),
+        service = new DonationService(donations, settings, new DonationCheckoutRateLimiter(), jdbc,
                 Clock.fixed(NOW, ZoneOffset.UTC), "https://studily.ca/");
     }
 
@@ -230,5 +237,42 @@ class DonationServiceTest {
         assertThat(status.amountCents()).isEqualTo(500);
         assertThatThrownBy(() -> service.status(2L, id)).isInstanceOf(NotFoundException.class);
         verify(donations, never()).findById(any());
+    }
+
+    @Test
+    void checkoutTakesThePerUserLockBeforeLookingForAnOpenSession() {
+        enabled();
+        Donation open = new Donation();
+        open.setCheckoutUrl("https://checkout.stripe.com/c/pay/cs_old");
+        when(donations.findOpenCheckout(eq(42L), eq(500), any())).thenReturn(Optional.of(open));
+
+        service.checkout(42L, "a@b.c", 500);
+
+        var order = inOrder(jdbc, donations);
+        order.verify(jdbc).queryForObject(contains("pg_advisory_xact_lock"), eq(Object.class), eq("42"));
+        order.verify(donations).findOpenCheckout(eq(42L), eq(500), any());
+    }
+
+    @Test
+    void dailyCapOfNewCheckoutSessionsIsEnforced() {
+        enabled();
+        when(donations.findOpenCheckout(eq(1L), anyInt(), any())).thenReturn(Optional.empty());
+        when(donations.countByUserIdAndCreatedAtAfter(1L, NOW.minusSeconds(24 * 3600))).thenReturn(20L);
+
+        assertThatThrownBy(() -> service.checkout(1L, "a@b.c", 500))
+                .isInstanceOf(TooManyRequestsException.class);
+        verify(donations, never()).save(any());
+        verify(settings, never()).client();
+    }
+
+    @Test
+    void reuseStillWorksAtTheDailyCap() {
+        enabled();
+        Donation open = new Donation();
+        open.setCheckoutUrl("https://checkout.stripe.com/c/pay/cs_old");
+        when(donations.findOpenCheckout(eq(1L), eq(500), any())).thenReturn(Optional.of(open));
+
+        assertThat(service.checkout(1L, "a@b.c", 500).url()).isEqualTo("https://checkout.stripe.com/c/pay/cs_old");
+        verify(donations, never()).countByUserIdAndCreatedAtAfter(anyLong(), any());
     }
 }

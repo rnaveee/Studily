@@ -6,12 +6,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -82,6 +84,36 @@ class StripeWebhookControllerTest {
     @Test
     void missingSignatureHeaderIsRejected() throws Exception {
         mvc.perform(post("/api/stripe/webhook").contentType(MediaType.APPLICATION_JSON).content(payload))
+                .andExpect(status().isBadRequest());
+
+        verify(webhookService, never()).handle(any());
+    }
+
+    @Test
+    void signatureIsCheckedOverTheRawUtf8BytesWhateverCharsetIsDeclared() throws Exception {
+        String unicode = StripeTestEvents.envelope("evt_u", "customer.created",
+                "{\"id\":\"cus_1\",\"object\":\"customer\",\"name\":\"Zoë Ñúñez 学生 🎓\"}");
+        String header = StripeTestEvents.signatureHeader(unicode, StripeTestEvents.WEBHOOK_SECRET,
+                Instant.now().getEpochSecond());
+
+        mvc.perform(post("/api/stripe/webhook").contentType("application/json; charset=ISO-8859-1")
+                        .header("Stripe-Signature", header).content(unicode.getBytes(StandardCharsets.UTF_8)))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/stripe/webhook").contentType(MediaType.TEXT_PLAIN)
+                        .header("Stripe-Signature", header).content(unicode.getBytes(StandardCharsets.UTF_8)))
+                .andExpect(status().isOk());
+
+        verify(webhookService, times(2)).handle(any());
+    }
+
+    @Test
+    void malformedJsonWithAValidSignatureIsRejected() throws Exception {
+        String broken = "{\"id\":\"evt_1\",\"object\":\"event\",\"data\":";
+        String header = StripeTestEvents.signatureHeader(broken, StripeTestEvents.WEBHOOK_SECRET,
+                Instant.now().getEpochSecond());
+
+        mvc.perform(post("/api/stripe/webhook").contentType(MediaType.APPLICATION_JSON)
+                        .header("Stripe-Signature", header).content(broken))
                 .andExpect(status().isBadRequest());
 
         verify(webhookService, never()).handle(any());

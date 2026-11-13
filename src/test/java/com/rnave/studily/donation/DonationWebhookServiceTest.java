@@ -1,6 +1,10 @@
 package com.rnave.studily.donation;
 
+import com.rnave.studily.notification.NotificationDispatcher;
+import com.rnave.studily.notification.NotificationType;
 import com.rnave.studily.support.SupporterBadge;
+import com.rnave.studily.user.User;
+import com.rnave.studily.user.UserRepository;
 import com.stripe.model.Event;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -38,13 +43,25 @@ class DonationWebhookServiceTest {
     @Mock
     private SupporterBadge supporterBadge;
 
+    @Mock
+    private UserRepository users;
+
+    @Mock
+    private NotificationDispatcher dispatcher;
+
+    private User user;
+
     private DonationWebhookService service;
     private UUID donationId;
     private Donation donation;
 
     @BeforeEach
     void setUp() {
-        service = new DonationWebhookService(donations, events, supporterBadge, Clock.fixed(NOW, ZoneOffset.UTC));
+        service = new DonationWebhookService(donations, events, supporterBadge, users, dispatcher,
+                Clock.fixed(NOW, ZoneOffset.UTC));
+        user = new User();
+        user.setId(7L);
+        lenient().when(users.findById(7L)).thenReturn(Optional.of(user));
         donationId = UUID.randomUUID();
         donation = new Donation();
         donation.setId(donationId);
@@ -171,6 +188,8 @@ class DonationWebhookServiceTest {
 
     @Test
     void fullRefundMarksRefunded() {
+        when(donations.existsByStripePaymentIntent("pi_1")).thenReturn(true);
+
         service.handle(StripeTestEvents.parse(StripeTestEvents.charge("evt_6", "charge.refunded", "pi_1", true)));
 
         verify(donations).markRefunded("pi_1");
@@ -185,6 +204,8 @@ class DonationWebhookServiceTest {
 
     @Test
     void disputeMarksDisputed() {
+        when(donations.existsByStripePaymentIntent("pi_1")).thenReturn(true);
+
         service.handle(StripeTestEvents.parse(StripeTestEvents.dispute("evt_7", "pi_1")));
 
         verify(donations).markDisputed(eq("pi_1"));
@@ -205,5 +226,109 @@ class DonationWebhookServiceTest {
                 "{\"id\":\"cs_1\",\"object\":\"checkout.session\"}"));
 
         assertThatThrownBy(() -> service.handle(event)).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void grantSendsTheThanksNotification() {
+        when(donations.markPaid(donationId, NOW, "pi_1")).thenReturn(1);
+
+        service.handle(completed("evt_1", "paid", 500, "cad"));
+
+        verify(dispatcher).dispatch(user, NotificationType.DONATION_THANKS, null, "DONATION:" + donationId,
+                "Thank you for supporting Studily!", "Your Supporter badge is on your profile.", "/support-studily");
+    }
+
+    @Test
+    void lostClaimSendsNoNotification() {
+        when(donations.markPaid(donationId, NOW, "pi_1")).thenReturn(0);
+
+        service.handle(completed("evt_1", "paid", 500, "cad"));
+
+        verifyNoInteractions(dispatcher);
+    }
+
+    @Test
+    void notificationFailureDoesNotFailTheWebhook() {
+        when(donations.markPaid(donationId, NOW, "pi_1")).thenReturn(1);
+        doThrow(new IllegalStateException("push down")).when(dispatcher)
+                .dispatch(any(), any(), any(), anyString(), anyString(), anyString(), anyString());
+
+        service.handle(completed("evt_1", "paid", 500, "cad"));
+
+        verify(supporterBadge).grantIfMissing(7L, null);
+    }
+
+    @Test
+    void userDeletedBetweenRowAndGrantRecordsPaymentOnly() {
+        when(users.findById(7L)).thenReturn(Optional.empty());
+        when(donations.markPaid(donationId, NOW, "pi_1")).thenReturn(1);
+
+        service.handle(completed("evt_1", "paid", 500, "cad"));
+
+        verify(donations).markPaid(donationId, NOW, "pi_1");
+        verifyNoInteractions(supporterBadge);
+        verifyNoInteractions(dispatcher);
+    }
+
+    @Test
+    void sessionThatIsNotTheRowsSessionDoesNotGrant() {
+        donation.setStripeSessionId("cs_real");
+
+        service.handle(completed("evt_1", "paid", 500, "cad"));
+
+        verify(donations, never()).markPaid(any(), any(), any());
+        verifyNoInteractions(supporterBadge);
+    }
+
+    @Test
+    void metadataUserIdIsNeverUsedToCredit() {
+        String object = "{\"id\":\"cs_1\",\"object\":\"checkout.session\",\"client_reference_id\":\"" + donationId
+                + "\",\"payment_status\":\"paid\",\"amount_total\":500,\"currency\":\"cad\","
+                + "\"payment_intent\":\"pi_1\",\"metadata\":{\"userId\":\"999\",\"donationId\":\"x\"}}";
+        when(donations.markPaid(donationId, NOW, "pi_1")).thenReturn(1);
+
+        service.handle(StripeTestEvents.parse(StripeTestEvents.envelope("evt_m", "checkout.session.completed", object)));
+
+        verify(supporterBadge).grantIfMissing(7L, null);
+        verify(users, never()).findById(999L);
+    }
+
+    @Test
+    void missingAmountTotalDoesNotGrant() {
+        String object = "{\"id\":\"cs_1\",\"object\":\"checkout.session\",\"client_reference_id\":\"" + donationId
+                + "\",\"payment_status\":\"paid\",\"currency\":\"cad\",\"payment_intent\":\"pi_1\"}";
+
+        service.handle(StripeTestEvents.parse(StripeTestEvents.envelope("evt_n", "checkout.session.completed", object)));
+
+        verify(donations, never()).markPaid(any(), any(), any());
+        verifyNoInteractions(supporterBadge);
+    }
+
+    @Test
+    void refundArrivingBeforeThePaymentIsRetried() {
+        Event refund = StripeTestEvents.parse(StripeTestEvents.createdAt(
+                StripeTestEvents.charge("evt_r", "charge.refunded", "pi_new", true), NOW.getEpochSecond() - 60));
+
+        assertThatThrownBy(() -> service.handle(refund)).isInstanceOf(IllegalStateException.class);
+        verify(donations, never()).markRefunded(anyString());
+    }
+
+    @Test
+    void disputeArrivingBeforeThePaymentIsRetried() {
+        Event dispute = StripeTestEvents.parse(StripeTestEvents.createdAt(
+                StripeTestEvents.dispute("evt_d", "pi_new"), NOW.getEpochSecond() - 60));
+
+        assertThatThrownBy(() -> service.handle(dispute)).isInstanceOf(IllegalStateException.class);
+        verify(donations, never()).markDisputed(anyString());
+    }
+
+    @Test
+    void oldRefundForAnUnknownPaymentIsIgnored() {
+        Event refund = StripeTestEvents.parse(StripeTestEvents.createdAt(
+                StripeTestEvents.charge("evt_r", "charge.refunded", "pi_other", true), NOW.getEpochSecond() - 7200));
+
+        service.handle(refund);
+
+        verifyNoInteractions(supporterBadge);
     }
 }

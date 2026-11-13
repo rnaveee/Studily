@@ -40,6 +40,10 @@ final class StripeTestEvents {
                 + "\",\"type\":\"" + type + "\",\"data\":{\"object\":" + object + "}}";
     }
 
+    static String createdAt(String json, long epochSecond) {
+        return "{\"created\":" + epochSecond + "," + json.substring(1);
+    }
+
     static Event parse(String json) {
         return Webhook.constructEventWithoutVerification(json);
     }

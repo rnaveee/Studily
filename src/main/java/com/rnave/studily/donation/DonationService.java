@@ -14,7 +14,9 @@ import com.stripe.param.checkout.SessionCreateParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -32,19 +34,23 @@ public class DonationService {
     static final String CURRENCY = "cad";
     static final List<Integer> PRESETS = List.of(200, 500, 1000, 2000);
     static final Duration REUSE_WINDOW = Duration.ofMinutes(30);
+    static final int DAILY_CHECKOUT_CAP = 20;
+    static final Duration DAILY_WINDOW = Duration.ofHours(24);
 
     private final DonationRepository donationRepository;
     private final StripeSettings stripeSettings;
     private final DonationCheckoutRateLimiter rateLimiter;
+    private final JdbcTemplate jdbc;
     private final Clock clock;
     private final String baseUrl;
 
     public DonationService(DonationRepository donationRepository, StripeSettings stripeSettings,
-                           DonationCheckoutRateLimiter rateLimiter, Clock clock,
+                           DonationCheckoutRateLimiter rateLimiter, JdbcTemplate jdbc, Clock clock,
                            @Value("${app.base-url}") String baseUrl) {
         this.donationRepository = donationRepository;
         this.stripeSettings = stripeSettings;
         this.rateLimiter = rateLimiter;
+        this.jdbc = jdbc;
         this.clock = clock;
         this.baseUrl = baseUrl.trim().replaceAll("/+$", "");
     }
@@ -53,6 +59,7 @@ public class DonationService {
         return new ConfigResponse(stripeSettings.isEnabled(), CURRENCY, PRESETS, MIN_CENTS, MAX_CENTS);
     }
 
+    @Transactional(noRollbackFor = PaymentProviderException.class)
     public CheckoutResponse checkout(Long userId, String email, Number amount) {
         if (!stripeSettings.isEnabled()) {
             throw new ServiceUnavailableException("Donations are not available right now");
@@ -62,10 +69,16 @@ public class DonationService {
             throw new TooManyRequestsException("Too many checkout attempts, please try again in a few minutes");
         }
 
+        jdbc.queryForObject("SELECT pg_advisory_xact_lock(hashtext('donation:checkout'), hashtext(?))",
+                Object.class, String.valueOf(userId));
+
         Instant now = clock.instant();
         var open = donationRepository.findOpenCheckout(userId, amountCents, now.minus(REUSE_WINDOW));
         if (open.isPresent()) {
             return new CheckoutResponse(open.get().getCheckoutUrl());
+        }
+        if (donationRepository.countByUserIdAndCreatedAtAfter(userId, now.minus(DAILY_WINDOW)) >= DAILY_CHECKOUT_CAP) {
+            throw new TooManyRequestsException("Too many checkout attempts today, please try again tomorrow");
         }
 
         Donation donation = new Donation();

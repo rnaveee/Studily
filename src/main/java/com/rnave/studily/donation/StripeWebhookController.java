@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
+
 @RestController
 @RequestMapping("/api/stripe")
 public class StripeWebhookController {
@@ -28,7 +30,7 @@ public class StripeWebhookController {
     }
 
     @PostMapping("/webhook")
-    public ResponseEntity<Void> receive(@RequestBody String payload,
+    public ResponseEntity<Void> receive(@RequestBody byte[] body,
                                         @RequestHeader(value = "Stripe-Signature", required = false) String signature) {
         if (!stripeSettings.isEnabled()) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
@@ -36,6 +38,7 @@ public class StripeWebhookController {
         if (signature == null || signature.isBlank()) {
             return ResponseEntity.badRequest().build();
         }
+        String payload = new String(body, StandardCharsets.UTF_8);
         Event event;
         try {
             event = Webhook.constructEvent(payload, signature, stripeSettings.webhookSecret());

@@ -22,9 +22,13 @@ public interface DonationRepository extends JpaRepository<Donation, UUID> {
     Optional<Donation> findOpenCheckout(@Param("userId") Long userId, @Param("amountCents") int amountCents,
                                         @Param("since") Instant since);
 
+    long countByUserIdAndCreatedAtAfter(Long userId, Instant since);
+
+    boolean existsByStripePaymentIntent(String stripePaymentIntent);
+
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "UPDATE donations SET status = 'PAID', paid_at = :now, stripe_payment_intent = :paymentIntent "
-            + "WHERE id = :id AND status = 'PENDING'", nativeQuery = true)
+            + "WHERE id = :id AND status IN ('PENDING', 'EXPIRED')", nativeQuery = true)
     int markPaid(@Param("id") UUID id, @Param("now") Instant now, @Param("paymentIntent") String paymentIntent);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
