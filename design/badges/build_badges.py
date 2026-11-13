@@ -66,6 +66,7 @@ BADGES = [
     ("cosmetic_son", "ruby", "photo_son", "SON"),
     ("cosmetic_bruh", "bronze", "photo_bruh", "BRUH"),
     ("feedback", "diamond", "feedback", "FEEDBACK"),
+    ("supporter", "obsidian", "heart", "SUPPORTER"),
 ]
 
 FACE = "M56 300 L256 150 L456 300 L256 450 Z"
@@ -412,6 +413,24 @@ def icon_feedback():
     return clips + face + hand
 
 
+def icon_heart():
+    heart = ("M256 352 C204 314 128 266 128 194 C128 150 160 120 200 120 C226 120 246 134 256 156 "
+             "C266 134 286 120 312 120 C352 120 384 150 384 194 C384 266 308 314 256 352 Z")
+    right = ("M256 156 C266 134 286 120 312 120 C352 120 384 150 384 194 C384 266 308 314 256 352 Z")
+    inner = ("M256 318 C214 288 160 252 160 198 C160 168 180 150 204 150 C226 150 244 164 256 190 "
+             "C268 164 286 150 308 150 C332 150 352 168 352 198 C352 252 298 288 256 318 Z")
+    return (
+        f'<path d="{heart}" fill="#3BD47F"/>'
+        f'<path d="{right}" fill="#1FA85A"/>'
+        f'<path d="{inner}" fill="#6BEBA4" opacity="0.55"/>'
+        '<path d="M256 190 C268 164 286 150 308 150 C332 150 352 168 352 198 C352 252 298 288 256 318 Z" fill="#2CC06C" opacity="0.6"/>'
+        '<path d="M156 214 C148 186 158 160 184 150" fill="none" stroke="#FFFFFF" stroke-width="13" stroke-linecap="round" opacity="0.6"/>'
+        '<ellipse cx="206" cy="150" rx="12" ry="8" fill="#FFFFFF" opacity="0.6" transform="rotate(-20 206 150)"/>'
+        f'<path d="{heart}" fill="none" stroke="{OUT}" stroke-width="{SW + 2}" stroke-linejoin="round"/>'
+        + sparkle(134, 300, 14, "#B6F7CF") + sparkle(394, 268, 10, "#FFFFFF")
+    )
+
+
 def photo(name, x, y, w):
     path = PHOTO_DIR / f"{name}.png"
     with Image.open(path) as img:
@@ -423,6 +442,7 @@ ICONS = {
     "arrow": icon_arrow, "brain": icon_brain, "cards": icon_cards, "people": icon_people,
     "bicep": icon_bicep, "double_bicep": icon_double_bicep, "spark": icon_spark,
     "comet": icon_comet, "crown": icon_crown, "warrior": icon_warrior, "feedback": icon_feedback,
+    "heart": icon_heart,
     "photo_doge": lambda: photo("cosmetic_doge", 127, 60, 258),
     "photo_mog": lambda: photo("cosmetic_mog", 128, 66, 249),
     "photo_chad_nugget": lambda: photo("cosmetic_chad_nugget", 140, 56, 233),

@@ -100,6 +100,11 @@
   --flame-blue-2:   #5c9cff;
   --flame-blue-3:   #b8e2ff;
   --flame-blue-hot: #eef8ff;
+  --heart-green-1:  #0d6b3c;
+  --heart-green-2:  #1fae5c;
+  --heart-green-3:  #45dc8a;
+  --heart-green-4:  #c4f9da;
+  --heart-glow:     #2fd77c;
   --flair-star:     #ffffff;
   --flair-shine:    rgb(255 255 255 / 0.78);
   --flair-shade:    rgb(10 8 30 / 0.22);
@@ -158,6 +163,8 @@
   --flair-gold-4:   #94690b;
   --flair-galaxy-1: #2b1c74;
   --flair-fire-1:   #931515;
+  --heart-green-1:  #138a4c;
+  --heart-glow:     #3ef08e;
   --flair-shine:    rgb(255 255 255 / 0.6);
   --flair-shade:    rgb(0 0 0 / 0.3);
 }
@@ -1032,6 +1039,25 @@ textarea.input { resize: vertical; }
   20%  { opacity: 1; }
   100% { transform: translateY(-26px) scale(0.3); opacity: 0; }
 }
+.hh-beat {
+  transform-box: fill-box;
+  transform-origin: 50% 55%;
+  animation: hh-beat 2.6s ease-in-out infinite;
+}
+@keyframes hh-beat {
+  0%, 40%, 100% { transform: scale(1); }
+  12% { transform: scale(1.07); }
+  24% { transform: scale(0.99); }
+  32% { transform: scale(1.04); }
+}
+.hh-glow {
+  animation: hh-glow 2.6s ease-in-out infinite;
+}
+@keyframes hh-glow {
+  0%, 100% { transform: scale(0.9); opacity: 0.7; }
+  14%      { transform: scale(1.06); opacity: 1; }
+  50%      { transform: scale(0.96); opacity: 0.82; }
+}
 
 .streak-tint {
   border: 1px solid color-mix(in srgb, var(--tint) 32%, var(--line));
@@ -1288,6 +1314,8 @@ button.streak-tint:hover {
   .sf-layer,
   .sf-lick,
   .sf-glow { animation: none; }
+  .hh-beat,
+  .hh-glow { animation: none; }
   .sf-spark { animation: none; display: none; }
   .flair-spin,
   .flair-spin-rev,
