@@ -76,6 +76,7 @@ public class BotChatService {
     static final String REFUSED =
             "I can't help with that one. Try rephrasing the question, or ask about a different part of your notes.";
     static final String EMPTY_ANSWER = "I couldn't put an answer together for that. Try rewording the question.";
+    static final String CUT_OFF = "\n\n*This answer hit the length limit and was cut off. Ask me to continue.*";
     static final String CHAT_FILES_SCOPE = "the files attached to this chat";
     static final int MAX_ATTACHMENTS = 10;
 
@@ -522,7 +523,10 @@ public class BotChatService {
         if (refused(answer)) {
             return REFUSED;
         }
-        return answer.text().isBlank() ? EMPTY_ANSWER : answer.text();
+        if (answer.text().isBlank()) {
+            return EMPTY_ANSWER;
+        }
+        return StopReason.MAX_TOKENS.equals(answer.stopReason()) ? answer.text() + CUT_OFF : answer.text();
     }
 
     private static boolean succeeded(AnswerAccumulator answer) {

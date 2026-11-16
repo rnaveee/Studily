@@ -84,6 +84,8 @@ class BotChatServiceTest {
             {"type":"message_delta","delta":{"stop_reason":"end_turn","stop_sequence":null},"usage":{"output_tokens":9}}""";
     private static final String REFUSAL = """
             {"type":"message_delta","delta":{"stop_reason":"refusal","stop_sequence":null},"usage":{"output_tokens":3}}""";
+    private static final String MAX_TOKENS = """
+            {"type":"message_delta","delta":{"stop_reason":"max_tokens","stop_sequence":null},"usage":{"output_tokens":8192}}""";
     private static final String MESSAGE_STOP = """
             {"type":"message_stop"}""";
 
@@ -473,6 +475,17 @@ class BotChatServiceTest {
 
         assertThat(thread.getLast().getContent()).isEqualTo(BotChatService.REFUSED);
         verify(usage).record(USER, AiFeature.BOT_CHAT, "claude-haiku-5-5", 40, 3, false);
+    }
+
+    @Test
+    void anAnswerCutOffAtTheTokenLimitSaysSoAndStillCountsAsAnswered() throws Exception {
+        BotChat chat = chat(BotMode.CHAT, null, false);
+        replyWith(MESSAGE_START, TEXT_BLOCK, textDelta("Step 1: expand the"), BLOCK_STOP, MAX_TOKENS, MESSAGE_STOP);
+
+        service.answer(service.open(chat.getId(), "Derive the formula"), sink());
+
+        assertThat(thread.getLast().getContent()).isEqualTo("Step 1: expand the" + BotChatService.CUT_OFF);
+        verify(usage).record(USER, AiFeature.BOT_CHAT, "claude-haiku-5-5", 40, 8192, true);
     }
 
     @Test

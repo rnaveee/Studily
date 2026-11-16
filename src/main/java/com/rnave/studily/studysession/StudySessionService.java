@@ -49,10 +49,10 @@ public class StudySessionService {
     static final int POMODORO_BLOCK_MINUTES = 25;
     static final int POMODORO_BREAK_MINUTES = 5;
     static final int POMODORO_DEFAULT_BLOCKS = 5;
-    static final int MAX_BLOCKS = 8;
+    static final int MAX_POMODORO_BLOCKS = 48;
     static final int TIMER_BLOCK_MINUTES = 30;
     static final int TIMER_DEFAULT_MINUTES = 120;
-    static final Set<Integer> TIMER_MINUTES = Set.of(30, 60, 90, 120, 150, 180);
+    static final int MAX_TIMER_MINUTES = 1440;
     static final int MAX_TASKS = 10;
     static final int MAX_TASK_LENGTH = 200;
     static final Duration CHECKIN_EARLY = Duration.ofSeconds(60);
@@ -586,15 +586,15 @@ public class StudySessionService {
         return switch (req.mode()) {
             case POMODORO -> {
                 int blocks = req.blocks() == null ? POMODORO_DEFAULT_BLOCKS : req.blocks();
-                if (blocks < 1 || blocks > MAX_BLOCKS) {
-                    throw new BadRequestException("Pomodoro sessions have 1 to 8 blocks");
+                if (blocks < 1 || blocks > MAX_POMODORO_BLOCKS) {
+                    throw new BadRequestException("Pomodoro sessions need at least 1 block and can't run past a day");
                 }
                 yield new Plan(StudySessionMode.POMODORO, blocks, POMODORO_BLOCK_MINUTES, POMODORO_BREAK_MINUTES);
             }
             case TIMER -> {
                 int minutes = req.minutes() == null ? TIMER_DEFAULT_MINUTES : req.minutes();
-                if (!TIMER_MINUTES.contains(minutes)) {
-                    throw new BadRequestException("Timer sessions run 30 minutes to 3 hours, in 30-minute steps");
+                if (minutes < TIMER_BLOCK_MINUTES || minutes > MAX_TIMER_MINUTES || minutes % TIMER_BLOCK_MINUTES != 0) {
+                    throw new BadRequestException("Timer sessions run in 30-minute steps and can't run past a day");
                 }
                 yield new Plan(StudySessionMode.TIMER, minutes / TIMER_BLOCK_MINUTES, TIMER_BLOCK_MINUTES, 0);
             }

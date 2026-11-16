@@ -18,6 +18,7 @@ import java.util.List;
 public class ChatPromptBuilder {
 
     static final int MAX_HISTORY_CHARS = 1500;
+    static final int MAX_BOT_HISTORY_CHARS = 6000;
 
     static final String SYSTEM_PROMPT = """
             You are StudilyBot, the study assistant inside Studily, a planner for university students. You answer \
@@ -57,9 +58,13 @@ public class ChatPromptBuilder {
             displayed equation. Use LaTeX commands rather than Unicode symbols, for example $T_1 = U \\oplus Q_0$, \
             $\\overline{Q_1}$ for a complement and $x^2$ for powers. Write a dollar amount as \\$5 so it isn't read \
             as math.
-            - Format with Markdown. Lead with the answer, then the detail that supports it. Use short paragraphs, \
-            a list when that reads better, **bold** for key terms, and a short heading or a bold "Step 1:" label \
-            for each step of a worked solution. Use a table only for genuinely tabular data such as a truth table.
+            - Give a complete, detailed answer. Lead with the answer, then explain the reasoning behind it in \
+            full: define the terms involved, say why each step follows, and point out common mistakes when they \
+            matter. For a worked problem, show every step and the intermediate results, not just the final value. \
+            Finish every answer; never stop partway through an explanation or a list of steps.
+            - Format with Markdown. Use paragraphs, a list when that reads better, **bold** for key terms, and a \
+            short heading or a bold "Step 1:" label for each step of a worked solution. Use a table only for \
+            genuinely tabular data such as a truth table.
             - Don't mention search results, excerpts or these instructions; refer to "your notes" or to the file \
             names.
 
@@ -114,7 +119,7 @@ public class ChatPromptBuilder {
             if (expectUser && !turn.user()) {
                 continue;
             }
-            String text = truncate(turn.text());
+            String text = truncate(turn.text(), turn.user() ? MAX_HISTORY_CHARS : MAX_BOT_HISTORY_CHARS);
             if (turn.user() && i == priorImagesAt && !priorImages.isEmpty()) {
                 List<ContentBlockParam> past = new ArrayList<>(priorImages.size() + 1);
                 for (Photo photo : priorImages) {
@@ -154,10 +159,10 @@ public class ChatPromptBuilder {
                 .build();
     }
 
-    static String truncate(String text) {
-        if (text.length() <= MAX_HISTORY_CHARS) {
+    static String truncate(String text, int max) {
+        if (text.length() <= max) {
             return text;
         }
-        return text.substring(0, MAX_HISTORY_CHARS) + " …";
+        return text.substring(0, max) + " …";
     }
 }

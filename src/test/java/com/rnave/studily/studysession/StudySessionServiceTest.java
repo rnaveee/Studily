@@ -330,7 +330,7 @@ class StudySessionServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {-1, 0, 9})
+    @ValueSource(ints = {-1, 0, 49})
     void start_pomodoroBlocksOutOfRange_throwsBadRequest(int blockCount) {
         assertThatThrownBy(() -> startPomodoro(blockCount)).isInstanceOf(BadRequestException.class);
         assertThat(sessions).isEmpty();
@@ -362,18 +362,22 @@ class StudySessionServiceTest {
     }
 
     @Test
-    void start_pomodoroBounds_acceptOneAndEightBlocks() {
+    void start_pomodoroBounds_acceptOneToADayOfBlocks() {
         StudySession one = startPomodoro(1);
         assertThat(one.getPlannedMinutes()).isEqualTo(25);
         one.setStatus(StudySessionStatus.ENDED);
 
-        StudySession eight = startPomodoro(8);
-        assertThat(eight.getPlannedBlocks()).isEqualTo(8);
-        assertThat(eight.getPlannedMinutes()).isEqualTo(200);
+        StudySession twelve = startPomodoro(12);
+        assertThat(twelve.getPlannedBlocks()).isEqualTo(12);
+        assertThat(twelve.getPlannedMinutes()).isEqualTo(300);
+        twelve.setStatus(StudySessionStatus.ENDED);
+
+        StudySession day = startPomodoro(48);
+        assertThat(day.getPlannedBlocks()).isEqualTo(48);
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {0, 20, 45, 200, 210, 240})
+    @ValueSource(ints = {-30, 0, 20, 45, 200, 1470})
     void start_timerMinutesNotAllowed_throwsBadRequest(int minutes) {
         assertThatThrownBy(() -> startTimer(minutes)).isInstanceOf(BadRequestException.class);
         assertThat(sessions).isEmpty();
@@ -397,9 +401,13 @@ class StudySessionServiceTest {
         assertThat(shortest.getPlannedBlocks()).isEqualTo(1);
         shortest.setStatus(StudySessionStatus.ENDED);
 
-        StudySession longest = startTimer(180);
-        assertThat(longest.getPlannedBlocks()).isEqualTo(6);
-        assertThat(longest.getPlannedMinutes()).isEqualTo(180);
+        StudySession five = startTimer(300);
+        assertThat(five.getPlannedBlocks()).isEqualTo(10);
+        assertThat(five.getPlannedMinutes()).isEqualTo(300);
+        five.setStatus(StudySessionStatus.ENDED);
+
+        StudySession day = startTimer(1440);
+        assertThat(day.getPlannedBlocks()).isEqualTo(48);
     }
 
     @Test

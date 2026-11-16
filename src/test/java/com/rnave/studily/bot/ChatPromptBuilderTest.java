@@ -85,9 +85,12 @@ class ChatPromptBuilderTest {
 
     @Test
     void longHistoryMessagesAreTruncated() {
-        String essay = "x".repeat(ChatPromptBuilder.MAX_HISTORY_CHARS + 500);
+        String essay = "x".repeat(ChatPromptBuilder.MAX_BOT_HISTORY_CHARS + 500);
 
-        assertThat(ChatPromptBuilder.truncate(essay)).hasSize(ChatPromptBuilder.MAX_HISTORY_CHARS + 2);
+        assertThat(ChatPromptBuilder.truncate(essay, ChatPromptBuilder.MAX_HISTORY_CHARS))
+                .hasSize(ChatPromptBuilder.MAX_HISTORY_CHARS + 2);
+        assertThat(ChatPromptBuilder.truncate(essay, ChatPromptBuilder.MAX_BOT_HISTORY_CHARS))
+                .hasSize(ChatPromptBuilder.MAX_BOT_HISTORY_CHARS + 2);
     }
 
     private static List<ContentBlockParam> lastUserBlocks(MessageCreateParams params) {

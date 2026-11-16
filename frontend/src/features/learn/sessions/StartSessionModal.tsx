@@ -19,8 +19,9 @@ const MODES: { value: StudySessionMode; label: string }[] = [
 const POMO_BLOCK = 25;
 const POMO_BREAK = 5;
 const MIN_BLOCKS = 1;
-const MAX_BLOCKS = 8;
-const TIMER_OPTIONS = [30, 60, 90, 120, 150, 180];
+const MAX_BLOCKS = 48;
+const TIMER_STEP = 30;
+const MAX_TIMER_MINUTES = 1440;
 const MAX_TASKS = 10;
 const MAX_TASK_LEN = 200;
 
@@ -105,64 +106,29 @@ function StartForm({ initialTasks }: { initialTasks?: string[] }) {
 
         {mode === "POMODORO" ? (
           <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3 rounded-xl bg-surface-hi px-3 py-2.5" style={{ boxShadow: "var(--control-inset)" }}>
-              <button
-                type="button"
-                onClick={() => setBlocks((b) => Math.max(MIN_BLOCKS, b - 1))}
-                disabled={blocks <= MIN_BLOCKS}
-                className="btn btn-ghost h-10 w-10 shrink-0"
-                style={{ borderRadius: 9999, padding: 0 }}
-                aria-label="Fewer blocks"
-              >
-                <Minus size={16} />
-              </button>
-              <div className="text-center">
-                <div className="text-[22px] font-bold leading-none tabular-nums text-fg">
-                  {blocks} {blocks === 1 ? "block" : "blocks"}
-                </div>
-                <div className="mt-1 text-[11.5px] text-fg-3">
-                  {POMO_BLOCK} min focus · {POMO_BREAK} min break
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setBlocks((b) => Math.min(MAX_BLOCKS, b + 1))}
-                disabled={blocks >= MAX_BLOCKS}
-                className="btn btn-ghost h-10 w-10 shrink-0"
-                style={{ borderRadius: 9999, padding: 0 }}
-                aria-label="More blocks"
-              >
-                <Plus size={16} />
-              </button>
-            </div>
+            <Stepper
+              value={`${blocks} ${blocks === 1 ? "block" : "blocks"}`}
+              detail={`${POMO_BLOCK} min focus · ${POMO_BREAK} min break`}
+              onLess={() => setBlocks((b) => Math.max(MIN_BLOCKS, b - 1))}
+              onMore={() => setBlocks((b) => Math.min(MAX_BLOCKS, b + 1))}
+              lessDisabled={blocks <= MIN_BLOCKS}
+              moreDisabled={blocks >= MAX_BLOCKS}
+              lessLabel="Fewer blocks"
+              moreLabel="More blocks"
+            />
             <PlanBar blocks={blocks} />
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-            {TIMER_OPTIONS.map((m) => {
-              const active = m === minutes;
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMinutes(m)}
-                  aria-pressed={active}
-                  className="card press min-h-[40px] px-2 py-2 text-[13px] font-semibold tabular-nums"
-                  style={
-                    active
-                      ? {
-                          borderColor: "var(--accent)",
-                          background: "color-mix(in srgb, var(--accent) 10%, var(--surface))",
-                          color: "var(--accent)",
-                        }
-                      : { color: "var(--fg-2)" }
-                  }
-                >
-                  {formatMinutes(m)}
-                </button>
-              );
-            })}
-          </div>
+          <Stepper
+            value={formatMinutes(minutes)}
+            detail={`${TIMER_STEP}-minute blocks · no breaks`}
+            onLess={() => setMinutes((m) => Math.max(TIMER_STEP, m - TIMER_STEP))}
+            onMore={() => setMinutes((m) => Math.min(MAX_TIMER_MINUTES, m + TIMER_STEP))}
+            lessDisabled={minutes <= TIMER_STEP}
+            moreDisabled={minutes >= MAX_TIMER_MINUTES}
+            lessLabel="Less time"
+            moreLabel="More time"
+          />
         )}
 
         <p className="text-[12px] tabular-nums text-fg-3">
@@ -291,6 +257,55 @@ function StartForm({ initialTasks }: { initialTasks?: string[] }) {
         </button>
       </div>
     </>
+  );
+}
+
+function Stepper({
+  value,
+  detail,
+  onLess,
+  onMore,
+  lessDisabled,
+  moreDisabled,
+  lessLabel,
+  moreLabel,
+}: {
+  value: string;
+  detail: string;
+  onLess: () => void;
+  onMore: () => void;
+  lessDisabled: boolean;
+  moreDisabled: boolean;
+  lessLabel: string;
+  moreLabel: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-surface-hi px-3 py-2.5" style={{ boxShadow: "var(--control-inset)" }}>
+      <button
+        type="button"
+        onClick={onLess}
+        disabled={lessDisabled}
+        className="btn btn-ghost h-10 w-10 shrink-0"
+        style={{ borderRadius: 9999, padding: 0 }}
+        aria-label={lessLabel}
+      >
+        <Minus size={16} />
+      </button>
+      <div className="text-center">
+        <div className="text-[22px] font-bold leading-none tabular-nums text-fg">{value}</div>
+        <div className="mt-1 text-[11.5px] text-fg-3">{detail}</div>
+      </div>
+      <button
+        type="button"
+        onClick={onMore}
+        disabled={moreDisabled}
+        className="btn btn-ghost h-10 w-10 shrink-0"
+        style={{ borderRadius: 9999, padding: 0 }}
+        aria-label={moreLabel}
+      >
+        <Plus size={16} />
+      </button>
+    </div>
   );
 }
 
