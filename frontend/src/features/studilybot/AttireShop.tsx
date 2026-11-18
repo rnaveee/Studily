@@ -1,29 +1,61 @@
 import { useState } from "react";
 import { ArrowLeft, Check, ChevronRight, Coins, Gift, Lock, RotateCcw } from "lucide-react";
+import { botOutfit, type BotGroup } from "../../lib/botArt";
 import { useConfirm } from "../../lib/confirm";
 import { RARITY_COLOR, RARITY_LABEL } from "../../lib/flairs";
 import type { BotOutfitDto, BotOutfitRef, BotOutfitSlot } from "../../types";
 import { useBotOutfits, useBuyBotOutfit, useEquipBotOutfit } from "../progress/useProgress";
 import Mascot, { useEquippedOutfit, type MascotState } from "./Mascot";
 
-interface Category {
+interface SlotInfo {
   slot: BotOutfitSlot;
   key: keyof BotOutfitRef;
-  label: string;
   single: string;
-  example: string;
 }
 
+interface Category {
+  id: string;
+  slot: BotOutfitSlot;
+  group: BotGroup;
+  label: string;
+  example: string;
+  parent?: Category;
+}
+
+const SLOTS: SlotInfo[] = [
+  { slot: "TOP", key: "top", single: "Top" },
+  { slot: "BOTTOM", key: "bottom", single: "Bottom" },
+];
+const SLOT_KEY = new Map(SLOTS.map((s) => [s.slot, s.key]));
+
+const HOODIES: Category = { id: "hoodies", slot: "TOP", group: "hoodie", label: "Hoodies", example: "hoodie_varsity" };
+const SCHOOL_HOODIES: Category = {
+  id: "school",
+  slot: "TOP",
+  group: "school",
+  label: "School hoodies",
+  example: "hoodie_ubc",
+  parent: HOODIES,
+};
 const CATEGORIES: Category[] = [
-  { slot: "TOP", key: "top", label: "Hoodies", single: "Top", example: "hoodie_varsity" },
-  { slot: "BOTTOM", key: "bottom", label: "Pants", single: "Bottom", example: "pants_jeans" },
+  HOODIES,
+  { id: "shirts", slot: "TOP", group: "shirt", label: "Shirts", example: "tee_studily" },
+  { id: "pants", slot: "BOTTOM", group: "bottom", label: "Pants", example: "pants_jeans" },
 ];
 
-const BY_SLOT = new Map(CATEGORIES.map((c) => [c.slot, c]));
 const EMPTY_LOOK: BotOutfitRef = { top: null, bottom: null };
 
-function only(category: Category, code: string): BotOutfitRef {
-  return { ...EMPTY_LOOK, [category.key]: code };
+function only(slot: BotOutfitSlot, code: string): BotOutfitRef {
+  return { ...EMPTY_LOOK, [SLOT_KEY.get(slot)!]: code };
+}
+
+function groupOf(item: BotOutfitDto): BotGroup {
+  const art = botOutfit(item.code, SLOT_KEY.get(item.slot)!);
+  return art?.group ?? (item.slot === "TOP" ? "hoodie" : "bottom");
+}
+
+function itemsIn(list: BotOutfitDto[], category: Category): BotOutfitDto[] {
+  return list.filter((o) => o.slot === category.slot && groupOf(o) === category.group);
 }
 
 export default function AttireShop({ coins }: { coins: number }) {
@@ -39,12 +71,14 @@ export default function AttireShop({ coins }: { coins: number }) {
   const list = outfits.data ?? [];
   const look = tryOn ?? equipped;
   const byCode = new Map(list.map((o) => [o.code, o]));
-  const worn = CATEGORIES.map((c) => ({ category: c, item: look[c.key] ? byCode.get(look[c.key] as string) : undefined }));
+  const worn = SLOTS.map((s) => ({ slot: s, item: look[s.key] ? byCode.get(look[s.key] as string) : undefined }));
   const trying = worn.some((w) => w.item && !w.item.owned);
-  const changed = CATEGORIES.some((c) => look[c.key] !== equipped[c.key]);
+  const changed = SLOTS.some((s) => look[s.key] !== equipped[s.key]);
+  const openKey = open ? SLOT_KEY.get(open.slot)! : null;
+  const schoolItems = itemsIn(list, SCHOOL_HOODIES);
 
   function tryPiece(item: BotOutfitDto) {
-    const key = BY_SLOT.get(item.slot)!.key;
+    const key = SLOT_KEY.get(item.slot)!;
     setTryOn({ ...look, [key]: look[key] === item.code ? null : item.code });
     setMood("idle");
   }
@@ -67,7 +101,7 @@ export default function AttireShop({ coins }: { coins: number }) {
     });
     if (!ok) return;
     buy.mutate(item.code, {
-      onSuccess: () => wear({ ...equipped, [BY_SLOT.get(item.slot)!.key]: item.code }),
+      onSuccess: () => wear({ ...equipped, [SLOT_KEY.get(item.slot)!]: item.code }),
     });
   }
 
@@ -108,13 +142,13 @@ export default function AttireShop({ coins }: { coins: number }) {
         </div>
         <Mascot state={mood} outfit={look} size={190} shadow label="StudilyBot preview" />
         <div className="flex flex-wrap justify-center gap-1.5">
-          {worn.map(({ category, item }) => (
+          {worn.map(({ slot, item }) => (
             <span
-              key={category.slot}
+              key={slot.slot}
               className="rounded-full px-2.5 py-1 text-[12px] text-fg-2"
               style={{ background: "var(--surface-hi)", border: "1px solid var(--line)" }}
             >
-              <span className="text-fg-3">{category.single}:</span>{" "}
+              <span className="text-fg-3">{slot.single}:</span>{" "}
               <span className="font-medium text-fg">{item?.title ?? "Nothing"}</span>
             </span>
           ))}
@@ -127,13 +161,13 @@ export default function AttireShop({ coins }: { coins: number }) {
       </div>
 
       {open === null ? (
-        <div key="categories" className="stagger-children grid grid-cols-2 gap-3">
+        <div key="categories" className="stagger-children grid grid-cols-2 gap-3 sm:grid-cols-3">
           {CATEGORIES.map((category) => {
-            const items = list.filter((o) => o.slot === category.slot);
+            const items = [...itemsIn(list, category), ...(category === HOODIES ? schoolItems : [])];
             const owned = items.filter((o) => o.owned).length;
             return (
               <button
-                key={category.slot}
+                key={category.id}
                 type="button"
                 onClick={() => setOpen(category)}
                 className="card card-lift group flex flex-col items-center gap-2 p-4 text-center"
@@ -142,7 +176,7 @@ export default function AttireShop({ coins }: { coins: number }) {
                   className="flex h-[150px] w-full items-center justify-center rounded-xl"
                   style={{ background: "color-mix(in srgb, var(--accent) 7%, var(--surface-hi))" }}
                 >
-                  <Mascot outfit={only(category, category.example)} size={104} still />
+                  <Mascot outfit={only(category.slot, category.example)} size={104} still />
                 </span>
                 <span className="text-[15px] font-semibold text-fg">{category.label}</span>
                 <span className="inline-flex items-center gap-1 text-[12px] text-fg-3 tabular-nums">
@@ -154,11 +188,11 @@ export default function AttireShop({ coins }: { coins: number }) {
           })}
         </div>
       ) : (
-        <div key={open.slot} className="space-y-3">
+        <div key={open.id} className="space-y-3">
           <div className="animate-in flex items-center gap-2">
-            <button type="button" onClick={() => setOpen(null)} className="btn btn-ghost text-xs">
+            <button type="button" onClick={() => setOpen(open.parent ?? null)} className="btn btn-ghost text-xs">
               <ArrowLeft size={14} />
-              All clothes
+              {open.parent ? open.parent.label : "All clothes"}
             </button>
             <h3 className="text-[15px] font-semibold text-fg">{open.label}</h3>
           </div>
@@ -170,27 +204,60 @@ export default function AttireShop({ coins }: { coins: number }) {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-              {list
-                .filter((o) => o.slot === open.slot)
-                .map((item, index) => (
-                  <OutfitCard
-                    key={item.code}
-                    index={index}
-                    item={item}
-                    selected={look[open.key] === item.code}
-                    coins={coins}
-                    busy={buy.isPending || equip.isPending}
-                    buying={buy.isPending && buy.variables === item.code}
-                    onTry={() => tryPiece(item)}
-                    onBuy={() => purchase(item)}
-                    onEquip={() => wear({ ...equipped, [open.key]: item.equipped ? null : item.code })}
-                  />
-                ))}
+              {open === HOODIES && schoolItems.length > 0 && (
+                <SchoolHoodiesCard items={schoolItems} onOpen={() => setOpen(SCHOOL_HOODIES)} />
+              )}
+              {itemsIn(list, open).map((item, index) => (
+                <OutfitCard
+                  key={item.code}
+                  index={open === HOODIES ? index + 1 : index}
+                  item={item}
+                  selected={look[openKey!] === item.code}
+                  coins={coins}
+                  busy={buy.isPending || equip.isPending}
+                  buying={buy.isPending && buy.variables === item.code}
+                  onTry={() => tryPiece(item)}
+                  onBuy={() => purchase(item)}
+                  onEquip={() => wear({ ...equipped, [openKey!]: item.equipped ? null : item.code })}
+                />
+              ))}
             </div>
           )}
         </div>
       )}
     </div>
+  );
+}
+
+function SchoolHoodiesCard({ items, onOpen }: { items: BotOutfitDto[]; onOpen: () => void }) {
+  const owned = items.filter((o) => o.owned).length;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="attire-pop card card-lift group flex flex-col gap-2 p-2.5 text-left"
+    >
+      <span
+        className="flex h-[130px] items-center justify-center rounded-xl"
+        style={{ background: "color-mix(in srgb, var(--accent) 8%, var(--surface-hi))" }}
+      >
+        <Mascot outfit={only(SCHOOL_HOODIES.slot, SCHOOL_HOODIES.example)} size={88} still />
+      </span>
+      <span
+        className="self-start rounded-full px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-accent tabular-nums"
+        style={{ background: "color-mix(in srgb, var(--accent) 14%, transparent)" }}
+      >
+        {items.length} schools
+      </span>
+      <span className="text-[13.5px] font-semibold leading-tight text-fg">School hoodies</span>
+      <span
+        className="mt-auto flex min-h-[36px] w-full items-center justify-center gap-1 rounded-xl text-[12px] font-semibold text-accent tabular-nums"
+        style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}
+      >
+        {owned > 0 ? `${owned} owned` : "Browse"}
+        <ChevronRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+      </span>
+    </button>
   );
 }
 
@@ -216,7 +283,7 @@ function OutfitCard({
   onEquip: () => void;
 }) {
   const color = RARITY_COLOR[item.rarity];
-  const piece = only(BY_SLOT.get(item.slot)!, item.code);
+  const piece = only(item.slot, item.code);
   const short = (item.priceCoins ?? 0) - coins;
 
   return (

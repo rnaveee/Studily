@@ -4,17 +4,21 @@ import {
   BOT_HEAD,
   BOT_HEAD_VIEW,
   BOT_LEGS,
+  BOT_LOGO_MARK,
   BOT_LOGO_TF,
   BOT_PLUMES,
   BOT_POSE_EXPRESSION,
   BOT_POSES,
   BOT_TORSO,
   BOT_VIEW,
+  botLettering,
   botOutfit,
   limbAt,
   limbPath,
   limbSegment,
+  limbSub,
   type BotBottomStyle,
+  type BotEmblem,
   type BotExpression,
   type BotLimb,
   type BotPaint,
@@ -158,7 +162,12 @@ function Arm({
         />
       )}
       <path d={limbPath(limb)} fill="none" stroke={C.limb} strokeWidth="9" strokeLinecap="round" />
-      {top && (
+      {top?.cut === "tee" ? (
+        <>
+          <path d={limbSub(limb, 0.38)} fill="none" stroke={sleeveFill} strokeWidth="17" />
+          <path d={limbSegment(limb, 0.31, 0.38)} fill="none" stroke={top.band} strokeWidth="17.5" />
+        </>
+      ) : top && (
         <>
           <path d={limbPath({ ...limb, e: limbAt(limb, 0.86) })} fill="none" stroke={sleeveFill} strokeWidth="15" strokeLinecap="round" />
           {cuffStroke && <path d={limbSegment(limb, 0.8, 0.88)} fill="none" stroke={cuffStroke} strokeWidth="16" strokeLinecap="butt" />}
@@ -169,30 +178,95 @@ function Arm({
   );
 }
 
+function Emblem({ emblem, bg }: { emblem: BotEmblem; bg: string }) {
+  const line = { fill: "none", strokeLinecap: "round", strokeLinejoin: "round" } as const;
+  switch (emblem.kind) {
+    case "letters": {
+      const { d, width } = botLettering(emblem.text);
+      return <path d={d} stroke={emblem.ink} strokeWidth={width} {...line} />;
+    }
+    case "circuit":
+      return (
+        <g>
+          <path d="M92 221 L92 206 L100 198 L100 187 M106 221 L106 211 L112 205 M134 221 L134 211 L126 203 L126 190 M148 221 L148 201 L140 193" stroke={emblem.ink} strokeWidth="1.8" {...line} />
+          {[[100, 187], [112, 205], [126, 190], [140, 193]].map(([x, y]) => (
+            <circle key={`${x}-${y}`} cx={x} cy={y} r="2.2" fill={emblem.ink} />
+          ))}
+          <rect x="113" y="207" width="14" height="10" rx="2" fill={emblem.ink} />
+          <path d="M116.5 217 L116.5 221 M120 217 L120 221 M123.5 217 L123.5 221" stroke={emblem.ink} strokeWidth="1.4" {...line} />
+          <circle cx="120" cy="212" r="1.6" fill={bg} />
+        </g>
+      );
+    case "brain":
+      return (
+        <g>
+          <path d="M120 203 C116 199 109 200 108 205 C104 206 104 212 108 214 C109 218 115 219 118 216 L122 216 C125 219 131 218 132 214 C136 212 136 206 132 205 C131 200 124 199 120 203 Z" fill={emblem.ink} />
+          <path d="M120 204 L120 216 M110.5 208.5 Q113.5 206 116.5 208.5 M111 212.5 Q114 211 117 213 M123.5 208.5 Q126.5 206 129.5 208.5 M123 213 Q126 211 129 212.5" stroke={bg} strokeWidth="1.3" {...line} />
+        </g>
+      );
+    case "dna":
+      return (
+        <g>
+          <path d="M117 202.3 L123 202.3 M116 206.6 L124 206.6 M116 213.4 L124 213.4 M117 217.7 L123 217.7" stroke={emblem.accent} strokeWidth="1.7" {...line} />
+          <path d="M114 199 Q130 204.5 120 210 Q110 215.5 126 221 M126 199 Q110 204.5 120 210 Q130 215.5 114 221" stroke={emblem.ink} strokeWidth="2.3" {...line} />
+        </g>
+      );
+    case "code":
+      return <path d="M111 204 L105 210 L111 216 M123 202 L117 218 M129 204 L135 210 L129 216" stroke={emblem.ink} strokeWidth="2.6" {...line} />;
+    case "math":
+      return <path d="M108.5 204 Q110 202 113 202.5 L131.5 202.5 M114.5 202.5 Q115 212 112 217.5 M125 202.5 Q124 214 129.5 217" stroke={emblem.ink} strokeWidth="2.6" {...line} />;
+    case "studily": {
+      const s = emblem.size / BOT_LOGO_MARK.width;
+      const [cx, cy] = BOT_LOGO_MARK.center;
+      const plumeOpacity = [0.62, 0.8, 1];
+      return (
+        <g transform={`translate(${emblem.x} ${emblem.y}) scale(${s.toFixed(3)}) translate(${-cx} ${-cy})`}>
+          {BOT_PLUMES.map((p, i) => (
+            <path key={i} d={p.d} fill={emblem.mono ?? p.fill} opacity={emblem.mono ? plumeOpacity[i] : 1} />
+          ))}
+          <path d={BOT_LOGO_MARK.board} fill={emblem.mono ?? C.board} />
+          <path d={BOT_LOGO_MARK.shade} fill={emblem.mono ? emblem.shade ?? emblem.mono : C.boardShade} />
+        </g>
+      );
+    }
+  }
+}
+
 function Top({ top, bodyFill }: { top: BotTopStyle; bodyFill: string }) {
+  if (top.cut === "tee") {
+    return (
+      <g>
+        <path d="M84 182 Q84 158 108 158 L132 158 Q156 158 156 182 L157 224 L83 224 Z" fill={bodyFill} />
+        <rect x="83" y="219" width="74" height="6" rx="3" fill={top.band} />
+        {top.emblem && <Emblem emblem={top.emblem} bg={top.band} />}
+        <path d="M103 160 Q120 176 137 160" fill="none" stroke={top.collar ?? top.band} strokeWidth="4.5" strokeLinecap="round" />
+      </g>
+    );
+  }
   return (
     <g>
       <path d="M84 184 Q84 158 108 158 L132 158 Q156 158 156 184 L158 226 L82 226 Z" fill={bodyFill} />
       <rect x="82" y="222" width="76" height="13" rx="6.5" fill={top.band} />
       {top.bandStripe && <rect x="84" y="227.3" width="72" height="2.4" fill={top.bandStripe} />}
       {top.cut === "hoodie" ? (
-        <path d="M98 198 L142 198 Q148 198 149 204 L151 222 L89 222 L91 204 Q92 198 98 198 Z" fill={top.pocket} />
+        <path d="M98 198 L142 198 Q148 198 149 204 L151 222 L89 222 L91 204 Q92 198 98 198 Z" fill={top.pocket ?? top.band} />
       ) : (
         <>
-          <path d="M94 202 L101 219" stroke={top.pocket} strokeWidth="3" strokeLinecap="round" />
-          <path d="M146 202 L139 219" stroke={top.pocket} strokeWidth="3" strokeLinecap="round" />
+          <path d="M94 202 L101 219" stroke={top.pocket ?? top.band} strokeWidth="3" strokeLinecap="round" />
+          <path d="M146 202 L139 219" stroke={top.pocket ?? top.band} strokeWidth="3" strokeLinecap="round" />
           <path d="M120 166 L120 224" stroke="#e5e7eb" strokeWidth="3" />
           <path d="M120 168 L120 222" stroke="#9ca3af" strokeWidth="3" strokeDasharray="1.2 2.2" />
           <rect x="116.5" y="180" width="7" height="12" rx="2.5" fill="#e5e7eb" stroke="#9ca3af" strokeWidth="1" />
         </>
       )}
+      {top.emblem && <Emblem emblem={top.emblem} bg={top.pocket ?? top.band} />}
       {top.patch && (
         <g>
           <circle cx="120" cy="210" r="9.5" fill={top.patch.fill} />
           <path d="M123.5 205.5 Q120 202.8 117 205.2 Q115 208.4 120 209.8 Q125 211.2 123 214.8 Q120 217.6 116.4 215" fill="none" stroke={top.patch.ink} strokeWidth="2.4" strokeLinecap="round" />
         </g>
       )}
-      <path d="M84 180 Q80 150 120 147 Q160 150 156 180 Q140 168 120 168 Q100 168 84 180 Z" fill={top.hood} />
+      <path d="M84 180 Q80 150 120 147 Q160 150 156 180 Q140 168 120 168 Q100 168 84 180 Z" fill={top.hood ?? top.band} />
       {top.strings && (
         <g stroke={top.strings} strokeWidth="2.4" strokeLinecap="round">
           <path d="M112 170 L110 192" />
@@ -243,6 +317,9 @@ function Bottom({ bottom, fill }: { bottom: BotBottomStyle; fill: string }) {
           <path d={`M${l.x(cuffTop)} ${cuffTop} L${l.x(end)} ${end}`} stroke={bottom.cuff} strokeWidth="20" />
         </g>
       ))}
+      {bottom.stripe && (
+        <path d="M90.5 223 L88.8 249 M149.5 223 L151.2 249" stroke={bottom.stripe} strokeWidth="3" strokeLinecap="round" />
+      )}
     </g>
   );
 }
