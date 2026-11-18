@@ -132,11 +132,13 @@ function Face({ expression, animate }: { expression: BotExpression; animate: boo
 }
 
 function Arm({
+  side,
   limb,
   top,
   sleeveFill,
   wave,
 }: {
+  side: "l" | "r";
   limb: BotLimb;
   top: BotTopStyle | null;
   sleeveFill: string;
@@ -144,6 +146,7 @@ function Arm({
 }) {
   const cuffStroke = top ? top.band : null;
   return (
+    <g className={`sb-arm-${side}`}>
     <g>
       {wave && (
         <animateTransform
@@ -161,6 +164,7 @@ function Arm({
           {cuffStroke && <path d={limbSegment(limb, 0.8, 0.88)} fill="none" stroke={cuffStroke} strokeWidth="16" strokeLinecap="butt" />}
         </>
       )}
+    </g>
     </g>
   );
 }
@@ -206,35 +210,39 @@ function Bottom({ bottom, fill }: { bottom: BotBottomStyle; fill: string }) {
   const lx = (y: number) => 105.5 - ((y - 230) / 38) * 2;
   const rx = (y: number) => 134.5 + ((y - 230) / 38) * 2;
   const cuffTop = end - 7;
+  const legs = [
+    { side: "l", x0: 105.5, x: lx, hx: 107, flapX: 87, seamDx: -6 },
+    { side: "r", x0: 134.5, x: rx, hx: 137, flapX: 142, seamDx: 6 },
+  ];
   return (
     <g>
       <path d="M92 216 L148 216 Q152 216 152 220 L154 250 L86 250 L88 220 Q88 216 92 216 Z" fill={fill} />
       <rect x="88" y="215" width="64" height="7" rx="3.5" fill={bottom.cuff} />
-      <path d={`M105.5 230 L${lx(end)} ${end}`} stroke={fill} strokeWidth="18" />
-      <path d={`M134.5 230 L${rx(end)} ${end}`} stroke={fill} strokeWidth="18" />
-      {bottom.highlight && (
-        <g stroke={bottom.highlight} strokeWidth="3" strokeLinecap="round" opacity="0.8">
-          <path d={`M107 247 L${lx(258) + 2} 258`} />
-          <path d={`M137 247 L${rx(258) + 2} 258`} />
+      {bottom.seam && <path d="M120 222 L120 246" stroke={bottom.seam} strokeWidth="1.3" strokeDasharray="2.6 2.4" fill="none" />}
+      {legs.map((l) => (
+        <g key={l.side} className={`sb-leg-${l.side}`}>
+          <path d={`M${l.x0} 230 L${l.x(end)} ${end}`} stroke={fill} strokeWidth="18" />
+          {bottom.highlight && (
+            <path d={`M${l.hx} 247 L${l.x(258) + 2} 258`} stroke={bottom.highlight} strokeWidth="3" strokeLinecap="round" opacity="0.8" />
+          )}
+          {bottom.seam && (
+            <path
+              d={`M${l.side === "l" ? 95 : 145} 232 L${l.x(cuffTop) + l.seamDx} ${cuffTop}`}
+              stroke={bottom.seam}
+              strokeWidth="1.3"
+              strokeDasharray="2.6 2.4"
+              fill="none"
+            />
+          )}
+          {bottom.flap && (
+            <g fill={bottom.flap}>
+              <rect x={l.flapX} y="230" width="11" height="14" rx="2" />
+              <rect x={l.flapX} y="230" width="11" height="4" rx="1.5" fill={bottom.cuff} />
+            </g>
+          )}
+          <path d={`M${l.x(cuffTop)} ${cuffTop} L${l.x(end)} ${end}`} stroke={bottom.cuff} strokeWidth="20" />
         </g>
-      )}
-      {bottom.seam && (
-        <g stroke={bottom.seam} strokeWidth="1.3" strokeDasharray="2.6 2.4" fill="none">
-          <path d={`M95 232 L${lx(cuffTop) - 6} ${cuffTop}`} />
-          <path d={`M145 232 L${rx(cuffTop) + 6} ${cuffTop}`} />
-          <path d="M120 222 L120 246" />
-        </g>
-      )}
-      {bottom.flap && (
-        <g fill={bottom.flap}>
-          <rect x="87" y="230" width="11" height="14" rx="2" />
-          <rect x="142" y="230" width="11" height="14" rx="2" />
-          <rect x="87" y="230" width="11" height="4" rx="1.5" fill={bottom.cuff} />
-          <rect x="142" y="230" width="11" height="4" rx="1.5" fill={bottom.cuff} />
-        </g>
-      )}
-      <path d={`M${lx(cuffTop)} ${cuffTop} L${lx(end)} ${end}`} stroke={bottom.cuff} strokeWidth="20" />
-      <path d={`M${rx(cuffTop)} ${cuffTop} L${rx(end)} ${end}`} stroke={bottom.cuff} strokeWidth="20" />
+      ))}
     </g>
   );
 }
@@ -294,10 +302,10 @@ export default function StudilyBot({
           <animateTransform attributeName="transform" type="translate" values="0 0;0 -3;0 0" dur="2.6s" repeatCount="indefinite" />
         )}
         {[BOT_LEGS.left, BOT_LEGS.right].map(([a, b], i) => (
-          <path key={i} d={`M${a[0]} ${a[1]} L${b[0]} ${b[1]}`} stroke={C.limb} strokeWidth="11" strokeLinecap="round" />
+          <path key={i} className={i === 0 ? "sb-leg-l" : "sb-leg-r"} d={`M${a[0]} ${a[1]} L${b[0]} ${b[1]}`} stroke={C.limb} strokeWidth="11" strokeLinecap="round" />
         ))}
-        <Arm limb={arms.left} top={topStyle} sleeveFill={sleeveFill} wave={false} />
-        <Arm limb={arms.right} top={topStyle} sleeveFill={sleeveFill} wave={animate && pose === "wave"} />
+        <Arm side="l" limb={arms.left} top={topStyle} sleeveFill={sleeveFill} wave={false} />
+        <Arm side="r" limb={arms.right} top={topStyle} sleeveFill={sleeveFill} wave={animate && pose === "wave"} />
         <rect x={BOT_TORSO.x} y={BOT_TORSO.y} width={BOT_TORSO.w} height={BOT_TORSO.h} rx={BOT_TORSO.r} fill={C.torso} />
         {bottomStyle && <Bottom bottom={bottomStyle} fill={pantsFill} />}
         {topStyle && <Top top={topStyle} bodyFill={bodyFill} />}

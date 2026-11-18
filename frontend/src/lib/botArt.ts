@@ -1,6 +1,17 @@
 import type { FlairRarity } from "../types";
 
-export type BotPose = "idle" | "wave" | "think" | "cheer";
+export type BotPose =
+  | "idle"
+  | "wave"
+  | "think"
+  | "cheer"
+  | "dab"
+  | "discoUp"
+  | "discoDown"
+  | "robotUp"
+  | "robotDown"
+  | "run"
+  | "twist";
 export type BotExpression = "happy" | "curious" | "proud" | "sleepy" | "love";
 export type BotSlot = "top" | "bottom";
 export type Pt = [number, number];
@@ -71,6 +82,34 @@ export const BOT_POSES: Record<BotPose, { left: BotLimb; right: BotLimb }> = {
     left: { s: SHOULDER_L, c: [58, 189], e: [46, 143] },
     right: { s: SHOULDER_R, c: [182, 189], e: [194, 143] },
   },
+  dab: {
+    left: { s: SHOULDER_L, c: [-20, 70], e: [100, 110] },
+    right: { s: SHOULDER_R, c: [180, 160], e: [214, 134] },
+  },
+  discoUp: {
+    left: { s: SHOULDER_L, c: [64, 196], e: [90, 214] },
+    right: { s: SHOULDER_R, c: [172, 152], e: [200, 102] },
+  },
+  discoDown: {
+    left: { s: SHOULDER_L, c: [64, 196], e: [90, 214] },
+    right: { s: SHOULDER_R, c: [172, 212], e: [200, 246] },
+  },
+  robotUp: {
+    left: { s: SHOULDER_L, c: [56, 190], e: [62, 150] },
+    right: { s: SHOULDER_R, c: [184, 190], e: [178, 150] },
+  },
+  robotDown: {
+    left: { s: SHOULDER_L, c: [56, 178], e: [60, 218] },
+    right: { s: SHOULDER_R, c: [184, 190], e: [178, 150] },
+  },
+  run: {
+    left: { s: SHOULDER_L, c: [72, 206], e: [66, 182] },
+    right: { s: SHOULDER_R, c: [168, 206], e: [174, 182] },
+  },
+  twist: {
+    left: { s: SHOULDER_L, c: [70, 208], e: [56, 192] },
+    right: { s: SHOULDER_R, c: [170, 208], e: [184, 192] },
+  },
 };
 
 export const BOT_POSE_EXPRESSION: Record<BotPose, BotExpression> = {
@@ -78,6 +117,13 @@ export const BOT_POSE_EXPRESSION: Record<BotPose, BotExpression> = {
   wave: "happy",
   think: "curious",
   cheer: "proud",
+  dab: "proud",
+  discoUp: "proud",
+  discoDown: "proud",
+  robotUp: "happy",
+  robotDown: "happy",
+  run: "proud",
+  twist: "happy",
 };
 
 export function limbAt(l: BotLimb, t: number): Pt {

@@ -16,21 +16,82 @@ export type MascotState =
   | "love"
   | "confused"
   | "sleepy"
-  | "spin";
+  | "spin"
+  | "run"
+  | "dab"
+  | "floss"
+  | "robot"
+  | "disco"
+  | "twist";
 
-const STATES: Record<MascotState, { pose: BotPose; expression: BotExpression; motion: string }> = {
+interface PoseFrame {
+  pose: BotPose;
+  ms: number;
+}
+
+const STATES: Record<MascotState, { pose: BotPose; expression: BotExpression; motion: string; frames?: PoseFrame[] }> = {
   idle: { pose: "idle", expression: "happy", motion: "sway" },
   wave: { pose: "wave", expression: "happy", motion: "sway" },
   thinking: { pose: "think", expression: "curious", motion: "think" },
   explaining: { pose: "wave", expression: "happy", motion: "talk" },
   happy: { pose: "idle", expression: "happy", motion: "bounce" },
   excited: { pose: "cheer", expression: "proud", motion: "hop" },
-  highfive: { pose: "wave", expression: "proud", motion: "lean" },
+  highfive: { pose: "wave", expression: "proud", motion: "highfive" },
   love: { pose: "wave", expression: "love", motion: "sway" },
   confused: { pose: "think", expression: "curious", motion: "tilt" },
   sleepy: { pose: "idle", expression: "sleepy", motion: "breathe" },
   spin: { pose: "cheer", expression: "happy", motion: "spin" },
+  run: { pose: "run", expression: "proud", motion: "run" },
+  dab: {
+    pose: "cheer",
+    expression: "proud",
+    motion: "dab",
+    frames: [
+      { pose: "cheer", ms: 350 },
+      { pose: "dab", ms: 900 },
+      { pose: "idle", ms: 300 },
+    ],
+  },
+  floss: { pose: "idle", expression: "happy", motion: "floss" },
+  robot: {
+    pose: "robotUp",
+    expression: "happy",
+    motion: "robot",
+    frames: [
+      { pose: "robotUp", ms: 450 },
+      { pose: "robotDown", ms: 450 },
+    ],
+  },
+  disco: {
+    pose: "discoUp",
+    expression: "proud",
+    motion: "disco",
+    frames: [
+      { pose: "discoUp", ms: 500 },
+      { pose: "discoDown", ms: 500 },
+    ],
+  },
+  twist: { pose: "twist", expression: "happy", motion: "twist" },
 };
+
+function usePoseFrames(state: MascotState, frames: PoseFrame[] | undefined, moving: boolean): number {
+  const [tick, setTick] = useState({ state, i: 0 });
+  useEffect(() => {
+    if (!moving || !frames) return;
+    let i = 0;
+    let t: number | undefined;
+    const step = () => {
+      t = window.setTimeout(() => {
+        i = (i + 1) % frames.length;
+        setTick({ state, i });
+        step();
+      }, frames[i].ms);
+    };
+    step();
+    return () => window.clearTimeout(t);
+  }, [state, frames, moving]);
+  return tick.state === state ? tick.i : 0;
+}
 
 export function useMascotReaction(): [MascotState | null, (state: MascotState, ms?: number) => void] {
   const [reaction, setReaction] = useState<MascotState | null>(null);
@@ -58,6 +119,7 @@ export default function Mascot({
   crop = "full",
   label,
   still = false,
+  overlay,
   className = "",
 }: {
   state?: MascotState;
@@ -68,12 +130,15 @@ export default function Mascot({
   crop?: "full" | "head";
   label?: string;
   still?: boolean;
+  overlay?: ReactNode;
   className?: string;
 }) {
   const equipped = useEquippedOutfit();
   const worn = outfit ?? equipped;
   const s = STATES[state];
   const moving = !still && !prefersReducedMotion();
+  const frame = usePoseFrames(state, s.frames, moving);
+  const pose = s.frames ? s.frames[frame].pose : s.pose;
 
   return (
     <span className={`mascot inline-flex flex-col items-center ${className}`}>
@@ -82,9 +147,9 @@ export default function Mascot({
           {say}
         </span>
       )}
-      <span className={`mascot-figure ${moving ? `mascot-${s.motion}` : ""}`} style={{ lineHeight: 0 }}>
+      <span className={`mascot-figure relative ${moving ? `mascot-${s.motion}` : ""}`} style={{ lineHeight: 0 }}>
         <StudilyBot
-          pose={s.pose}
+          pose={pose}
           expression={s.expression}
           top={worn.top}
           bottom={worn.bottom}
@@ -93,6 +158,7 @@ export default function Mascot({
           animate={moving}
           title={label}
         />
+        {overlay}
       </span>
       {shadow && <span className="mascot-shadow" style={{ width: size * 0.55 }} aria-hidden="true" />}
     </span>
