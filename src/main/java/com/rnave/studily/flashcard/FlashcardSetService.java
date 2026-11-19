@@ -37,6 +37,8 @@ import java.util.Set;
 @Service
 public class FlashcardSetService {
 
+    static final int MAX_SELECTED_SETS = 20;
+
     private final FlashcardSetRepository flashcardSetRepository;
     private final CurrentUser currentUser;
     private final CourseService courseService;
@@ -180,6 +182,19 @@ public class FlashcardSetService {
         return flashcardSetRepository.findById(id)
                 .filter(s -> canView(s, viewerId))
                 .orElseThrow(() -> new NotFoundException("Flashcard set not found"));
+    }
+
+    public List<FlashcardSet> requireViewableAll(List<Long> ids, Long viewerId) {
+        if (ids == null || ids.isEmpty()) {
+            throw new BadRequestException("Pick at least one set");
+        }
+        if (ids.size() > MAX_SELECTED_SETS) {
+            throw new BadRequestException("You can study at most " + MAX_SELECTED_SETS + " sets at once");
+        }
+        if (ids.stream().anyMatch(java.util.Objects::isNull) || new HashSet<>(ids).size() != ids.size()) {
+            throw new BadRequestException("Each set can only be picked once");
+        }
+        return ids.stream().map(id -> requireViewable(id, viewerId)).toList();
     }
 
     private boolean canView(FlashcardSet set, Long viewerId) {

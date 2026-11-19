@@ -27,7 +27,7 @@ public class FlashcardRunController {
 
     @PostMapping("/api/flashcard-runs")
     public FlashcardRunStart startGroup(@Valid @RequestBody StartGroupRunRequest req) {
-        return flashcardRunService.startGroup(req.mode(), req.folderId(), req.courseId());
+        return flashcardRunService.startGroup(req.mode(), req.folderId(), req.courseId(), req.setIds());
     }
 
     @PostMapping("/api/flashcard-runs/{runId}/complete")

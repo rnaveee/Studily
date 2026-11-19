@@ -527,8 +527,8 @@ export interface FlashcardFolder {
 }
 
 export interface StudyGroup {
-  kind: "folder" | "course";
-  id: number;
+  kind: "folder" | "course" | "selection";
+  id: number | null;
   title: string;
   setCount: number;
   truncated: boolean;

@@ -59,7 +59,8 @@ public class FlashcardFolderController {
 
     @GetMapping("/api/flashcard-study")
     public StudyGroupDto study(@RequestParam(required = false) Long folderId,
-                               @RequestParam(required = false) Long courseId) {
-        return studyService.group(folderId, courseId);
+                               @RequestParam(required = false) Long courseId,
+                               @RequestParam(required = false) List<Long> setIds) {
+        return studyService.group(folderId, courseId, setIds);
     }
 }

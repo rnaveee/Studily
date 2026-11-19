@@ -35,13 +35,17 @@ export function useFlashcardRun(scope: StudyScope, mode: FlashcardRunMode, cards
         ? api.post<FlashcardRunStart>(`/flashcard-sets/${scope.id}/runs`, { mode })
         : api.post<FlashcardRunStart>("/flashcard-runs", {
             mode,
-            ...(scope.kind === "folder" ? { folderId: scope.id } : { courseId: scope.id }),
+            ...(scope.kind === "selection"
+              ? { setIds: scope.setIds }
+              : scope.kind === "folder"
+                ? { folderId: scope.id }
+                : { courseId: scope.id }),
           });
     run.current = request
       .then((r) => r.runId)
       .catch(() => null);
     setStatus("running");
-  }, [eligible, scope.kind, scope.id, mode]);
+  }, [eligible, scope.kind, scope.id, scope.setIds, mode]);
 
   const complete = useCallback(
     async (results: FlashcardRunCardResult[]) => {

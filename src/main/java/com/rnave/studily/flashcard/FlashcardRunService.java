@@ -88,20 +88,26 @@ public class FlashcardRunService {
     }
 
     @Transactional
-    public FlashcardRunStart startGroup(FlashcardRunMode mode, Long folderId, Long courseId) {
-        if ((folderId == null) == (courseId == null)) {
-            throw new BadRequestException("Pass either folderId or courseId");
+    public FlashcardRunStart startGroup(FlashcardRunMode mode, Long folderId, Long courseId, List<Long> setIds) {
+        int scopes = (folderId != null ? 1 : 0) + (courseId != null ? 1 : 0) + (setIds != null ? 1 : 0);
+        if (scopes != 1) {
+            throw new BadRequestException("Pass exactly one of folderId, courseId or setIds");
         }
         User user = currentUser.entity();
         rateLimiter.check(user.getId());
-        boolean hasCards = flashcardSetService.ownedGroupSets(folderId, courseId).stream()
-                .anyMatch(s -> !s.completeCards().isEmpty());
+        List<FlashcardSet> sets = setIds != null
+                ? flashcardSetService.requireViewableAll(setIds, user.getId())
+                : flashcardSetService.ownedGroupSets(folderId, courseId);
+        boolean hasCards = sets.stream().anyMatch(s -> !s.completeCards().isEmpty());
         if (!hasCards) {
             throw new BadRequestException("There are no cards to study here yet");
         }
         FlashcardRun run = newRun(user, mode);
         run.setFolderId(folderId);
         run.setCourseId(courseId);
+        if (setIds != null) {
+            run.getCoveredSetIds().addAll(setIds);
+        }
         runRepository.save(run);
         return new FlashcardRunStart(run.getId(), run.getStartedAt());
     }
@@ -135,13 +141,18 @@ public class FlashcardRunService {
         if (now.isAfter(run.getStartedAt().plus(MAX_RUN_AGE))) {
             throw new BadRequestException("This run has expired");
         }
-        boolean group = run.getSet() == null && (run.getFolderId() != null || run.getCourseId() != null);
+        boolean selection = run.getSet() == null && run.getFolderId() == null && run.getCourseId() == null
+                && !run.getCoveredSetIds().isEmpty();
+        boolean group = run.getSet() == null && (run.getFolderId() != null || run.getCourseId() != null || selection);
         if (run.getSet() == null && !group) {
             throw new BadRequestException("This flashcard set no longer exists");
         }
         Map<Long, Flashcard> cards;
         if (group) {
-            cards = flashcardSetService.ownedGroupSets(run.getFolderId(), run.getCourseId()).stream()
+            List<FlashcardSet> groupSets = selection
+                    ? flashcardSetService.requireViewableAll(List.copyOf(run.getCoveredSetIds()), user.getId())
+                    : flashcardSetService.ownedGroupSets(run.getFolderId(), run.getCourseId());
+            cards = groupSets.stream()
                     .flatMap(s -> s.completeCards().stream())
                     .filter(c -> c.getId() != null)
                     .collect(Collectors.toMap(Flashcard::getId, Function.identity()));
@@ -174,6 +185,9 @@ public class FlashcardRunService {
         int granted = progressService.grantXp(delta, XpSource.FLASHCARD_RUN, score.xp(),
                 "flashcard-run:" + run.getId(), run.getId());
 
+        if (selection) {
+            run.getCoveredSetIds().clear();
+        }
         run.getCoveredSetIds().addAll(touched);
         run.setCompletedAt(now);
         run.setCardCount(cardCount);
@@ -236,7 +250,9 @@ public class FlashcardRunService {
                     userId, setId, run.getLocalDate(), 0)
                     + runRepository.countGroupRunsCovering(userId, setId, run.getLocalDate());
         }
-        long scoped = run.getFolderId() != null
+        long scoped = run.getFolderId() == null && run.getCourseId() == null
+                ? 0
+                : run.getFolderId() != null
                 ? runRepository.countByUserIdAndFolderIdAndLocalDateAndXpAwardedGreaterThan(
                 userId, run.getFolderId(), run.getLocalDate(), 0)
                 : runRepository.countByUserIdAndCourseIdAndLocalDateAndXpAwardedGreaterThan(
