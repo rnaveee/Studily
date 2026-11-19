@@ -2,6 +2,7 @@ package com.rnave.studily.flashcard;
 
 import com.rnave.studily.config.BadRequestException;
 import com.rnave.studily.config.CurrentUser;
+import com.rnave.studily.config.NotFoundException;
 import com.rnave.studily.course.CourseService;
 import com.rnave.studily.exam.ExamStudyLinkRepository;
 import com.rnave.studily.flashcard.FlashcardRunDtos.CardResult;
@@ -253,7 +254,7 @@ class FlashcardGroupRunTest {
     }
 
     private FlashcardRunResult folderRun(Long folderId, List<CardResult> results) {
-        return finish(service.startGroup(FlashcardRunMode.REVIEW, folderId, null).runId(), results);
+        return finish(service.startGroup(FlashcardRunMode.REVIEW, folderId, null, null).runId(), results);
     }
 
     private FlashcardRunResult setRun(FlashcardSet set) {
@@ -262,7 +263,7 @@ class FlashcardGroupRunTest {
 
     @Test
     void startGroup_folder_savesGroupRunWithoutSet() {
-        service.startGroup(FlashcardRunMode.REVIEW, FOLDER, null);
+        service.startGroup(FlashcardRunMode.REVIEW, FOLDER, null, null);
 
         assertThat(runs).singleElement().satisfies(r -> {
             assertThat(r.getSet()).isNull();
@@ -274,16 +275,16 @@ class FlashcardGroupRunTest {
 
     @Test
     void startGroup_needsExactlyOneScope() {
-        assertThatThrownBy(() -> service.startGroup(FlashcardRunMode.REVIEW, null, null))
+        assertThatThrownBy(() -> service.startGroup(FlashcardRunMode.REVIEW, null, null, null))
                 .isInstanceOf(BadRequestException.class);
-        assertThatThrownBy(() -> service.startGroup(FlashcardRunMode.REVIEW, FOLDER, COURSE))
+        assertThatThrownBy(() -> service.startGroup(FlashcardRunMode.REVIEW, FOLDER, COURSE, null))
                 .isInstanceOf(BadRequestException.class);
         assertThat(runs).isEmpty();
     }
 
     @Test
     void startGroup_emptyOrForeignFolder_isRejected() {
-        assertThatThrownBy(() -> service.startGroup(FlashcardRunMode.REVIEW, 404L, null))
+        assertThatThrownBy(() -> service.startGroup(FlashcardRunMode.REVIEW, 404L, null, null))
                 .isInstanceOf(BadRequestException.class);
         assertThat(runs).isEmpty();
     }
@@ -293,7 +294,7 @@ class FlashcardGroupRunTest {
         moveTo(setA, null);
         moveTo(setB, null);
 
-        assertThatThrownBy(() -> service.startGroup(FlashcardRunMode.REVIEW, FOLDER, null))
+        assertThatThrownBy(() -> service.startGroup(FlashcardRunMode.REVIEW, FOLDER, null, null))
                 .isInstanceOf(BadRequestException.class);
     }
 
@@ -316,7 +317,7 @@ class FlashcardGroupRunTest {
 
     @Test
     void complete_cardFromSetMovedOutOfFolder_isRejected() {
-        long runId = service.startGroup(FlashcardRunMode.REVIEW, FOLDER, null).runId();
+        long runId = service.startGroup(FlashcardRunMode.REVIEW, FOLDER, null, null).runId();
         moveTo(setB, OTHER_FOLDER);
 
         assertThatThrownBy(() -> finish(runId, across(setA, setB))).isInstanceOf(BadRequestException.class);
@@ -324,7 +325,7 @@ class FlashcardGroupRunTest {
 
     @Test
     void complete_courseRun_validatesAgainstCourseSets() {
-        long runId = service.startGroup(FlashcardRunMode.REVIEW, null, COURSE).runId();
+        long runId = service.startGroup(FlashcardRunMode.REVIEW, null, COURSE, null).runId();
 
         FlashcardRunResult result = finish(runId, across(setA, setB));
 
@@ -377,7 +378,7 @@ class FlashcardGroupRunTest {
     void complete_courseRunAfterFolderRunOverSameSets_isReduced() {
         folderRun(FOLDER, across(setA, setB));
 
-        FlashcardRunResult result = finish(service.startGroup(FlashcardRunMode.REVIEW, null, COURSE).runId(),
+        FlashcardRunResult result = finish(service.startGroup(FlashcardRunMode.REVIEW, null, COURSE, null).runId(),
                 across(setA, setB));
 
         assertThat(result.xpReason()).isEqualTo(XpReason.REDUCED);
@@ -426,9 +427,104 @@ class FlashcardGroupRunTest {
 
     @Test
     void complete_deletedFolderRun_isRejected() {
-        long runId = service.startGroup(FlashcardRunMode.REVIEW, FOLDER, null).runId();
+        long runId = service.startGroup(FlashcardRunMode.REVIEW, FOLDER, null, null).runId();
         runs.get(0).setFolderId(null);
 
         assertThatThrownBy(() -> finish(runId, across(setA))).isInstanceOf(BadRequestException.class);
+    }
+
+    private FlashcardRunResult selectionRun(List<Long> setIds, List<CardResult> results) {
+        return finish(service.startGroup(FlashcardRunMode.REVIEW, null, null, setIds).runId(), results);
+    }
+
+    @Test
+    void startGroup_selection_savesCoveredSetsWithoutScope() {
+        service.startGroup(FlashcardRunMode.REVIEW, null, null, List.of(10L, 11L));
+
+        assertThat(runs).singleElement().satisfies(r -> {
+            assertThat(r.getSet()).isNull();
+            assertThat(r.getFolderId()).isNull();
+            assertThat(r.getCourseId()).isNull();
+            assertThat(r.getCoveredSetIds()).containsExactlyInAnyOrder(10L, 11L);
+        });
+    }
+
+    @Test
+    void startGroup_selection_foreignPrivateSetIsRejected() {
+        assertThatThrownBy(() -> service.startGroup(FlashcardRunMode.REVIEW, null, null, List.of(10L, 99L)))
+                .isInstanceOf(NotFoundException.class);
+        assertThat(runs).isEmpty();
+    }
+
+    @Test
+    void startGroup_selection_publicSetOfAnotherUserIsAllowed() {
+        foreign.setVisibility(FlashcardSetVisibility.PUBLIC);
+
+        service.startGroup(FlashcardRunMode.REVIEW, null, null, List.of(10L, 99L));
+
+        assertThat(runs).hasSize(1);
+    }
+
+    @Test
+    void startGroup_selection_capIsEnforced() {
+        List<Long> twentyOne = new ArrayList<>();
+        for (long i = 1; i <= 21; i++) {
+            twentyOne.add(i);
+        }
+
+        assertThatThrownBy(() -> service.startGroup(FlashcardRunMode.REVIEW, null, null, twentyOne))
+                .isInstanceOf(BadRequestException.class);
+        assertThat(runs).isEmpty();
+    }
+
+    @Test
+    void startGroup_selection_emptyOrDuplicateIsRejected() {
+        assertThatThrownBy(() -> service.startGroup(FlashcardRunMode.REVIEW, null, null, List.of()))
+                .isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.startGroup(FlashcardRunMode.REVIEW, null, null, List.of(10L, 10L)))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void startGroup_selection_cannotBeMixedWithFolderOrCourse() {
+        assertThatThrownBy(() -> service.startGroup(FlashcardRunMode.REVIEW, FOLDER, null, List.of(10L)))
+                .isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.startGroup(FlashcardRunMode.REVIEW, null, COURSE, List.of(10L)))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void complete_selectionRun_combinesCardsFromAllSets() {
+        FlashcardRunResult result = selectionRun(List.of(10L, 11L), across(setA, setB));
+
+        assertThat(result.cardCount()).isEqualTo(16);
+        assertThat(result.xpReason()).isEqualTo(XpReason.FULL);
+        assertThat(result.xpAwarded()).isEqualTo(2 * 16 + 20);
+        assertThat(runs.get(0).getCoveredSetIds()).containsExactlyInAnyOrder(10L, 11L);
+    }
+
+    @Test
+    void complete_selectionRun_cardOutsideSelectionIsRejected() {
+        FlashcardSet extra = set(12L, me, 8, FOLDER, COURSE);
+        allSets.add(extra);
+
+        assertThatThrownBy(() -> selectionRun(List.of(10L, 11L), across(setA, extra)))
+                .isInstanceOf(BadRequestException.class);
+    }
+
+    @Test
+    void complete_selectionRun_setMadePrivateAfterStartIsRejected() {
+        foreign.setVisibility(FlashcardSetVisibility.PUBLIC);
+        long runId = service.startGroup(FlashcardRunMode.REVIEW, null, null, List.of(10L, 99L)).runId();
+        foreign.setVisibility(FlashcardSetVisibility.PRIVATE);
+
+        assertThatThrownBy(() -> finish(runId, across(setA, foreign))).isInstanceOf(NotFoundException.class);
+    }
+
+    @Test
+    void complete_selectionRun_repeatsAreDampedPerSet() {
+        assertThat(selectionRun(List.of(10L, 11L), across(setA, setB)).xpReason()).isEqualTo(XpReason.FULL);
+        assertThat(selectionRun(List.of(10L, 11L), across(setA, setB)).xpReason()).isEqualTo(XpReason.REDUCED);
+        assertThat(selectionRun(List.of(10L, 11L), across(setA, setB)).xpReason()).isEqualTo(XpReason.REPEAT);
     }
 }

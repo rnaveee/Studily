@@ -58,7 +58,7 @@ class FlashcardFolderServiceTest {
                 mock(FriendRequestRepository.class), mock(Flairs.class), mock(FlashcardImageRepository.class),
                 mock(ExamStudyLinkRepository.class), mock(UserTimeZones.class));
         folders = new FlashcardFolderService(folderRepository, setRepository, setService, currentUser);
-        study = new FlashcardStudyService(setService, folders, courseService);
+        study = new FlashcardStudyService(setService, folders, courseService, currentUser);
 
         when(folderRepository.save(any(FlashcardFolder.class))).thenAnswer(inv -> {
             FlashcardFolder f = inv.getArgument(0);
@@ -236,7 +236,7 @@ class FlashcardFolderServiceTest {
         when(setRepository.findByUserIdAndFolderIdOrderByCreatedAtDesc(1L, mine.getId())).thenReturn(List.of(a, b));
         when(setRepository.findByUserIdAndFolderIdOrderByCreatedAtDesc(2L, mine.getId())).thenReturn(List.of(foreign));
 
-        StudyGroupDto group = study.group(mine.getId(), null);
+        StudyGroupDto group = study.group(mine.getId(), null, null);
 
         assertThat(group.title()).isEqualTo("Bio");
         assertThat(group.kind()).isEqualTo("folder");
@@ -250,7 +250,7 @@ class FlashcardFolderServiceTest {
     void study_someoneElsesFolder_isNotFound() {
         FlashcardFolder theirs = folderOf(other, "Theirs");
 
-        assertThatThrownBy(() -> study.group(theirs.getId(), null)).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> study.group(theirs.getId(), null, null)).isInstanceOf(NotFoundException.class);
     }
 
     @Test
@@ -262,7 +262,7 @@ class FlashcardFolderServiceTest {
         FlashcardSet a = setOf(10L, me, null, 2);
         when(setRepository.findByUserIdAndCourseIdOrderByCreatedAtDesc(1L, 3L)).thenReturn(List.of(a));
 
-        StudyGroupDto group = study.group(null, 3L);
+        StudyGroupDto group = study.group(null, 3L, null);
 
         assertThat(group.kind()).isEqualTo("course");
         assertThat(group.title()).isEqualTo("BIO 101");
@@ -273,13 +273,13 @@ class FlashcardFolderServiceTest {
     void study_someoneElsesCourse_isNotFound() {
         when(courseService.requireOwned(9L)).thenThrow(new NotFoundException("Course not found"));
 
-        assertThatThrownBy(() -> study.group(null, 9L)).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> study.group(null, 9L, null)).isInstanceOf(NotFoundException.class);
     }
 
     @Test
     void study_needsExactlyOneScope() {
-        assertThatThrownBy(() -> study.group(null, null)).isInstanceOf(BadRequestException.class);
-        assertThatThrownBy(() -> study.group(1L, 2L)).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> study.group(null, null, null)).isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> study.group(1L, 2L, null)).isInstanceOf(BadRequestException.class);
     }
 
     @Test
@@ -289,7 +289,7 @@ class FlashcardFolderServiceTest {
         FlashcardSet b = setOf(11L, me, mine, 10);
         when(setRepository.findByUserIdAndFolderIdOrderByCreatedAtDesc(1L, mine.getId())).thenReturn(List.of(a, b));
 
-        StudyGroupDto group = study.group(mine.getId(), null);
+        StudyGroupDto group = study.group(mine.getId(), null, null);
 
         assertThat(group.cards()).hasSize(FlashcardStudyService.MAX_CARDS);
         assertThat(group.truncated()).isTrue();

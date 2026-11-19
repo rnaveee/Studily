@@ -130,6 +130,7 @@
     "/flashcards",
     "/study/flashcards/folders/:id",
     "/study/flashcards/courses/:id",
+    "/study/flashcards/selection",
     "/study/flashcards/:id",
     "/study/sessions",
     "/study/ai",

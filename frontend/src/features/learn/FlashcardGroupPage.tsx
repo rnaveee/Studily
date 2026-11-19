@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Folder, Info } from "lucide-react";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth";
@@ -14,19 +14,33 @@ import SpeedMatch from "./SpeedMatch";
 import SetModePicker, { useStudyMode } from "./SetModePicker";
 import { cardIsComplete } from "./CardEditor";
 import { isDue } from "./sm2";
-import type { StudyScope } from "./studyScope";
+import { scopeKey, selectionScope, type StudyScope } from "./studyScope";
 import type { Course, StudyGroup } from "../../types";
 
-export default function FlashcardGroupPage({ kind }: { kind: "folder" | "course" }) {
+const MAX_SELECTED_SETS = 20;
+
+function parseSetIds(raw: string | null): number[] {
+  const ids = (raw ?? "").split(",").map((v) => Number(v));
+  const valid = ids.every((n) => Number.isInteger(n) && n > 0) && new Set(ids).size === ids.length;
+  return valid && ids.length <= MAX_SELECTED_SETS ? ids : [];
+}
+
+export default function FlashcardGroupPage({ kind }: { kind: "folder" | "course" | "selection" }) {
   const { id } = useParams();
-  const groupId = Number(id);
+  const [search] = useSearchParams();
+  const rawIds = search.get("ids");
+  const setIds = useMemo(() => (kind === "selection" ? parseSetIds(rawIds) : []), [kind, rawIds]);
+  const groupId = kind === "selection" ? 0 : Number(id);
   const { user } = useAuth();
   const [mode, setMode] = useStudyMode();
 
   const group = useQuery({
-    queryKey: ["flashcards", "study", kind, groupId],
-    queryFn: () => api.get<StudyGroup>(`/flashcard-study?${kind}Id=${groupId}`),
-    enabled: Number.isFinite(groupId),
+    queryKey: ["flashcards", "study", kind, groupId, setIds],
+    queryFn: () =>
+      api.get<StudyGroup>(
+        kind === "selection" ? `/flashcard-study?setIds=${setIds.join(",")}` : `/flashcard-study?${kind}Id=${groupId}`,
+      ),
+    enabled: kind === "selection" ? setIds.length > 0 : Number.isFinite(groupId),
     retry: false,
   });
 
@@ -45,7 +59,9 @@ export default function FlashcardGroupPage({ kind }: { kind: "folder" | "course"
     return (
       <div className="card p-10 text-center">
         <p className="text-sm text-fg-3">
-          This {kind === "folder" ? "folder" : "course"} doesn't exist.
+          {kind === "selection"
+            ? "Those sets aren't available to study."
+            : `This ${kind === "folder" ? "folder" : "course"} doesn't exist.`}
         </p>
         <Link to="/study/flashcards" className="btn btn-soft mt-3 inline-flex">
           Back to sets
@@ -55,7 +71,8 @@ export default function FlashcardGroupPage({ kind }: { kind: "folder" | "course"
   }
 
   const data = group.data;
-  const scope: StudyScope = { kind, id: data.id };
+  const scope: StudyScope = kind === "selection" ? selectionScope(setIds) : { kind, id: data.id ?? 0 };
+  const groupKey = scopeKey(scope);
   const course = kind === "course" ? courses.data?.find((c) => c.id === data.id) : undefined;
   const color = course?.color ?? "var(--accent)";
   const viewerKey = user ? String(user.id) : "guest";
@@ -71,7 +88,7 @@ export default function FlashcardGroupPage({ kind }: { kind: "folder" | "course"
             <span className="min-w-0 truncate">{data.title}</span>
           </h1>
           <p className="mt-1 text-[13px] text-fg-3">
-            Studying all {data.setCount} {data.setCount === 1 ? "set" : "sets"} together · {count}{" "}
+            Studying {kind === "selection" ? "" : "all "}{data.setCount} {data.setCount === 1 ? "set" : "sets"} together · {count}{" "}
             {count === 1 ? "card" : "cards"}
           </p>
         </div>
@@ -98,7 +115,7 @@ export default function FlashcardGroupPage({ kind }: { kind: "folder" | "course"
       ) : (
         <>
           {mode === "flashcards" && (
-            <FlashcardViewer key={`${kind}-${data.id}`} cards={cards} color={color} scope={scope} viewerKey={viewerKey} />
+            <FlashcardViewer key={groupKey} cards={cards} color={color} scope={scope} viewerKey={viewerKey} />
           )}
 
           {mode === "study" && (
@@ -107,7 +124,7 @@ export default function FlashcardGroupPage({ kind }: { kind: "folder" | "course"
 
           {mode === "learn" && (
             <LearnMode
-              key={`${kind}-${data.id}`}
+              key={groupKey}
               scope={scope}
               cards={cards}
               color={color}
@@ -118,7 +135,7 @@ export default function FlashcardGroupPage({ kind }: { kind: "folder" | "course"
 
           {mode === "memory" && (
             <MemoryGame
-              key={`${kind}-${data.id}`}
+              key={groupKey}
               scope={scope}
               cards={cards}
               color={color}
@@ -128,7 +145,7 @@ export default function FlashcardGroupPage({ kind }: { kind: "folder" | "course"
 
           {mode === "match" && (
             <SpeedMatch
-              key={`${kind}-${data.id}`}
+              key={groupKey}
               scope={scope}
               cards={cards}
               color={color}

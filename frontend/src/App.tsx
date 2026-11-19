@@ -168,6 +168,7 @@ export const appRoutes = (
       <Route path="/flashcards" element={<Navigate to="/study/flashcards" replace />} />
       <Route path="/study/flashcards/folders/:id" element={<FlashcardGroupPage kind="folder" />} />
       <Route path="/study/flashcards/courses/:id" element={<FlashcardGroupPage kind="course" />} />
+      <Route path="/study/flashcards/selection" element={<FlashcardGroupPage kind="selection" />} />
       <Route path="/study/flashcards/:id" element={<FlashcardSetPage />} />
       <Route path="/study/sessions" element={<SessionHistoryPage />} />
       <Route path="/study/ai" element={<Navigate to="/study/studilybot/chat" replace />} />

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   Check,
+  CheckSquare,
   ClipboardPaste,
   Folder,
   FolderPlus,
@@ -31,6 +32,8 @@ import QueryError from "../../components/QueryError";
 
 type Grouping = "folder" | "course";
 
+const MAX_SELECTED_SETS = 20;
+
 const GROUPING_KEY = "studily.flashcards.grouping";
 
 interface Section {
@@ -46,6 +49,7 @@ interface Section {
 export default function FlashcardsPage() {
   const qc = useQueryClient();
   const requireAuth = useRequireAuth();
+  const navigate = useNavigate();
   const confirm = useConfirm();
   const [editingSet, setEditingSet] = useState<FlashcardSet | null>(null);
   const [showCreate, setShowCreate] = useState<"blank" | "import" | null>(null);
@@ -58,6 +62,8 @@ export default function FlashcardsPage() {
   const [renameValue, setRenameValue] = useState("");
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const [touchOver, setTouchOver] = useState<string | null>(null);
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<number[]>([]);
 
   const sets = useQuery({
     queryKey: ["flashcards", "sets"],
@@ -131,7 +137,7 @@ export default function FlashcardsPage() {
   }
 
   const touchDrag = useLongPressDrag({
-    enabled: grouping === "folder",
+    enabled: grouping === "folder" && !selecting,
     onStart: setDraggingId,
     onHover: setTouchOver,
     onCancel: () => setDraggingId(null),
@@ -150,10 +156,37 @@ export default function FlashcardsPage() {
   }
 
   const list = sets.data ?? [];
+
+  useEffect(() => {
+    if (!sets.data) return;
+    const known = new Set(sets.data.map((x) => x.id));
+    setSelected((prev) => (prev.every((id) => known.has(id)) ? prev : prev.filter((id) => known.has(id))));
+  }, [sets.data]);
+
+  useEffect(() => {
+    if (!selecting) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !(e.target instanceof HTMLInputElement && e.target.type === "text")) exitSelecting();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selecting]);
+
+  function exitSelecting() {
+    setSelecting(false);
+    setSelected([]);
+  }
+
+  function toggleSelected(id: number) {
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : prev.length >= MAX_SELECTED_SETS ? prev : [...prev, id],
+    );
+  }
+
   const sections = buildSections(grouping, list, folders.data ?? [], courses.data ?? []);
 
   return (
-    <div className="space-y-6 stagger-children">
+    <div className={`space-y-6 stagger-children ${selecting ? "pb-20" : ""}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <BackButton fallback="/study" />
@@ -193,15 +226,26 @@ export default function FlashcardsPage() {
             value={grouping}
             onChange={setGrouping}
           />
-          {grouping === "folder" && !creatingFolder && (
+          <div className="flex items-center gap-2">
+            {grouping === "folder" && !creatingFolder && !selecting && (
+              <button
+                onClick={() => requireAuth(() => setCreatingFolder(true))}
+                className="btn btn-soft"
+              >
+                <FolderPlus size={13} />
+                New folder
+              </button>
+            )}
             <button
-              onClick={() => requireAuth(() => setCreatingFolder(true))}
-              className="btn btn-soft"
+              type="button"
+              onClick={() => (selecting ? exitSelecting() : setSelecting(true))}
+              aria-pressed={selecting}
+              className={`btn min-w-[92px] justify-center ${selecting ? "btn-primary" : "btn-soft"}`}
             >
-              <FolderPlus size={13} />
-              New folder
+              {selecting ? <X size={13} /> : <CheckSquare size={13} />}
+              {selecting ? "Cancel" : "Select"}
             </button>
-          )}
+          </div>
         </div>
       )}
 
@@ -271,7 +315,10 @@ export default function FlashcardsPage() {
                 if (ok) removeFolder.mutate(f.id);
               }}
               courses={courses.data ?? []}
-              dragEnabled={grouping === "folder"}
+              dragEnabled={grouping === "folder" && !selecting}
+              selecting={selecting}
+              selected={selected}
+              onToggleSelected={toggleSelected}
               draggingId={draggingId}
               onDragStart={setDraggingId}
               onDragEnd={() => setDraggingId(null)}
@@ -295,6 +342,42 @@ export default function FlashcardsPage() {
         <div className="card p-10 text-center">
           <Layers className="mx-auto mb-2 text-fg-3" size={28} strokeWidth={1.5} />
           <p className="text-sm text-fg-3">You have no flashcards. Create one!</p>
+        </div>
+      )}
+
+      {selecting && (
+        <div className="sticky bottom-3 z-20 -mt-6 h-0">
+          <div
+            className="card absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 p-3 shadow-2xl"
+            style={{ background: "var(--surface)", borderTop: "2px solid var(--accent)" }}
+          >
+            <p className="min-w-0 truncate text-[13px] text-fg-2" aria-live="polite">
+              {selected.length === 0
+                ? "Pick sets to study together"
+                : selected.length >= MAX_SELECTED_SETS
+                  ? `${selected.length} selected (max ${MAX_SELECTED_SETS})`
+                  : `${selected.length} selected`}
+            </p>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                disabled={selected.length === 0}
+                onClick={() => setSelected([])}
+                className="btn btn-ghost min-h-[44px]"
+              >
+                Clear
+              </button>
+              <button
+                type="button"
+                disabled={selected.length === 0}
+                onClick={() => navigate(`/study/flashcards/selection?ids=${selected.join(",")}`)}
+                className="btn btn-primary min-h-[44px]"
+              >
+                <Play size={12} />
+                Study {selected.length} {selected.length === 1 ? "set" : "sets"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -379,6 +462,9 @@ function SectionBlock({
   onDropSet,
   touchOver,
   touchDrag,
+  selecting,
+  selected,
+  onToggleSelected,
   onEdit,
   onDelete,
 }: {
@@ -398,6 +484,9 @@ function SectionBlock({
   onDropSet: (setId: number, folderId: number | null) => void;
   touchOver: string | null;
   touchDrag: ReturnType<typeof useLongPressDrag>;
+  selecting: boolean;
+  selected: number[];
+  onToggleSelected: (id: number) => void;
   onEdit: (s: FlashcardSet) => void;
   onDelete: (s: FlashcardSet) => void;
 }) {
@@ -536,6 +625,10 @@ function SectionBlock({
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
               touchDrag={touchDrag}
+              selecting={selecting}
+              checked={selected.includes(s.id)}
+              checkDisabled={selected.length >= MAX_SELECTED_SETS && !selected.includes(s.id)}
+              onToggleSelected={onToggleSelected}
               onEdit={onEdit}
               onDelete={onDelete}
             />
@@ -554,11 +647,19 @@ function SetCard({
   onDragStart,
   onDragEnd,
   touchDrag,
+  selecting,
+  checked,
+  checkDisabled,
+  onToggleSelected,
   onEdit,
   onDelete,
 }: {
   set: FlashcardSet;
   color: string;
+  selecting: boolean;
+  checked: boolean;
+  checkDisabled: boolean;
+  onToggleSelected: (id: number) => void;
   touchDrag: ReturnType<typeof useLongPressDrag>;
   draggable: boolean;
   dragging: boolean;
@@ -578,11 +679,19 @@ function SetCard({
         ...(draggable ? { WebkitTouchCallout: "none", userSelect: "none" } : null),
       }}
       draggable={draggable && !touchScreen}
-      onPointerDown={(e) => touchDrag.begin(e, s.id, s.title)}
+      onPointerDown={(e) => {
+        if (!selecting) touchDrag.begin(e, s.id, s.title);
+      }}
       onContextMenu={(e) => {
         if (draggable && touchDrag.blocksContextMenu()) e.preventDefault();
       }}
       onClickCapture={(e) => {
+        if (selecting) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!checkDisabled) onToggleSelected(s.id);
+          return;
+        }
         if (touchDrag.blocksClick()) {
           e.preventDefault();
           e.stopPropagation();
@@ -622,6 +731,22 @@ function SetCard({
           {s.description && <div className="text-[12px] text-fg-3 truncate">{s.description}</div>}
         </div>
       </Link>
+      {selecting ? (
+        <label
+          className={`-my-1 flex h-11 w-[68px] shrink-0 items-center justify-center ${checkDisabled ? "opacity-40" : "cursor-pointer"}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <input
+            type="checkbox"
+            checked={checked}
+            disabled={checkDisabled}
+            onChange={() => onToggleSelected(s.id)}
+            aria-label={`Select ${s.title}`}
+            className="h-5 w-5"
+            style={{ accentColor: "var(--accent)" }}
+          />
+        </label>
+      ) : (
       <div className="flex shrink-0 items-center">
         <button
           onClick={() => onEdit(s)}
@@ -638,6 +763,7 @@ function SetCard({
           <Trash2 size={15} />
         </button>
       </div>
+      )}
     </li>
   );
 }
