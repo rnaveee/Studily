@@ -79,6 +79,9 @@ public class User {
 
     private Instant welcomedAt;
 
+    @Column(name = "dismissed_hints", length = 255)
+    private String dismissedHints;
+
     @Column(name = "equipped_flair_code", length = 48)
     private String equippedFlairCode;
 
