@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../lib/api";
+import { trimPercent } from "../courses/weights";
 import { summarize } from "../../lib/recurrence";
 import { DAYS, type DayOfWeek, type Recurrence, type RecurrenceFreq, type Semester } from "../../types";
 
@@ -233,7 +234,7 @@ export default function RepeatPicker({
               {showWeight && (
                 <>
                   {" · "}
-                  each worth {weightNum}% ({Math.round(weightNum * Number(occurrences[1]) * 10) / 10}% total)
+                  each worth {weightNum}% ({trimPercent(weightNum * Number(occurrences[1]))}% total)
                 </>
               )}
             </p>

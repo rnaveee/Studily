@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 
 class GradesTest {
 
@@ -44,6 +45,20 @@ class GradesTest {
         AcademicItem i = item(null, score, maxScore);
         i.setGradeCategory(category);
         return i;
+    }
+
+    @Test
+    void effectiveWeight_splitsACategoryWeightEvenlyAcrossItsItems() {
+        GradeCategory assignments = category(1, "Assignments", 20);
+        List<AcademicItem> items = new ArrayList<>();
+        for (int n = 0; n < 6; n++) {
+            items.add(inCategory(assignments, null, null));
+        }
+        var counts = Grades.countsByCategory(items);
+
+        for (AcademicItem each : items) {
+            assertThat(Grades.effectiveWeight(each, List.of(assignments), counts)).isCloseTo(3.3333, within(0.0001));
+        }
     }
 
     @Test

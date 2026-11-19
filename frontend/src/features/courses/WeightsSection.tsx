@@ -151,7 +151,7 @@ export default function WeightsSection({ courseId, categories, items, onChange }
                       ) : (
                         <>
                           {count} item{count > 1 ? "s" : ""}
-                          {each != null && ` · ${trimPercent(each)}% each`}
+                          {each != null && ` × ${trimPercent(each)}% each`}
                           {category.kind === "EXAM" && " · exam"}
                         </>
                       )}

@@ -155,6 +155,12 @@ export default function ItemForm({
         )}
       </div>
 
+      {categoryId == null && (
+        <p className="text-[11px] text-fg-3">
+          Tip: put it in a category weighted 10% and the items split it evenly.
+        </p>
+      )}
+
       {category?.weight != null && (
         <p className="text-[11px] text-fg-3">
           Graded under {category.name}, worth {trimPercent(category.weight)}% of the course split
