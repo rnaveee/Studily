@@ -17,6 +17,7 @@ import {
 } from "../../lib/push";
 import Toggle from "../../components/Toggle";
 import SegmentedToggle from "../../components/SegmentedToggle";
+import InstallRow from "../../components/InstallRow";
 import DeleteAccountForm from "../../components/DeleteAccountForm";
 import CanvasImportForm from "../canvas/CanvasImportForm";
 import SchoolFeedsList from "../canvas/SchoolFeedsList";
@@ -121,6 +122,8 @@ export default function SettingsPage() {
         <BackButton />
         <h1 className="text-xl font-semibold text-fg">Settings</h1>
       </div>
+
+      <InstallRow />
 
       <h2 className="mt-6 text-[13px] font-semibold uppercase tracking-wider text-fg-3">
         Notifications

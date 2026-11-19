@@ -8,3 +8,8 @@ export function isStandalone(): boolean {
     return false;
   }
 }
+
+export function isIos(): boolean {
+  const ua = navigator.userAgent;
+  return /iPad|iPhone|iPod/.test(ua) || (ua.includes("Mac") && navigator.maxTouchPoints > 1);
+}
