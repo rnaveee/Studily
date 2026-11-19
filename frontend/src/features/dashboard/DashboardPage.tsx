@@ -37,6 +37,8 @@ import TodoQuickView from "../todos/TodoQuickView";
 import { priorityLabel, priorityTone } from "../todos/priority";
 import DashboardStreak from "./DashboardStreak";
 import GradesCard from "./GradesCard";
+import NextStepsCard from "./NextStepsCard";
+import { useNextSteps } from "./useNextSteps";
 import ExamsCard, { useUpcomingExams } from "../exams/ExamsCard";
 import { quoteOfTheDay } from "./quotes";
 import QueryError from "../../components/QueryError";
@@ -222,6 +224,8 @@ export default function DashboardPage() {
 
   const hasExams = (useUpcomingExams(semesterId).data?.length ?? 0) > 0;
 
+  const nextSteps = useNextSteps(courses, semesterId);
+
   const createItem = useMutation({
     mutationFn: ({ courseId, req }: { courseId: number; req: AcademicItemRequest }) =>
       api.post<AcademicItem>(`/courses/${courseId}/items`, req),
@@ -292,6 +296,8 @@ export default function DashboardPage() {
       </div>
 
       <SetupNudge />
+
+      <NextStepsCard steps={nextSteps.steps} onDismiss={nextSteps.dismiss} />
 
       {isLoading && (
         <div className="stagger-item flex flex-col gap-4 md:flex-row" style={staggerDelay(2)}>
