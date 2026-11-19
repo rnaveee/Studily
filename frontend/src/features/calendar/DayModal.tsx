@@ -189,6 +189,8 @@ export default function DayModal({
                 <input
                   className="input !px-2"
                   type="number"
+                  inputMode="decimal"
+                  step="any"
                   value={weight}
                   onChange={(e) => setWeight(e.target.value)}
                   min={0}
