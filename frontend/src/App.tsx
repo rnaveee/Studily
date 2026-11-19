@@ -59,8 +59,11 @@ import SurveyPage from "./features/survey/SurveyPage";
 import TodosPage from "./features/todos/TodosPage";
 import BadgesPage from "./features/progress/BadgesPage";
 import SessionHistoryPage from "./features/learn/sessions/SessionHistoryPage";
+import DiscoverLayout from "./features/discover/DiscoverLayout";
 
 const PeriodicTablePage = lazy(() => import("./features/learn/PeriodicTablePage"));
+const DiscoverHub = lazy(() => import("./features/discover/DiscoverHub"));
+const WhatIsStudilyPage = lazy(() => import("./features/discover/articles/WhatIsStudilyPage"));
 const CalculatorPage = lazy(() => import("./features/learn/CalculatorPage"));
 const AdminPage = lazy(() => import("./features/admin/AdminPage"));
 
@@ -137,6 +140,24 @@ export const appRoutes = (
     <Route path="/forgot-password" element={<ForgotPasswordPage />} />
     <Route path="/reset-password" element={<ResetPasswordPage />} />
     <Route path="/verify-email" element={<VerifyEmailPage />} />
+    <Route element={<DiscoverLayout />}>
+      <Route
+        path="/discover"
+        element={
+          <Suspense fallback={null}>
+            <DiscoverHub />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/discover/what-is-studily"
+        element={
+          <Suspense fallback={null}>
+            <WhatIsStudilyPage />
+          </Suspense>
+        }
+      />
+    </Route>
     <Route
       path="/welcome"
       element={

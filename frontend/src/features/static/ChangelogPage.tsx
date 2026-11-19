@@ -7,6 +7,7 @@ type Entry = {
 };
 
 const ENTRIES: Entry[] = [
+  { version: 91, date: "2026-11-19", summary: "Added Discover, a public guide to studying with Studily." },
   { version: 90, date: "2026-11-17", summary: "Added StudilyBot cosmetics." },
   { version: 89, date: "2026-11-17", summary: "Added StudilyBot dances and tricks." },
   { version: 87, date: "2026-11-16", summary: "Removed the study session time limit and made StudilyBot's answers longer." },

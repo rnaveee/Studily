@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   LogIn,
+  Compass,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { useAuth } from "../lib/auth";
@@ -51,6 +52,7 @@ const NAV = [
 const FULL_BLEED = [/^\/messages\/[^/]+$/];
 
 const SUB_LINKS = [
+  { label: "Discover", to: "/discover" },
   { label: "About",   to: "/about" },
   { label: "Terms",   to: "/terms" },
   { label: "Privacy", to: "/privacy" },
@@ -169,7 +171,7 @@ export default function Layout() {
           </ClientOnly>
         </div>
 
-        <div className="px-4 pb-2">
+        <div className="flex w-fit flex-col gap-1.5 px-4 pb-2">
           <Link
             to="/support-studily"
             className="inline-flex h-8 items-center gap-1.5 rounded-full pl-2 pr-3 text-[12.5px] font-semibold transition-colors"
@@ -179,8 +181,19 @@ export default function Layout() {
             }}
           >
             <GreenHeart size={18} glow />
-            Support Studily!
+            Support Studily
           </Link>
+          <a
+            href="/discover"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group inline-flex h-8 items-center gap-1.5 rounded-full pl-2 pr-2.5 text-[12.5px] font-semibold text-accent transition-colors"
+            style={{ background: "color-mix(in srgb, var(--accent) 15%, transparent)" }}
+          >
+            <Compass size={16} className="transition-transform duration-300 group-hover:rotate-[40deg] motion-reduce:transition-none" aria-hidden="true" />
+            Discover Studily
+            <span className="sr-only">(opens in a new tab)</span>
+          </a>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto">

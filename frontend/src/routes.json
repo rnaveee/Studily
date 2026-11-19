@@ -52,6 +52,16 @@
       }
     },
     {
+      "path": "/discover",
+      "title": "Discover: Study Techniques and Guides · Studily",
+      "description": "Learn what Studily is and what it gives you: a student dashboard, calendar, course and grade tracker, study timer, flashcards, an AI study bot and more, all free in one app."
+    },
+    {
+      "path": "/discover/what-is-studily",
+      "title": "What is Studily? The All-in-One Student Platform · Studily",
+      "description": "Studily combines a student dashboard, calendar, course and grade tracker, study timer, flashcards and an AI study bot in one free app. See what it does and why it was built."
+    },
+    {
       "path": "/support-studily",
       "title": "Support Studily: Help Keep It Free",
       "description": "Studily is free and built by one student. Share it with a friend, post it to your story or chip in a few dollars to help cover hosting and development, and earn the Supporter badge."
