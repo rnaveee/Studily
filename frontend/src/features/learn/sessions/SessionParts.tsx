@@ -44,7 +44,6 @@ export function Ring({
           className={`absolute inset-[8%] rounded-full ${glow ? "pomo-breathe" : ""}`}
           style={{
             background: `radial-gradient(circle, color-mix(in srgb, ${color} 26%, transparent) 0%, transparent 70%)`,
-            filter: "blur(18px)",
           }}
         />
       )}

@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../lib/api";
 import { useConfirm } from "../../../lib/confirm";
+import { useNow } from "../../../lib/clock";
 import { formatTime } from "../../../lib/format";
 import { formatMs, pomodoroColor } from "../../../lib/pomodoro";
 import { applyDelta, holdProgressMoments } from "../../../lib/progressDelta";
@@ -19,13 +20,7 @@ export function useSessionControls(session: StudySessionDto, receivedAt: number)
   const qc = useQueryClient();
   const confirm = useConfirm();
   const skew = Date.parse(session.serverNow) - receivedAt;
-  const [now, setNow] = useState(() => Date.now() + skew);
-
-  useEffect(() => {
-    setNow(Date.now() + skew);
-    const id = window.setInterval(() => setNow(Date.now() + skew), 250);
-    return () => window.clearInterval(id);
-  }, [skew]);
+  const now = useNow(1000) + skew;
 
   const current = session.blocks.find((b) => b.index === session.currentBlock) ?? null;
   const running = session.status === "ACTIVE" && current?.status === "RUNNING" ? current : null;

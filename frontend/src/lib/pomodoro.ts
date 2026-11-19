@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { api, getToken } from "./api";
+import { subscribeClock } from "./clock";
 import { toast } from "./toast";
 import { isRingtoneId, playRingtone, unlockAudio, type RingtoneId } from "./ringtones";
 
@@ -72,7 +73,7 @@ function loadSessions(): number {
 }
 
 const listeners = new Set<() => void>();
-let timer: ReturnType<typeof setInterval> | null = null;
+let stopClock: (() => void) | null = null;
 let endsAt = 0;
 
 function initialState(): PomodoroState {
@@ -138,8 +139,8 @@ function durationMs(phase: PomodoroPhase): number {
 }
 
 function stopTicking() {
-  if (timer) clearInterval(timer);
-  timer = null;
+  if (stopClock) stopClock();
+  stopClock = null;
 }
 
 function syncSchedule() {
@@ -217,7 +218,7 @@ export const pomodoro = {
     }
     endsAt = Date.now() + (state.remainingMs > 0 ? state.remainingMs : durationMs(state.phase));
     emit({ running: true });
-    timer = setInterval(tick, 250);
+    stopClock = subscribeClock(1000, tick);
     saveState();
     syncSchedule();
   },
@@ -283,7 +284,7 @@ export const pomodoro = {
 };
 
 if (state.running) {
-  timer = setInterval(tick, 250);
+  stopClock = subscribeClock(1000, tick);
   syncSchedule();
   document.addEventListener("pointerdown", unlockAudio, { once: true });
 } else if (getToken()) {

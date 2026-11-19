@@ -145,7 +145,6 @@ function TimerRing({ s, size, timeClass }: { s: PomodoroState; size: string; tim
         className={`absolute inset-[8%] rounded-full ${s.running ? "pomo-breathe" : ""}`}
         style={{
           background: `radial-gradient(circle, color-mix(in srgb, ${color} 26%, transparent) 0%, transparent 70%)`,
-          filter: "blur(18px)",
         }}
       />
       <svg viewBox="0 0 100 100" overflow="visible" className="relative h-full w-full -rotate-90 overflow-visible">
