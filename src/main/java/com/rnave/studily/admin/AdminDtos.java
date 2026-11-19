@@ -321,4 +321,7 @@ public final class AdminDtos {
 
     public record SurveyContact(String username, String email, Instant createdAt) {
     }
+
+    public record SurveyExport(String text) {
+    }
 }

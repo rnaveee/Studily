@@ -1489,6 +1489,10 @@ export interface AdminSurveyText {
   value: string;
 }
 
+export interface AdminSurveyExport {
+  text: string;
+}
+
 export interface AdminSurveyContact {
   username: string;
   email: string;

@@ -2,6 +2,7 @@ package com.rnave.studily.admin;
 
 import com.rnave.studily.admin.AdminDtos.Paged;
 import com.rnave.studily.admin.AdminDtos.SurveyContact;
+import com.rnave.studily.admin.AdminDtos.SurveyExport;
 import com.rnave.studily.admin.AdminDtos.SurveySummary;
 import com.rnave.studily.admin.AdminDtos.SurveyTextAnswer;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,5 +43,10 @@ public class AdminSurveyController {
     @GetMapping("/contacts")
     public List<SurveyContact> contacts() {
         return surveyService.contacts();
+    }
+
+    @GetMapping("/export")
+    public SurveyExport export() {
+        return surveyService.export();
     }
 }

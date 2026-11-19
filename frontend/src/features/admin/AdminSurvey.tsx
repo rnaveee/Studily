@@ -5,6 +5,7 @@ import type {
   AdminPaged,
   AdminSurveyContact,
   AdminSurveyCount,
+  AdminSurveyExport,
   AdminSurveyMatrixRow,
   AdminSurveyQuestion,
   AdminSurveySummary,
@@ -50,6 +51,7 @@ export default function AdminSurvey() {
 
   return (
     <div className="space-y-6">
+      <ExportButtons />
       <section className="grid grid-cols-2 gap-3 md:grid-cols-5">
         <Stat label="Responses" value={s.responses.toLocaleString()} sub={rate} />
         <Stat
@@ -84,6 +86,72 @@ export default function AdminSurvey() {
       <TextAnswers questions={texts} />
       <Contacts />
     </div>
+  );
+}
+
+function ExportButtons() {
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
+  const [fallback, setFallback] = useState("");
+
+  async function load(): Promise<string | null> {
+    setBusy(true);
+    setNote("");
+    setFallback("");
+    try {
+      return (await api.get<AdminSurveyExport>("/admin/survey/export")).text;
+    } catch {
+      setNote("Couldn't build the export.");
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function copy() {
+    const text = await load();
+    if (text == null) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setNote("Copied. Paste it into an AI chat.");
+      window.setTimeout(() => setNote(""), 2500);
+    } catch {
+      setFallback(text);
+      setNote("Clipboard blocked. Select all below and copy.");
+    }
+  }
+
+  async function download() {
+    const text = await load();
+    if (text == null) return;
+    const url = URL.createObjectURL(new Blob([text], { type: "text/markdown" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `studily-feedback-${new Date().toISOString().slice(0, 10)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <section>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className="btn" disabled={busy} onClick={copy}>
+          Copy for AI
+        </button>
+        <button type="button" className="btn btn-ghost" disabled={busy} onClick={download}>
+          Download .md
+        </button>
+        {note && <span className="text-[12px] text-fg-3">{note}</span>}
+      </div>
+      {fallback && (
+        <textarea
+          className="input mt-2 h-40 w-full text-[12px]"
+          readOnly
+          value={fallback}
+          onFocus={(e) => e.currentTarget.select()}
+        />
+      )}
+    </section>
   );
 }
 

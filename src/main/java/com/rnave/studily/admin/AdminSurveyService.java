@@ -3,6 +3,7 @@ package com.rnave.studily.admin;
 import com.rnave.studily.admin.AdminDtos.Paged;
 import com.rnave.studily.admin.AdminDtos.SurveyContact;
 import com.rnave.studily.admin.AdminDtos.SurveyCount;
+import com.rnave.studily.admin.AdminDtos.SurveyExport;
 import com.rnave.studily.admin.AdminDtos.SurveyMatrixRow;
 import com.rnave.studily.admin.AdminDtos.SurveyQuestionSummary;
 import com.rnave.studily.admin.AdminDtos.SurveySummary;
@@ -18,6 +19,8 @@ import org.springframework.stereotype.Service;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -167,6 +170,120 @@ public class AdminSurveyService {
                 ORDER BY r.created_at DESC
                 """, (rs, i) -> new SurveyContact(rs.getString("username"), rs.getString("email"),
                 rs.getTimestamp("created_at").toInstant()), SurveyDefinition.FALL_2026.key());
+    }
+
+    public SurveyExport export() {
+        SurveyDefinition definition = SurveyDefinition.FALL_2026;
+        Map<Long, List<String[]>> answers = new LinkedHashMap<>();
+        jdbc.query("""
+                SELECT r.id AS rid, a.question, a.item, a.value
+                FROM survey_answers a JOIN survey_responses r ON r.id = a.response_id
+                WHERE r.survey_key = ?
+                ORDER BY r.id, a.id
+                """, rs -> {
+                    answers.computeIfAbsent(rs.getLong("rid"), k -> new ArrayList<>())
+                            .add(new String[]{rs.getString("question"), rs.getString("item"), rs.getString("value")});
+                }, definition.key());
+        String text = render(summary(), definition, new ArrayList<>(answers.values()),
+                LocalDate.ofInstant(clock.instant(), ZoneOffset.UTC));
+        return new SurveyExport(text);
+    }
+
+    static String render(SurveySummary s, SurveyDefinition definition, List<List<String[]>> respondents,
+                         LocalDate date) {
+        StringBuilder out = new StringBuilder();
+        out.append("# Studily user feedback survey (").append(s.key()).append(")\n\n");
+        out.append("Exported ").append(date).append(". ").append(s.responses()).append(" responses from ")
+                .append(s.eligible()).append(" eligible users.\n\n");
+        out.append("Task for the reader: analyze this feedback from students using Studily, a study-planner app. ")
+                .append("Group the written answers into themes, rank the problems by how many people and how ")
+                .append("severely they are affected, call out which user segments (by usage frequency) raise ")
+                .append("them, and propose concrete fixes or features in priority order.\n\n");
+
+        out.append("## Headline metrics\n");
+        out.append("- Very disappointed if Studily disappeared: ").append(pct(s.pmfAll())).append(" (")
+                .append(s.pmfAllBase()).append(" answered; 40% is the product-market-fit bar)\n");
+        out.append("- Same, among weekly+ users: ").append(pct(s.pmfWeekly())).append(" (")
+                .append(s.pmfWeeklyBase()).append(" answered)\n");
+        out.append("- NPS: ").append(s.nps() == null ? "n/a" : s.nps()).append(" (").append(s.npsBase())
+                .append(" answered)\n");
+        out.append("- Ease of use: ").append(s.avgEase() == null ? "n/a" : s.avgEase() + " / 5").append("\n\n");
+
+        out.append("## Aggregate results\n");
+        for (SurveyQuestionSummary q : s.questions()) {
+            if (q.type().equals("TEXT")) {
+                continue;
+            }
+            out.append("\n### ").append(clean(q.prompt())).append(" (").append(q.respondents())
+                    .append(" respondents)\n");
+            if (q.matrix() != null) {
+                for (SurveyMatrixRow row : q.matrix()) {
+                    out.append("- ").append(row.label()).append(": ");
+                    out.append(String.join(", ", row.counts().stream()
+                            .map(c -> c.label() + " " + c.count()).toList())).append("\n");
+                }
+            } else {
+                long total = q.counts().stream().mapToLong(SurveyCount::count).sum();
+                for (SurveyCount c : q.counts()) {
+                    out.append("- ").append(c.label()).append(": ").append(c.count()).append(" (")
+                            .append(total == 0 ? 0 : Math.round(c.count() * 100.0 / total)).append("%)\n");
+                }
+            }
+        }
+
+        out.append("\n## Individual responses (anonymous)\n");
+        Map<String, Question> byId = definition.byId();
+        int n = 0;
+        for (List<String[]> response : respondents) {
+            n++;
+            out.append("\n### Respondent ").append(n).append("\n");
+            Map<String, List<String>> grouped = new LinkedHashMap<>();
+            for (String[] a : response) {
+                Question q = byId.get(a[0]);
+                if (q == null || a[0].equals("contact")) {
+                    continue;
+                }
+                String value = a[2];
+                if (q.optionsFrom() != null) {
+                    value = labelOf(byId.get(q.optionsFrom()), value);
+                }
+                String key = q.id();
+                if (q.type() == Type.MATRIX && a[1] != null) {
+                    key = q.id() + " / " + labelOf(q, a[1]);
+                }
+                grouped.computeIfAbsent(key, k -> new ArrayList<>()).add(clean(value));
+            }
+            for (Map.Entry<String, List<String>> e : grouped.entrySet()) {
+                String id = e.getKey().split(" / ")[0];
+                Question q = byId.get(id);
+                String label = q.type() == Type.MATRIX ? e.getKey() : id;
+                out.append("- ").append(label).append(": ").append(String.join("; ", e.getValue())).append("\n");
+            }
+        }
+
+        out.append("\n## Question reference\n");
+        for (Question q : definition.questions()) {
+            if (q.id().equals("contact")) {
+                continue;
+            }
+            out.append("- ").append(q.id()).append(": ").append(clean(q.prompt())).append("\n");
+        }
+        return out.toString();
+    }
+
+    private static String labelOf(Question q, String id) {
+        if (q == null || q.rows() == null) {
+            return id;
+        }
+        return q.rows().stream().filter(r -> r.id().equals(id)).map(Item::label).findFirst().orElse(id);
+    }
+
+    private static String clean(String value) {
+        return value == null ? "" : value.replace("{names}", "these").replace("\r", "").replace("\n", " / ");
+    }
+
+    private static String pct(Double value) {
+        return value == null ? "n/a" : value + "%";
     }
 
     private static List<String> textIds(SurveyDefinition definition) {
