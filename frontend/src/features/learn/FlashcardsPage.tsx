@@ -186,7 +186,7 @@ export default function FlashcardsPage() {
   const sections = buildSections(grouping, list, folders.data ?? [], courses.data ?? []);
 
   return (
-    <div className={`space-y-6 stagger-children ${selecting ? "pb-20" : ""}`}>
+    <div className="space-y-6 stagger-children">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <BackButton fallback="/study" />
@@ -346,9 +346,9 @@ export default function FlashcardsPage() {
       )}
 
       {selecting && (
-        <div className="sticky bottom-3 z-20 -mt-6 h-0">
+        <div className="sticky bottom-3 z-20">
           <div
-            className="card absolute inset-x-0 bottom-0 flex items-center justify-between gap-3 p-3 shadow-2xl"
+            className="card flex items-center justify-between gap-3 p-3 shadow-2xl"
             style={{ background: "var(--surface)", borderTop: "2px solid var(--accent)" }}
           >
             <p className="min-w-0 truncate text-[13px] text-fg-2" aria-live="polite">
@@ -672,10 +672,13 @@ function SetCard({
 
   return (
     <li
-      className={`card flex items-center justify-between gap-3 p-4 animate-fade ${draggable ? "cursor-grab active:cursor-grabbing" : ""}`}
+      className={`card flex items-center justify-between gap-3 p-4 animate-fade transition-all ${draggable ? "cursor-grab active:cursor-grabbing" : ""} ${selecting ? (checkDisabled ? "cursor-not-allowed" : "cursor-pointer") : ""}`}
+      aria-pressed={selecting ? checked : undefined}
       style={{
         borderLeft: `4px solid ${color}`,
-        opacity: dragging ? 0.45 : 1,
+        opacity: dragging ? 0.45 : selecting && !checked ? 0.4 : 1,
+        ...(selecting && !checked ? { filter: "grayscale(1)" } : null),
+        ...(selecting && checked ? { boxShadow: `0 0 0 2px ${color}, 0 0 18px color-mix(in srgb, ${color} 45%, transparent)` } : null),
         ...(draggable ? { WebkitTouchCallout: "none", userSelect: "none" } : null),
       }}
       draggable={draggable && !touchScreen}
@@ -731,22 +734,7 @@ function SetCard({
           {s.description && <div className="text-[12px] text-fg-3 truncate">{s.description}</div>}
         </div>
       </Link>
-      {selecting ? (
-        <label
-          className={`-my-1 flex h-11 w-[68px] shrink-0 items-center justify-center ${checkDisabled ? "opacity-40" : "cursor-pointer"}`}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <input
-            type="checkbox"
-            checked={checked}
-            disabled={checkDisabled}
-            onChange={() => onToggleSelected(s.id)}
-            aria-label={`Select ${s.title}`}
-            className="h-5 w-5"
-            style={{ accentColor: "var(--accent)" }}
-          />
-        </label>
-      ) : (
+      {selecting ? null : (
       <div className="flex shrink-0 items-center">
         <button
           onClick={() => onEdit(s)}
